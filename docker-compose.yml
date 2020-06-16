@@ -1,0 +1,42 @@
+version: "3"
+
+services:
+  redis:
+    image: redis:latest
+
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    volumes:
+      - ./volumes/minio:/data
+    ports:
+      - "9000:9000"
+
+  api:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/Dockerfile-api
+    volumes:
+      - ./diamond_miner:/app/diamond_miner
+    ports:
+      - "8000:8000"
+    links:
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/Dockerfile-worker
+    volumes:
+      - ./diamond_miner:/app/diamond_miner
+    links:
+      - redis
+
+  agent:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/Dockerfile-agent
+    volumes:
+      - ./diamond_miner:/app/diamond_miner
+    links:
+      - redis

@@ -1,0 +1,14 @@
+FROM python:3.8
+LABEL key="Matthieu Gouel <matthieu.gouel@gmail.com>"
+
+WORKDIR /app
+
+RUN pip install poetry uvicorn
+RUN poetry config virtualenvs.create false
+
+COPY pyproject.toml pyproject.toml
+RUN poetry install --no-root --no-dev
+
+COPY diamond_miner diamond_miner
+
+CMD ["dramatiq", "diamond_miner.worker.handlers", "--watch", "diamond_miner/worker"]

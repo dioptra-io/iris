@@ -1,0 +1,69 @@
+FROM python:3.8
+LABEL key="Matthieu Gouel <matthieu.gouel@gmail.com>"
+
+# Compilation tools
+WORKDIR /app
+RUN apt-get update
+RUN apt-get -y install gnupg gcc g++ cmake libboost-all-dev git autoconf automake build-essential
+
+# PF RING
+ARG PFRING
+RUN if [ "$PFRING" = "enable" ] ; then apt-get update && \
+    apt-get -y -q install wget lsb-release && \
+    wget -q http://apt.ntop.org/16.04/all/apt-ntop.deb && dpkg -i apt-ntop.deb && \
+    apt-get clean all && \
+    apt-get update && \
+    apt-get -y install pfring ; fi
+
+# Libcperm
+RUN git clone https://github.com/lancealt/libcperm.git
+RUN cd libcperm && \
+    ./autogen.sh && \
+    ./configure && \
+    make -j8 && \
+    make install
+
+# Libtins
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libpcap-dev libssl-dev
+RUN git clone https://github.com/mfontanini/libtins.git
+RUN cd libtins && \
+    mkdir build && \
+    cd build && \
+    cmake .. -DLIBTINS_ENABLE_CXX11=1 && \
+    make -j8 && \
+    make install
+RUN ldconfig
+
+# Terashuf
+RUN git clone https://github.com/alexandres/terashuf.git
+RUN cd terashuf && make -j8 && cd ..
+
+# Exports
+ENV TMPDIR /app/prober/resources/
+ENV MEMORY 24
+
+# Diamond-Miner Prober
+RUN git clone https://github.com/dioptra-io/diamond-miner-cpp.git prober
+RUN mkdir -p prober/resources
+WORKDIR /app/prober
+RUN if [ "$PFRING" = "enable" ] ; then mkdir build && \
+    cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPROBER=1 -DPF_RING=1 && \
+    make -j8 ; else mkdir build && \
+    cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPROBER=1 && \
+    make -j8 ; fi
+
+# Diamond-Miner Agent
+WORKDIR /app
+RUN pip install poetry
+RUN poetry config virtualenvs.create false
+
+COPY pyproject.toml pyproject.toml
+RUN poetry install --no-root
+
+COPY entrypoints/agent.py agent.py
+COPY tools/autoreload.py autoreload.py
+COPY diamond_miner diamond_miner
+
+CMD ["python", "-u", "autoreload.py", "agent:app"]
