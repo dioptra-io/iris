@@ -18,9 +18,10 @@ def state_formater(state):
 async def get_agents(request: Request):
     """Get all agents information."""
     agents = await request.app.redis.agents_info()
-    return [
+    response = [
         {"uuid": agent.name, "state": state_formater(state)} for agent, state in agents
     ]
+    return {"count": len(response), "results": response}
 
 
 @router.get("/{uuid}")

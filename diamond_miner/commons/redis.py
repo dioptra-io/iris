@@ -13,9 +13,12 @@ class Redis(object):
         self.redis = None
         self.info = None
 
-    async def connect(self, host):
+    async def connect(self, host, password=None):
         """Connect to Redis instance."""
         self.redis = await aioredis.create_redis(host)
+        if password:
+            await self.redis.auth(password)
+
         await self.redis.client_setname(self.uuid)
         self.info = await self.whoami()
 
@@ -50,6 +53,14 @@ class Redis(object):
     async def set(self, *args, **kwargs):
         """Set a value from a key input."""
         return await self.redis.set(*args, **kwargs)
+
+    async def register_measurement(self, measurement_uuid):
+        """Register a measurement."""
+        await self.redis.lpush("measurements", measurement_uuid)
+
+    async def get_measurements(self):
+        """Get all registered measurements."""
+        return await self.redis.lrange("measurements", 0, -1)
 
     async def publish(self, channel_name, data):
         """Publish a message via into a channel."""

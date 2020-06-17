@@ -2,9 +2,14 @@ import dramatiq
 import logging
 
 from dramatiq.brokers.redis import RedisBroker
+from diamond_miner.worker.settings import WorkerSettings
 
-
-redis_broker = RedisBroker(host="redis", port=6379)
+settings = WorkerSettings()
+redis_broker = RedisBroker(
+    host=settings.REDIS_HOSTNAME,
+    port=settings.REDIS_PORT,
+    password=settings.REDIS_PASSWORD,
+)
 dramatiq.set_broker(redis_broker)
 
 logger = logging.getLogger("worker")

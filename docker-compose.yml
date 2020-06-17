@@ -3,6 +3,9 @@ version: "3"
 services:
   redis:
     image: redis:latest
+    command: redis-server --appendonly yes --requirepass redispass
+    volumes:
+      - ./volumes/redis:/data
 
   minio:
     image: minio/minio:latest
