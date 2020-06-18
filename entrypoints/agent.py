@@ -12,6 +12,7 @@ settings = AgentSettings()
 async def main():
     """Main agent loop."""
     redis = Redis()
+    await asyncio.sleep(5)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
     await redis.set(f"state:{redis.uuid}", 1)
 

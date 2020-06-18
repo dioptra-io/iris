@@ -80,16 +80,3 @@ class Redis(object):
         """Close the connection."""
         self.redis.close()
         await self.redis.wait_closed()
-
-    # async def _reader(self, channel):
-    #     while await channel.wait_message():
-    #         return await channel.get_json()
-
-    # async def subscribe(self, channel_name):
-    #     """Subscribe to a channel and wait for a response"""
-    #     channels = await self.redis.subscribe(channel_name)
-    #     task = asyncio.create_task(self._reader(channels[0]))
-    #     return task
-
-    # async def unsubscribe(self, channel_name):
-    #     await self.redis.unsubscribe(channel_name)

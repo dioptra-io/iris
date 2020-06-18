@@ -80,6 +80,10 @@ class Storage(object):
                 fin, bucket, filename,
             )
 
+    async def download_file(self, bucket, filename, output_path):
+        async with aioboto3.client("s3", **self.settings) as s3:
+            await s3.download_file(bucket, filename, output_path)
+
     async def delete_file_check(self, bucket, filename):
         async with aioboto3.client("s3", **self.settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)

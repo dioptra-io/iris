@@ -4,13 +4,14 @@ import logging
 
 # Set logger
 logger = logging.getLogger("api")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s :: %(levelname)s :: API :: %(message)s")
 stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
+stream_handler.setLevel(logging.INFO)
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 logger.propagate = False
+
 
 from fastapi import APIRouter  # noqa
 from diamond_miner.api import (  # noqa
@@ -35,6 +36,3 @@ router.include_router(targets.router, prefix="/targets", tags=["Targets"])
 router.include_router(
     measurements.router, prefix="/measurements", tags=["Measurements"]
 )
-
-
-__version__ = "0.1.0"

@@ -1,8 +1,9 @@
 """API Entrypoint."""
 
-from diamond_miner.api import router, __version__
-from diamond_miner.commons.redis import Redis
+from diamond_miner import __version__
+from diamond_miner.api import router
 from diamond_miner.api.settings import APISettings
+from diamond_miner.commons.redis import Redis
 from fastapi import FastAPI
 
 

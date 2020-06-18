@@ -3,7 +3,7 @@
 from diamond_miner.api import logger
 from diamond_miner.api.settings import APISettings
 from diamond_miner.commons.storage import Storage
-from diamond_miner.worker.handlers import handler
+from diamond_miner.worker.hooks import hook
 from fastapi import APIRouter, BackgroundTasks, Request, status, HTTPException
 from pydantic import BaseModel
 from uuid import uuid4
@@ -78,7 +78,7 @@ async def publish_measurement(redis, measurement_uuid, agents, parameters):
         },
     )
 
-    handler.send(measurement_uuid, agents)
+    hook.send(measurement_uuid, agents, dict(parameters))
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)

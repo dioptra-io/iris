@@ -1,79 +1,54 @@
 """Measurement interface."""
 
-import aiofiles
-import asyncio
-import random
-import json
-
 from aiofiles import os as aios
+from diamond_miner.agent.prober import probe
 from diamond_miner.agent.settings import AgentSettings
 from diamond_miner.commons.storage import Storage
 from pathlib import Path
+
 
 settings = AgentSettings()
 storage = Storage()
 
 
-async def execute(parameters, ofile, start_time_log_file):
-    """Execute measurement with Diamond-Miner."""
-    cmd = (
-        settings.AGENT_D_MINER_EXE_PATH
-        + " -o "
-        + ofile
-        + " -r "
-        + str(settings.AGENT_PROBING_RATE)
-        + " --buffer-sniffer-size="
-        + str(settings.AGENT_BUFFER_SNIFFER_SIZE)
-        + " -d "
-        + str(settings.AGENT_IPS_PER_SUBNET)
-        + " -i "
-        + str(settings.AGENT_INF_BORN)
-        + " -s "
-        + str(settings.AGENT_SUP_BORN)
-        + " -p "
-        + str(parameters["protocol"])
-        + " --dport="
-        + str(parameters["destination_port"])
-        + " --min-ttl="
-        + str(parameters["min_ttl"])
-        + " --max-ttl="
-        + str(parameters["max_ttl"])
-        + " --record-timestamp "
-        + " --start-time-log-file="
-        + start_time_log_file
-    )
-
-    proc = await asyncio.create_subprocess_shell(
-        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-
-    stdout, stderr = await proc.communicate()
-
-
 async def measuremement(redis, request):
     """Conduct a measurement."""
-
     # Lock the client state
     await redis.set(f"state:{redis.uuid}", 0)
 
     measuremement_uuid = request["measurement_uuid"]
     round_number = request["round"]
 
-    result_filename = f"{redis.uuid}_{round_number}.json"
+    result_filename = f"{redis.uuid}_results_{round_number}.pcap"
+    result_filepath = str(settings.AGENT_RESULTS_DIR / result_filename)
+    starttime_filename = f"{redis.uuid}_starttime_{round_number}.log"
+    starttime_filepath = str(settings.AGENT_RESULTS_DIR / starttime_filename)
 
-    # Simulate a measurement
-    value = random.randint(5, 10)
-    await asyncio.sleep(value)
+    # Download target file locally
+    if round_number == 1:
+        target_filename = request["parameters"]["target_file_key"]
+        target_filepath = str(settings.AGENT_TARGETS_DIR / target_filename)
+        await storage.download_file(
+            settings.AWS_S3_TARGETS_BUCKET_NAME, target_filename, target_filepath,
+        )
+    else:
+        target_filepath = None
+        # TODO CSV file for round >= 2
 
-    async with aiofiles.open(f"{result_filename}", "w") as fin:
-        await fin.write(json.dumps({"result": value}, indent=4))
+    # Diamond-Miner measurement
+    await probe(
+        request, result_filepath, starttime_filepath, target_filepath=target_filepath
+    )
 
-    # # Upload result file into AWS S3
-    with Path(result_filename).open("rb") as fin:
+    # Upload result file & start time log file into AWS S3
+    with Path(result_filepath).open("rb") as fin:
         await storage.upload_file(measuremement_uuid, result_filename, fin)
+    with Path(starttime_filepath).open("rb") as fin:
+        await storage.upload_file(measuremement_uuid, starttime_filename, fin)
 
     # Remove local result file
-    await aios.remove(result_filename)
+    await aios.remove(result_filepath)
+    await aios.remove(starttime_filepath)
 
     # Unlock the client state
     await redis.set(f"state:{redis.uuid}", 1)

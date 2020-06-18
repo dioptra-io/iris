@@ -1,10 +1,13 @@
 FROM python:3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@gmail.com>"
 
-# Compilation tools
 WORKDIR /app
+
+# Compilation tools
 RUN apt-get update
 RUN apt-get -y install gnupg gcc g++ cmake libboost-all-dev git autoconf automake build-essential
+RUN apt-get clean
+RUN apt-get update
 
 # PF RING
 ARG PFRING
@@ -38,13 +41,20 @@ RUN ldconfig
 RUN git clone https://github.com/alexandres/terashuf.git
 RUN cd terashuf && make -j8 && cd ..
 
+# Web page
+RUN apt-get -y install nginx
+RUN rm -f /var/www/html/*
+COPY statics/index.html /var/www/html/index.html
+EXPOSE 80
+
 # Exports
 ENV TMPDIR /app/prober/resources/
 ENV MEMORY 24
 
 # Diamond-Miner Prober
 RUN git clone https://github.com/dioptra-io/diamond-miner-cpp.git prober
-RUN mkdir -p prober/resources
+RUN mkdir prober/resources
+COPY statics/excluded_prefixes /app/prober/resources
 WORKDIR /app/prober
 RUN if [ "$PFRING" = "enable" ] ; then mkdir build && \
     cd build && \
@@ -66,4 +76,7 @@ COPY entrypoints/agent.py agent.py
 COPY tools/autoreload.py autoreload.py
 COPY diamond_miner diamond_miner
 
-CMD ["python", "-u", "autoreload.py", "agent:app"]
+RUN mkdir targets
+RUN mkdir results
+
+CMD ["python", "-u", "autoreload.py", "agent:app", "&", "nginx"]
