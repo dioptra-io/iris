@@ -7,6 +7,15 @@ services:
     volumes:
       - ./volumes/redis:/data
 
+  clickhouse:
+    image: "yandex/clickhouse-server:latest"
+    volumes:
+      - "./volumes/clickhouse:/var/lib/clickhouse"
+    ulimits:
+      nofile:
+        soft: "262144"
+        hard: "262144"
+
   minio:
     image: minio/minio:latest
     command: server /data
@@ -34,6 +43,7 @@ services:
       - ./diamond_miner:/app/diamond_miner
     links:
       - redis
+      - clickhouse
 
   agent:
     build:

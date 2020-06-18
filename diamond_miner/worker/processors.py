@@ -7,10 +7,10 @@ settings = WorkerSettings()
 
 
 async def pcap_to_csv(
-    round_number, result_filepath, starttime_filename, output_csv_filepath, parameters
+    round_number, result_filepath, starttime_filepath, output_csv_filepath, parameters
 ):
     """Transform a PCAP & start time log file into CSV using D-Miner Reader."""
-    # Snapshot numerotation is not used currently
+    # Snapshot numbering is currently unused
     snapshot_number = 1
 
     cmd = (
@@ -20,6 +20,8 @@ async def pcap_to_csv(
         + str(result_filepath)
         + " -o "
         + str(output_csv_filepath)
+        + " -E "
+        + str(settings.WORKER_EXCLUSION_FILE_PATH)
         + " -R "
         + str(round_number)
         + " -s "
@@ -28,7 +30,7 @@ async def pcap_to_csv(
         + str(parameters["destination_port"])
         + " --compute-rtt "
         + " --start-time-log-file="
-        + starttime_filename
+        + str(starttime_filepath)
     )
 
     await start_stream_subprocess(cmd, logger=logger)

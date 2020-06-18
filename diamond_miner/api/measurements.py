@@ -1,5 +1,6 @@
 """Measurements operations."""
 
+from datetime import datetime
 from diamond_miner.api import logger
 from diamond_miner.api.settings import APISettings
 from diamond_miner.commons.storage import Storage
@@ -59,7 +60,7 @@ class Measurement(BaseModel):
     max_ttl: int
 
 
-async def publish_measurement(redis, measurement_uuid, agents, parameters):
+async def publish_measurement(redis, measurement_uuid, timestamp, agents, parameters):
     """Launch a measurement procedure on each available agents."""
     await redis.register_measurement(measurement_uuid)
     try:
@@ -73,12 +74,13 @@ async def publish_measurement(redis, measurement_uuid, agents, parameters):
         {
             "measurement_uuid": measurement_uuid,
             "measurement_tool": "diamond_miner",
+            "timestamp": timestamp,
             "round": 1,
             "parameters": dict(parameters),
         },
     )
 
-    hook.send(measurement_uuid, agents, dict(parameters))
+    hook.send(measurement_uuid, timestamp, agents, dict(parameters))
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -99,8 +101,15 @@ async def post_measurement(
         raise HTTPException(status_code=404, detail="No client available")
 
     measurement_uuid = str(uuid4())
+    timestamp = datetime.timestamp(datetime.now())
+
     background_tasks.add_task(
-        publish_measurement, request.app.redis, measurement_uuid, agents, measurement,
+        publish_measurement,
+        request.app.redis,
+        measurement_uuid,
+        timestamp,
+        agents,
+        measurement,
     )
 
     return {"measurement": measurement_uuid}

@@ -38,6 +38,8 @@ async def probe(
         + str(parameters["parameters"]["min_ttl"])
         + " --max-ttl="
         + str(parameters["parameters"]["max_ttl"])
+        + " -E "
+        + str(settings.AGENT_EXCLUSION_FILE_PATH)
         + " --record-timestamp "
         + " --start-time-log-file="
         + str(starttime_filepath)

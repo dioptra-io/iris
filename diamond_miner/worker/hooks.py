@@ -4,18 +4,26 @@ import dramatiq
 from aiofiles import os as aios
 from diamond_miner.commons.storage import Storage
 from diamond_miner.worker import logger
-from diamond_miner.worker.settings import WorkerSettings
+from diamond_miner.worker.database import Database
 from diamond_miner.worker.processors import pcap_to_csv
+from diamond_miner.worker.settings import WorkerSettings
 
 
 settings = WorkerSettings()
+database = Database(host=settings.WORKER_DATABASE_HOST)
 storage = Storage()
 
 
 async def pipeline(
-    measurement_uuid, agent_uuid, parameters, result_filename, starttime_filename
+    measurement_uuid,
+    timestamp,
+    agent_uuid,
+    parameters,
+    result_filename,
+    starttime_filename,
 ):
     """Process results and eventually request a new round."""
+    logger.info(f"New files detected for agent `{agent_uuid}`")
     round_number = result_filename.split("_")[2].split(".")[0]
 
     logger.info("Download results file & start time log file")
@@ -29,14 +37,10 @@ async def pipeline(
     )
 
     logger.info("Transform results file & start time log file into CSV file")
-    output_csv_filename = f"{agent_uuid}_csv_{round_number}.csv"
-    output_csv_filepath = str(settings.WORKER_RESULTS_DIR / output_csv_filename)
+    csv_filename = f"{agent_uuid}_csv_{round_number}.csv"
+    csv_filepath = str(settings.WORKER_RESULTS_DIR / csv_filename)
     await pcap_to_csv(
-        round_number,
-        result_filepath,
-        starttime_filepath,
-        output_csv_filepath,
-        parameters,
+        round_number, result_filepath, starttime_filepath, csv_filepath, parameters,
     )
 
     logger.info("Remove local results file & start time log file")
@@ -51,8 +55,26 @@ async def pipeline(
     if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
         logger.error(f"Impossible to remove result file `{starttime_filename}`")
 
+    logger.info(f"Create database `{settings.WORKER_DATABASE_NAME}`if not exists")
+    await database.create_datebase(settings.WORKER_DATABASE_NAME)
 
-async def watch(measurement_uuid, agent, parameters):
+    table_name = (
+        settings.WORKER_DATABASE_NAME
+        + "."
+        + database.forge_table_name(measurement_uuid, agent_uuid, timestamp)
+    )
+    logger.info(f"Create table `{table_name}`")
+    await database.create_table(table_name, drop=False)
+    await database.clean_table(table_name)
+
+    logger.info("Insert CSV file into database")
+    await database.insert_csv(csv_filepath, table_name)
+
+    logger.info("Remove local CSV file")
+    await aios.remove(csv_filepath)
+
+
+async def watch(measurement_uuid, timestamp, agent, parameters):
     """Watch for a results from an agent."""
     agent_uuid = agent[3]
     while True:
@@ -71,6 +93,7 @@ async def watch(measurement_uuid, agent, parameters):
             ][0]
             await pipeline(
                 measurement_uuid,
+                timestamp,
                 agent_uuid,
                 parameters,
                 result_filename,
@@ -81,11 +104,11 @@ async def watch(measurement_uuid, agent, parameters):
             await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
 
 
-async def callback(measurement_uuid, agents, parameters):
+async def callback(measurement_uuid, timestamp, agents, parameters):
     """Asynchronous callback."""
-    logger.info("New result file detected! Processing ...")
+    logger.info("New measurement! Watching ...")
     await asyncio.gather(
-        *[watch(measurement_uuid, agent, parameters) for agent in agents]
+        *[watch(measurement_uuid, timestamp, agent, parameters) for agent in agents]
     )
     logger.info("Delete measurement bucket")
     try:
@@ -96,6 +119,6 @@ async def callback(measurement_uuid, agents, parameters):
 
 
 @dramatiq.actor(time_limit=settings.WORKER_TIMEOUT)
-def hook(measurement_uuid, agents, parameters):
+def hook(measurement_uuid, timestamp, agents, parameters):
     """Hook a worker process to a measurement"""
-    asyncio.run(callback(measurement_uuid, agents, parameters))
+    asyncio.run(callback(measurement_uuid, timestamp, agents, parameters))
