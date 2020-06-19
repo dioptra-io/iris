@@ -2,15 +2,15 @@ import asyncio
 import dramatiq
 
 from aiofiles import os as aios
+from diamond_miner.commons.database import Database
 from diamond_miner.commons.storage import Storage
 from diamond_miner.worker import logger
-from diamond_miner.worker.database import Database
 from diamond_miner.worker.processors import pcap_to_csv
 from diamond_miner.worker.settings import WorkerSettings
 
 
 settings = WorkerSettings()
-database = Database(host=settings.WORKER_DATABASE_HOST)
+database = Database(host=settings.WORKER_DATABASE_HOST, logger=logger)
 storage = Storage()
 
 

@@ -1,16 +1,17 @@
 """Interface with Clickhouse database."""
 
-from diamond_miner.worker import logger
 from diamond_miner.commons.subprocess import start_stream_subprocess
 
 
 class Database(object):
     """Database interface."""
 
-    def __init__(self, host):
+    def __init__(self, host, logger):
         self.host = host
+        self.logger = logger
 
-    def forge_table_name(self, measurement_uuid, agent_uuid, timestamp):
+    @staticmethod
+    def forge_table_name(measurement_uuid, agent_uuid, timestamp):
         """Forge the table name from agent UUID and timestamp."""
         sanitized_measurement_uuid = measurement_uuid.replace("-", "_")
         sanitized_agent_uuid = agent_uuid.replace("-", "_")
@@ -22,9 +23,15 @@ class Database(object):
             + f"__{sanitized_timestamp}"
         )
 
-    def parse_table_name(self, table_name):
+    @staticmethod
+    def parse_table_name(table_name):
         """Parse table name to extract parameters."""
-        measurement_uuid, agent_uuid, timestamp = table_name.split("__")
+        table_name_split = table_name.split("__")
+        measurement_uuid, agent_uuid, timestamp = (
+            table_name_split[1],
+            table_name_split[2],
+            table_name_split[3],
+        )
         return {
             "measurement_uuid": measurement_uuid.replace("_", "-"),
             "agent_uuid": agent_uuid.replace("_", "-"),
@@ -41,7 +48,7 @@ class Database(object):
             + "'"
         )
 
-        await start_stream_subprocess(cmd, logger=logger)
+        await start_stream_subprocess(cmd, logger=self.logger)
 
     async def create_table(self, table_name, drop=False):
         """Create a table."""
@@ -75,7 +82,7 @@ class Database(object):
             + " FORMAT CSV'"
         )
 
-        await start_stream_subprocess(cmd, logger=logger)
+        await start_stream_subprocess(cmd, logger=self.logger)
 
     async def drop_table(self, table_name):
         """Drop a table."""
@@ -87,7 +94,7 @@ class Database(object):
             + "'"
         )
 
-        await start_stream_subprocess(cmd, logger=logger)
+        await start_stream_subprocess(cmd, logger=self.logger)
 
     async def clean_table(self, table_name):
         """Clean a table."""
