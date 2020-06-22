@@ -61,9 +61,10 @@ class Database(object):
             + " --query='CREATE TABLE "
             + str(table_name)
             + "(src_ip UInt32, dst_prefix UInt32, dst_ip UInt32, reply_ip UInt32, "
-            + "proto UInt8, src_port UInt16, dst_port UInt16, ttl UInt8, type UInt8, "
-            + "code UInt8, rtt Float64, reply_ttl UInt8, reply_size UInt16, "
-            + "round UInt32, snapshot UInt16) ENGINE=MergeTree() "
+            + "proto UInt8, src_port UInt16, dst_port UInt16, ttl UInt8, "
+            + "ttl_check UInt8, type UInt8, "
+            + "code UInt8, rtt Float64, reply_ttl UInt8, "
+            + "reply_size UInt16, round UInt32, snapshot UInt16) ENGINE=MergeTree() "
             + "ORDER BY (src_ip, dst_prefix, dst_ip, ttl, src_port, dst_port, snapshot)"
             + " '"
         )

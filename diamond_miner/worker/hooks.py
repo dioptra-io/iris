@@ -3,6 +3,7 @@ import dramatiq
 
 from aiofiles import os as aios
 from diamond_miner.commons.database import Database
+from diamond_miner.commons.redis import Redis
 from diamond_miner.commons.storage import Storage
 from diamond_miner.worker import logger
 from diamond_miner.worker.processors import pcap_to_csv
@@ -15,15 +16,12 @@ storage = Storage()
 
 
 async def pipeline(
-    measurement_uuid,
-    timestamp,
-    agent_uuid,
-    parameters,
-    result_filename,
-    starttime_filename,
+    agent_uuid, parameters, result_filename, starttime_filename,
 ):
     """Process results and eventually request a new round."""
     logger.info(f"New files detected for agent `{agent_uuid}`")
+    measurement_uuid = parameters["measurement_uuid"]
+    timestamp = parameters["timestamp"]
     round_number = result_filename.split("_")[2].split(".")[0]
 
     logger.info("Download results file & start time log file")
@@ -70,13 +68,13 @@ async def pipeline(
     logger.info("Insert CSV file into database")
     await database.insert_csv(csv_filepath, table_name)
 
-    logger.info("Remove local CSV file")
-    await aios.remove(csv_filepath)
+    # logger.info("Remove local CSV file")
+    # await aios.remove(csv_filepath)
 
 
-async def watch(measurement_uuid, timestamp, agent, parameters):
+async def watch(agent_uuid, parameters):
     """Watch for a results from an agent."""
-    agent_uuid = agent[3]
+    measurement_uuid = parameters["measurement_uuid"]
     while True:
         logger.debug(f"{measurement_uuid} -> {agent_uuid}")
         files = await storage.get_all_files(measurement_uuid)
@@ -92,33 +90,54 @@ async def watch(measurement_uuid, timestamp, agent, parameters):
                 if f["key"].startswith(f"{agent_uuid}_starttime")
             ][0]
             await pipeline(
-                measurement_uuid,
-                timestamp,
-                agent_uuid,
-                parameters,
-                result_filename,
-                starttime_filename,
+                agent_uuid, parameters, result_filename, starttime_filename,
             )
             break
         except IndexError:
             await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
 
 
-async def callback(measurement_uuid, timestamp, agents, parameters):
+async def callback(agents, parameters):
     """Asynchronous callback."""
-    logger.info("New measurement! Watching ...")
-    await asyncio.gather(
-        *[watch(measurement_uuid, timestamp, agent, parameters) for agent in agents]
-    )
+    logger.info("New measurement! Publishing request")
+    measurement_uuid = parameters["measurement_uuid"]
+
+    redis = Redis()
+    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+
+    is_measurement_published = bool(await redis.get(f"published:{measurement_uuid}"))
+    if not is_measurement_published:
+        try:
+            await storage.create_bucket(bucket=measurement_uuid)
+        except Exception:
+            logger.error(f"Impossible to create bucket `{measurement_uuid}`")
+        await redis.set(f"published:{measurement_uuid}", "waiting")
+        await redis.publish(
+            "request:all",
+            {
+                "measurement_uuid": measurement_uuid,
+                "measurement_tool": "diamond_miner",
+                "timestamp": parameters["timestamp"],
+                "round": 1,
+                "parameters": dict(parameters),
+            },
+        )
+
+    logger.info("Watching ...")
+    await asyncio.gather(*[watch(agent_uuid, parameters) for agent_uuid in agents])
     logger.info("Delete measurement bucket")
     try:
         await storage.delete_bucket(bucket=measurement_uuid)
     except Exception:
         logger.error(f"Impossible to remove bucket `{measurement_uuid}`")
-    return True
+
+    await redis.delete(f"published:{measurement_uuid}")
+    await redis.close()
 
 
-@dramatiq.actor(time_limit=settings.WORKER_TIMEOUT)
-def hook(measurement_uuid, timestamp, agents, parameters):
+@dramatiq.actor(
+    time_limit=settings.WORKER_TIME_LIMIT, max_age=settings.WORKER_MESSAGE_AGE_LIMIT
+)
+def hook(agents, parameters):
     """Hook a worker process to a measurement"""
-    asyncio.run(callback(measurement_uuid, timestamp, agents, parameters))
+    asyncio.run(callback(agents, parameters))

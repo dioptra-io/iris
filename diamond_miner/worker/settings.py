@@ -7,7 +7,8 @@ class WorkerSettings(CommonSettings):
 
     WORKER_D_MINER_READER_PATH: Path = Path("/app/reader/build/Reader")
     WORKER_EXCLUSION_FILE_PATH: Path = Path("/app/reader/resources/excluded_prefixes")
-    WORKER_TIMEOUT: int = 60 * 60 * 1000
+    WORKER_TIME_LIMIT: int = 60 * 60 * 1000  # 1hour
+    WORKER_MESSAGE_AGE_LIMIT: int = 60 * 60 * 1000  # 1hour
 
     WORKER_WATCH_REFRESH: int = 1
 

@@ -11,17 +11,15 @@ settings = AgentSettings()
 storage = Storage()
 
 
-async def measuremement(redis, request):
+async def measuremement(uuid, request):
     """Conduct a measurement."""
     # Lock the client state
-    await redis.set(f"state:{redis.uuid}", 0)
-
     measuremement_uuid = request["measurement_uuid"]
     round_number = request["round"]
 
-    result_filename = f"{redis.uuid}_results_{round_number}.pcap"
+    result_filename = f"{uuid}_results_{round_number}.pcap"
     result_filepath = str(settings.AGENT_RESULTS_DIR / result_filename)
-    starttime_filename = f"{redis.uuid}_starttime_{round_number}.log"
+    starttime_filename = f"{uuid}_starttime_{round_number}.log"
     starttime_filepath = str(settings.AGENT_RESULTS_DIR / starttime_filename)
 
     # Download target file locally
@@ -49,6 +47,3 @@ async def measuremement(redis, request):
     # Remove local result file
     await aios.remove(result_filepath)
     await aios.remove(starttime_filepath)
-
-    # Unlock the client state
-    await redis.set(f"state:{redis.uuid}", 1)

@@ -1,14 +1,12 @@
 import aioredis
 import asyncio
 
-from uuid import uuid4
-
 
 class Redis(object):
     """Redis interface."""
 
     def __init__(self, uuid=None):
-        self.uuid = uuid if uuid is not None else str(uuid4())
+        self.uuid = uuid
 
         self.redis = None
         self.info = None
@@ -18,12 +16,14 @@ class Redis(object):
         self.redis = await aioredis.create_redis(host)
         if password:
             await self.redis.auth(password)
-
-        await self.redis.client_setname(self.uuid)
-        self.info = await self.whoami()
+        if self.uuid:
+            await self.redis.client_setname(self.uuid)
+            self.info = await self.whoami()
 
     async def whoami(self):
         """Get Redis own client information."""
+        if not self.uuid:
+            return
         clients = await self.redis.client_list()
         infos = [c for c in clients if c.name == self.uuid]
         if len(infos) != 1:
@@ -41,10 +41,10 @@ class Redis(object):
 
     async def agents_info(self):
         """Get client information."""
-        clients = await self.redis.client_list()
-        clients = [c for c in clients if c.name and not c.name.startswith("controller")]
-        states = await asyncio.gather(*[self.client_state(c.name) for c in clients])
-        return [(c, s) for c, s in zip(clients, states)]
+        agents = await self.redis.client_list()
+        agents = [agent.name for agent in agents if agent.name]
+        states = await asyncio.gather(*[self.client_state(agent) for agent in agents])
+        return [(c, s) for c, s in zip(agents, states)]
 
     async def get(self, *args, **kwargs):
         """Get a value from a key input."""
@@ -53,6 +53,9 @@ class Redis(object):
     async def set(self, *args, **kwargs):
         """Set a value from a key input."""
         return await self.redis.set(*args, **kwargs)
+
+    async def delete(self, *args, **kwargs):
+        return await self.redis.delete(*args, **kwargs)
 
     async def register_measurement(self, measurement_uuid):
         """Register a measurement."""

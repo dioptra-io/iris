@@ -4,12 +4,11 @@ import ipaddress
 
 from aioch import Client
 from datetime import datetime
-from diamond_miner.api import logger
 from diamond_miner.api.settings import APISettings
 from diamond_miner.commons.database import Database
 from diamond_miner.commons.storage import Storage
 from diamond_miner.worker.hooks import hook
-from fastapi import APIRouter, BackgroundTasks, Request, status, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Request, status
 from pydantic import BaseModel
 from uuid import uuid4
 
@@ -19,10 +18,11 @@ settings = APISettings()
 storage = Storage()
 
 
-async def measurement_formater_summary(uuid, ongoing_measurements):
+async def measurement_formater_summary(redis, uuid):
     measurement = {"uuid": uuid}
-    if uuid in ongoing_measurements:
-        measurement["status"] = "ongoing"
+    status = await redis.get(f"published:{uuid}")
+    if status is not None:
+        measurement["status"] = status
     else:
         measurement["status"] = "finished"
     return measurement
@@ -38,19 +38,20 @@ def packet_formater(row):
         "source_port": row[5],
         "destination_port": row[6],
         "ttl": row[7],
-        "type": row[8],
-        "code": row[9],
-        "rtt": row[10],
-        "reply_ttl": row[11],
-        "reply_size": row[12],
-        "round": row[13],
+        "ttl_check": row[8],  # implemented only in UDP
+        "type": row[9],
+        "code": row[10],
+        "rtt": row[11],
+        "reply_ttl": row[12],
+        "reply_size": row[13],
+        "round": row[14],
         # "snapshot": row[14], # Not curently used
     }
 
 
-async def measurement_formater_full(uuid, ongoing_measurements):
+async def measurement_formater_full(redis, uuid):
     """Format a measurement."""
-    measurement = await measurement_formater_summary(uuid, ongoing_measurements)
+    measurement = await measurement_formater_summary(redis, uuid)
 
     if measurement["status"] != "finished":
         return measurement
@@ -94,14 +95,11 @@ async def measurement_formater_full(uuid, ongoing_measurements):
 async def get_measurements(request: Request):
     """Get global measurements information."""
     all_measurements = await request.app.redis.get_measurements()
-    ongoing_measurements = await storage.get_ongoing_measurements()
 
     measurements = []
     for measurement in all_measurements:
         uuid = measurement.decode("utf-8")
-        measurements.append(
-            await measurement_formater_summary(uuid, ongoing_measurements)
-        )
+        measurements.append(await measurement_formater_summary(request.app.redis, uuid))
 
     return {
         "count": len(measurements),
@@ -115,11 +113,9 @@ async def get_measurement_by_uuid(
 ):
     """Get measurement results by uuid."""
     all_measurements = await request.app.redis.get_measurements()
-    ongoing_measurements = await storage.get_ongoing_measurements()
-
     for measurement in all_measurements:
         if measurement.decode("utf-8") == uuid:
-            return await measurement_formater_full(uuid, ongoing_measurements)
+            return await measurement_formater_full(request.app.redis, uuid)
     raise HTTPException(status_code=404, detail="Measurement not found")
 
 
@@ -131,32 +127,27 @@ class Measurement(BaseModel):
     max_ttl: int
 
 
-async def publish_measurement(redis, measurement_uuid, timestamp, agents, parameters):
+async def publish_measurement(redis, agents, parameters):
     """Launch a measurement procedure on each available agents."""
+    measurement_uuid = parameters["measurement_uuid"]
     await redis.register_measurement(measurement_uuid)
-    try:
-        await storage.create_bucket(bucket=measurement_uuid)
-    except Exception:
-        logger.error(f"Impossible to create bucket {measurement_uuid}")
-        return
-
-    await redis.publish(
-        "request:all",
-        {
-            "measurement_uuid": measurement_uuid,
-            "measurement_tool": "diamond_miner",
-            "timestamp": timestamp,
-            "round": 1,
-            "parameters": dict(parameters),
-        },
-    )
-
-    hook.send(measurement_uuid, timestamp, agents, dict(parameters))
+    hook.send(agents, parameters)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def post_measurement(
-    request: Request, background_tasks: BackgroundTasks, measurement: Measurement
+    request: Request,
+    background_tasks: BackgroundTasks,
+    measurement: Measurement = Body(
+        ...,
+        example={
+            "target_file_key": "test.txt",
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    ),
 ):
     """Launch a measurement."""
     try:
@@ -167,20 +158,14 @@ async def post_measurement(
         raise HTTPException(status_code=404, detail="File object not found")
 
     agents = await request.app.redis.agents_info()
-    agents = [client for client, state in agents if state is True]
-    if not agents:
-        raise HTTPException(status_code=404, detail="No client available")
+    agents = [agent for agent, _ in agents]
 
-    measurement_uuid = str(uuid4())
-    timestamp = datetime.timestamp(datetime.now())
+    parameters = dict(measurement)
+    parameters["measurement_uuid"] = str(uuid4())
+    parameters["timestamp"] = datetime.timestamp(datetime.now())
 
     background_tasks.add_task(
-        publish_measurement,
-        request.app.redis,
-        measurement_uuid,
-        timestamp,
-        agents,
-        measurement,
+        publish_measurement, request.app.redis, agents, parameters,
     )
 
-    return {"measurement": measurement_uuid}
+    return {"measurement": parameters["measurement_uuid"]}

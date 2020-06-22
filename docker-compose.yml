@@ -33,6 +33,8 @@ services:
     ports:
       - "8000:8000"
     links:
+      - clickhouse
+      - minio
       - redis
 
   worker:
@@ -42,14 +44,19 @@ services:
     volumes:
       - ./diamond_miner:/app/diamond_miner
     links:
-      - redis
       - clickhouse
+      - minio
+      - redis
 
   agent:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-agent
+    cap_add:
+      - SYS_PTRACE
     volumes:
       - ./diamond_miner:/app/diamond_miner
     links:
+      - clickhouse
+      - minio
       - redis

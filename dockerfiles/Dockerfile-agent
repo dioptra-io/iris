@@ -52,7 +52,7 @@ ENV TMPDIR /app/prober/resources/
 ENV MEMORY 24
 
 # Diamond-Miner Prober
-RUN git clone https://github.com/dioptra-io/diamond-miner-cpp.git prober
+RUN git clone -b feature/redundant_ttl https://github.com/dioptra-io/diamond-miner-cpp.git prober
 RUN mkdir prober/resources
 COPY statics/excluded_prefixes /app/prober/resources
 WORKDIR /app/prober
