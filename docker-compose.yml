@@ -41,6 +41,8 @@ services:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-worker
+      args:
+        DEBUG_ITERATION: 0
     volumes:
       - ./diamond_miner:/app/diamond_miner
     links:
@@ -52,6 +54,8 @@ services:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-agent
+      args:
+        DEBUG_ITERATION: 0
     cap_add:
       - SYS_PTRACE
     volumes:

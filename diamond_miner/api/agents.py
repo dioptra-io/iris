@@ -1,5 +1,7 @@
 """agents operations."""
 
+import json
+
 from fastapi import APIRouter, Request, HTTPException
 
 router = APIRouter()
@@ -33,9 +35,26 @@ async def get_agent_by_uuid(request: Request, uuid: str):
         raise HTTPException(status_code=404, detail="Agent not found")
     elif len(filtered_agents) > 1:
         raise HTTPException(status_code=500, detail="Duplicate Redis UUID")
-    else:
-        agent = filtered_agents[0]
-        return {"uuid": agent[0], "state": state_formater(agent[1])}
+
+    agent = filtered_agents[0]
+    agent_uuid = agent[0]
+    agent_status = agent[1]
+    agent_parameters = await request.app.redis.get(f"parameters:{agent_uuid}")
+    ip_address, probing_rate, buffer_sniffer_size = None, None, None
+    if agent_parameters is not None:
+        agent_parameters = json.loads(agent_parameters)
+        ip_address, probing_rate, buffer_sniffer_size = (
+            agent_parameters["ip_address"],
+            agent_parameters["probing_rate"],
+            agent_parameters["buffer_sniffer_size"],
+        )
+    return {
+        "uuid": agent_uuid,
+        "state": state_formater(agent_status),
+        "ip_address": ip_address,
+        "probing_rate": probing_rate,
+        "buffer_sniffer_size": buffer_sniffer_size,
+    }
 
 
 @router.post("/")

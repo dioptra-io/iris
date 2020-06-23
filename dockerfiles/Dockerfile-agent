@@ -52,16 +52,17 @@ ENV TMPDIR /app/prober/resources/
 ENV MEMORY 24
 
 # Diamond-Miner Prober
+ARG DEBUG_ITERATION=0
 RUN git clone -b feature/redundant_ttl https://github.com/dioptra-io/diamond-miner-cpp.git prober
 RUN mkdir prober/resources
 COPY statics/excluded_prefixes /app/prober/resources
 WORKDIR /app/prober
 RUN if [ "$PFRING" = "enable" ] ; then mkdir build && \
     cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPROBER=1 -DPF_RING=1 && \
+    cmake .. -DCMAKE_BUILD_TYPE=Debug -DPROBER=1 -DPF_RING=1 && \
     make -j8 ; else mkdir build && \
     cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPROBER=1 && \
+    cmake .. -DCMAKE_BUILD_TYPE=Debug -DPROBER=1 && \
     make -j8 ; fi
 
 # Diamond-Miner Agent
