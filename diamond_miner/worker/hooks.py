@@ -20,6 +20,10 @@ database = Database(host=settings.WORKER_DATABASE_HOST, logger=logger)
 storage = Storage()
 
 
+def extract_round_number(filename):
+    return int(filename.split("_")[-1].split(".")[0])
+
+
 async def pipeline(
     agent_uuid,
     agent_parameters,
@@ -31,7 +35,7 @@ async def pipeline(
     logger.info(f"New files detected for agent `{agent_uuid}`")
     measurement_uuid = measurement_parameters["measurement_uuid"]
     timestamp = measurement_parameters["timestamp"]
-    round_number = int(result_filename.split("_")[2].split(".")[0])
+    round_number = extract_round_number(result_filename)
 
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
 
@@ -139,75 +143,123 @@ async def pipeline(
         return None
 
 
+async def sanity_clean(measurement_uuid, agent_uuid):
+    """Clean AWS S3 if the sanity check don't pass."""
+    remote_files = await storage.get_all_files(measurement_uuid)
+    for remote_file in remote_files:
+        remote_filename = remote_file["key"]
+        if remote_filename.startswith(agent_uuid):
+            logger.warning(f"Sanity remove `{remote_filename}` from AWS S3")
+            response = await storage.delete_file_no_check(
+                measurement_uuid, remote_filename
+            )
+            if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
+                logger.error(f"Impossible to remove `{remote_filename}`")
+
+
+async def sanity_check(redis, measurement_uuid, agent_uuid):
+    """
+    Sanity check to close the loop if the agent is disconnected.
+    Returns: True if the agent is alive, else False.
+    """
+    checks = []
+    for _ in range(settings.WORKER_SANITY_CHECK_RETRIES):
+        checks.append(redis.check_agent(agent_uuid))
+        asyncio.sleep(settings.WORKER_SANITY_CHECK_REFRESH)
+    if False in checks:
+        await sanity_clean(measurement_uuid, agent_uuid)
+        return False
+    return True
+
+
 async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
     """Watch for a results from an agent."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
     while True:
         logger.debug(f"{measurement_uuid} -> {agent_uuid}")
-        files = await storage.get_all_files(measurement_uuid)
-        try:
-            # Search for result file & start time file
-            # TODO Check the round, take the lowest,
-            # and check if it the same for the two files
-            result_filename = [
-                f["key"] for f in files if f["key"].startswith(f"{agent_uuid}_results")
-            ][0]
-            starttime_filename = [
-                f["key"]
-                for f in files
-                if f["key"].startswith(f"{agent_uuid}_starttime")
-            ][0]
 
-            # If found, then execute process pipeline
-            shuffled_next_round_csv_filepath = await pipeline(
-                agent_uuid,
-                agent_parameters,
-                measurement_parameters,
-                result_filename,
-                starttime_filename,
+        if settings.WORKER_SANITY_CHECK_ENABLE:
+            logger.debug(f"Perform sanity check on agent `{agent_uuid}`")
+            is_agent_alive = await sanity_check(redis, measurement_uuid, agent_uuid)
+            if not is_agent_alive:
+                logger.warning(f"Agent `{agent_uuid} seems to be down. Stop watching.`")
+                break
+
+        remote_files = await storage.get_all_files(measurement_uuid)
+
+        # Search for result file & start time file
+        result_files = []
+        starttime_files = []
+        for remote_file in remote_files:
+            remote_filename = remote_file["key"]
+            if remote_filename.startswith(f"{agent_uuid}_results"):
+                result_files.append(remote_filename)
+            elif remote_filename.startswith(f"{agent_uuid}_starttime"):
+                starttime_files.append(remote_filename)
+
+        if len(result_files) == 0 or len(starttime_files) == 0:
+            # The result file & start time file are not present, watch again
+            await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
+            continue
+
+        sorted(result_files, key=lambda x: extract_round_number(x))
+        sorted(starttime_files, key=lambda x: extract_round_number(x))
+
+        lowest_round_result_files = extract_round_number(result_files[0])
+        lowest_round_starttime_files = extract_round_number(starttime_files[0])
+
+        if lowest_round_result_files != lowest_round_starttime_files:
+            # The lowest round numbers don't match, watch again
+            await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
+            continue
+
+        result_filename, starttime_filename = result_files[0], starttime_files[0]
+
+        # If found, then execute process pipeline
+        shuffled_next_round_csv_filepath = await pipeline(
+            agent_uuid,
+            agent_parameters,
+            measurement_parameters,
+            result_filename,
+            starttime_filename,
+        )
+
+        if shuffled_next_round_csv_filepath is None:
+            logger.info(
+                f"Measurement `{measurement_uuid}` is done for agent `{agent_uuid}`"
+            )
+            break
+        else:
+            logger.info(
+                f"Publish measurement `{measurement_uuid}` to agent {agent_uuid}"
             )
 
-            if shuffled_next_round_csv_filepath is None:
-                logger.info(
-                    f"Measurement `{measurement_uuid}` is done for agent `{agent_uuid}`"
-                )
-                break
-            else:
-                logger.info(
-                    f"Publish measurement `{measurement_uuid}` to agent {agent_uuid}"
-                )
+            round_number = int(
+                shuffled_next_round_csv_filepath.split("_")[-1].split(".")[0]
+            )
+            measurement_parameters["csv_probe_file"] = shuffled_next_round_csv_filepath
 
-                round_number = int(
-                    shuffled_next_round_csv_filepath.split("_")[-1].split(".")[0]
-                )
-                measurement_parameters[
-                    "csv_probe_file"
-                ] = shuffled_next_round_csv_filepath
-
-                await redis.publish(
-                    agent_uuid,
-                    {
-                        "measurement_uuid": measurement_uuid,
-                        "measurement_tool": "diamond_miner",
-                        "timestamp": measurement_parameters["timestamp"],
-                        "round": round_number,
-                        "parameters": measurement_parameters,
-                    },
-                )
-        except IndexError:
-            # If not found, wait and restart
-            await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
+            await redis.publish(
+                agent_uuid,
+                {
+                    "measurement_uuid": measurement_uuid,
+                    "measurement_tool": "diamond_miner",
+                    "timestamp": measurement_parameters["timestamp"],
+                    "round": round_number,
+                    "parameters": measurement_parameters,
+                },
+            )
 
 
 async def callback(agents, measurement_parameters):
     """Asynchronous callback."""
-    logger.info("New measurement! Publishing request")
     measurement_uuid = measurement_parameters["measurement_uuid"]
+    logger.info(f"New measurement `{measurement_uuid}`. Publishing request.")
 
     redis = Redis()
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
-    logger.info("Create local measurement directory if not exists")
+    logger.info("Create local measurement directory if not exists.")
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
     try:
         await aios.mkdir(str(measurement_results_path))
@@ -217,7 +269,7 @@ async def callback(agents, measurement_parameters):
 
     if await redis.get_measurement_state(measurement_uuid) is None:
         # There is no measurement state, so the measurement hasn't started yet
-        logger.info("Create measurement bucket")
+        logger.info(f"Create measurement bucket  `{measurement_uuid}`")
         try:
             await storage.create_bucket(bucket=measurement_uuid)
         except Exception:
@@ -253,7 +305,7 @@ async def callback(agents, measurement_parameters):
     )
 
     if not settings.WORKER_DEBUG_MODE:
-        logger.info("Removing local measurement directory")
+        logger.info(f"Removing local measurement directory `{measurement_uuid}`")
         try:
             await aios.rmdir(str(measurement_results_path))
         except OSError:
@@ -261,12 +313,13 @@ async def callback(agents, measurement_parameters):
                 f"Impossible to remove local measurement `{measurement_uuid}` directory"
             )
 
-    logger.info("Delete measurement bucket")
+    logger.info(f"Delete measurement bucket `{measurement_uuid}`")
     try:
         await storage.delete_bucket(bucket=measurement_uuid)
     except Exception:
         logger.error(f"Impossible to remove bucket `{measurement_uuid}`")
 
+    logger.info(f"Measurement `{measurement_uuid}` is done")
     await redis.delete_measurement_state(measurement_uuid)
     await redis.close()
 

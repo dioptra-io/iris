@@ -17,10 +17,12 @@ async def consumer(agent_uuid, queue):
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD, register=False)
     while True:
         measurement_uuid, measuremement = await queue.get()
-        logger.info("Request consumption")
+        logger.info(f"Set agent `{agent_uuid}` state to `working`")
         await redis.set_agent_state("working")
+        logger.info(f"Set measurement `{measurement_uuid}` state to `ongoing`")
         await redis.set_measurement_state(measurement_uuid, "ongoing")
         await measuremement
+        logger.info(f"Set agent `{agent_uuid}` state to `idle`")
         await redis.set_agent_state("idle")
     await redis.close()
 

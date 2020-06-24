@@ -56,6 +56,19 @@ class Redis(object):
             return None
         return json.loads(parameters)
 
+    async def check_agent(self, uuid):
+        agents = self.get_agents(state=False, parameters=False)
+        agents = [agent["uuid"] for agent in agents]
+        if uuid not in agents:
+            return False
+        agent_state = self.get_agent_state(uuid)
+        if agent_state == "unknown":
+            return False
+        agent_parameters = self.get_agent_parameters(uuid)
+        if agent_parameters is None:
+            return False
+        return True
+
     async def register_measurement(self, uuid):
         """Register a measurement."""
         await self._redis.lpush("measurements", uuid)
