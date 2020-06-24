@@ -31,6 +31,8 @@ RUN ldconfig
 # Terashuf
 RUN git clone https://github.com/alexandres/terashuf.git
 RUN cd terashuf && make -j8 && cd ..
+ENV TMPDIR /app/reader/resources/
+ENV MEMORY 24
 
 # Clickhouse
 WORKDIR /root
@@ -58,10 +60,6 @@ RUN apt-get update \
             tzdata \
     && rm -rf /var/lib/apt/lists/* /var/cache/debconf \
     && apt-get clean
-
-# Exports
-ENV TMPDIR /app/reader/resources/
-ENV MEMORY 24
 
 WORKDIR /app
 

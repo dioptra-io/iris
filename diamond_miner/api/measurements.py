@@ -20,9 +20,9 @@ storage = Storage()
 
 async def measurement_formater_summary(redis, uuid):
     measurement = {"uuid": uuid}
-    status = await redis.get(f"published:{uuid}")
-    if status is not None:
-        measurement["status"] = status
+    state = await redis.get_measurement_state(uuid)
+    if state is not None:
+        measurement["status"] = state
     else:
         measurement["status"] = "finished"
     return measurement
@@ -97,9 +97,10 @@ async def get_measurements(request: Request):
     all_measurements = await request.app.redis.get_measurements()
 
     measurements = []
-    for measurement in all_measurements:
-        uuid = measurement.decode("utf-8")
-        measurements.append(await measurement_formater_summary(request.app.redis, uuid))
+    for measurement_uuid in all_measurements:
+        measurements.append(
+            await measurement_formater_summary(request.app.redis, measurement_uuid)
+        )
 
     return {
         "count": len(measurements),
@@ -113,8 +114,8 @@ async def get_measurement_by_uuid(
 ):
     """Get measurement results by uuid."""
     all_measurements = await request.app.redis.get_measurements()
-    for measurement in all_measurements:
-        if measurement.decode("utf-8") == uuid:
+    for measurement_uuid in all_measurements:
+        if measurement_uuid == uuid:
             return await measurement_formater_full(request.app.redis, uuid)
     raise HTTPException(status_code=404, detail="Measurement not found")
 
@@ -157,8 +158,8 @@ async def post_measurement(
     except Exception:
         raise HTTPException(status_code=404, detail="File object not found")
 
-    agents = await request.app.redis.agents_info()
-    agents = [agent for agent, _ in agents]
+    agents = await request.app.redis.get_agents(state=False, parameters=False)
+    agents = [agent["uuid"] for agent in agents]
 
     parameters = dict(measurement)
     parameters["measurement_uuid"] = str(uuid4())

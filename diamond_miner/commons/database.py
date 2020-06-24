@@ -58,7 +58,7 @@ class Database(object):
         cmd = (
             "clickhouse-client --host="
             + self.host
-            + " --query='CREATE TABLE "
+            + " --query='CREATE TABLE IF NOT EXISTS "
             + str(table_name)
             + "(src_ip UInt32, dst_prefix UInt32, dst_ip UInt32, reply_ip UInt32, "
             + "proto UInt8, src_port UInt16, dst_port UInt16, ttl UInt8, "
@@ -90,7 +90,7 @@ class Database(object):
         cmd = (
             "clickhouse-client --host="
             + self.host
-            + " --query='DROP TABLE "
+            + " --query='DROP TABLE IF EXISTS "
             + str(table_name)
             + "'"
         )

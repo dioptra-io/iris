@@ -40,6 +40,8 @@ RUN ldconfig
 # Terashuf
 RUN git clone https://github.com/alexandres/terashuf.git
 RUN cd terashuf && make -j8 && cd ..
+ENV TMPDIR /app/reader/resources/
+ENV MEMORY 24
 
 # Web page
 RUN apt-get -y install nginx
@@ -47,9 +49,9 @@ RUN rm -f /var/www/html/*
 COPY statics/index.html /var/www/html/index.html
 EXPOSE 80
 
-# Exports
-ENV TMPDIR /app/prober/resources/
-ENV MEMORY 24
+# Debug tools
+RUN apt-get update
+RUN apt-get install -y gdb tcpdump traceroute
 
 # Diamond-Miner Prober
 ARG DEBUG_ITERATION=0

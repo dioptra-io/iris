@@ -1,6 +1,5 @@
 import asyncio
 import dramatiq
-import json
 
 from aiofiles import os as aios
 from diamond_miner.commons.database import Database
@@ -13,6 +12,7 @@ from diamond_miner.worker.processors import (
     shuffle_next_round_csv,
 )
 from diamond_miner.worker.settings import WorkerSettings
+from pathlib import Path
 
 
 settings = WorkerSettings()
@@ -79,7 +79,6 @@ async def pipeline(
     )
     logger.info(f"Create table `{table_name}`")
     await database.create_table(table_name, drop=False)
-    await database.clean_table(table_name)
 
     logger.info("Insert CSV file into database")
     await database.insert_csv(csv_filepath, table_name)
@@ -95,7 +94,7 @@ async def pipeline(
     if agent_parameters is None:
         logger.error("No agent parameters")
 
-    logger.info("Compute the next round CSV file")
+    logger.info("Compute the next round CSV probe file")
     await next_round_csv(
         round_number,
         table_name,
@@ -111,25 +110,43 @@ async def pipeline(
         measurement_results_path / shuffled_next_round_csv_filename
     )
 
-    logger.info("Shuffle next round CSV file")
-    await shuffle_next_round_csv(
-        next_round_csv_filepath, shuffled_next_round_csv_filepath
-    )
-
     if not settings.WORKER_DEBUG_MODE:
-        logger.info("Remove local next round CSV file")
+        logger.info("Remove local next round CSV probe file")
         await aios.remove(next_round_csv_filepath)
 
-    return (agent_uuid, shuffled_next_round_csv_filepath)
+    if (await aios.stat(next_round_csv_filepath)).st_size != 0:
+        logger.info(f"Next round is required for measurement `{measurement_uuid}`")
+        logger.info("Shuffle next round CSV probe file")
+        await shuffle_next_round_csv(
+            next_round_csv_filepath, shuffled_next_round_csv_filepath
+        )
+
+        logger.info("Uploading next round CSV probe file")
+        with Path(shuffled_next_round_csv_filepath).open("rb") as fin:
+            await storage.upload_file(
+                measurement_uuid, shuffled_next_round_csv_filename, fin
+            )
+
+        if not settings.WORKER_DEBUG_MODE:
+            logger.info("Remove local next round CSV probe file")
+            await aios.remove(shuffled_next_round_csv_filepath)
+        return shuffled_next_round_csv_filename
+    else:
+        logger.info(f"Next round is not required for measurement `{measurement_uuid}`")
+        if not settings.WORKER_DEBUG_MODE:
+            logger.info("Remove local empty next round CSV probe file")
+            await aios.remove(shuffled_next_round_csv_filepath)
+        return None
 
 
-async def watch(agent_uuid, agent_parameters, measurement_parameters):
+async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
     """Watch for a results from an agent."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
     while True:
         logger.debug(f"{measurement_uuid} -> {agent_uuid}")
         files = await storage.get_all_files(measurement_uuid)
         try:
+            # Search for result file & start time file
             # TODO Check the round, take the lowest,
             # and check if it the same for the two files
             result_filename = [
@@ -140,15 +157,45 @@ async def watch(agent_uuid, agent_parameters, measurement_parameters):
                 for f in files
                 if f["key"].startswith(f"{agent_uuid}_starttime")
             ][0]
-            await pipeline(
+
+            # If found, then execute process pipeline
+            shuffled_next_round_csv_filepath = await pipeline(
                 agent_uuid,
                 agent_parameters,
                 measurement_parameters,
                 result_filename,
                 starttime_filename,
             )
-            break
+
+            if shuffled_next_round_csv_filepath is None:
+                logger.info(
+                    f"Measurement `{measurement_uuid}` is done for agent `{agent_uuid}`"
+                )
+                break
+            else:
+                logger.info(
+                    f"Publish measurement `{measurement_uuid}` to agent {agent_uuid}"
+                )
+
+                round_number = int(
+                    shuffled_next_round_csv_filepath.split("_")[-1].split(".")[0]
+                )
+                measurement_parameters[
+                    "csv_probe_file"
+                ] = shuffled_next_round_csv_filepath
+
+                await redis.publish(
+                    agent_uuid,
+                    {
+                        "measurement_uuid": measurement_uuid,
+                        "measurement_tool": "diamond_miner",
+                        "timestamp": measurement_parameters["timestamp"],
+                        "round": round_number,
+                        "parameters": measurement_parameters,
+                    },
+                )
         except IndexError:
+            # If not found, wait and restart
             await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
 
 
@@ -168,37 +215,38 @@ async def callback(agents, measurement_parameters):
         logger.error(f"Local measurement `{measurement_uuid}` directory already exits.")
         return
 
-    is_measurement_published = bool(await redis.get(f"published:{measurement_uuid}"))
-    if not is_measurement_published:
+    if await redis.get_measurement_state(measurement_uuid) is None:
+        # There is no measurement state, so the measurement hasn't started yet
+        logger.info("Create measurement bucket")
         try:
             await storage.create_bucket(bucket=measurement_uuid)
         except Exception:
             logger.error(f"Impossible to create bucket `{measurement_uuid}`")
-        await redis.set(f"published:{measurement_uuid}", "waiting")
+
+        logger.info(f"Set measurement `{measurement_uuid}` state to `waiting`")
+        await redis.set_measurement_state(measurement_uuid, "waiting")
+
+        logger.info(f"Publish measurement `{measurement_uuid}` to agents")
         await redis.publish(
-            "request:all",
+            "all",
             {
                 "measurement_uuid": measurement_uuid,
                 "measurement_tool": "diamond_miner",
                 "timestamp": measurement_parameters["timestamp"],
                 "round": 1,
-                "parameters": dict(measurement_parameters),
+                "parameters": measurement_parameters,
             },
         )
 
-    logger.info("Getting agent parameters")
-    agents_parameters = []
-    for agent_uuid in agents:
-        agent_parameters = await redis.get(f"parameters:{agent_uuid}")
-        if agent_parameters:
-            agents_parameters.append(json.loads(agent_parameters))
-        else:
-            agents_parameters.append(None)
+    logger.info("Getting agents parameters")
+    agents_parameters = [
+        await redis.get_agent_parameters(agent_uuid) for agent_uuid in agents
+    ]
 
     logger.info("Watching ...")
     await asyncio.gather(
         *[
-            watch(agent_uuid, agent_parameters, measurement_parameters)
+            watch(redis, agent_uuid, agent_parameters, measurement_parameters)
             for agent_uuid, agent_parameters in zip(agents, agents_parameters)
             if agent_parameters is not None
         ]
@@ -219,7 +267,7 @@ async def callback(agents, measurement_parameters):
     except Exception:
         logger.error(f"Impossible to remove bucket `{measurement_uuid}`")
 
-    await redis.delete(f"published:{measurement_uuid}")
+    await redis.delete_measurement_state(measurement_uuid)
     await redis.close()
 
 
