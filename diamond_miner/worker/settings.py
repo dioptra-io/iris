@@ -19,7 +19,11 @@ class WorkerSettings(CommonSettings):
     WORKER_TIME_LIMIT: int = 60 * 60 * 1000  # 1hour
     WORKER_MESSAGE_AGE_LIMIT: int = 60 * 60 * 1000  # 1hour
 
-    WORKER_WATCH_REFRESH: int = 1
+    WORKER_WATCH_REFRESH: int = 1  # in seconds
+
+    WORKER_SANITY_CHECK_ENABLE: bool = True
+    WORKER_SANITY_CHECK_RETRIES: int = 3
+    WORKER_SANITY_CHECK_REFRESH: int = 1  # in seconds
 
     WORKER_DATABASE_HOST: str = "clickhouse"
     WORKER_DATABASE_NAME: str = "diamond_miner"
