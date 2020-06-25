@@ -14,3 +14,6 @@ class CommonSettings(BaseSettings):
     REDIS_HOSTNAME: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = "redispass"
+
+    LOKI_URL: str = "http://loki:3100/loki/api/v1/push"
+    LOKI_VERSION: str = "1"

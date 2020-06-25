@@ -6,6 +6,7 @@ from diamond_miner.api.settings import APISettings
 from diamond_miner.commons.redis import Redis
 from diamond_miner.commons.storage import Storage
 from fastapi import FastAPI
+from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 
 settings = APISettings()
@@ -13,6 +14,10 @@ settings = APISettings()
 app = FastAPI(
     title="Diamond-Miner", description="Diamond-Miner API", version=__version__,
 )
+
+app.add_middleware(PrometheusMiddleware)
+app.add_route("/metrics", handle_metrics)
+
 app.include_router(router, prefix="/v0")
 
 
