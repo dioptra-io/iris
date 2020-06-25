@@ -1,18 +1,27 @@
 """agents operations."""
 
+from diamond_miner.api.models import (
+    ExceptionResponse,
+    AgentsGetResponse,
+    AgentsGetByUUIDResponse,
+)
 from fastapi import APIRouter, Request, HTTPException
 
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("/", response_model=AgentsGetResponse)
 async def get_agents(request: Request):
     """Get all agents information."""
     agents = await request.app.redis.get_agents(parameters=False)
     return {"count": len(agents), "results": agents}
 
 
-@router.get("/{uuid}")
+@router.get(
+    "/{uuid}",
+    response_model=AgentsGetByUUIDResponse,
+    responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
+)
 async def get_agent_by_uuid(request: Request, uuid: str):
     """Get agent information from agent UUID."""
     agents = await request.app.redis.get_agents(state=False, parameters=False)

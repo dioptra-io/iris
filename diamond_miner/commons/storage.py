@@ -48,7 +48,7 @@ class Storage(object):
             bucket = await s3.Bucket(bucket)
             async for file_object in bucket.objects.all():
                 file_size = await file_object.size
-                last_modified = await file_object.last_modified
+                last_modified = str(await file_object.last_modified)
                 targets.append(
                     {
                         "key": file_object.key,

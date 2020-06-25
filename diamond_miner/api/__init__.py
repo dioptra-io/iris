@@ -10,16 +10,17 @@ settings = APISettings()
 
 # Set logger
 logger = logging.getLogger("api")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s :: %(levelname)s :: API :: %(message)s")
 stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
+stream_handler.setLevel(logging.DEBUG)
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 loki_handler = logging_loki.LokiQueueHandler(
     Queue(-1), url=settings.LOKI_URL, version=settings.LOKI_VERSION
 )
+loki_handler.setLevel(logging.INFO)
 logger.addHandler(loki_handler)
 
 logger.propagate = False
