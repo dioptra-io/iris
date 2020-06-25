@@ -1,4 +1,4 @@
-"""API Body and Response models."""
+"""API Body and Response schemas."""
 
 from pydantic import BaseModel, Field
 from typing import Set, List
@@ -83,25 +83,13 @@ class TargetsDeleteResponse(BaseModel):
 # --- Measurements ----
 
 
-class MeasurementFullResponse(BaseModel):
-    """Full information about a measurement (Response)."""
+class MeasurementInfoResponse(BaseModel):
+    """Information about a measurement (Response)."""
 
-    source_ip: str
-    destination_prefix: str
-    destination_ip: str
-    reply_ip: str
-    protocol: str
-    source_port: int
-    destination_port: int
-    ttl: int
-    ttl_check: int  # implemented only in UDP
-    type: int
-    code: int
-    rtt: float
-    reply_ttl: int
-    reply_size: int
-    round: int
-    # snapshot: int # Not curently used
+    uuid: str
+    status: str
+    date: str
+    agents: Set[str]
 
 
 class MeasurementSummaryResponse(BaseModel):
@@ -144,12 +132,31 @@ class MeasurementsPostResponse(BaseModel):
     uuid: str
 
 
-class MeasurementsGetByUuuidResponse(BaseModel):
+class PacketResponse(BaseModel):
+    """Full information about a measurement (Response)."""
+
+    source_ip: str
+    destination_prefix: str
+    destination_ip: str
+    reply_ip: str
+    protocol: str
+    source_port: int
+    destination_port: int
+    ttl: int
+    ttl_check: int  # implemented only in UDP
+    type: int
+    code: int
+    rtt: float
+    reply_ttl: int
+    reply_size: int
+    round: int
+    # snapshot: int # Not curently used
+
+
+class MeasurementsResultsResponse(BaseModel):
     """GET /measurements/{uuid} (Response)."""
 
-    uuid: str
-    status: str
-    date: str
-    agents: Set[str]
     count: int
-    results: List[MeasurementFullResponse]
+    next: str = None
+    previous: str = None
+    results: List[PacketResponse]

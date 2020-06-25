@@ -1,6 +1,6 @@
 """agents operations."""
 
-from diamond_miner.api.models import (
+from diamond_miner.api.schemas import (
     ExceptionResponse,
     AgentsGetResponse,
     AgentsGetByUUIDResponse,
@@ -10,7 +10,7 @@ from fastapi import APIRouter, Request, HTTPException
 router = APIRouter()
 
 
-@router.get("/", response_model=AgentsGetResponse)
+@router.get("/", response_model=AgentsGetResponse, summary="Get all agents inforamtion")
 async def get_agents(request: Request):
     """Get all agents information."""
     agents = await request.app.redis.get_agents(parameters=False)
@@ -21,9 +21,10 @@ async def get_agents(request: Request):
     "/{uuid}",
     response_model=AgentsGetByUUIDResponse,
     responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
+    summary="Get agent information from UUID",
 )
 async def get_agent_by_uuid(request: Request, uuid: str):
-    """Get agent information from agent UUID."""
+    """Get agent information from UUID."""
     agents = await request.app.redis.get_agents(state=False, parameters=False)
     filtered_agents = [agent["uuid"] for agent in agents if agent["uuid"] == uuid]
     if len(filtered_agents) == 0:
@@ -37,13 +38,13 @@ async def get_agent_by_uuid(request: Request, uuid: str):
     return {"uuid": agent_uuid, "state": agent_state, "parameters": agent_parameters}
 
 
-@router.post("/")
+@router.post("/", summary="Deploy agents into Kubernetes cluster")
 def post_agents():
-    """Deploy agent into Kubernetes cluster."""
-    return {}
+    """Deploy agents into Kubernetes cluster."""
+    raise HTTPException(501, detail="Not implemented")
 
 
-@router.delete("/")
+@router.delete("/", summary="Undeploy agents from Kubernetes cluster")
 def delete_agents():
-    """Undeploy agent into Kubernetes cluster."""
-    return {}
+    """Undeploy agents from Kubernetes cluster."""
+    raise HTTPException(501, detail="Not implemented")

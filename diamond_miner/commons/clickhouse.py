@@ -1,10 +1,10 @@
-"""Interface with Clickhouse database."""
+"""Interface with Clickhouse database for management."""
 
 from diamond_miner.commons.subprocess import start_stream_subprocess
 
 
-class Database(object):
-    """Database interface."""
+class ClickhouseManagement(object):
+    """Clickhouse interface for management."""
 
     def __init__(self, host, logger):
         self.host = host

@@ -18,6 +18,7 @@ aiofiles = "^0.5.0"
 aioch = "^0.0.2"
 python-logging-loki = "^0.3.1"
 starlette_exporter = "^0.4.1"
+sqlalchemy-clickhouse = "^0.1.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

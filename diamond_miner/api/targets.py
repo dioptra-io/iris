@@ -1,7 +1,7 @@
 """Targets operations."""
 
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, status, HTTPException
-from diamond_miner.api.models import (
+from diamond_miner.api.schemas import (
     ExceptionResponse,
     TargetResponse,
     TargetsGetResponse,
@@ -16,8 +16,11 @@ settings = APISettings()
 storage = Storage()
 
 
-@router.get("/", response_model=TargetsGetResponse)
+@router.get(
+    "/", response_model=TargetsGetResponse, summary="Get all targets information"
+)
 async def get_targets():
+    """Get all targets lists information."""
     targets = await storage.get_all_files(settings.AWS_S3_TARGETS_BUCKET_NAME)
     return {"count": len(targets), "results": targets}
 
@@ -26,8 +29,10 @@ async def get_targets():
     "/{key}",
     response_model=TargetResponse,
     responses={404: {"model": ExceptionResponse}},
+    summary="Get targets list information by key",
 )
 async def get_target_by_key(key: str):
+    """"Get a targets list information by key."""
     try:
         target = await storage.get_file(settings.AWS_S3_TARGETS_BUCKET_NAME, key)
     except Exception:
@@ -43,12 +48,15 @@ async def upload_targets_file(targets_file):
 
 
 @router.post(
-    "/", status_code=status.HTTP_201_CREATED, response_model=TargetsPostResponse
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TargetsPostResponse,
+    summary="Upload a targets list",
 )
 async def post_target(
     background_tasks: BackgroundTasks, targets_file: UploadFile = File(...)
 ):
-    """Upload a file."""
+    """Upload a targets list to object storage."""
     background_tasks.add_task(upload_targets_file, targets_file)
     return {"key": targets_file.filename, "action": "upload"}
 
@@ -57,9 +65,10 @@ async def post_target(
     "/{key}",
     response_model=TargetsDeleteResponse,
     responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
+    summary="Delete a targets list from object storage.",
 )
 async def delete_target_by_key(key: str):
-    """Delete a file."""
+    """Delete a targets list from object storage."""
     try:
         response = await storage.delete_file_check(
             settings.AWS_S3_TARGETS_BUCKET_NAME, key
