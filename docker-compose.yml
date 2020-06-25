@@ -32,8 +32,9 @@ services:
       - ./diamond_miner:/app/diamond_miner
     ports:
       - "8000:8000"
-    links:
+    depends_on:
       - clickhouse
+      - loki
       - minio
       - redis
 
@@ -45,8 +46,9 @@ services:
         DEBUG_ITERATION: 0
     volumes:
       - ./diamond_miner:/app/diamond_miner
-    links:
+    depends_on:
       - clickhouse
+      - loki
       - minio
       - redis
 
@@ -60,7 +62,31 @@ services:
       - SYS_PTRACE
     volumes:
       - ./diamond_miner:/app/diamond_miner
-    links:
+    depends_on:
       - clickhouse
+      - loki
       - minio
       - redis
+
+  prometheus:
+    image: prom/prometheus:v2.11.1
+    volumes:
+      - "./volumes/prometheus:/prometheus"
+      - "./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=365d"
+
+  loki:
+    image: grafana/loki:1.5.0
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - "./volumes/loki:/loki"
+
+  grafana:
+    image: grafana/grafana:master
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./volumes/graphana:/var/lib/grafana"
