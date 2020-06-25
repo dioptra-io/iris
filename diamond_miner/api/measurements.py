@@ -1,19 +1,21 @@
 """Measurements operations."""
 
-import ipaddress
-
 from aioch import Client
 from datetime import datetime
-from diamond_miner.api import logger
-from diamond_miner.api.models import (
+from diamond_miner.api.database import (
+    MeasurementResults,
+    get_table_name,
+    get_agents_and_date,
+)
+from diamond_miner.api.schemas import (
     ExceptionResponse,
+    MeasurementInfoResponse,
     MeasurementsGetResponse,
     MeasurementsPostBody,
     MeasurementsPostResponse,
-    MeasurementsGetByUuuidResponse,
+    MeasurementsResultsResponse,
 )
 from diamond_miner.api.settings import APISettings
-from diamond_miner.commons.database import Database
 from diamond_miner.commons.storage import Storage
 from diamond_miner.worker.hooks import hook
 from fastapi import (
@@ -21,6 +23,7 @@ from fastapi import (
     BackgroundTasks,
     Body,
     HTTPException,
+    Query,
     Request,
     status,
 )
@@ -33,6 +36,7 @@ storage = Storage()
 
 
 async def measurement_formater_summary(redis, uuid):
+    """Summary of a measurements."""
     measurement = {"uuid": uuid}
     state = await redis.get_measurement_state(uuid)
     if state is not None:
@@ -42,73 +46,52 @@ async def measurement_formater_summary(redis, uuid):
     return measurement
 
 
-def packet_formater(row):
-
-    return {
-        "source_ip": str(ipaddress.ip_address(row[0])),
-        "destination_prefix": str(ipaddress.ip_address(row[1])),
-        "destination_ip": str(ipaddress.ip_address(row[2])),
-        "reply_ip": str(ipaddress.ip_address(row[3])),
-        "protocol": row[4],
-        "source_port": row[5],
-        "destination_port": row[6],
-        "ttl": row[7],
-        "ttl_check": row[8],  # implemented only in UDP
-        "type": row[9],
-        "code": row[10],
-        "rtt": row[11],
-        "reply_ttl": row[12],
-        "reply_size": row[13],
-        "round": row[14],
-        # "snapshot": row[14], # Not curently used
-    }
-
-
-async def measurement_formater_full(redis, uuid):
-    """Format a measurement."""
+async def measurement_formater_info(redis, uuid):
+    """Measurement information."""
     measurement = await measurement_formater_summary(redis, uuid)
 
     if measurement["status"] != "finished":
         return measurement
 
     client = Client(settings.API_DATABASE_HOST)
-    response = await client.execute(f"SHOW TABLES FROM {settings.API_DATABASE_NAME}")
-    all_tables = [table[0] for table in response]
-
-    measurement_uuid = measurement["uuid"]
-
-    tables, agents, date = [], [], ""
-    for table in all_tables:
-        parsed_table_name = Database.parse_table_name(table)
-        if parsed_table_name["measurement_uuid"] != measurement_uuid:
-            continue
-        tables.append(table)
-        agents.append(parsed_table_name["agent_uuid"])
-        date = str(datetime.fromtimestamp(parsed_table_name["timestamp"]))
-
-    measurement["date"] = date
-    measurement["agents"] = agents
-
-    # TODO Pagination, filtering
-    results = []
-    for table in tables:
-        response = await client.execute(
-            f"SELECT * FROM {settings.API_DATABASE_NAME}.{table}"
-        )
-        results = results + [packet_formater(row) for row in response]
-
-    results = sorted(
-        results, key=lambda x: (x["source_ip"], x["destination_ip"], x["ttl"])
-    )
-    measurement["count"] = len(results)
-    measurement["results"] = results
+    measurement["agents"], measurement["date"] = await get_agents_and_date(client, uuid)
 
     return measurement
 
 
-@router.get("/", response_model=MeasurementsGetResponse)
+async def measurement_formater_results(
+    request, measurement_uuid, agent_uuid, offset, limit
+):
+    """Measurement result for an agent."""
+    measurement = await measurement_formater_summary(
+        request.app.redis, measurement_uuid
+    )
+    if measurement["status"] != "finished":
+        return {"count": 0, "results": []}
+
+    client = Client(settings.API_DATABASE_HOST)
+
+    table_name = await get_table_name(client, measurement_uuid, agent_uuid)
+    if table_name is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"The agent `{agent_uuid}` "
+                f"did not participate to measurement `{measurement_uuid}`",
+            ),
+        )
+
+    querier = MeasurementResults(request, client, table_name, offset, limit)
+    return await querier.query()
+
+
+@router.get(
+    "/",
+    response_model=MeasurementsGetResponse,
+    summary="Get all measurements with the status",
+)
 async def get_measurements(request: Request):
-    """Get global measurements information."""
+    """Get all measurements with the status."""
     all_measurements = await request.app.redis.get_measurements()
 
     measurements = []
@@ -135,6 +118,7 @@ async def publish_measurement(redis, agents, parameters):
     status_code=status.HTTP_201_CREATED,
     response_model=MeasurementsPostResponse,
     responses={404: {"model": ExceptionResponse}},
+    summary="Request a measurement",
 )
 async def post_measurement(
     request: Request,
@@ -150,7 +134,7 @@ async def post_measurement(
         },
     ),
 ):
-    """Launch a measurement."""
+    """Request a measurement."""
     try:
         await storage.get_file(
             settings.AWS_S3_TARGETS_BUCKET_NAME, measurement.target_file_key
@@ -165,8 +149,6 @@ async def post_measurement(
     parameters["measurement_uuid"] = str(uuid4())
     parameters["timestamp"] = datetime.timestamp(datetime.now())
 
-    logger.debug(measurement.agents)
-
     background_tasks.add_task(
         publish_measurement, request.app.redis, agents, parameters,
     )
@@ -175,16 +157,38 @@ async def post_measurement(
 
 
 @router.get(
-    "/{uuid}",
-    response_model=MeasurementsGetByUuuidResponse,
+    "/{measurement_uuid}",
+    response_model=MeasurementInfoResponse,
     responses={404: {"model": ExceptionResponse}},
+    summary="Get measurement information by uuid",
 )
-async def get_measurement_by_uuid(
-    request: Request, uuid: str,
-):
-    """Get measurement results by uuid."""
+async def get_measurement_by_uuid(request: Request, measurement_uuid: str):
+    """Get measurement information by uuid."""
     all_measurements = await request.app.redis.get_measurements()
     for measurement_uuid in all_measurements:
-        if measurement_uuid == uuid:
-            return await measurement_formater_full(request.app.redis, uuid)
+        if measurement_uuid == measurement_uuid:
+            return await measurement_formater_info(request.app.redis, measurement_uuid)
+    raise HTTPException(status_code=404, detail="Measurement not found")
+
+
+@router.get(
+    "/{measurement_uuid}/{agent_uuid}",
+    response_model=MeasurementsResultsResponse,
+    responses={404: {"model": ExceptionResponse}},
+    summary="Get measurement results",
+)
+async def get_measurement_results(
+    request: Request,
+    measurement_uuid: str,
+    agent_uuid: str,
+    offset: int = Query(0),
+    limit: int = Query(100, le=200),
+):
+    """Get measurement results."""
+    all_measurements = await request.app.redis.get_measurements()
+    for measurement_uuid in all_measurements:
+        if measurement_uuid == measurement_uuid:
+            return await measurement_formater_results(
+                request, measurement_uuid, agent_uuid, offset, limit
+            )
     raise HTTPException(status_code=404, detail="Measurement not found")

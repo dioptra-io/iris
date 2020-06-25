@@ -2,7 +2,7 @@ import asyncio
 import dramatiq
 
 from aiofiles import os as aios
-from diamond_miner.commons.database import Database
+from diamond_miner.commons.clickhouse import ClickhouseManagement
 from diamond_miner.commons.redis import Redis
 from diamond_miner.commons.storage import Storage
 from diamond_miner.worker import logger
@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 settings = WorkerSettings()
-database = Database(host=settings.WORKER_DATABASE_HOST, logger=logger)
+database = ClickhouseManagement(host=settings.WORKER_DATABASE_HOST, logger=logger)
 storage = Storage()
 
 

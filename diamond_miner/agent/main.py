@@ -42,7 +42,7 @@ async def main():
     """Main agent function."""
     redis = AgentRedis(str(uuid4()))
 
-    await asyncio.sleep(5)
+    await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
     try:
@@ -62,8 +62,6 @@ async def main():
         queue = asyncio.Queue()
         await asyncio.gather(producer(redis, queue), consumer(redis.uuid, queue))
 
-    except Exception as e:
-        raise e
     finally:
         await redis.delete_agent_state()
         await redis.delete_agent_parameters()
