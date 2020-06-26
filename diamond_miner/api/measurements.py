@@ -51,6 +51,8 @@ async def measurement_formater_info(redis, uuid):
     measurement = await measurement_formater_summary(redis, uuid)
 
     if measurement["status"] != "finished":
+        measurement["agents"] = None
+        measurement["date"] = None
         return measurement
 
     client = Client(settings.API_DATABASE_HOST)
@@ -145,6 +147,12 @@ async def post_measurement(
     agents = await request.app.redis.get_agents(state=False, parameters=False)
     agents = [agent["uuid"] for agent in agents]
 
+    if measurement.agents:
+        measurement.agents = list(measurement.agents)
+        for agent in measurement.agents:
+            if agent not in agents:
+                raise HTTPException(status_code=404, detail="Agent not found")
+
     parameters = dict(measurement)
     parameters["measurement_uuid"] = str(uuid4())
     parameters["timestamp"] = datetime.timestamp(datetime.now())
@@ -181,8 +189,8 @@ async def get_measurement_results(
     request: Request,
     measurement_uuid: str,
     agent_uuid: str,
-    offset: int = Query(0),
-    limit: int = Query(100, le=200),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=0, le=200),
 ):
     """Get measurement results."""
     all_measurements = await request.app.redis.get_measurements()

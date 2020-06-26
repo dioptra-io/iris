@@ -88,8 +88,8 @@ class MeasurementInfoResponse(BaseModel):
 
     uuid: str
     status: str
-    date: str
-    agents: Set[str]
+    date: str = None
+    agents: Set[str] = None
 
 
 class MeasurementSummaryResponse(BaseModel):

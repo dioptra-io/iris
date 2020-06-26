@@ -164,8 +164,8 @@ async def sanity_check(redis, measurement_uuid, agent_uuid):
     """
     checks = []
     for _ in range(settings.WORKER_SANITY_CHECK_RETRIES):
-        checks.append(redis.check_agent(agent_uuid))
-        asyncio.sleep(settings.WORKER_SANITY_CHECK_REFRESH)
+        checks.append(await redis.check_agent(agent_uuid))
+        await asyncio.sleep(settings.WORKER_SANITY_CHECK_REFRESH)
     if False in checks:
         await sanity_clean(measurement_uuid, agent_uuid)
         return False
@@ -254,41 +254,46 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
 async def callback(agents, measurement_parameters):
     """Asynchronous callback."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
-    logger.info(f"New measurement `{measurement_uuid}`. Publishing request.")
+    logger.info(f"New measurement `{measurement_uuid}` received")
 
     redis = Redis()
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
-    logger.info("Create local measurement directory if not exists.")
+    logger.info("Create local measurement directory if not exists")
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
     try:
         await aios.mkdir(str(measurement_results_path))
     except FileExistsError:
-        logger.error(f"Local measurement `{measurement_uuid}` directory already exits.")
+        logger.error(f"Local measurement `{measurement_uuid}` directory already exits")
         return
 
     if await redis.get_measurement_state(measurement_uuid) is None:
         # There is no measurement state, so the measurement hasn't started yet
-        logger.info(f"Create measurement bucket  `{measurement_uuid}`")
+        logger.info(f"Create measurement bucket  `{measurement_uuid}` in AWS S3")
         try:
             await storage.create_bucket(bucket=measurement_uuid)
         except Exception:
             logger.error(f"Impossible to create bucket `{measurement_uuid}`")
+            return
 
         logger.info(f"Set measurement `{measurement_uuid}` state to `waiting`")
         await redis.set_measurement_state(measurement_uuid, "waiting")
 
         logger.info(f"Publish measurement `{measurement_uuid}` to agents")
-        await redis.publish(
-            "all",
-            {
-                "measurement_uuid": measurement_uuid,
-                "measurement_tool": "diamond_miner",
-                "timestamp": measurement_parameters["timestamp"],
-                "round": 1,
-                "parameters": measurement_parameters,
-            },
-        )
+
+        measurement_request = {
+            "measurement_uuid": measurement_uuid,
+            "measurement_tool": "diamond_miner",
+            "timestamp": measurement_parameters["timestamp"],
+            "round": 1,
+            "parameters": measurement_parameters,
+        }
+        if not measurement_parameters["agents"]:
+            await redis.publish("all", measurement_request)
+        else:
+            agents = measurement_parameters["agents"]
+            for agent_uuid in measurement_parameters["agents"]:
+                await redis.publish(agent_uuid, measurement_request)
 
     logger.info("Getting agents parameters")
     agents_parameters = [
