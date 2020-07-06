@@ -3,7 +3,7 @@
 import logging
 import logging_loki
 
-from diamond_miner.api.settings import APISettings
+from iris.api.settings import APISettings
 from multiprocessing import Queue
 
 settings = APISettings()
@@ -27,7 +27,7 @@ logger.propagate = False
 
 
 from fastapi import APIRouter  # noqa
-from diamond_miner.api import (  # noqa
+from iris.api import (  # noqa
     authentication,
     configuration,
     agents,

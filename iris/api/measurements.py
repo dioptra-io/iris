@@ -2,12 +2,12 @@
 
 from aioch import Client
 from datetime import datetime
-from diamond_miner.api.database import (
+from iris.api.database import (
     MeasurementResults,
     get_table_name,
     get_agents_and_date,
 )
-from diamond_miner.api.schemas import (
+from iris.api.schemas import (
     ExceptionResponse,
     MeasurementInfoResponse,
     MeasurementsGetResponse,
@@ -15,9 +15,9 @@ from diamond_miner.api.schemas import (
     MeasurementsPostResponse,
     MeasurementsResultsResponse,
 )
-from diamond_miner.api.settings import APISettings
-from diamond_miner.commons.storage import Storage
-from diamond_miner.worker.hooks import hook
+from iris.api.settings import APISettings
+from iris.commons.storage import Storage
+from iris.worker.hooks import hook
 from fastapi import (
     APIRouter,
     BackgroundTasks,

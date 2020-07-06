@@ -29,7 +29,7 @@ services:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-api
     volumes:
-      - ./diamond_miner:/app/diamond_miner
+      - ./iris:/app/iris
     ports:
       - "8000:8000"
     depends_on:
@@ -45,7 +45,7 @@ services:
       args:
         DEBUG_ITERATION: 0
     volumes:
-      - ./diamond_miner:/app/diamond_miner
+      - ./iris:/app/iris
     depends_on:
       - clickhouse
       - loki
@@ -61,7 +61,7 @@ services:
     cap_add:
       - SYS_PTRACE
     volumes:
-      - ./diamond_miner:/app/diamond_miner
+      - ./iris:/app/iris
     depends_on:
       - clickhouse
       - loki

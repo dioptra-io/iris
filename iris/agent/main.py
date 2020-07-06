@@ -1,10 +1,10 @@
 import asyncio
 
-from diamond_miner.agent import logger
-from diamond_miner.agent.measurements import measuremement
-from diamond_miner.commons.redis import AgentRedis
-from diamond_miner.commons.utils import get_own_ip_address
-from diamond_miner.agent.settings import AgentSettings
+from iris.agent import logger
+from iris.agent.measurements import measuremement
+from iris.commons.redis import AgentRedis
+from iris.commons.utils import get_own_ip_address
+from iris.agent.settings import AgentSettings
 from uuid import uuid4
 
 

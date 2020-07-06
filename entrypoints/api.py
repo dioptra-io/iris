@@ -1,19 +1,17 @@
 """API Entrypoint."""
 
-from diamond_miner import __version__
-from diamond_miner.api import router
-from diamond_miner.api.settings import APISettings
-from diamond_miner.commons.redis import Redis
-from diamond_miner.commons.storage import Storage
+from iris import __version__
+from iris.api import router
+from iris.api.settings import APISettings
+from iris.commons.redis import Redis
+from iris.commons.storage import Storage
 from fastapi import FastAPI
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 
 settings = APISettings()
 
-app = FastAPI(
-    title="Diamond-Miner", description="Diamond-Miner API", version=__version__,
-)
+app = FastAPI(title="Iris", description="Iris API", version=__version__,)
 
 app.add_middleware(PrometheusMiddleware)
 app.add_route("/metrics", handle_metrics)

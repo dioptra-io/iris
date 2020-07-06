@@ -1,10 +1,10 @@
 """Measurement interface."""
 
 from aiofiles import os as aios
-from diamond_miner.agent import logger
-from diamond_miner.agent.prober import probe
-from diamond_miner.agent.settings import AgentSettings
-from diamond_miner.commons.storage import Storage
+from iris.agent import logger
+from iris.agent.prober import probe
+from iris.agent.settings import AgentSettings
+from iris.commons.storage import Storage
 from pathlib import Path
 
 
@@ -40,7 +40,7 @@ async def measuremement(uuid, request):
             measurement_uuid, csv_filename, csv_filepath,
         )
 
-    # Diamond-Miner measurement
+    # Iris measurement
     await probe(
         request,
         result_filepath,

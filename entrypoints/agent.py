@@ -2,7 +2,7 @@
 
 import asyncio
 
-from diamond_miner.agent.main import main
+from iris.agent.main import main
 
 
 def app():

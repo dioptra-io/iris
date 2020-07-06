@@ -1,15 +1,15 @@
 """Targets operations."""
 
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, status, HTTPException
-from diamond_miner.api.schemas import (
+from iris.api.schemas import (
     ExceptionResponse,
     TargetResponse,
     TargetsGetResponse,
     TargetsPostResponse,
     TargetsDeleteResponse,
 )
-from diamond_miner.api.settings import APISettings
-from diamond_miner.commons.storage import Storage
+from iris.api.settings import APISettings
+from iris.commons.storage import Storage
 
 router = APIRouter()
 settings = APISettings()

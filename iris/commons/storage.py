@@ -1,6 +1,6 @@
 import aioboto3
 
-from diamond_miner.commons.settings import CommonSettings
+from iris.commons.settings import CommonSettings
 
 common_settings = CommonSettings()
 

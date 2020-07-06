@@ -1,4 +1,4 @@
-# Diamond-Miner Controller
+# Iris Controller
 
 
 ## Contribute

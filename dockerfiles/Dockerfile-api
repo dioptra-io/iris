@@ -10,7 +10,7 @@ COPY pyproject.toml pyproject.toml
 RUN poetry install --no-root --no-dev
 
 COPY entrypoints/api.py api.py
-COPY diamond_miner diamond_miner
+COPY iris iris
 
 EXPOSE 8000
 

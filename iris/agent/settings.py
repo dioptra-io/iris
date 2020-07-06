@@ -1,4 +1,4 @@
-from diamond_miner.commons.settings import CommonSettings
+from iris.commons.settings import CommonSettings
 from pathlib import Path
 
 

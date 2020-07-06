@@ -1,8 +1,8 @@
 import ipaddress
 
-from diamond_miner.commons.subprocess import start_stream_subprocess
-from diamond_miner.worker import logger
-from diamond_miner.worker.settings import WorkerSettings
+from iris.commons.subprocess import start_stream_subprocess
+from iris.worker import logger
+from iris.worker.settings import WorkerSettings
 
 
 settings = WorkerSettings()

@@ -2,8 +2,8 @@
 import ipaddress
 
 from datetime import datetime
-from diamond_miner.api.settings import APISettings
-from diamond_miner.commons.clickhouse import ClickhouseManagement
+from iris.api.settings import APISettings
+from iris.commons.clickhouse import ClickhouseManagement
 
 settings = APISettings()
 

@@ -43,7 +43,7 @@ def import_from_string(import_str):
         )
 
     try:
-        reload_package("diamond_miner/agent")
+        reload_package("iris/agent")
         module = importlib.import_module(module_str)
         module = importlib.reload(module)
     except ImportError as exc:
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     logger.info("Starting application process")
     p = process_start(app_str)
     try:
-        for changes in watchgod.watch("diamond_miner/agent"):
+        for changes in watchgod.watch("iris/agent"):
             logger.info("Restarting application process")
             process_stop(p)
             p = process_start(app_str)

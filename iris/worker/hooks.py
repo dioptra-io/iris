@@ -2,16 +2,16 @@ import asyncio
 import dramatiq
 
 from aiofiles import os as aios
-from diamond_miner.commons.clickhouse import ClickhouseManagement
-from diamond_miner.commons.redis import Redis
-from diamond_miner.commons.storage import Storage
-from diamond_miner.worker import logger
-from diamond_miner.worker.processors import (
+from iris.commons.clickhouse import ClickhouseManagement
+from iris.commons.redis import Redis
+from iris.commons.storage import Storage
+from iris.worker import logger
+from iris.worker.processors import (
     pcap_to_csv,
     next_round_csv,
     shuffle_next_round_csv,
 )
-from diamond_miner.worker.settings import WorkerSettings
+from iris.worker.settings import WorkerSettings
 from pathlib import Path
 
 
@@ -283,7 +283,7 @@ async def callback(agents, measurement_parameters):
 
         measurement_request = {
             "measurement_uuid": measurement_uuid,
-            "measurement_tool": "diamond_miner",
+            "measurement_tool": "iris",
             "timestamp": measurement_parameters["timestamp"],
             "round": 1,
             "parameters": measurement_parameters,

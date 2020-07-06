@@ -1,4 +1,4 @@
-from diamond_miner.commons.settings import CommonSettings
+from iris.commons.settings import CommonSettings
 from pathlib import Path
 
 
@@ -26,4 +26,4 @@ class WorkerSettings(CommonSettings):
     WORKER_SANITY_CHECK_REFRESH: int = 1  # seconds
 
     WORKER_DATABASE_HOST: str = "clickhouse"
-    WORKER_DATABASE_NAME: str = "diamond_miner"
+    WORKER_DATABASE_NAME: str = "iris"
