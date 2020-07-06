@@ -82,8 +82,8 @@ RUN poetry config virtualenvs.create false
 COPY pyproject.toml pyproject.toml
 RUN poetry install --no-root --no-dev
 
-COPY diamond_miner diamond_miner
+COPY iris iris
 
 RUN mkdir results
 
-CMD ["dramatiq", "diamond_miner.worker.hooks", "--watch", "diamond_miner/worker"]
+CMD ["dramatiq", "iris.worker.hooks", "--watch", "iris/worker"]

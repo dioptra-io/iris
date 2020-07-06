@@ -3,7 +3,7 @@ import logging
 import logging_loki
 
 from dramatiq.brokers.redis import RedisBroker
-from diamond_miner.worker.settings import WorkerSettings
+from iris.worker.settings import WorkerSettings
 from multiprocessing import Queue
 
 settings = WorkerSettings()

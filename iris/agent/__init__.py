@@ -1,7 +1,7 @@
 import logging
 import logging_loki
 
-from diamond_miner.agent.settings import AgentSettings
+from iris.agent.settings import AgentSettings
 from multiprocessing import Queue
 
 settings = AgentSettings()

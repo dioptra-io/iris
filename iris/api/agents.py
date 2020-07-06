@@ -1,6 +1,6 @@
 """agents operations."""
 
-from diamond_miner.api.schemas import (
+from iris.api.schemas import (
     ExceptionResponse,
     AgentsGetResponse,
     AgentsGetByUUIDResponse,

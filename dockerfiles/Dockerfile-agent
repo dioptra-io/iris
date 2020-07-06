@@ -67,7 +67,7 @@ RUN if [ "$PFRING" = "enable" ] ; then mkdir build && \
     cmake .. -DCMAKE_BUILD_TYPE=Debug -DPROBER=1 && \
     make -j8 ; fi
 
-# Diamond-Miner Agent
+# Iris Agent
 WORKDIR /app
 RUN pip install poetry
 RUN poetry config virtualenvs.create false
@@ -77,7 +77,7 @@ RUN poetry install --no-root
 
 COPY entrypoints/agent.py agent.py
 COPY tools/autoreload.py autoreload.py
-COPY diamond_miner diamond_miner
+COPY iris iris
 
 RUN mkdir targets
 RUN mkdir results

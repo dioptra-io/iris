@@ -1,8 +1,8 @@
 """Prober executor."""
 
-from diamond_miner.agent import logger
-from diamond_miner.agent.settings import AgentSettings
-from diamond_miner.commons.subprocess import start_stream_subprocess
+from iris.agent import logger
+from iris.agent.settings import AgentSettings
+from iris.commons.subprocess import start_stream_subprocess
 
 
 settings = AgentSettings()
@@ -15,7 +15,7 @@ async def probe(
     csv_filepath=None,
     target_filepath=None,
 ):
-    """Execute measurement with Diamond-Miner."""
+    """Execute measurement with Iris."""
     cmd = (
         str(settings.AGENT_D_MINER_PROBER_PATH)
         + " -o "
