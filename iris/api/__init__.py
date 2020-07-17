@@ -27,23 +27,14 @@ logger.propagate = False
 
 
 from fastapi import APIRouter  # noqa
-from iris.api import (  # noqa
-    authentication,
-    configuration,
-    agents,
-    targets,
-    measurements,
-)
+from iris.api import configuration, agents, targets, measurements  # noqa
 
 
 # Register API routes
 router = APIRouter()
-router.include_router(
-    authentication.router, prefix="/authentication", tags=["Authentication"]
-)
-router.include_router(
-    configuration.router, prefix="/configuration", tags=["Configuration"]
-)
+# router.include_router(
+#     configuration.router, prefix="/configuration", tags=["Configuration"]
+# )
 router.include_router(agents.router, prefix="/agents", tags=["Agents"])
 router.include_router(targets.router, prefix="/targets", tags=["Targets"])
 router.include_router(
