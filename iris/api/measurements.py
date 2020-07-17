@@ -2,11 +2,18 @@
 
 from aioch import Client
 from datetime import datetime
-from iris.api.database import (
-    MeasurementResults,
-    get_table_name,
-    get_agents_and_date,
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    status,
 )
+from iris.api.database import MeasurementResults, get_table_name, get_agents_and_date
+from iris.api.security import authenticate
 from iris.api.schemas import (
     ExceptionResponse,
     MeasurementInfoResponse,
@@ -18,15 +25,6 @@ from iris.api.schemas import (
 from iris.api.settings import APISettings
 from iris.commons.storage import Storage
 from iris.worker.hooks import hook
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Body,
-    HTTPException,
-    Query,
-    Request,
-    status,
-)
 from uuid import uuid4
 
 
@@ -92,7 +90,7 @@ async def measurement_formater_results(
     response_model=MeasurementsGetResponse,
     summary="Get all measurements with the status",
 )
-async def get_measurements(request: Request):
+async def get_measurements(request: Request, username: str = Depends(authenticate)):
     """Get all measurements with the status."""
     all_measurements = await request.app.redis.get_measurements()
 
@@ -102,10 +100,7 @@ async def get_measurements(request: Request):
             await measurement_formater_summary(request.app.redis, measurement_uuid)
         )
 
-    return {
-        "count": len(measurements),
-        "results": measurements,
-    }
+    return {"count": len(measurements), "results": measurements}
 
 
 async def publish_measurement(redis, agents, parameters):
@@ -135,6 +130,7 @@ async def post_measurement(
             "max_ttl": 30,
         },
     ),
+    username: str = Depends(authenticate),
 ):
     """Request a measurement."""
     try:
@@ -158,7 +154,7 @@ async def post_measurement(
     parameters["timestamp"] = datetime.timestamp(datetime.now())
 
     background_tasks.add_task(
-        publish_measurement, request.app.redis, agents, parameters,
+        publish_measurement, request.app.redis, agents, parameters
     )
 
     return {"uuid": parameters["measurement_uuid"]}
@@ -170,7 +166,9 @@ async def post_measurement(
     responses={404: {"model": ExceptionResponse}},
     summary="Get measurement information by uuid",
 )
-async def get_measurement_by_uuid(request: Request, measurement_uuid: str):
+async def get_measurement_by_uuid(
+    request: Request, measurement_uuid: str, username: str = Depends(authenticate)
+):
     """Get measurement information by uuid."""
     all_measurements = await request.app.redis.get_measurements()
     for measurement_uuid in all_measurements:
@@ -191,6 +189,7 @@ async def get_measurement_results(
     agent_uuid: str,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
+    username: str = Depends(authenticate),
 ):
     """Get measurement results."""
     all_measurements = await request.app.redis.get_measurements()

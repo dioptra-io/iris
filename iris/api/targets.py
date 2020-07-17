@@ -1,6 +1,15 @@
 """Targets operations."""
 
-from fastapi import APIRouter, BackgroundTasks, UploadFile, File, status, HTTPException
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    UploadFile,
+    File,
+    status,
+    HTTPException,
+)
+from iris.api.security import authenticate
 from iris.api.schemas import (
     ExceptionResponse,
     TargetResponse,
@@ -19,7 +28,7 @@ storage = Storage()
 @router.get(
     "/", response_model=TargetsGetResponse, summary="Get all targets information"
 )
-async def get_targets():
+async def get_targets(username: str = Depends(authenticate)):
     """Get all targets lists information."""
     targets = await storage.get_all_files(settings.AWS_S3_TARGETS_BUCKET_NAME)
     return {"count": len(targets), "results": targets}
@@ -31,7 +40,7 @@ async def get_targets():
     responses={404: {"model": ExceptionResponse}},
     summary="Get targets list information by key",
 )
-async def get_target_by_key(key: str):
+async def get_target_by_key(key: str, username: str = Depends(authenticate)):
     """"Get a targets list information by key."""
     try:
         target = await storage.get_file(settings.AWS_S3_TARGETS_BUCKET_NAME, key)
@@ -54,7 +63,9 @@ async def upload_targets_file(targets_file):
     summary="Upload a targets list",
 )
 async def post_target(
-    background_tasks: BackgroundTasks, targets_file: UploadFile = File(...)
+    background_tasks: BackgroundTasks,
+    targets_file: UploadFile = File(...),
+    username: str = Depends(authenticate),
 ):
     """Upload a targets list to object storage."""
     background_tasks.add_task(upload_targets_file, targets_file)
@@ -67,7 +78,7 @@ async def post_target(
     responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
     summary="Delete a targets list from object storage.",
 )
-async def delete_target_by_key(key: str):
+async def delete_target_by_key(key: str, username: str = Depends(authenticate)):
     """Delete a targets list from object storage."""
     try:
         response = await storage.delete_file_check(
