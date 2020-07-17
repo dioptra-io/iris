@@ -54,7 +54,6 @@ RUN apt-get update
 RUN apt-get install -y gdb tcpdump traceroute
 
 # Diamond-Miner Prober
-ARG DEBUG_ITERATION=0
 RUN git clone -b feature/redundant_ttl https://github.com/dioptra-io/diamond-miner-cpp.git prober
 RUN mkdir prober/resources
 COPY statics/excluded_prefixes /app/prober/resources
@@ -82,4 +81,4 @@ COPY iris iris
 RUN mkdir targets
 RUN mkdir results
 
-CMD ["python", "-u", "autoreload.py", "agent:app", "&", "nginx"]
+CMD ["python", "-u", "agent.py", "&", "nginx"]

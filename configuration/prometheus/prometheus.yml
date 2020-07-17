@@ -4,6 +4,6 @@ scrape_configs:
     scrape_interval: 1m
 
     static_configs:
-      - targets: ["api:8000"]
+      - targets: ["api:80"]
         labels:
-          group: "develop"
+          group: "production"

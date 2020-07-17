@@ -28,7 +28,7 @@ async def measuremement(uuid, request):
         target_filename = request["parameters"]["target_file_key"]
         target_filepath = str(settings.AGENT_TARGETS_DIR / target_filename)
         await storage.download_file(
-            settings.AWS_S3_TARGETS_BUCKET_NAME, target_filename, target_filepath,
+            settings.AWS_S3_TARGETS_BUCKET_NAME, target_filename, target_filepath
         )
         csv_filepath = None
     else:
@@ -36,11 +36,9 @@ async def measuremement(uuid, request):
         target_filepath = None
         csv_filename = request["parameters"]["csv_probe_file"]
         csv_filepath = str(settings.AGENT_TARGETS_DIR / csv_filename)
-        await storage.download_file(
-            measurement_uuid, csv_filename, csv_filepath,
-        )
+        await storage.download_file(measurement_uuid, csv_filename, csv_filepath)
 
-    # Iris measurement
+    # Diamond-Miner measurement
     await probe(
         request,
         result_filepath,
