@@ -1,4 +1,4 @@
-version: 3
+version: "3"
 
 services:
   minio:
@@ -7,7 +7,7 @@ services:
 
   api:
     ports:
-      - "8000:8000"
+      - "8000:80"
 
   grafana:
     ports:

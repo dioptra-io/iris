@@ -46,8 +46,6 @@ services:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-agent
-      args:
-        DEBUG_ITERATION: 0
     cap_add:
       - SYS_PTRACE
     volumes:
@@ -62,7 +60,7 @@ services:
     image: prom/prometheus:v2.11.1
     volumes:
       - "./volumes/prometheus:/prometheus"
-      - "./configuration/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -73,7 +71,7 @@ services:
     command: -config.file=/etc/loki/loki.yaml
     volumes:
       - "./volumes/loki:/loki"
-      - "./configuration/loki/loki.yml:/etc/loki/loki.yaml"
+      - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
 
   grafana:
     image: grafana/grafana:master
