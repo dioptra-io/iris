@@ -1,0 +1,14 @@
+version: 3
+
+services:
+  minio:
+    ports:
+      - "9000:9000"
+
+  api:
+    ports:
+      - "8000:8000"
+
+  grafana:
+    ports:
+      - "3000:3000"

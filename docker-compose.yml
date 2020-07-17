@@ -11,18 +11,12 @@ services:
     image: "yandex/clickhouse-server:latest"
     volumes:
       - "./volumes/clickhouse:/var/lib/clickhouse"
-    ulimits:
-      nofile:
-        soft: "262144"
-        hard: "262144"
 
   minio:
     image: minio/minio:latest
     command: server /data
     volumes:
       - ./volumes/minio:/data
-    ports:
-      - "9000:9000"
 
   api:
     build:
@@ -30,8 +24,6 @@ services:
       dockerfile: ./dockerfiles/Dockerfile-api
     volumes:
       - ./iris:/app/iris
-    ports:
-      - "8000:8000"
     depends_on:
       - clickhouse
       - loki
@@ -42,8 +34,6 @@ services:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-worker
-      args:
-        DEBUG_ITERATION: 0
     volumes:
       - ./iris:/app/iris
     depends_on:
@@ -72,7 +62,7 @@ services:
     image: prom/prometheus:v2.11.1
     volumes:
       - "./volumes/prometheus:/prometheus"
-      - "./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "./configuration/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -83,11 +73,9 @@ services:
     command: -config.file=/etc/loki/loki.yaml
     volumes:
       - "./volumes/loki:/loki"
-      - "./monitoring/loki/loki.yml:/etc/loki/loki.yaml"
+      - "./configuration/loki/loki.yml:/etc/loki/loki.yaml"
 
   grafana:
     image: grafana/grafana:master
-    ports:
-      - "3000:3000"
     volumes:
-      - "./volumes/graphana:/var/lib/grafana"
+      - "./volumes/grafana:/var/lib/grafana"

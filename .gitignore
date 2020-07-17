@@ -137,9 +137,16 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# VScode
+# Local
 .vscode
-
 .DS_Store
 
+# Resources
 resources
+
+# Custom Docker configuration
+docker-compose.prod.yml
+docker-compose.test.yml
+
+# Custom Documentation
+PRODUCTION.md
