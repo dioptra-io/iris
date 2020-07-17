@@ -3,7 +3,7 @@ name: Publish Iris Agent
 on:
   push:
     tags:
-      - "master"
+      - "*"
 
 jobs:
   build:
