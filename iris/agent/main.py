@@ -1,6 +1,7 @@
 import asyncio
 
 from aioredis.errors import ConnectionClosedError
+from iris import __version__
 from iris.agent import logger
 from iris.agent.measurements import measuremement
 from iris.commons.redis import AgentRedis
@@ -73,6 +74,7 @@ async def main():
         await redis.set_agent_state("idle")
         await redis.set_agent_parameters(
             {
+                "version": __version__,
                 "ip_address": get_own_ip_address(),
                 "probing_rate": settings.AGENT_PROBING_RATE,
                 "buffer_sniffer_size": settings.AGENT_BUFFER_SNIFFER_SIZE,

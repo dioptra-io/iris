@@ -25,6 +25,7 @@ class AgentSummaryResponse(BaseModel):
 class AgentParametersResponse(BaseModel):
     """Parameters of an agent (Response)."""
 
+    version: str
     ip_address: str
     probing_rate: int
     buffer_sniffer_size: int
