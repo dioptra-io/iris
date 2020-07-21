@@ -12,6 +12,21 @@ from uuid import uuid4
 settings = AgentSettings()
 
 
+async def robust_redis(redis, redis_future):
+    """Perform a Redis query robust to Redis failure."""
+    result = None
+    try:
+        result = await redis_future
+    except ConnectionClosedError as error:
+        logger.error(error)
+        await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
+        try:
+            await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+        except OSError:
+            pass
+    return result
+
+
 async def consumer(agent_uuid, queue):
     """Wait for a task in a queue and process it."""
     redis = AgentRedis(agent_uuid)
@@ -20,24 +35,14 @@ async def consumer(agent_uuid, queue):
         measurement_uuid, measuremement = await queue.get()
 
         logger.info(f"Set agent `{agent_uuid}` state to `working`")
-        try:
-            await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
-            await redis.set_agent_state("working")
-        except (ConnectionClosedError, OSError) as error:
-            logger.error(error)
-            pass
+        await robust_redis(redis, redis.set_agent_state("working"))
 
         logger.info(f"Set measurement `{measurement_uuid}` state to `ongoing`")
         await redis.set_measurement_state(measurement_uuid, "ongoing")
         await measuremement
 
         logger.info(f"Set agent `{agent_uuid}` state to `idle`")
-        try:
-            await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
-            await redis.set_agent_state("idle")
-        except (ConnectionClosedError, OSError) as error:
-            logger.error(error)
-            pass
+        await robust_redis(redis, redis.set_agent_state("idle"))
 
     await redis.close()
 
@@ -46,12 +51,8 @@ async def producer(redis, queue):
     """Wait a task and put in on the queue."""
     while True:
         logger.info("Wait for a new request...")
-        try:
-            await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
-            parameters = await redis.subscribe()
-        except (ConnectionClosedError, OSError) as error:
-            logger.error(error)
-            await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
+        parameters = await robust_redis(redis, redis.subscribe())
+        if parameters is None:
             continue
 
         logger.info("New request received! Putting in task queue")

@@ -12,6 +12,7 @@ RUN apt-get update
 # PF RING
 ARG PFRING
 ENV AGENT_PFRING=${PFRING:+on}
+ENV AGENT_PFRING=${PFRING:-off}
 RUN if [ "$PFRING" = "on" ] ; then apt-get update && \
     apt-get -y -q install wget lsb-release && \
     wget -q http://apt.ntop.org/16.04/all/apt-ntop.deb && dpkg -i apt-ntop.deb && \
