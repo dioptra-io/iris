@@ -141,12 +141,19 @@ cython_debug/
 .vscode
 .DS_Store
 
-# Resources
+# Internal Resources
 resources
 
-# Custom Docker configuration
+# Internal deployment & scripts
+deployment
+scripts
+
+# Internal Kubernetes configuration
+kubernetes
+
+# Internal Docker configuration
 docker-compose.prod.yml
 docker-compose.test.yml
 
-# Custom Documentation
+# Internal Documentation
 PRODUCTION.md

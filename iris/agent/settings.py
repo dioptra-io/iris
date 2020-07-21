@@ -9,14 +9,17 @@ class AgentSettings(CommonSettings):
     AGENT_EXCLUSION_FILE_PATH: Path = Path("/app/prober/resources/excluded_prefixes")
 
     AGENT_PROBING_RATE: int = 1000  # pps
-    AGENT_BUFFER_SNIFFER_SIZE: int = 100000  # bytes
+    AGENT_BUFFER_SNIFFER_SIZE: int = 100000  # kB
 
     AGENT_INF_BORN: int = 0
     AGENT_SUP_BORN: int = (2 ** 32) - 1
 
     AGENT_IPS_PER_SUBNET: int = 6
 
+    AGENT_PFRING: bool = False
+
     AGENT_TARGETS_DIR: Path = Path("/app/targets")
     AGENT_RESULTS_DIR: Path = Path("/app/results")
 
     AGENT_WAIT_FOR_START: int = 10  # seconds
+    AGENT_RECOVER_TIME_REDIS_FAILURE: int = 10  # seconds

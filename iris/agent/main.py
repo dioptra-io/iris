@@ -1,5 +1,6 @@
 import asyncio
 
+from aioredis.errors import ConnectionClosedError
 from iris.agent import logger
 from iris.agent.measurements import measuremement
 from iris.commons.redis import AgentRedis
@@ -17,13 +18,27 @@ async def consumer(agent_uuid, queue):
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD, register=False)
     while True:
         measurement_uuid, measuremement = await queue.get()
+
         logger.info(f"Set agent `{agent_uuid}` state to `working`")
-        await redis.set_agent_state("working")
+        try:
+            await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+            await redis.set_agent_state("working")
+        except (ConnectionClosedError, OSError) as error:
+            logger.error(error)
+            pass
+
         logger.info(f"Set measurement `{measurement_uuid}` state to `ongoing`")
         await redis.set_measurement_state(measurement_uuid, "ongoing")
         await measuremement
+
         logger.info(f"Set agent `{agent_uuid}` state to `idle`")
-        await redis.set_agent_state("idle")
+        try:
+            await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+            await redis.set_agent_state("idle")
+        except (ConnectionClosedError, OSError) as error:
+            logger.error(error)
+            pass
+
     await redis.close()
 
 
@@ -31,7 +46,14 @@ async def producer(redis, queue):
     """Wait a task and put in on the queue."""
     while True:
         logger.info("Wait for a new request...")
-        parameters = await redis.subscribe()
+        try:
+            await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+            parameters = await redis.subscribe()
+        except (ConnectionClosedError, OSError) as error:
+            logger.error(error)
+            await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
+            continue
+
         logger.info("New request received! Putting in task queue")
         await queue.put(
             (parameters["measurement_uuid"], measuremement(redis.uuid, parameters))
@@ -56,6 +78,7 @@ async def main():
                 "inf_born": settings.AGENT_INF_BORN,
                 "sup_born": settings.AGENT_SUP_BORN,
                 "ips_per_subnet": settings.AGENT_IPS_PER_SUBNET,
+                "pfring": settings.AGENT_PFRING,
             }
         )
 
