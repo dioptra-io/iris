@@ -34,7 +34,10 @@ storage = Storage()
 
 
 async def measurement_formater_summary(redis, uuid):
-    """Summary of a measurements."""
+    """Summary of a measurements.
+    Only display the uuid of the measurement and the state from Redis.
+    `finished` if no state.
+    """
     measurement = {"uuid": uuid}
     state = await redis.get_measurement_state(uuid)
     if state is not None:
@@ -45,7 +48,10 @@ async def measurement_formater_summary(redis, uuid):
 
 
 async def measurement_formater_info(redis, uuid):
-    """Measurement information."""
+    """Measurement information.
+    Get the state from Redis (`finished` if no state)
+    The other information is derived from the database.
+    """
     measurement = await measurement_formater_summary(redis, uuid)
 
     if measurement["status"] != "finished":
@@ -62,7 +68,9 @@ async def measurement_formater_info(redis, uuid):
 async def measurement_formater_results(
     request, measurement_uuid, agent_uuid, offset, limit
 ):
-    """Measurement result for an agent."""
+    """Measurement results for an agent.
+    Get the results from the database only.
+    """
     measurement = await measurement_formater_summary(
         request.app.redis, measurement_uuid
     )

@@ -1,4 +1,5 @@
 import asyncio
+import socket
 
 from aioredis.errors import ConnectionClosedError
 from iris import __version__
@@ -75,6 +76,7 @@ async def main():
         await redis.set_agent_parameters(
             {
                 "version": __version__,
+                "hostname": socket.gethostname(),
                 "ip_address": get_own_ip_address(),
                 "probing_rate": settings.AGENT_PROBING_RATE,
                 "buffer_sniffer_size": settings.AGENT_BUFFER_SNIFFER_SIZE,
@@ -89,6 +91,8 @@ async def main():
         await asyncio.gather(producer(redis, queue), consumer(redis.uuid, queue))
 
     finally:
+        for task in asyncio.Task.all_tasks():
+            task.cancel()
         await redis.delete_agent_state()
         await redis.delete_agent_parameters()
         await redis.close()
