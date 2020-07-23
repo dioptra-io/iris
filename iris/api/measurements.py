@@ -4,7 +4,6 @@ from aioch import Client
 from datetime import datetime
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Body,
     Depends,
     HTTPException,
@@ -12,7 +11,7 @@ from fastapi import (
     Request,
     status,
 )
-from iris.api.database import MeasurementResults, get_table_name, get_agents_and_date
+from iris.api.results import MeasurementResults
 from iris.api.security import authenticate
 from iris.api.schemas import (
     ExceptionResponse,
@@ -23,6 +22,7 @@ from iris.api.schemas import (
     MeasurementsResultsResponse,
 )
 from iris.api.settings import APISettings
+from iris.commons.database import DatabaseMeasurement, DatabaseAllMeasurements
 from iris.commons.storage import Storage
 from iris.worker.hooks import hook
 from uuid import uuid4
@@ -47,24 +47,6 @@ async def measurement_formater_summary(redis, uuid):
     return measurement
 
 
-async def measurement_formater_info(redis, uuid):
-    """Measurement information.
-    Get the state from Redis (`finished` if no state)
-    The other information is derived from the database.
-    """
-    measurement = await measurement_formater_summary(redis, uuid)
-
-    if measurement["status"] != "finished":
-        measurement["agents"] = None
-        measurement["date"] = None
-        return measurement
-
-    client = Client(settings.API_DATABASE_HOST)
-    measurement["agents"], measurement["date"] = await get_agents_and_date(client, uuid)
-
-    return measurement
-
-
 async def measurement_formater_results(
     request, measurement_uuid, agent_uuid, offset, limit
 ):
@@ -77,10 +59,13 @@ async def measurement_formater_results(
     if measurement["status"] != "finished":
         return {"count": 0, "results": []}
 
-    client = Client(settings.API_DATABASE_HOST)
+    client = Client(settings.DATABASE_HOST)
+    table_name = DatabaseMeasurement.forge_table_name(measurement_uuid, agent_uuid)
+    table_name = f"{settings.DATABASE_NAME}.{table_name}"
 
-    table_name = await get_table_name(client, measurement_uuid, agent_uuid)
-    if table_name is None:
+    response = await client.execute(f"EXISTS TABLE {table_name}")
+    is_table_exists = bool(response[0][0])
+    if not is_table_exists:
         raise HTTPException(
             status_code=404,
             detail=(
@@ -100,7 +85,10 @@ async def measurement_formater_results(
 )
 async def get_measurements(request: Request, username: str = Depends(authenticate)):
     """Get all measurements with the status."""
-    all_measurements = await request.app.redis.get_measurements()
+    database = DatabaseAllMeasurements(
+        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
+    )
+    all_measurements = await database.all(username)
 
     measurements = []
     for measurement_uuid in all_measurements:
@@ -109,13 +97,6 @@ async def get_measurements(request: Request, username: str = Depends(authenticat
         )
 
     return {"count": len(measurements), "results": measurements}
-
-
-async def publish_measurement(redis, agents, parameters):
-    """Launch a measurement procedure on each available agents."""
-    measurement_uuid = parameters["measurement_uuid"]
-    await redis.register_measurement(measurement_uuid)
-    hook.send(agents, parameters)
 
 
 @router.post(
@@ -127,7 +108,6 @@ async def publish_measurement(redis, agents, parameters):
 )
 async def post_measurement(
     request: Request,
-    background_tasks: BackgroundTasks,
     measurement: MeasurementsPostBody = Body(
         ...,
         example={
@@ -159,11 +139,11 @@ async def post_measurement(
 
     parameters = dict(measurement)
     parameters["measurement_uuid"] = str(uuid4())
-    parameters["timestamp"] = datetime.timestamp(datetime.now())
+    parameters["user"] = username
+    parameters["start_time"] = datetime.timestamp(datetime.now())
 
-    background_tasks.add_task(
-        publish_measurement, request.app.redis, agents, parameters
-    )
+    # launch a measurement procedure on the worker.
+    hook.send(agents, parameters)
 
     return {"uuid": parameters["measurement_uuid"]}
 
@@ -178,11 +158,21 @@ async def get_measurement_by_uuid(
     request: Request, measurement_uuid: str, username: str = Depends(authenticate)
 ):
     """Get measurement information by uuid."""
-    all_measurements = await request.app.redis.get_measurements()
-    for measurement_uuid in all_measurements:
-        if measurement_uuid == measurement_uuid:
-            return await measurement_formater_info(request.app.redis, measurement_uuid)
-    raise HTTPException(status_code=404, detail="Measurement not found")
+    database = DatabaseAllMeasurements(
+        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
+    )
+    measurement_info = await database.get(username, measurement_uuid)
+    if measurement_info is None:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+
+    measurement = await measurement_formater_summary(
+        request.app.redis, measurement_uuid
+    )
+
+    measurement = {**measurement, **measurement_info}
+    del measurement["user"]
+
+    return measurement
 
 
 @router.get(
@@ -200,7 +190,10 @@ async def get_measurement_results(
     username: str = Depends(authenticate),
 ):
     """Get measurement results."""
-    all_measurements = await request.app.redis.get_measurements()
+    database = DatabaseAllMeasurements(
+        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
+    )
+    all_measurements = await database.all(username)
     for measurement_uuid in all_measurements:
         if measurement_uuid == measurement_uuid:
             return await measurement_formater_results(

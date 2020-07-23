@@ -69,15 +69,6 @@ class Redis(object):
             return False
         return True
 
-    async def register_measurement(self, uuid):
-        """Register a measurement."""
-        await self._redis.lpush("measurements", uuid)
-
-    async def get_measurements(self):
-        """Get all registered measurements."""
-        uuids = await self._redis.lrange(f"{self.KEY_MEASUREMENTS}", 0, -1)
-        return [uuid.decode("utf8") for uuid in uuids]
-
     async def get_measurement_state(self, uuid):
         """Get measurement state."""
         state = await self._redis.get(f"{self.KEY_MEASUREMENT_STATE}:{uuid}")

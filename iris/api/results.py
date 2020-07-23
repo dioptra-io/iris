@@ -1,11 +1,5 @@
-"""Database interaction."""
+"""Database interaction for handling results."""
 import ipaddress
-
-from datetime import datetime
-from iris.api.settings import APISettings
-from iris.commons.clickhouse import ClickhouseManagement
-
-settings = APISettings()
 
 
 def packet_formater(row):
@@ -30,32 +24,6 @@ def packet_formater(row):
     }
 
 
-async def get_agents_and_date(client, measurement_uuid):
-    """Get UUID of the agents that participated to the measurement + date."""
-    agents = []
-    date = ""
-    response = await client.execute(f"SHOW TABLES FROM {settings.API_DATABASE_NAME}")
-    tables = [table[0] for table in response]
-    for table in tables:
-        table_info = ClickhouseManagement.parse_table_name(table)
-        if measurement_uuid == table_info["measurement_uuid"]:
-            agents.append(table_info["agent_uuid"])
-            date = str(datetime.fromtimestamp(table_info["timestamp"]))
-    return agents, date
-
-
-async def get_table_name(client, measurement_uuid, agent_uuid):
-    response = await client.execute(f"SHOW TABLES FROM {settings.API_DATABASE_NAME}")
-    tables = [table[0] for table in response]
-    for table in tables:
-        table_info = ClickhouseManagement.parse_table_name(table)
-        if (
-            table_info["measurement_uuid"] == measurement_uuid
-            and table_info["agent_uuid"] == agent_uuid
-        ):
-            return table
-
-
 class MeasurementResults(object):
     """Return measurement results paginated."""
 
@@ -69,9 +37,7 @@ class MeasurementResults(object):
 
     async def get_count(self):
         """Get total count query."""
-        response = await self.client.execute(
-            f"SELECT Count() FROM {settings.API_DATABASE_NAME}.{self.table_name} "
-        )
+        response = await self.client.execute(f"SELECT Count() FROM {self.table_name}")
         self.count = response[0][0]
         return self.count
 
@@ -101,9 +67,10 @@ class MeasurementResults(object):
 
     async def get_results(self):
         """Get results from database according to offeset and limit parameters."""
+        query = f"SELECT * FROM {self.table_name} LIMIT %(offset)s,%(limit)s"
+
         response = await self.client.execute(
-            f"SELECT * FROM {settings.API_DATABASE_NAME}.{self.table_name} "
-            f"LIMIT {self.offset},{self.limit}"
+            query, {"offset": self.offset, "limit": self.limit}
         )
         return [packet_formater(row) for row in response]
 

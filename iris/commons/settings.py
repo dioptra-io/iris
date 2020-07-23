@@ -10,6 +10,11 @@ class CommonSettings(BaseSettings):
     AWS_REGION_NAME: str = "local"
     AWS_S3_TARGETS_BUCKET_NAME = "targets"
 
+    DATABASE_HOST: str = "clickhouse"
+    DATABASE_NAME: str = "iris"
+
+    MEASUREMENT_TABLE_NAME: str = f"{DATABASE_NAME}.measurements"
+
     REDIS_URL: str = "redis://redis"
     REDIS_HOSTNAME: str = "redis"
     REDIS_PORT: int = 6379

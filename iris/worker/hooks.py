@@ -2,7 +2,8 @@ import asyncio
 import dramatiq
 
 from aiofiles import os as aios
-from iris.commons.clickhouse import ClickhouseManagement
+from datetime import datetime
+from iris.commons.database import DatabaseMeasurement, DatabaseAllMeasurements
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from iris.worker import logger
@@ -16,7 +17,6 @@ from pathlib import Path
 
 
 settings = WorkerSettings()
-database = ClickhouseManagement(host=settings.WORKER_DATABASE_HOST, logger=logger)
 storage = Storage()
 
 
@@ -32,9 +32,11 @@ async def pipeline(
     starttime_filename,
 ):
     """Process results and eventually request a new round."""
+
+    database = DatabaseMeasurement(host=settings.DATABASE_HOST, logger=logger)
+
     logger.info(f"New files detected for agent `{agent_uuid}`")
     measurement_uuid = measurement_parameters["measurement_uuid"]
-    timestamp = measurement_parameters["timestamp"]
     round_number = extract_round_number(result_filename)
 
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
@@ -73,13 +75,10 @@ async def pipeline(
     if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
         logger.error(f"Impossible to remove result file `{starttime_filename}`")
 
-    logger.info(f"Create database `{settings.WORKER_DATABASE_NAME}`if not exists")
-    await database.create_datebase(settings.WORKER_DATABASE_NAME)
-
     table_name = (
-        settings.WORKER_DATABASE_NAME
+        settings.DATABASE_NAME
         + "."
-        + database.forge_table_name(measurement_uuid, agent_uuid, timestamp)
+        + database.forge_table_name(measurement_uuid, agent_uuid)
     )
     logger.info(f"Create table `{table_name}`")
     await database.create_table(table_name, drop=False)
@@ -244,7 +243,6 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
                 {
                     "measurement_uuid": measurement_uuid,
                     "measurement_tool": "diamond_miner",
-                    "timestamp": measurement_parameters["timestamp"],
                     "round": round_number,
                     "parameters": measurement_parameters,
                 },
@@ -254,21 +252,34 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
 async def callback(agents, measurement_parameters):
     """Asynchronous callback."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
+    user = measurement_parameters["user"]
+
     logger.info(f"New measurement `{measurement_uuid}` received")
+    database = DatabaseAllMeasurements(
+        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME,
+    )
 
     redis = Redis()
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
-    logger.info("Create local measurement directory if not exists")
-    measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
-    try:
-        await aios.mkdir(str(measurement_results_path))
-    except FileExistsError:
-        logger.error(f"Local measurement `{measurement_uuid}` directory already exits")
-        return
-
     if await redis.get_measurement_state(measurement_uuid) is None:
         # There is no measurement state, so the measurement hasn't started yet
+        logger.info(f"Set measurement `{measurement_uuid}` state to `waiting`")
+        await redis.set_measurement_state(measurement_uuid, "waiting")
+
+        logger.info("Create local measurement directory if not exists")
+        measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
+        try:
+            await aios.mkdir(str(measurement_results_path))
+        except FileExistsError:
+            logger.warning(
+                f"Local measurement `{measurement_uuid}` directory already exits"
+            )
+
+        logger.info(f"Register measurement `{measurement_uuid}` into database")
+        await database.create_table()
+        await database.register(agents, measurement_parameters)
+
         logger.info(f"Create measurement bucket  `{measurement_uuid}` in AWS S3")
         try:
             await storage.create_bucket(bucket=measurement_uuid)
@@ -276,15 +287,10 @@ async def callback(agents, measurement_parameters):
             logger.error(f"Impossible to create bucket `{measurement_uuid}`")
             return
 
-        logger.info(f"Set measurement `{measurement_uuid}` state to `waiting`")
-        await redis.set_measurement_state(measurement_uuid, "waiting")
-
         logger.info(f"Publish measurement `{measurement_uuid}` to agents")
-
         measurement_request = {
             "measurement_uuid": measurement_uuid,
             "measurement_tool": "iris",
-            "timestamp": measurement_parameters["timestamp"],
             "round": 1,
             "parameters": measurement_parameters,
         }
@@ -323,6 +329,9 @@ async def callback(agents, measurement_parameters):
         await storage.delete_bucket(bucket=measurement_uuid)
     except Exception:
         logger.error(f"Impossible to remove bucket `{measurement_uuid}`")
+
+    logger.info(f"Stamp the end time for measurement `{measurement_uuid}`")
+    await database.stamp_end_time(user, measurement_uuid, datetime.now())
 
     logger.info(f"Measurement `{measurement_uuid}` is done")
     await redis.delete_measurement_state(measurement_uuid)

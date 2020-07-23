@@ -24,6 +24,3 @@ class WorkerSettings(CommonSettings):
     WORKER_SANITY_CHECK_ENABLE: bool = True
     WORKER_SANITY_CHECK_RETRIES: int = 3
     WORKER_SANITY_CHECK_REFRESH: int = 1  # seconds
-
-    WORKER_DATABASE_HOST: str = "clickhouse"
-    WORKER_DATABASE_NAME: str = "iris"

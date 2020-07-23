@@ -56,7 +56,7 @@ async def next_round_csv(
         + " -t"
         + table_name
         + " --db-host="
-        + str(settings.WORKER_DATABASE_HOST)
+        + str(settings.DATABASE_HOST)
         + " -v "
         + str(int(ipaddress.IPv4Address(agent_parameters["ip_address"])))
         + " --dport="

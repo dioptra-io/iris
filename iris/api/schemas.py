@@ -1,7 +1,7 @@
 """API Body and Response schemas."""
 
 from pydantic import BaseModel, Field
-from typing import Set, List
+from typing import Optional, List, Set
 
 # --- Commons ----
 
@@ -91,8 +91,14 @@ class MeasurementInfoResponse(BaseModel):
 
     uuid: str
     status: str
-    date: str = None
-    agents: Set[str] = None
+    agents: List[str]
+    target_file_key: str
+    protocol: str
+    destination_port: int
+    min_ttl: int
+    max_ttl: int
+    start_time: str
+    end_time: Optional[str]
 
 
 class MeasurementSummaryResponse(BaseModel):
