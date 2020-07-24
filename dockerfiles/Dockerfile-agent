@@ -71,17 +71,18 @@ RUN if [ "$PFRING" = "enable" ] ; then mkdir build && \
 
 # Iris Agent
 WORKDIR /app
+
+RUN pip install --upgrade pip
 RUN pip install poetry
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
-RUN poetry install --no-root
+RUN poetry install --no-root --no-dev
 
-COPY entrypoints/agent.py agent.py
-COPY tools/autoreload.py autoreload.py
 COPY iris iris
+COPY iris/agent/main.py main.py
 
 RUN mkdir targets
 RUN mkdir results
 
-CMD ["python", "-u", "agent.py", "&", "nginx"]
+CMD ["python", "-u", "main.py", "&", "nginx"]

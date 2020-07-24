@@ -22,6 +22,8 @@ services:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-api
+    environment:
+      MODULE_NAME: iris.api.main
     volumes:
       - ./iris:/app/iris
     depends_on:

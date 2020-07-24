@@ -96,3 +96,12 @@ async def main():
         await redis.delete_agent_state()
         await redis.delete_agent_parameters()
         await redis.close()
+
+
+def app():
+    """ASGI interface."""
+    asyncio.run(main())
+
+
+if __name__ == "__main__":
+    app()

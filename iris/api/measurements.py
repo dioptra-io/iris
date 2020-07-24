@@ -1,6 +1,7 @@
 """Measurements operations."""
 
-from aioch import Client
+import aioch
+
 from datetime import datetime
 from fastapi import (
     APIRouter,
@@ -33,6 +34,12 @@ settings = APISettings()
 storage = Storage()
 
 
+async def session():
+    return DatabaseAllMeasurements(
+        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
+    )
+
+
 async def measurement_formater_summary(redis, uuid):
     """Summary of a measurements.
     Only display the uuid of the measurement and the state from Redis.
@@ -59,7 +66,7 @@ async def measurement_formater_results(
     if measurement["status"] != "finished":
         return {"count": 0, "results": []}
 
-    client = Client(settings.DATABASE_HOST)
+    client = aioch.Client(settings.DATABASE_HOST)
     table_name = DatabaseMeasurement.forge_table_name(measurement_uuid, agent_uuid)
     table_name = f"{settings.DATABASE_NAME}.{table_name}"
 
@@ -70,7 +77,7 @@ async def measurement_formater_results(
             status_code=404,
             detail=(
                 f"The agent `{agent_uuid}` "
-                f"did not participate to measurement `{measurement_uuid}`",
+                f"did not participate to measurement `{measurement_uuid}`"
             ),
         )
 
@@ -83,12 +90,13 @@ async def measurement_formater_results(
     response_model=MeasurementsGetResponse,
     summary="Get all measurements with the status",
 )
-async def get_measurements(request: Request, username: str = Depends(authenticate)):
+async def get_measurements(
+    request: Request,
+    username: str = Depends(authenticate),
+    session: DatabaseAllMeasurements = Depends(session),
+):
     """Get all measurements with the status."""
-    database = DatabaseAllMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
-    )
-    all_measurements = await database.all(username)
+    all_measurements = await session.all(username)
 
     measurements = []
     for measurement_uuid in all_measurements:
@@ -155,13 +163,13 @@ async def post_measurement(
     summary="Get measurement information by uuid",
 )
 async def get_measurement_by_uuid(
-    request: Request, measurement_uuid: str, username: str = Depends(authenticate)
+    request: Request,
+    measurement_uuid: str,
+    username: str = Depends(authenticate),
+    session: DatabaseAllMeasurements = Depends(session),
 ):
     """Get measurement information by uuid."""
-    database = DatabaseAllMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
-    )
-    measurement_info = await database.get(username, measurement_uuid)
+    measurement_info = await session.get(username, measurement_uuid)
     if measurement_info is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
 
@@ -188,15 +196,13 @@ async def get_measurement_results(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     username: str = Depends(authenticate),
+    session: DatabaseAllMeasurements = Depends(session),
 ):
     """Get measurement results."""
-    database = DatabaseAllMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
+    measurement_info = await session.get(username, measurement_uuid)
+    if measurement_info is None:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+
+    return await measurement_formater_results(
+        request, measurement_uuid, agent_uuid, offset, limit
     )
-    all_measurements = await database.all(username)
-    for measurement_uuid in all_measurements:
-        if measurement_uuid == measurement_uuid:
-            return await measurement_formater_results(
-                request, measurement_uuid, agent_uuid, offset, limit
-            )
-    raise HTTPException(status_code=404, detail="Measurement not found")
