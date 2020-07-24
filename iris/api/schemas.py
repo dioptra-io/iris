@@ -91,7 +91,7 @@ class MeasurementInfoResponse(BaseModel):
 
     uuid: str
     status: str
-    agents: List[str]
+    agents: Set[str]
     target_file_key: str
     protocol: str
     destination_port: int
@@ -119,7 +119,7 @@ class MeasurementsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
     target_file_key: str
-    agents: Set[str] = Field(
+    agents: List[str] = Field(
         None,
         title="Optional agent list",
         description="Publish the measurement to all agents if not set.",
@@ -166,6 +166,6 @@ class MeasurementsResultsResponse(BaseModel):
     """GET /measurements/{uuid} (Response)."""
 
     count: int
-    next: str = None
-    previous: str = None
+    next: Optional[str] = None
+    previous: Optional[str] = None
     results: List[PacketResponse]

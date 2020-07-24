@@ -1,6 +1,8 @@
 """Database interaction for handling results."""
 import ipaddress
 
+from typing import Optional
+
 
 def packet_formater(row):
     """Database row -> packet formater."""
@@ -41,7 +43,7 @@ class MeasurementResults(object):
         self.count = response[0][0]
         return self.count
 
-    def get_next_url(self) -> str:
+    def get_next_url(self) -> Optional[str]:
         """Constructs `next` parameter in resulting JSON."""
         if self.offset + self.limit >= self.count:
             return None
@@ -51,7 +53,7 @@ class MeasurementResults(object):
             )
         )
 
-    def get_previous_url(self) -> str:
+    def get_previous_url(self) -> Optional[str]:
         """Constructs `previous` parameter in resulting JSON."""
         if self.offset <= 0:
             return None
