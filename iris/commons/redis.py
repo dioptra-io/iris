@@ -1,7 +1,6 @@
 import aioredis
+import aioredis.pubsub
 import json
-
-from aioredis.pubsub import Receiver
 
 
 class Redis(object):
@@ -17,11 +16,25 @@ class Redis(object):
     def __init__(self, uuid=None):
         self._redis = None
 
-    async def connect(self, host, password=None, register=True):
+    async def connect(self, host, password=None):
         """Connect to Redis instance."""
         self._redis = await aioredis.create_redis(host)
         if password:
             await self._redis.auth(password)
+
+    async def get_agent_state(self, uuid):
+        """Get agent state."""
+        state = await self._redis.get(f"{self.KEY_AGENT_STATE}:{uuid}")
+        if state is None:
+            return "unknown"
+        return state.decode("utf8")
+
+    async def get_agent_parameters(self, uuid):
+        """Get agent parameters."""
+        parameters = await self._redis.get(f"{self.KEY_AGENT_PARAMETERS}:{uuid}")
+        if parameters is None:
+            return None
+        return json.loads(parameters)
 
     async def get_agents(self, state=True, parameters=True):
         """Get agents UUID along with their state."""
@@ -42,21 +55,8 @@ class Redis(object):
             agents.append(agent)
         return agents
 
-    async def get_agent_state(self, uuid):
-        """Get agent state."""
-        state = await self._redis.get(f"{self.KEY_AGENT_STATE}:{uuid}")
-        if state is None:
-            return "unknown"
-        return state.decode("utf8")
-
-    async def get_agent_parameters(self, uuid):
-        """Get agent parameters."""
-        parameters = await self._redis.get(f"{self.KEY_AGENT_PARAMETERS}:{uuid}")
-        if parameters is None:
-            return None
-        return json.loads(parameters)
-
     async def check_agent(self, uuid):
+        """Check the conformity of an agent."""
         agents = await self.get_agents(state=False, parameters=False)
         agents = [agent["uuid"] for agent in agents]
         if uuid not in agents:
@@ -125,7 +125,7 @@ class AgentRedis(Redis):
 
     async def subscribe(self):
         """Subscribe to agent channels (all, specific) and wait for a response"""
-        mpsc = Receiver()
+        mpsc = aioredis.pubsub.Receiver()
 
         await self._redis.subscribe(
             mpsc.channel(f"{self.KEY_AGENT_LISTEN}:all"),

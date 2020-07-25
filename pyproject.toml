@@ -25,7 +25,8 @@ click = "^7.1.2"
 flake8 = "^3.8.3"
 jinja2 = "^2.11.2"
 mypy = "^0.782"
-pytest = {version = "^5.2",allow-prereleases = true}
+pytest = {version = "^6.0.0rc1",allow-prereleases = true}
+pytest-asyncio = "^0.14.0"
 pytest-cov = "^2.10.0"
 requests = "^2.24.0"
 
