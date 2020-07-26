@@ -64,7 +64,7 @@ RUN apt-get update \
 WORKDIR /app
 
 # Diamond-Miner Reader
-RUN git clone -b feature/redundant_ttl https://github.com/dioptra-io/diamond-miner-cpp.git reader
+RUN git clone https://github.com/dioptra-io/diamond-miner-cpp.git reader
 RUN mkdir -p reader/resources
 COPY statics/excluded_prefixes /app/reader/resources
 WORKDIR /app/reader

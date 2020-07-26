@@ -57,7 +57,7 @@ RUN apt-get update
 RUN apt-get install -y gdb tcpdump traceroute nload
 
 # Diamond-Miner Prober
-RUN git clone -b feature/redundant_ttl https://github.com/dioptra-io/diamond-miner-cpp.git prober
+RUN git clone https://github.com/dioptra-io/diamond-miner-cpp.git prober
 RUN mkdir prober/resources
 COPY statics/excluded_prefixes /app/prober/resources
 WORKDIR /app/prober
