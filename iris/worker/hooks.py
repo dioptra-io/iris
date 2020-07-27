@@ -94,7 +94,7 @@ async def pipeline(
     next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"
     next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
 
-    if agent_parameters is None:
+    if not agent_parameters:
         logger.error("No agent parameters")
 
     logger.info("Compute the next round CSV probe file")

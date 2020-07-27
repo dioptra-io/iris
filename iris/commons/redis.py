@@ -33,7 +33,7 @@ class Redis(object):
         """Get agent parameters."""
         parameters = await self._redis.get(f"{self.KEY_AGENT_PARAMETERS}:{uuid}")
         if parameters is None:
-            return None
+            return {}
         return json.loads(parameters)
 
     async def get_agents(self, state=True, parameters=True):
@@ -65,7 +65,7 @@ class Redis(object):
         if agent_state == "unknown":
             return False
         agent_parameters = await self.get_agent_parameters(uuid)
-        if agent_parameters is None:
+        if not agent_parameters:
             return False
         return True
 

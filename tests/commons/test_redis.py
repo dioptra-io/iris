@@ -75,7 +75,7 @@ async def test_redis_get_agent_parameters():
     redis._redis = FakeRedisConnection()
 
     redis._redis.assign("get", fake(None))
-    assert await redis.get_agent_parameters("test") is None
+    assert await redis.get_agent_parameters("test") == {}
 
     redis._redis.assign("get", fake(b'{"test":0}'))
     assert await redis.get_agent_parameters("test") == {"test": 0}
