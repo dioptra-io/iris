@@ -11,7 +11,7 @@ from iris.api.schemas import (
 router = APIRouter()
 
 
-@router.get("/", response_model=AgentsGetResponse, summary="Get all agents inforamtion")
+@router.get("/", response_model=AgentsGetResponse, summary="Get all agents information")
 async def get_agents(request: Request, username: str = Depends(authenticate)):
     """Get all agents information."""
     agents = await request.app.redis.get_agents(parameters=False)

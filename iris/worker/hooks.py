@@ -297,7 +297,9 @@ async def callback(agents, measurement_parameters):
         logger.info("Register agents into database")
         await database_agents.create_table()
         for agent_uuid, agent_parameters in agents_parameters.items():
-            await database_agents.register(agent_uuid, agent_parameters)
+            is_already_present = await database_agents.get(agent_uuid)
+            if is_already_present is None:
+                await database_agents.register(agent_uuid, agent_parameters)
 
         logger.info(f"Create measurement bucket  `{measurement_uuid}` in AWS S3")
         try:
