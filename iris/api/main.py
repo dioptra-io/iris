@@ -3,7 +3,7 @@
 from iris import __version__
 from iris.api import router
 from iris.api.settings import APISettings
-from iris.commons.database import DatabaseAllMeasurements
+from iris.commons.database import DatabaseMeasurements
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from fastapi import FastAPI
@@ -28,8 +28,8 @@ async def startup_event():
         await Storage().create_bucket(settings.AWS_S3_TARGETS_BUCKET_NAME)
     except Exception:
         pass
-    database = DatabaseAllMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
+    database = DatabaseMeasurements(
+        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME
     )
     await database.create_datebase(settings.DATABASE_NAME)
     await database.create_table()

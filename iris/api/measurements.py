@@ -23,7 +23,7 @@ from iris.api.schemas import (
     MeasurementsResultsResponse,
 )
 from iris.api.settings import APISettings
-from iris.commons.database import DatabaseMeasurement, DatabaseAllMeasurements
+from iris.commons.database import DatabaseMeasurementResults, DatabaseMeasurements
 from iris.commons.storage import Storage
 from iris.worker.hooks import hook
 from uuid import uuid4
@@ -35,8 +35,8 @@ storage = Storage()
 
 
 async def session():
-    return DatabaseAllMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME
+    return DatabaseMeasurements(
+        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME
     )
 
 
@@ -67,7 +67,9 @@ async def measurement_formater_results(
         return {"count": 0, "results": []}
 
     client = aioch.Client(settings.DATABASE_HOST)
-    table_name = DatabaseMeasurement.forge_table_name(measurement_uuid, agent_uuid)
+    table_name = DatabaseMeasurementResults.forge_table_name(
+        measurement_uuid, agent_uuid
+    )
     table_name = f"{settings.DATABASE_NAME}.{table_name}"
 
     response = await client.execute(f"EXISTS TABLE {table_name}")
@@ -93,7 +95,7 @@ async def measurement_formater_results(
 async def get_measurements(
     request: Request,
     username: str = Depends(authenticate),
-    session: DatabaseAllMeasurements = Depends(session),
+    session: DatabaseMeasurements = Depends(session),
 ):
     """Get all measurements with the status."""
     all_measurements = await session.all(username)
@@ -166,7 +168,7 @@ async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: str,
     username: str = Depends(authenticate),
-    session: DatabaseAllMeasurements = Depends(session),
+    session: DatabaseMeasurements = Depends(session),
 ):
     """Get measurement information by uuid."""
     measurement_info = await session.get(username, measurement_uuid)
@@ -196,7 +198,7 @@ async def get_measurement_results(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     username: str = Depends(authenticate),
-    session: DatabaseAllMeasurements = Depends(session),
+    session: DatabaseMeasurements = Depends(session),
 ):
     """Get measurement results."""
     measurement_info = await session.get(username, measurement_uuid)

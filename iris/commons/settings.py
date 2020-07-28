@@ -13,7 +13,8 @@ class CommonSettings(BaseSettings):
     DATABASE_HOST: str = "clickhouse"
     DATABASE_NAME: str = "iris"
 
-    MEASUREMENT_TABLE_NAME: str = f"{DATABASE_NAME}.measurements"
+    MEASUREMENTS_TABLE_NAME: str = f"{DATABASE_NAME}.measurements"
+    AGENTS_TABLE_NAME: str = f"{DATABASE_NAME}.agents"
 
     REDIS_URL: str = "redis://redis"
     REDIS_HOSTNAME: str = "redis"

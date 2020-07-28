@@ -3,7 +3,11 @@ import dramatiq
 
 from aiofiles import os as aios
 from datetime import datetime
-from iris.commons.database import DatabaseMeasurement, DatabaseAllMeasurements
+from iris.commons.database import (
+    DatabaseMeasurementResults,
+    DatabaseMeasurements,
+    DatabaseAgents,
+)
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from iris.worker import logger
@@ -33,7 +37,7 @@ async def pipeline(
 ):
     """Process results and eventually request a new round."""
 
-    database = DatabaseMeasurement(host=settings.DATABASE_HOST, logger=logger)
+    database = DatabaseMeasurementResults(host=settings.DATABASE_HOST, logger=logger)
 
     logger.info(f"New files detected for agent `{agent_uuid}`")
     measurement_uuid = measurement_parameters["measurement_uuid"]
@@ -255,12 +259,22 @@ async def callback(agents, measurement_parameters):
     user = measurement_parameters["user"]
 
     logger.info(f"New measurement `{measurement_uuid}` received")
-    database = DatabaseAllMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENT_TABLE_NAME,
+    database_measurements = DatabaseMeasurements(
+        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME,
+    )
+    database_agents = DatabaseAgents(
+        host=settings.DATABASE_HOST, table_name=settings.AGENTS_TABLE_NAME,
     )
 
     redis = Redis()
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+
+    logger.info("Getting agents parameters")
+    agents_parameters = {}
+    for agent_uuid in agents:
+        agent_parameters = await redis.get_agent_parameters(agent_uuid)
+        if agent_parameters:
+            agents_parameters[agent_uuid] = agent_parameters
 
     if await redis.get_measurement_state(measurement_uuid) is None:
         # There is no measurement state, so the measurement hasn't started yet
@@ -277,8 +291,13 @@ async def callback(agents, measurement_parameters):
             )
 
         logger.info(f"Register measurement `{measurement_uuid}` into database")
-        await database.create_table()
-        await database.register(agents, measurement_parameters)
+        await database_measurements.create_table()
+        await database_measurements.register(agents, measurement_parameters)
+
+        logger.info("Register agents into database")
+        await database_agents.create_table()
+        for agent_uuid, agent_parameters in agents_parameters.items():
+            await database_agents.register(agent_uuid, agent_parameters)
 
         logger.info(f"Create measurement bucket  `{measurement_uuid}` in AWS S3")
         try:
@@ -301,17 +320,11 @@ async def callback(agents, measurement_parameters):
             for agent_uuid in measurement_parameters["agents"]:
                 await redis.publish(agent_uuid, measurement_request)
 
-    logger.info("Getting agents parameters")
-    agents_parameters = [
-        await redis.get_agent_parameters(agent_uuid) for agent_uuid in agents
-    ]
-
     logger.info("Watching ...")
     await asyncio.gather(
         *[
             watch(redis, agent_uuid, agent_parameters, measurement_parameters)
-            for agent_uuid, agent_parameters in zip(agents, agents_parameters)
-            if agent_parameters is not None
+            for agent_uuid, agent_parameters in agents_parameters.items()
         ]
     )
 
@@ -331,7 +344,7 @@ async def callback(agents, measurement_parameters):
         logger.error(f"Impossible to remove bucket `{measurement_uuid}`")
 
     logger.info(f"Stamp the end time for measurement `{measurement_uuid}`")
-    await database.stamp_end_time(user, measurement_uuid, datetime.now())
+    await database_measurements.stamp_end_time(user, measurement_uuid, datetime.now())
 
     logger.info(f"Measurement `{measurement_uuid}` is done")
     await redis.delete_measurement_state(measurement_uuid)

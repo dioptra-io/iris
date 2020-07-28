@@ -15,7 +15,7 @@ def test_get_measurements_empty(client, monkeypatch):
     async def all(self, username):
         return []
 
-    monkeypatch.setattr(iris.commons.database.DatabaseAllMeasurements, "all", all)
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
 
     response = client.get("/v0/measurements")
     assert response.json() == {"count": 0, "results": []}
@@ -29,7 +29,7 @@ def test_get_measurements(client, monkeypatch):
     async def all(self, username):
         return [measurement_uuid]
 
-    monkeypatch.setattr(iris.commons.database.DatabaseAllMeasurements, "all", all)
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
 
     response = client.get("/v0/measurements")
     assert response.json() == {
@@ -69,7 +69,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "end_time": end_time,
         }
 
-    monkeypatch.setattr(iris.commons.database.DatabaseAllMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
 
     response = client.get(f"/v0/measurements/{measurement_uuid}")
     assert response.json() == {
@@ -94,7 +94,7 @@ def test_get_measurement_by_uuid_not_found(client, monkeypatch):
     async def get(self, username, measurement_uuid):
         return None
 
-    monkeypatch.setattr(iris.commons.database.DatabaseAllMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
 
     response = client.get(f"/v0/measurements/{measurement_uuid}")
     assert response.status_code == 404
@@ -154,7 +154,7 @@ def test_get_measurement_result(client, monkeypatch):
         async def execute(*args, **kwargs):
             return [[1]]
 
-    monkeypatch.setattr(iris.commons.database.DatabaseAllMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
     monkeypatch.setattr(iris.api.results.MeasurementResults, "get_results", get_results)
     monkeypatch.setattr(iris.api.measurements.aioch, "Client", FakeClient)
 
@@ -194,7 +194,7 @@ def test_get_measurement_no_result(client, monkeypatch):
         async def execute(*args, **kwargs):
             return [[0]]
 
-    monkeypatch.setattr(iris.commons.database.DatabaseAllMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
     monkeypatch.setattr(iris.api.measurements.aioch, "Client", FakeClient)
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
@@ -216,7 +216,7 @@ def test_get_measurement_result_not_found(client, monkeypatch):
     async def get(self, username, measurement_uuid):
         return None
 
-    monkeypatch.setattr(iris.commons.database.DatabaseAllMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 404

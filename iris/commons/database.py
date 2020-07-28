@@ -23,9 +23,85 @@ class Database(object):
         """Clean a table."""
         await self.client.execute(f"ALTER TABLE {table_name} DELETE WHERE 1=1")
 
+    async def disconnect(self):
+        """Disconnect agent."""
+        await self.client.disconnect()
 
-class DatabaseAllMeasurements(Database):
-    """Interface of handle all measurements."""
+
+class DatabaseAgents(Database):
+    """Interface that handle agents history."""
+
+    def __init__(self, host, table_name):
+        super().__init__(host)
+        self.table_name = table_name
+
+    async def create_table(self, drop=False):
+        """Create the table with all registered agents."""
+        if drop:
+            self.drop(self.table_name)
+
+        await self.client.execute(
+            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
+            "(uuid UUID, user String, version String, ip_address IPv4, "
+            "probing_rate UInt32, buffer_sniffer_size UInt32, inf_born UInt32, "
+            "sup_born UInt32, ips_per_subnet UInt32, pfring UInt8) "
+            "ENGINE=MergeTree() "
+            "ORDER BY (uuid)",
+        )
+
+    async def all(self, user="all"):
+        """Get all measurements uuid for a given user."""
+        responses = await self.client.execute(
+            f"SELECT uuid FROM {self.table_name} WHERE user=%(user)s", {"user": user},
+        )
+        return [str(response[0]) for response in responses]
+
+    async def get(self, uuid, user="all"):
+        responses = await self.client.execute(
+            f"SELECT * FROM {self.table_name} WHERE user=%(user)s AND uuid=%(uuid)s",
+            {"user": user, "uuid": uuid},
+        )
+        try:
+            response = responses[0]
+        except IndexError:
+            return None
+
+        return {
+            "uuid": str(response[0]),
+            "user": response[1],
+            "version": response[2],
+            "ip_address": str(response[3]),
+            "probing_rate": response[4],
+            "buffer_sniffer_size": response[5],
+            "inf_born": response[6],
+            "sup_born": response[7],
+            "ips_per_subnet": response[8],
+            "pfring": bool(response[9]),
+        }
+
+    async def register(self, uuid, parameters):
+        print(parameters)
+        await self.client.execute(
+            f"INSERT INTO {self.table_name} VALUES",
+            [
+                {
+                    "uuid": uuid,
+                    "user": "all",  # agents share for all user at the moment
+                    "version": parameters["version"],
+                    "ip_address": parameters["ip_address"],
+                    "probing_rate": parameters["probing_rate"],
+                    "buffer_sniffer_size": parameters["buffer_sniffer_size"],
+                    "inf_born": parameters["inf_born"],
+                    "sup_born": parameters["sup_born"],
+                    "ips_per_subnet": parameters["ips_per_subnet"],
+                    "pfring": bool(parameters["pfring"]),
+                }
+            ],
+        )
+
+
+class DatabaseMeasurements(Database):
+    """Interface that handle measurements history."""
 
     def __init__(self, host, table_name):
         super().__init__(host)
@@ -109,8 +185,8 @@ class DatabaseAllMeasurements(Database):
         )
 
 
-class DatabaseMeasurement(object):
-    """Database interface to manage measurements."""
+class DatabaseMeasurementResults(object):
+    """Database interface to handle measurement results."""
 
     def __init__(self, host, logger=None):
         self.host = host
