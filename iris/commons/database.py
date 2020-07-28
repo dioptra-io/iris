@@ -42,9 +42,9 @@ class DatabaseAgents(Database):
 
         await self.client.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, version String, ip_address IPv4, "
-            "probing_rate UInt32, buffer_sniffer_size UInt32, inf_born UInt32, "
-            "sup_born UInt32, ips_per_subnet UInt32, pfring UInt8) "
+            "(uuid UUID, user String, version String, hostname String, "
+            "ip_address IPv4, probing_rate UInt32, buffer_sniffer_size UInt32, "
+            "inf_born UInt32, sup_born UInt32, ips_per_subnet UInt32, pfring UInt8) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
         )
@@ -70,13 +70,14 @@ class DatabaseAgents(Database):
             "uuid": str(response[0]),
             "user": response[1],
             "version": response[2],
-            "ip_address": str(response[3]),
-            "probing_rate": response[4],
-            "buffer_sniffer_size": response[5],
-            "inf_born": response[6],
-            "sup_born": response[7],
-            "ips_per_subnet": response[8],
-            "pfring": bool(response[9]),
+            "hostname": response[3],
+            "ip_address": str(response[4]),
+            "probing_rate": response[5],
+            "buffer_sniffer_size": response[6],
+            "inf_born": response[7],
+            "sup_born": response[8],
+            "ips_per_subnet": response[9],
+            "pfring": bool(response[10]),
         }
 
     async def register(self, uuid, parameters):
@@ -88,6 +89,7 @@ class DatabaseAgents(Database):
                     "uuid": uuid,
                     "user": "all",  # agents share for all user at the moment
                     "version": parameters["version"],
+                    "hostname": parameters["hostname"],
                     "ip_address": parameters["ip_address"],
                     "probing_rate": parameters["probing_rate"],
                     "buffer_sniffer_size": parameters["buffer_sniffer_size"],
