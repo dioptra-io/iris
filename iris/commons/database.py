@@ -213,7 +213,7 @@ class DatabaseMeasurements(Database):
 
 
 class DatabaseAgentsInMeasurements(Database):
-    """Interface that handle agents history."""
+    """Interface that handle agents parameters specific by measurements history."""
 
     def __init__(self, host, table_name):
         super().__init__(host)
@@ -227,7 +227,7 @@ class DatabaseAgentsInMeasurements(Database):
         await self.client.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
-            "finished UInt8) "
+            "finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (measurement_uuid)",
         )
@@ -259,6 +259,7 @@ class DatabaseAgentsInMeasurements(Database):
                     "min_ttl": min_ttl,
                     "max_ttl": max_ttl,
                     "finished": int(False),
+                    "timestamp": datetime.now(),
                 }
             ],
         )
