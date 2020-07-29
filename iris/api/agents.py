@@ -16,7 +16,7 @@ async def get_agents(request: Request, username: str = Depends(authenticate)):
     """Get all agents information."""
     agents_info = await request.app.redis.get_agents()
     agents = []
-    print(agents_info)
+
     for agent in agents_info:
         agents.append(
             {

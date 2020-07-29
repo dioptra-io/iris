@@ -112,7 +112,7 @@ class MeasurementInfoResponse(BaseModel):
     uuid: str
     state: str
     agents: List[MeasurementAgentInfoResponse]
-    target_file_key: str
+    targets_file_key: str
     protocol: str
     destination_port: int
     min_ttl: int
@@ -126,7 +126,7 @@ class MeasurementSummaryResponse(BaseModel):
 
     uuid: str
     state: str
-    target_file_key: str
+    targets_file_key: str
     start_time: str
     end_time: str
 
@@ -141,7 +141,7 @@ class MeasurementsGetResponse(BaseModel):
 class MeasurementsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
-    target_file_key: str
+    targets_file_key: str
     agents: List[str] = Field(
         None,
         title="Optional agent list",

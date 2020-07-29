@@ -22,12 +22,17 @@ app.include_router(router, prefix="/v0")
 
 @app.on_event("startup")
 async def startup_event():
+    # Connect into Redis
     app.redis = Redis()
     await app.redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+
+    # Create `targets` bucket in AWS S3
     try:
         await Storage().create_bucket(settings.AWS_S3_TARGETS_BUCKET_NAME)
     except Exception:
         pass
+
+    # Create the database on Clickhouse
     database = DatabaseMeasurements(
         host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME
     )

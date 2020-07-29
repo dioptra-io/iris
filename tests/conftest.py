@@ -28,7 +28,7 @@ class FakeRedis(Redis):
         return True
 
     async def get_measurement_state(*args, **kwargs):
-        return "finished"
+        return None
 
     async def set_measurement_state(*args, **kwargs):
         pass

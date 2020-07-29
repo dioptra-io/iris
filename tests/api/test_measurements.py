@@ -25,7 +25,7 @@ def test_get_measurements(client, monkeypatch):
     """Test get all measurements."""
 
     measurement_uuid = str(uuid.uuid4())
-    target_file_key = "test.txt"
+    targets_file_key = "test.txt"
     start_time = datetime.now().isoformat()
     end_time = datetime.now().isoformat()
 
@@ -33,7 +33,7 @@ def test_get_measurements(client, monkeypatch):
         return [
             {
                 "uuid": measurement_uuid,
-                "target_file_key": target_file_key,
+                "targets_file_key": targets_file_key,
                 "start_time": start_time,
                 "end_time": end_time,
             }
@@ -48,7 +48,7 @@ def test_get_measurements(client, monkeypatch):
             {
                 "uuid": measurement_uuid,
                 "state": "finished",
-                "target_file_key": target_file_key,
+                "targets_file_key": targets_file_key,
                 "start_time": start_time,
                 "end_time": end_time,
             }
@@ -70,7 +70,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "max_ttl": 30,
         "state": "finished",
     }
-    target_file_key = "test.txt"
+    targets_file_key = "test.txt"
     protocol = "udp"
     destination_port = 33434
     min_ttl = 2
@@ -85,7 +85,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         return {
             "uuid": measurement_uuid,
             "user": user,
-            "target_file_key": target_file_key,
+            "targets_file_key": targets_file_key,
             "protocol": protocol,
             "destination_port": destination_port,
             "min_ttl": min_ttl,
@@ -137,7 +137,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                 },
             }
         ],
-        "target_file_key": target_file_key,
+        "targets_file_key": targets_file_key,
         "protocol": protocol,
         "destination_port": destination_port,
         "min_ttl": min_ttl,
@@ -196,7 +196,7 @@ def test_get_measurement_result(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": "test",
             "agents": [str(uuid.uuid4())],
-            "target_file_key": "test.txt",
+            "targets_file_key": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -208,7 +208,7 @@ def test_get_measurement_result(client, monkeypatch):
     async def get_results(self):
         return results
 
-    class FakeClient(object):
+    class FakeDatabaseClient(object):
         def __init__(self, *args, **kwargs):
             pass
 
@@ -217,7 +217,7 @@ def test_get_measurement_result(client, monkeypatch):
 
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
     monkeypatch.setattr(iris.api.results.MeasurementResults, "get_results", get_results)
-    monkeypatch.setattr(iris.api.measurements.aioch, "Client", FakeClient)
+    monkeypatch.setattr(iris.api.measurements.aioch, "Client", FakeDatabaseClient)
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.json() == {
@@ -239,7 +239,7 @@ def test_get_measurement_no_result(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": "test",
             "agents": [str(uuid.uuid4())],
-            "target_file_key": "test.txt",
+            "targets_file_key": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,

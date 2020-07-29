@@ -62,7 +62,7 @@ async def measurement_formater_results(
     request, measurement_uuid, agent_uuid, offset, limit
 ):
     """Measurement results for an agent.
-    Get the results from the database only.
+    Get the results from the database.
     """
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     if state is not None:
@@ -73,8 +73,6 @@ async def measurement_formater_results(
         measurement_uuid, agent_uuid
     )
     table_name = f"{settings.DATABASE_NAME}.{table_name}"
-
-    print(table_name)
 
     response = await client.execute(f"EXISTS TABLE {table_name}")
     is_table_exists = bool(response[0][0])
@@ -109,7 +107,7 @@ async def get_measurements(
             {
                 "uuid": measurement["uuid"],
                 "state": "finished" if state is None else state,
-                "target_file_key": measurement["target_file_key"],
+                "targets_file_key": measurement["targets_file_key"],
                 "start_time": measurement["start_time"],
                 "end_time": measurement["end_time"],
             }
@@ -133,7 +131,7 @@ async def post_measurement(
     measurement: MeasurementsPostBody = Body(
         ...,
         example={
-            "target_file_key": "test.txt",
+            "targets_file_key": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -145,7 +143,7 @@ async def post_measurement(
     """Request a measurement."""
     try:
         await storage.get_file(
-            settings.AWS_S3_TARGETS_BUCKET_NAME, measurement.target_file_key
+            settings.AWS_S3_TARGETS_BUCKET_NAME, measurement.targets_file_key
         )
     except Exception:
         raise HTTPException(status_code=404, detail="File object not found")

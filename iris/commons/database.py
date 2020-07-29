@@ -128,7 +128,7 @@ class DatabaseMeasurements(Database):
 
         await self.client.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, target_file_key String, protocol String, "
+            "(uuid UUID, user String, targets_file_key String, protocol String, "
             "destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
             "start_time DateTime, "
             "end_time Nullable(DateTime)) "
@@ -145,7 +145,7 @@ class DatabaseMeasurements(Database):
             {
                 "uuid": str(response[0]),
                 "user": response[1],
-                "target_file_key": response[2],
+                "targets_file_key": response[2],
                 "protocol": response[3],
                 "destination_port": response[4],
                 "min_ttl": response[5],
@@ -172,7 +172,7 @@ class DatabaseMeasurements(Database):
         return {
             "uuid": str(response[0]),
             "user": response[1],
-            "target_file_key": response[2],
+            "targets_file_key": response[2],
             "protocol": response[3],
             "destination_port": response[4],
             "min_ttl": response[5],
@@ -189,7 +189,7 @@ class DatabaseMeasurements(Database):
                 {
                     "uuid": measurement_parameters["measurement_uuid"],
                     "user": measurement_parameters["user"],
-                    "target_file_key": measurement_parameters["target_file_key"],
+                    "targets_file_key": measurement_parameters["targets_file_key"],
                     "protocol": measurement_parameters["protocol"],
                     "destination_port": measurement_parameters["destination_port"],
                     "min_ttl": measurement_parameters["min_ttl"],
