@@ -139,9 +139,24 @@ class DatabaseMeasurements(Database):
     async def all(self, user):
         """Get all measurements uuid for a given user."""
         responses = await self.client.execute(
-            f"SELECT uuid FROM {self.table_name} WHERE user=%(user)s", {"user": user},
+            f"SELECT * FROM {self.table_name} WHERE user=%(user)s", {"user": user},
         )
-        return [str(response[0]) for response in responses]
+        return [
+            {
+                "uuid": str(response[0]),
+                "user": response[1],
+                "target_file_key": response[2],
+                "protocol": response[3],
+                "destination_port": response[4],
+                "min_ttl": response[5],
+                "max_ttl": response[6],
+                "start_time": response[7].isoformat(),
+                "end_time": response[8].isoformat()
+                if response[8] is not None
+                else None,
+            }
+            for response in responses
+        ]
 
     async def get(self, user, uuid):
         """Get all measurement information."""
@@ -194,6 +209,71 @@ class DatabaseMeasurements(Database):
             "UPDATE end_time=toDateTime(%(end_time)s) "
             "WHERE user=%(user)s AND uuid=%(uuid)s",
             {"end_time": datetime.now(), "user": user, "uuid": uuid},
+        )
+
+
+class DatabaseAgentsInMeasurements(Database):
+    """Interface that handle agents history."""
+
+    def __init__(self, host, table_name):
+        super().__init__(host)
+        self.table_name = table_name
+
+    async def create_table(self, drop=False):
+        """Create the table with all registered agents."""
+        if drop:
+            self.drop(self.table_name)
+
+        await self.client.execute(
+            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
+            "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
+            "finished UInt8) "
+            "ENGINE=MergeTree() "
+            "ORDER BY (measurement_uuid)",
+        )
+
+    async def all(self, measurement_uuid):
+        """Get all measurement information."""
+        responses = await self.client.execute(
+            f"SELECT * FROM {self.table_name} WHERE measurement_uuid=%(uuid)s",
+            {"uuid": measurement_uuid},
+        )
+
+        return [
+            {
+                "uuid": str(response[1]),
+                "min_ttl": response[2],
+                "max_ttl": response[3],
+                "state": "finished" if bool(response[4]) else "ongoing",
+            }
+            for response in responses
+        ]
+
+    async def register(self, measurement_uuid, agent_uuid, min_ttl, max_ttl):
+        await self.client.execute(
+            f"INSERT INTO {self.table_name} VALUES",
+            [
+                {
+                    "measurement_uuid": measurement_uuid,
+                    "agent_uuid": agent_uuid,
+                    "min_ttl": min_ttl,
+                    "max_ttl": max_ttl,
+                    "finished": int(False),
+                }
+            ],
+        )
+
+    async def stamp_finished(self, measurement_uuid, agent_uuid):
+        await self.client.execute(
+            f"ALTER TABLE {self.table_name} "
+            "UPDATE finished=%(finished)s "
+            "WHERE measurement_uuid=%(measurement_uuid)s "
+            "AND agent_uuid=%(agent_uuid)s",
+            {
+                "finished": int(True),
+                "measurement_uuid": measurement_uuid,
+                "agent_uuid": agent_uuid,
+            },
         )
 
 

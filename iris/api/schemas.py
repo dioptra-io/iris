@@ -1,7 +1,7 @@
 """API Body and Response schemas."""
 
 from pydantic import BaseModel, Field
-from typing import Optional, List, Set
+from typing import Optional, List
 
 # --- Commons ----
 
@@ -15,11 +15,21 @@ class ExceptionResponse(BaseModel):
 # --- Agents ---
 
 
+class AgentParametersSummaryResponse(BaseModel):
+    """Summary parameters information about a agent (Response)."""
+
+    version: str
+    hostname: str
+    ip_address: str
+    probing_rate: int
+
+
 class AgentSummaryResponse(BaseModel):
     """Summary information about a agent (Response)."""
 
     uuid: str
     state: str
+    parameters: AgentParametersSummaryResponse
 
 
 class AgentParametersResponse(BaseModel):
@@ -86,12 +96,22 @@ class TargetsDeleteResponse(BaseModel):
 # --- Measurements ----
 
 
+class MeasurementAgentInfoResponse(BaseModel):
+    """Information about information of agents specific to a measurement (Response)."""
+
+    uuid: str
+    state: str
+    min_ttl: int
+    max_ttl: int
+    parameters: AgentParametersSummaryResponse
+
+
 class MeasurementInfoResponse(BaseModel):
     """Information about a measurement (Response)."""
 
     uuid: str
-    status: str
-    # agents: Set[str]
+    state: str
+    agents: List[MeasurementAgentInfoResponse]
     target_file_key: str
     protocol: str
     destination_port: int
@@ -105,7 +125,10 @@ class MeasurementSummaryResponse(BaseModel):
     """Summary information about a measurement (Response)."""
 
     uuid: str
-    status: str
+    state: str
+    target_file_key: str
+    start_time: str
+    end_time: str
 
 
 class MeasurementsGetResponse(BaseModel):

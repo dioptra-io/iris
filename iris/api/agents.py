@@ -14,7 +14,22 @@ router = APIRouter()
 @router.get("/", response_model=AgentsGetResponse, summary="Get all agents information")
 async def get_agents(request: Request, username: str = Depends(authenticate)):
     """Get all agents information."""
-    agents = await request.app.redis.get_agents(parameters=False)
+    agents_info = await request.app.redis.get_agents()
+    agents = []
+    print(agents_info)
+    for agent in agents_info:
+        agents.append(
+            {
+                "uuid": agent["uuid"],
+                "state": agent["state"],
+                "parameters": {
+                    "version": agent["parameters"]["version"],
+                    "hostname": agent["parameters"]["hostname"],
+                    "ip_address": agent["parameters"]["ip_address"],
+                    "probing_rate": agent["parameters"]["probing_rate"],
+                },
+            }
+        )
     return {"count": len(agents), "results": agents}
 
 

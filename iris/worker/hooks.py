@@ -7,6 +7,7 @@ from iris.commons.database import (
     DatabaseMeasurementResults,
     DatabaseMeasurements,
     DatabaseAgents,
+    DatabaseAgentsInMeasurements,
 )
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
@@ -220,8 +221,8 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
             await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
             continue
 
-        sorted(result_files, key=lambda x: extract_round_number(x))
-        sorted(starttime_files, key=lambda x: extract_round_number(x))
+        result_files.sort(key=lambda x: extract_round_number(x))
+        starttime_files.sort(key=lambda x: extract_round_number(x))
 
         lowest_round_result_files = extract_round_number(result_files[0])
         lowest_round_starttime_files = extract_round_number(starttime_files[0])
@@ -244,6 +245,13 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
 
         if shuffled_next_round_csv_filepath is None:
             logger.info(f"{logger_prefix} Measurement done for this agent")
+            database_measurement_agents = DatabaseAgentsInMeasurements(
+                host=settings.DATABASE_HOST,
+                table_name=settings.AGENTS_IN_MEASUREMENTS_TABLE_NAME,
+            )
+            await database_measurement_agents.stamp_finished(
+                measurement_uuid, agent_uuid
+            )
             break
         else:
             logger.info(f"{logger_prefix} Publish next mesurement")
@@ -276,6 +284,10 @@ async def callback(agents, measurement_parameters):
     database_agents = DatabaseAgents(
         host=settings.DATABASE_HOST, table_name=settings.AGENTS_TABLE_NAME,
     )
+    database_measurement_agents = DatabaseAgentsInMeasurements(
+        host=settings.DATABASE_HOST,
+        table_name=settings.AGENTS_IN_MEASUREMENTS_TABLE_NAME,
+    )
 
     redis = Redis()
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
@@ -286,6 +298,11 @@ async def callback(agents, measurement_parameters):
         agent_parameters = await redis.get_agent_parameters(agent_uuid)
         if agent_parameters:
             agents_parameters[agent_uuid] = agent_parameters
+
+    if not agents_parameters:
+        logger.error(
+            f"{measurement_uuid} Stopping measurement because no agent with parameters"
+        )
 
     if await redis.get_measurement_state(measurement_uuid) is None:
         # There is no measurement state, so the measurement hasn't started yet
@@ -309,7 +326,9 @@ async def callback(agents, measurement_parameters):
 
         logger.info(f"{measurement_uuid} :: Register agents into database")
         await database_agents.create_table()
+        await database_measurement_agents.create_table()
         for agent_uuid, agent_parameters in agents_parameters.items():
+            # Register information about the physical agent
             is_already_present = await database_agents.get(agent_uuid)
             if is_already_present is None:
                 # Physical agent not present, registering
@@ -317,6 +336,14 @@ async def callback(agents, measurement_parameters):
             else:
                 # Already present, updating last used
                 await database_agents.stamp_last_used(agent_uuid)
+
+            # Register information of agent specific of this measurement
+            await database_measurement_agents.register(
+                measurement_uuid,
+                agent_uuid,
+                min_ttl=measurement_parameters["min_ttl"],
+                max_ttl=measurement_parameters["max_ttl"],
+            )
 
         logger.info(f"{measurement_uuid} :: Create bucket in AWS S3")
         try:
@@ -338,6 +365,20 @@ async def callback(agents, measurement_parameters):
             agents = measurement_parameters["agents"]
             for agent_uuid in measurement_parameters["agents"]:
                 await redis.publish(agent_uuid, measurement_request)
+    else:
+        # We are in this state when the worker has fail and replaying the measurement
+        # So we stip off the agents those which are finished
+        agent_in_measurement_info = await database_measurement_agents.all(
+            measurement_uuid
+        )
+        finished_agents = [
+            a["uuid"] for a in agent_in_measurement_info if a["status"] == "finished"
+        ]
+        filtered_agents_parameters = {}
+        for agent_uuid, agent_parameters in agents_parameters.items():
+            if agent_uuid not in finished_agents:
+                filtered_agents_parameters[agent_uuid] = agent_parameters
+        agents_parameters = filtered_agents_parameters
 
     logger.info(f"{measurement_uuid} :: Watching ...")
     await asyncio.gather(

@@ -23,7 +23,12 @@ from iris.api.schemas import (
     MeasurementsResultsResponse,
 )
 from iris.api.settings import APISettings
-from iris.commons.database import DatabaseMeasurementResults, DatabaseMeasurements
+from iris.commons.database import (
+    DatabaseMeasurementResults,
+    DatabaseMeasurements,
+    DatabaseAgents,
+    DatabaseAgentsInMeasurements,
+)
 from iris.commons.storage import Storage
 from iris.worker.hooks import hook
 from uuid import uuid4
@@ -34,24 +39,23 @@ settings = APISettings()
 storage = Storage()
 
 
-async def session():
+async def session_measurements():
     return DatabaseMeasurements(
         host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME
     )
 
 
-async def measurement_formater_summary(redis, uuid):
-    """Summary of a measurements.
-    Only display the uuid of the measurement and the state from Redis.
-    `finished` if no state.
-    """
-    measurement = {"uuid": uuid}
-    state = await redis.get_measurement_state(uuid)
-    if state is not None:
-        measurement["status"] = state
-    else:
-        measurement["status"] = "finished"
-    return measurement
+async def session_agents():
+    return DatabaseAgents(
+        host=settings.DATABASE_HOST, table_name=settings.AGENTS_TABLE_NAME
+    )
+
+
+async def session_agents_in_measurements():
+    return DatabaseAgentsInMeasurements(
+        host=settings.DATABASE_HOST,
+        table_name=settings.AGENTS_IN_MEASUREMENTS_TABLE_NAME,
+    )
 
 
 async def measurement_formater_results(
@@ -60,17 +64,17 @@ async def measurement_formater_results(
     """Measurement results for an agent.
     Get the results from the database only.
     """
-    measurement = await measurement_formater_summary(
-        request.app.redis, measurement_uuid
-    )
-    if measurement["status"] != "finished":
-        return {"count": 0, "results": []}
+    state = await request.app.redis.get_measurement_state(measurement_uuid)
+    if state is not None:
+        return {"count": 0, "next": None, "previous": None, "results": []}
 
     client = aioch.Client(settings.DATABASE_HOST)
     table_name = DatabaseMeasurementResults.forge_table_name(
         measurement_uuid, agent_uuid
     )
     table_name = f"{settings.DATABASE_NAME}.{table_name}"
+
+    print(table_name)
 
     response = await client.execute(f"EXISTS TABLE {table_name}")
     is_table_exists = bool(response[0][0])
@@ -88,23 +92,31 @@ async def measurement_formater_results(
 
 
 @router.get(
-    "/",
-    response_model=MeasurementsGetResponse,
-    summary="Get all measurements with the status",
+    "/", response_model=MeasurementsGetResponse, summary="Get all measurements",
 )
 async def get_measurements(
     request: Request,
     username: str = Depends(authenticate),
-    session: DatabaseMeasurements = Depends(session),
+    session: DatabaseMeasurements = Depends(session_measurements),
 ):
     """Get all measurements with the status."""
     all_measurements = await session.all(username)
 
     measurements = []
-    for measurement_uuid in all_measurements:
+    for measurement in all_measurements:
+        state = await request.app.redis.get_measurement_state(measurement["uuid"])
         measurements.append(
-            await measurement_formater_summary(request.app.redis, measurement_uuid)
+            {
+                "uuid": measurement["uuid"],
+                "state": "finished" if state is None else state,
+                "target_file_key": measurement["target_file_key"],
+                "start_time": measurement["start_time"],
+                "end_time": measurement["end_time"],
+            }
         )
+
+    # Sort measurements by `start_time`
+    measurements.sort(key=lambda x: datetime.fromisoformat(x["start_time"]))
 
     return {"count": len(measurements), "results": measurements}
 
@@ -146,6 +158,7 @@ async def post_measurement(
         for agent in measurement.agents:
             if agent not in agents:
                 raise HTTPException(status_code=404, detail="Agent not found")
+        agents = measurement.agents
 
     parameters = dict(measurement)
     parameters["measurement_uuid"] = str(uuid4())
@@ -168,19 +181,45 @@ async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: str,
     username: str = Depends(authenticate),
-    session: DatabaseMeasurements = Depends(session),
+    session_measurement: DatabaseMeasurements = Depends(session_measurements),
+    session_agents: DatabaseAgents = Depends(session_agents),
+    session_agents_in_measurements: DatabaseAgentsInMeasurements = Depends(
+        session_agents_in_measurements
+    ),
 ):
     """Get measurement information by uuid."""
-    measurement_info = await session.get(username, measurement_uuid)
-    if measurement_info is None:
+    measurement = await session_measurement.get(username, measurement_uuid)
+    if measurement is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
 
-    measurement = await measurement_formater_summary(
-        request.app.redis, measurement_uuid
+    state = await request.app.redis.get_measurement_state(measurement_uuid)
+    measurement["uuid"] = measurement_uuid
+    measurement["state"] = "finished" if state is None else state
+
+    del measurement["user"]
+
+    agents_in_measurement = await session_agents_in_measurements.all(
+        measurement["uuid"]
     )
 
-    measurement = {**measurement, **measurement_info}
-    del measurement["user"]
+    agents = []
+    for agent in agents_in_measurement:
+        agent_info = await session_agents.get(agent["uuid"])
+        agents.append(
+            {
+                "uuid": agent["uuid"],
+                "state": agent["state"],
+                "min_ttl": agent["min_ttl"],
+                "max_ttl": agent["max_ttl"],
+                "parameters": {
+                    "version": agent_info["version"],
+                    "hostname": agent_info["hostname"],
+                    "ip_address": agent_info["ip_address"],
+                    "probing_rate": agent_info["probing_rate"],
+                },
+            }
+        )
+    measurement["agents"] = agents
 
     return measurement
 
@@ -198,7 +237,7 @@ async def get_measurement_results(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     username: str = Depends(authenticate),
-    session: DatabaseMeasurements = Depends(session),
+    session: DatabaseMeasurements = Depends(session_measurements),
 ):
     """Get measurement results."""
     measurement_info = await session.get(username, measurement_uuid)
