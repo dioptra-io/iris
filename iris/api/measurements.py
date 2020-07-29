@@ -97,7 +97,7 @@ async def get_measurements(
     username: str = Depends(authenticate),
     session: DatabaseMeasurements = Depends(session_measurements),
 ):
-    """Get all measurements with the status."""
+    """Get all measurements."""
     all_measurements = await session.all(username)
 
     measurements = []

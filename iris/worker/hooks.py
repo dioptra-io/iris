@@ -125,10 +125,6 @@ async def pipeline(
         measurement_results_path / shuffled_next_round_csv_filename
     )
 
-    if not settings.WORKER_DEBUG_MODE:
-        logger.info(f"{logger_prefix} Remove local next round CSV probe file")
-        await aios.remove(next_round_csv_filepath)
-
     if (await aios.stat(next_round_csv_filepath)).st_size != 0:
         logger.info(f"{logger_prefix} Next round is required")
         logger.info(f"{logger_prefix} Shuffle next round CSV probe file")
@@ -138,6 +134,10 @@ async def pipeline(
             logger_prefix=logger_prefix + " ",
         )
 
+        if not settings.WORKER_DEBUG_MODE:
+            logger.info(f"{logger_prefix} Remove local next round CSV probe file")
+            await aios.remove(next_round_csv_filepath)
+
         logger.info(f"{logger_prefix} Uploading next round CSV probe file")
         with Path(shuffled_next_round_csv_filepath).open("rb") as fin:
             await storage.upload_file(
@@ -145,7 +145,9 @@ async def pipeline(
             )
 
         if not settings.WORKER_DEBUG_MODE:
-            logger.info(f"{logger_prefix} Remove local next round CSV probe file")
+            logger.info(
+                f"{logger_prefix} Remove local shuffled next round CSV probe file"
+            )
             await aios.remove(shuffled_next_round_csv_filepath)
         return shuffled_next_round_csv_filename
     else:
@@ -301,7 +303,8 @@ async def callback(agents, measurement_parameters):
 
     if not agents_parameters:
         logger.error(
-            f"{measurement_uuid} Stopping measurement because no agent with parameters"
+            f"{measurement_uuid} :: Stopping measurement "
+            "because no agent with parameters"
         )
 
     if await redis.get_measurement_state(measurement_uuid) is None:
@@ -372,7 +375,7 @@ async def callback(agents, measurement_parameters):
             measurement_uuid
         )
         finished_agents = [
-            a["uuid"] for a in agent_in_measurement_info if a["status"] == "finished"
+            a["uuid"] for a in agent_in_measurement_info if a["state"] == "finished"
         ]
         filtered_agents_parameters = {}
         for agent_uuid, agent_parameters in agents_parameters.items():
