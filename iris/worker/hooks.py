@@ -154,7 +154,7 @@ async def pipeline(
         logger.info(f"{logger_prefix} Next round is not required")
         if not settings.WORKER_DEBUG_MODE:
             logger.info(f"{logger_prefix} Remove local empty next round CSV probe file")
-            await aios.remove(shuffled_next_round_csv_filepath)
+            await aios.remove(next_round_csv_filepath)
         return None
 
 
