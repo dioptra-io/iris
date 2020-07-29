@@ -91,7 +91,7 @@ class MeasurementInfoResponse(BaseModel):
 
     uuid: str
     status: str
-    agents: Set[str]
+    # agents: Set[str]
     target_file_key: str
     protocol: str
     destination_port: int

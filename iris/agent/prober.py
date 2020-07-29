@@ -55,4 +55,4 @@ async def probe(
 
     logger.info(cmd)
 
-    await start_stream_subprocess(cmd, logger=logger)
+    await start_stream_subprocess(cmd, stdout=logger.info, stderr=logger.warning)

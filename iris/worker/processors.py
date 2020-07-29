@@ -9,7 +9,12 @@ settings = WorkerSettings()
 
 
 async def pcap_to_csv(
-    round_number, result_filepath, starttime_filepath, csv_filepath, parameters
+    round_number,
+    result_filepath,
+    starttime_filepath,
+    csv_filepath,
+    parameters,
+    logger_prefix="",
 ):
     """Transform a PCAP & start time log file into CSV using D-Miner Reader."""
     # Snapshot numbering is currently unused
@@ -35,11 +40,18 @@ async def pcap_to_csv(
         + str(starttime_filepath)
     )
 
-    await start_stream_subprocess(cmd, logger=logger)
+    await start_stream_subprocess(
+        cmd, stdout=logger.info, stderr=logger.warning, prefix=logger_prefix
+    )
 
 
 async def next_round_csv(
-    round_number, table_name, csv_filepath, agent_parameters, measurement_parameters
+    round_number,
+    table_name,
+    csv_filepath,
+    agent_parameters,
+    measurement_parameters,
+    logger_prefx="",
 ):
     """Compute the next round and output CSV file."""
     # Snapshot numbering is currently unused
@@ -70,10 +82,12 @@ async def next_round_csv(
         # + "_skip_prefix "
     )
 
-    await start_stream_subprocess(cmd, logger=logger)
+    await start_stream_subprocess(
+        cmd, stdout=logger.info, stderr=logger.warning, prefix=logger_prefx
+    )
 
 
-async def shuffle_next_round_csv(csv_filepath, shuffled_csv_filepath):
+async def shuffle_next_round_csv(csv_filepath, shuffled_csv_filepath, logger_prefix=""):
     cmd = (
         "export MEMORY="
         + str(settings.WORKER_TERASHUF_MEMORY)
@@ -87,4 +101,6 @@ async def shuffle_next_round_csv(csv_filepath, shuffled_csv_filepath):
         + shuffled_csv_filepath
     )
 
-    await start_stream_subprocess(cmd, logger=logger)
+    await start_stream_subprocess(
+        cmd, stdout=logger.info, stderr=logger.info, prefix=logger_prefix,
+    )

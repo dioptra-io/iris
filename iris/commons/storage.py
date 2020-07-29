@@ -22,7 +22,8 @@ class Storage(object):
             "region_name": settings.AWS_REGION_NAME,
         }
 
-    async def get_ongoing_measurements(self):
+    async def get_measurement_buckets(self):
+        """Get bucket list that is not infrastructure."""
         infrastructure_buckets = ["targets"]
 
         buckets = []
@@ -35,14 +36,17 @@ class Storage(object):
         return buckets
 
     async def create_bucket(self, bucket):
+        """Create a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             await s3.create_bucket(Bucket=bucket)
 
     async def delete_bucket(self, bucket):
+        """Delete a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             await s3.delete_bucket(Bucket=bucket)
 
     async def get_all_files(self, bucket):
+        """Get all files inside a bucket."""
         targets = []
         async with aioboto3.resource("s3", **self.settings) as s3:
             bucket = await s3.Bucket(bucket)
@@ -59,6 +63,7 @@ class Storage(object):
         return targets
 
     async def get_file(self, bucket, filename):
+        """Get file information from a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
@@ -75,16 +80,19 @@ class Storage(object):
         }
 
     async def upload_file(self, bucket, filename, fin):
+        """Upload a file in a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             await s3.upload_fileobj(
                 fin, bucket, filename,
             )
 
     async def download_file(self, bucket, filename, output_path):
+        """Download a file from a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             await s3.download_file(bucket, filename, output_path)
 
     async def delete_file_check(self, bucket, filename):
+        """Delete a file with a check that it exists."""
         async with aioboto3.client("s3", **self.settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
@@ -93,5 +101,12 @@ class Storage(object):
             return await s3.delete_object(Bucket=bucket, Key=filename)
 
     async def delete_file_no_check(self, bucket, filename):
+        """Delete a file with no check that it exists."""
         async with aioboto3.client("s3", **self.settings) as s3:
             return await s3.delete_object(Bucket=bucket, Key=filename)
+
+    async def delete_all_files_from_bucket(self, bucket):
+        """Delete all files from a bucket."""
+        async with aioboto3.resource("s3", **self.settings) as s3:
+            bucket = await s3.Bucket(bucket)
+            await bucket.objects.all().delete()

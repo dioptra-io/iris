@@ -2,7 +2,7 @@ import asyncio
 import dramatiq
 
 from aiofiles import os as aios
-from datetime import datetime
+from aiohttp.client_exceptions import ServerTimeoutError
 from iris.commons.database import (
     DatabaseMeasurementResults,
     DatabaseMeasurements,
@@ -36,16 +36,17 @@ async def pipeline(
     starttime_filename,
 ):
     """Process results and eventually request a new round."""
-
     database = DatabaseMeasurementResults(host=settings.DATABASE_HOST, logger=logger)
 
-    logger.info(f"New files detected for agent `{agent_uuid}`")
     measurement_uuid = measurement_parameters["measurement_uuid"]
-    round_number = extract_round_number(result_filename)
 
+    logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
+    logger.info(f"{logger_prefix} New files detected")
+
+    round_number = extract_round_number(result_filename)
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
 
-    logger.info("Download results file & start time log file")
+    logger.info(f"{logger_prefix} Download results file & start time log file")
     result_filepath = str(measurement_results_path / result_filename)
     await storage.download_file(
         measurement_uuid, result_filename, result_filepath,
@@ -55,7 +56,9 @@ async def pipeline(
         measurement_uuid, starttime_filename, starttime_filepath,
     )
 
-    logger.info("Transform results file & start time log file into CSV file")
+    logger.info(
+        f"{logger_prefix} Transform results file & start time log file into CSV file"
+    )
     csv_filename = f"{agent_uuid}_csv_{round_number}.csv"
     csv_filepath = str(measurement_results_path / csv_filename)
     await pcap_to_csv(
@@ -64,14 +67,17 @@ async def pipeline(
         starttime_filepath,
         csv_filepath,
         measurement_parameters,
+        logger_prefix=logger_prefix + " ",
     )
 
     if not settings.WORKER_DEBUG_MODE:
-        logger.info("Remove local results file & start time log file")
+        logger.info(f"{logger_prefix}  Remove local results file & start time log file")
         await aios.remove(result_filepath)
         await aios.remove(starttime_filepath)
 
-    logger.info("Delete results file & start time log file from AWS S3")
+    logger.info(
+        f"{logger_prefix} Delete results file & start time log file from AWS S3"
+    )
     response = await storage.delete_file_no_check(measurement_uuid, result_filename)
     if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
         logger.error(f"Impossible to remove result file `{result_filename}`")
@@ -84,14 +90,14 @@ async def pipeline(
         + "."
         + database.forge_table_name(measurement_uuid, agent_uuid)
     )
-    logger.info(f"Create table `{table_name}`")
+    logger.info(f"{logger_prefix} Create table `{table_name}`")
     await database.create_table(table_name, drop=False)
 
-    logger.info("Insert CSV file into database")
+    logger.info(f"{logger_prefix} Insert CSV file into database")
     await database.insert_csv(csv_filepath, table_name)
 
     if not settings.WORKER_DEBUG_MODE:
-        logger.info("Remove local CSV file")
+        logger.info(f"{logger_prefix} Remove local CSV file")
         await aios.remove(csv_filepath)
 
     next_round_number = round_number + 1
@@ -99,15 +105,16 @@ async def pipeline(
     next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
 
     if not agent_parameters:
-        logger.error("No agent parameters")
+        logger.error(f"{logger_prefix} No agent parameters")
 
-    logger.info("Compute the next round CSV probe file")
+    logger.info(f"{logger_prefix} Compute the next round CSV probe file")
     await next_round_csv(
         round_number,
         table_name,
         next_round_csv_filepath,
         agent_parameters,
         measurement_parameters,
+        logger_prefx=logger_prefix + " ",
     )
 
     shuffled_next_round_csv_filename = (
@@ -118,30 +125,32 @@ async def pipeline(
     )
 
     if not settings.WORKER_DEBUG_MODE:
-        logger.info("Remove local next round CSV probe file")
+        logger.info(f"{logger_prefix} Remove local next round CSV probe file")
         await aios.remove(next_round_csv_filepath)
 
     if (await aios.stat(next_round_csv_filepath)).st_size != 0:
-        logger.info(f"Next round is required for measurement `{measurement_uuid}`")
-        logger.info("Shuffle next round CSV probe file")
+        logger.info(f"{logger_prefix} Next round is required")
+        logger.info(f"{logger_prefix} Shuffle next round CSV probe file")
         await shuffle_next_round_csv(
-            next_round_csv_filepath, shuffled_next_round_csv_filepath
+            next_round_csv_filepath,
+            shuffled_next_round_csv_filepath,
+            logger_prefix=logger_prefix + " ",
         )
 
-        logger.info("Uploading next round CSV probe file")
+        logger.info(f"{logger_prefix} Uploading next round CSV probe file")
         with Path(shuffled_next_round_csv_filepath).open("rb") as fin:
             await storage.upload_file(
                 measurement_uuid, shuffled_next_round_csv_filename, fin
             )
 
         if not settings.WORKER_DEBUG_MODE:
-            logger.info("Remove local next round CSV probe file")
+            logger.info(f"{logger_prefix} Remove local next round CSV probe file")
             await aios.remove(shuffled_next_round_csv_filepath)
         return shuffled_next_round_csv_filename
     else:
-        logger.info(f"Next round is not required for measurement `{measurement_uuid}`")
+        logger.info(f"{logger_prefix} Next round is not required")
         if not settings.WORKER_DEBUG_MODE:
-            logger.info("Remove local empty next round CSV probe file")
+            logger.info(f"{logger_prefix} Remove local empty next round CSV probe file")
             await aios.remove(shuffled_next_round_csv_filepath)
         return None
 
@@ -178,17 +187,23 @@ async def sanity_check(redis, measurement_uuid, agent_uuid):
 async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
     """Watch for a results from an agent."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
+    logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
     while True:
-        logger.debug(f"{measurement_uuid} -> {agent_uuid}")
+        logger.debug(f"{logger_prefix} Active watching")
 
         if settings.WORKER_SANITY_CHECK_ENABLE:
-            logger.debug(f"Perform sanity check on agent `{agent_uuid}`")
+            logger.debug(f"{measurement_uuid} :: {agent_uuid} :: Perform sanity check")
             is_agent_alive = await sanity_check(redis, measurement_uuid, agent_uuid)
             if not is_agent_alive:
-                logger.warning(f"Agent `{agent_uuid} seems to be down. Stop watching.`")
+                logger.warning(f"{logger_prefix} Stop watching agent, seems to be down")
                 break
 
-        remote_files = await storage.get_all_files(measurement_uuid)
+        try:
+            remote_files = await storage.get_all_files(measurement_uuid)
+        except ServerTimeoutError:
+            logger.error(f"{logger_prefix} AWS Server timed out")
+            await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
+            continue
 
         # Search for result file & start time file
         result_files = []
@@ -228,14 +243,10 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
         )
 
         if shuffled_next_round_csv_filepath is None:
-            logger.info(
-                f"Measurement `{measurement_uuid}` is done for agent `{agent_uuid}`"
-            )
+            logger.info(f"{logger_prefix} Measurement done for this agent")
             break
         else:
-            logger.info(
-                f"Publish measurement `{measurement_uuid}` to agent {agent_uuid}"
-            )
+            logger.info(f"{logger_prefix} Publish next mesurement")
 
             round_number = int(
                 shuffled_next_round_csv_filepath.split("_")[-1].split(".")[0]
@@ -258,7 +269,7 @@ async def callback(agents, measurement_parameters):
     measurement_uuid = measurement_parameters["measurement_uuid"]
     user = measurement_parameters["user"]
 
-    logger.info(f"New measurement `{measurement_uuid}` received")
+    logger.info(f"{measurement_uuid} :: New measurement received")
     database_measurements = DatabaseMeasurements(
         host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME,
     )
@@ -269,7 +280,7 @@ async def callback(agents, measurement_parameters):
     redis = Redis()
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
-    logger.info("Getting agents parameters")
+    logger.info(f"{measurement_uuid} :: Getting agents parameters")
     agents_parameters = {}
     for agent_uuid in agents:
         agent_parameters = await redis.get_agent_parameters(agent_uuid)
@@ -278,37 +289,43 @@ async def callback(agents, measurement_parameters):
 
     if await redis.get_measurement_state(measurement_uuid) is None:
         # There is no measurement state, so the measurement hasn't started yet
-        logger.info(f"Set measurement `{measurement_uuid}` state to `waiting`")
+        logger.info(f"{measurement_uuid} :: Set measurement state to `waiting`")
         await redis.set_measurement_state(measurement_uuid, "waiting")
 
-        logger.info("Create local measurement directory if not exists")
+        logger.info(
+            f"{measurement_uuid} :: Create local measurement directory if not exists"
+        )
         measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
         try:
             await aios.mkdir(str(measurement_results_path))
         except FileExistsError:
             logger.warning(
-                f"Local measurement `{measurement_uuid}` directory already exits"
+                f"{measurement_uuid} :: Local measurement directory already exits"
             )
 
-        logger.info(f"Register measurement `{measurement_uuid}` into database")
+        logger.info(f"{measurement_uuid} :: Register measurement into database")
         await database_measurements.create_table()
         await database_measurements.register(agents, measurement_parameters)
 
-        logger.info("Register agents into database")
+        logger.info(f"{measurement_uuid} :: Register agents into database")
         await database_agents.create_table()
         for agent_uuid, agent_parameters in agents_parameters.items():
             is_already_present = await database_agents.get(agent_uuid)
             if is_already_present is None:
+                # Physical agent not present, registering
                 await database_agents.register(agent_uuid, agent_parameters)
+            else:
+                # Already present, updating last used
+                await database_agents.stamp_last_used(agent_uuid)
 
-        logger.info(f"Create measurement bucket  `{measurement_uuid}` in AWS S3")
+        logger.info(f"{measurement_uuid} :: Create bucket in AWS S3")
         try:
             await storage.create_bucket(bucket=measurement_uuid)
         except Exception:
-            logger.error(f"Impossible to create bucket `{measurement_uuid}`")
+            logger.error(f"{measurement_uuid} :: Impossible to create bucket")
             return
 
-        logger.info(f"Publish measurement `{measurement_uuid}` to agents")
+        logger.info(f"{measurement_uuid} :: Publish measurement to agents")
         measurement_request = {
             "measurement_uuid": measurement_uuid,
             "measurement_tool": "iris",
@@ -322,7 +339,7 @@ async def callback(agents, measurement_parameters):
             for agent_uuid in measurement_parameters["agents"]:
                 await redis.publish(agent_uuid, measurement_request)
 
-    logger.info("Watching ...")
+    logger.info(f"{measurement_uuid} :: Watching ...")
     await asyncio.gather(
         *[
             watch(redis, agent_uuid, agent_parameters, measurement_parameters)
@@ -331,24 +348,25 @@ async def callback(agents, measurement_parameters):
     )
 
     if not settings.WORKER_DEBUG_MODE:
-        logger.info(f"Removing local measurement directory `{measurement_uuid}`")
+        logger.info(f"{measurement_uuid} :: Removing local measurement directory")
         try:
             await aios.rmdir(str(measurement_results_path))
         except OSError:
             logger.error(
-                f"Impossible to remove local measurement `{measurement_uuid}` directory"
+                f"{measurement_uuid} :: "
+                "Impossible to remove local measurement directory"
             )
 
-    logger.info(f"Delete measurement bucket `{measurement_uuid}`")
+    logger.info(f"{measurement_uuid} :: Delete bucket")
     try:
         await storage.delete_bucket(bucket=measurement_uuid)
     except Exception:
-        logger.error(f"Impossible to remove bucket `{measurement_uuid}`")
+        logger.error(f"{measurement_uuid} :: Impossible to remove bucket")
 
-    logger.info(f"Stamp the end time for measurement `{measurement_uuid}`")
-    await database_measurements.stamp_end_time(user, measurement_uuid, datetime.now())
+    logger.info(f"{measurement_uuid} :: Stamp the end time for measurement")
+    await database_measurements.stamp_end_time(user, measurement_uuid)
 
-    logger.info(f"Measurement `{measurement_uuid}` is done")
+    logger.info(f"{measurement_uuid} :: Measurement done")
     await redis.delete_measurement_state(measurement_uuid)
     await redis.close()
 

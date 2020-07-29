@@ -6,7 +6,6 @@ import json
 class Redis(object):
     """Redis interface."""
 
-    KEY_MEASUREMENTS: str = "measurements"
     KEY_MEASUREMENT_STATE: str = "measurement_state"
 
     KEY_AGENT_LISTEN: str = "agent_listen"

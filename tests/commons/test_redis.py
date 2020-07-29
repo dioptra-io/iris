@@ -28,7 +28,6 @@ def test_redis_attributes():
     """Test Redis global attributes."""
     redis = Redis()
 
-    assert redis.KEY_MEASUREMENTS == "measurements"
     assert redis.KEY_MEASUREMENT_STATE == "measurement_state"
 
     assert redis.KEY_AGENT_LISTEN == "agent_listen"

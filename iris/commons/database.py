@@ -44,7 +44,8 @@ class DatabaseAgents(Database):
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, user String, version String, hostname String, "
             "ip_address IPv4, probing_rate UInt32, buffer_sniffer_size UInt32, "
-            "inf_born UInt32, sup_born UInt32, ips_per_subnet UInt32, pfring UInt8) "
+            "inf_born UInt32, sup_born UInt32, ips_per_subnet UInt32, "
+            "pfring UInt8, last_used DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
         )
@@ -78,10 +79,11 @@ class DatabaseAgents(Database):
             "sup_born": response[8],
             "ips_per_subnet": response[9],
             "pfring": bool(response[10]),
+            "last_used": response[11].isoformat(),
         }
 
     async def register(self, uuid, parameters):
-        print(parameters)
+        """Register a physical agent."""
         await self.client.execute(
             f"INSERT INTO {self.table_name} VALUES",
             [
@@ -97,8 +99,18 @@ class DatabaseAgents(Database):
                     "sup_born": parameters["sup_born"],
                     "ips_per_subnet": parameters["ips_per_subnet"],
                     "pfring": bool(parameters["pfring"]),
+                    "last_used": datetime.now(),
                 }
             ],
+        )
+
+    async def stamp_last_used(self, uuid, user="all"):
+        """Stamp the last used for an agent."""
+        await self.client.execute(
+            f"ALTER TABLE {self.table_name} "
+            "UPDATE last_used=toDateTime(%(last_used)s) "
+            "WHERE user=%(user)s AND uuid=%(uuid)s",
+            {"last_used": datetime.now(), "user": user, "uuid": uuid},
         )
 
 
@@ -116,8 +128,8 @@ class DatabaseMeasurements(Database):
 
         await self.client.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, agents Array(UUID), target_file_key String, "
-            "protocol String, destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
+            "(uuid UUID, user String, target_file_key String, protocol String, "
+            "destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
             "start_time DateTime, "
             "end_time Nullable(DateTime)) "
             "ENGINE=MergeTree() "
@@ -145,14 +157,13 @@ class DatabaseMeasurements(Database):
         return {
             "uuid": str(response[0]),
             "user": response[1],
-            "agents": [str(r) for r in response[2]],
-            "target_file_key": response[3],
-            "protocol": response[4],
-            "destination_port": response[5],
-            "min_ttl": response[6],
-            "max_ttl": response[7],
-            "start_time": response[8].isoformat(),
-            "end_time": response[9].isoformat() if response[9] is not None else None,
+            "target_file_key": response[2],
+            "protocol": response[3],
+            "destination_port": response[4],
+            "min_ttl": response[5],
+            "max_ttl": response[6],
+            "start_time": response[7].isoformat(),
+            "end_time": response[8].isoformat() if response[8] is not None else None,
         }
 
     async def register(self, agents, measurement_parameters):
@@ -163,7 +174,6 @@ class DatabaseMeasurements(Database):
                 {
                     "uuid": measurement_parameters["measurement_uuid"],
                     "user": measurement_parameters["user"],
-                    "agents": agents,
                     "target_file_key": measurement_parameters["target_file_key"],
                     "protocol": measurement_parameters["protocol"],
                     "destination_port": measurement_parameters["destination_port"],
@@ -177,13 +187,13 @@ class DatabaseMeasurements(Database):
             ],
         )
 
-    async def stamp_end_time(self, user, uuid, end_time):
+    async def stamp_end_time(self, user, uuid):
         """Stamp the end time for a measurement."""
         await self.client.execute(
             f"ALTER TABLE {self.table_name} "
             "UPDATE end_time=toDateTime(%(end_time)s) "
             "WHERE user=%(user)s AND uuid=%(uuid)s",
-            {"end_time": end_time, "user": user, "uuid": uuid},
+            {"end_time": datetime.now(), "user": user, "uuid": uuid},
         )
 
 
@@ -248,4 +258,6 @@ class DatabaseMeasurementResults(object):
             + " FORMAT CSV'"
         )
 
-        await start_stream_subprocess(cmd, logger=self.logger)
+        await start_stream_subprocess(
+            cmd, stdout=self.logger.info, stderr=self.logger.error
+        )

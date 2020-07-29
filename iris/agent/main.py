@@ -65,10 +65,13 @@ async def producer(redis, queue):
 
 async def main():
     """Main agent function."""
-    redis = AgentRedis(str(uuid4()))
+    agent_uuid = str(uuid4())
+    redis = AgentRedis(agent_uuid)
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+
+    logger.info(f"Connected to Redis with UUID `{agent_uuid}`")
 
     try:
 
