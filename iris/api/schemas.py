@@ -128,7 +128,7 @@ class MeasurementSummaryResponse(BaseModel):
     state: str
     targets_file_key: str
     start_time: str
-    end_time: str
+    end_time: Optional[str]
 
 
 class MeasurementsGetResponse(BaseModel):

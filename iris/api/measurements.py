@@ -114,7 +114,7 @@ async def get_measurements(
         )
 
     # Sort measurements by `start_time`
-    measurements.sort(key=lambda x: datetime.fromisoformat(x["start_time"]))
+    measurements.sort(key=lambda x: x["start_time"])
 
     return {"count": len(measurements), "results": measurements}
 
