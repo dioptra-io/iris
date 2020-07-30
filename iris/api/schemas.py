@@ -101,7 +101,7 @@ class MeasurementSummaryResponse(BaseModel):
 
     uuid: str
     state: str
-    targets_file_key: str
+    targets_file_key: Optional[str]
     full: bool
     start_time: str
     end_time: Optional[str]
@@ -157,7 +157,7 @@ class MeasurementInfoResponse(BaseModel):
     uuid: str
     state: str
     agents: List[MeasurementAgentInfoResponse]
-    targets_file_key: str
+    targets_file_key: Optional[str]
     full: bool
     protocol: str
     destination_port: int
