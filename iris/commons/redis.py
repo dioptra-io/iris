@@ -135,8 +135,12 @@ class AgentRedis(Redis):
             response = json.loads(data)
             break
 
+        await self.unsubscribe()
+
+        return response
+
+    async def unsubscribe(self):
+        """Unsubscribe to channels."""
         await self._redis.unsubscribe(
             f"{self.KEY_AGENT_LISTEN}:all", f"{self.KEY_AGENT_LISTEN}:{self.uuid}"
         )
-
-        return response

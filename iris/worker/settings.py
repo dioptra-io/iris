@@ -14,7 +14,7 @@ class WorkerSettings(CommonSettings):
     WORKER_TERASHUF_MEMORY: int = 40  # GB
     WORKER_TERASHUF_TMP_DIR_PATH: Path = Path("/app/reader/resources/")
 
-    WORKER_DEBUG_MODE: bool = True
+    WORKER_DEBUG_MODE: bool = False
 
     WORKER_TIME_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)
     WORKER_MESSAGE_AGE_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)

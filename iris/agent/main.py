@@ -91,11 +91,16 @@ async def main():
         )
 
         queue = asyncio.Queue()
-        await asyncio.gather(producer(redis, queue), consumer(redis.uuid, queue))
+        tasks = [
+            asyncio.create_task(producer(redis, queue)),
+            asyncio.create_task(consumer(redis.uuid, queue)),
+        ]
+        await asyncio.gather(*tasks)
 
     finally:
-        for task in asyncio.all_tasks():
+        for task in tasks:
             task.cancel()
+        await redis.unsubscribe()
         await redis.delete_agent_state()
         await redis.delete_agent_parameters()
         await redis.close()

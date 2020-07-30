@@ -128,8 +128,8 @@ class DatabaseMeasurements(Database):
 
         await self.client.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, targets_file_key String, protocol String, "
-            "destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
+            "(uuid UUID, user String, targets_file_key Nullable(String), full UInt8, "
+            "protocol String, destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
             "start_time DateTime, "
             "end_time Nullable(DateTime)) "
             "ENGINE=MergeTree() "
@@ -146,13 +146,14 @@ class DatabaseMeasurements(Database):
                 "uuid": str(response[0]),
                 "user": response[1],
                 "targets_file_key": response[2],
-                "protocol": response[3],
-                "destination_port": response[4],
-                "min_ttl": response[5],
-                "max_ttl": response[6],
-                "start_time": response[7].isoformat(),
-                "end_time": response[8].isoformat()
-                if response[8] is not None
+                "full": bool(response[3]),
+                "protocol": response[4],
+                "destination_port": response[5],
+                "min_ttl": response[6],
+                "max_ttl": response[7],
+                "start_time": response[8].isoformat(),
+                "end_time": response[9].isoformat()
+                if response[9] is not None
                 else None,
             }
             for response in responses
@@ -173,12 +174,13 @@ class DatabaseMeasurements(Database):
             "uuid": str(response[0]),
             "user": response[1],
             "targets_file_key": response[2],
-            "protocol": response[3],
-            "destination_port": response[4],
-            "min_ttl": response[5],
-            "max_ttl": response[6],
-            "start_time": response[7].isoformat(),
-            "end_time": response[8].isoformat() if response[8] is not None else None,
+            "full": bool(response[3]),
+            "protocol": response[4],
+            "destination_port": response[5],
+            "min_ttl": response[6],
+            "max_ttl": response[7],
+            "start_time": response[8].isoformat(),
+            "end_time": response[9].isoformat() if response[9] is not None else None,
         }
 
     async def register(self, agents, measurement_parameters):
@@ -190,6 +192,7 @@ class DatabaseMeasurements(Database):
                     "uuid": measurement_parameters["measurement_uuid"],
                     "user": measurement_parameters["user"],
                     "targets_file_key": measurement_parameters["targets_file_key"],
+                    "full": int(measurement_parameters["full"]),
                     "protocol": measurement_parameters["protocol"],
                     "destination_port": measurement_parameters["destination_port"],
                     "min_ttl": measurement_parameters["min_ttl"],

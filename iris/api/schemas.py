@@ -96,37 +96,13 @@ class TargetsDeleteResponse(BaseModel):
 # --- Measurements ----
 
 
-class MeasurementAgentInfoResponse(BaseModel):
-    """Information about information of agents specific to a measurement (Response)."""
-
-    uuid: str
-    state: str
-    min_ttl: int
-    max_ttl: int
-    parameters: AgentParametersSummaryResponse
-
-
-class MeasurementInfoResponse(BaseModel):
-    """Information about a measurement (Response)."""
-
-    uuid: str
-    state: str
-    agents: List[MeasurementAgentInfoResponse]
-    targets_file_key: str
-    protocol: str
-    destination_port: int
-    min_ttl: int
-    max_ttl: int
-    start_time: str
-    end_time: Optional[str]
-
-
 class MeasurementSummaryResponse(BaseModel):
     """Summary information about a measurement (Response)."""
 
     uuid: str
     state: str
     targets_file_key: str
+    full: bool
     start_time: str
     end_time: Optional[str]
 
@@ -141,7 +117,8 @@ class MeasurementsGetResponse(BaseModel):
 class MeasurementsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
-    targets_file_key: str
+    targets_file_key: Optional[str]
+    full: Optional[bool]
     agents: List[str] = Field(
         None,
         title="Optional agent list",
@@ -162,6 +139,32 @@ class MeasurementsPostResponse(BaseModel):
     """POST /measurements (Response)."""
 
     uuid: str
+
+
+class MeasurementAgentInfoResponse(BaseModel):
+    """Information about information of agents specific to a measurement (Response)."""
+
+    uuid: str
+    state: str
+    min_ttl: int
+    max_ttl: int
+    parameters: AgentParametersSummaryResponse
+
+
+class MeasurementInfoResponse(BaseModel):
+    """Information about a measurement (Response)."""
+
+    uuid: str
+    state: str
+    agents: List[MeasurementAgentInfoResponse]
+    targets_file_key: str
+    full: bool
+    protocol: str
+    destination_port: int
+    min_ttl: int
+    max_ttl: int
+    start_time: str
+    end_time: Optional[str]
 
 
 class PacketResponse(BaseModel):

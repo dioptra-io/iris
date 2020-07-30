@@ -1,6 +1,10 @@
 version: "3"
 
 services:
+  redis:
+    ports:
+      - "6379:6379"
+
   minio:
     ports:
       - "9000:9000"
@@ -8,6 +12,18 @@ services:
   api:
     ports:
       - "8000:80"
+
+  worker:
+    build:
+      args:
+        DEBUG: "on"
+    environment:
+      WORKER_DEBUG_MODE: "true"
+
+  agent:
+    build:
+      args:
+        DEBUG: "on"
 
   grafana:
     ports:

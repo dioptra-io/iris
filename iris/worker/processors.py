@@ -61,6 +61,8 @@ async def next_round_csv(
         str(settings.WORKER_D_MINER_READER_PATH)
         + " -g  -o "
         + csv_filepath
+        + " -E "
+        + str(settings.WORKER_EXCLUSION_FILE_PATH)
         + " -R "
         + str(round_number)
         + " -s "

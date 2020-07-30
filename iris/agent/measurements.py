@@ -24,12 +24,16 @@ async def measuremement(uuid, request):
     starttime_filepath = str(settings.AGENT_RESULTS_DIR / starttime_filename)
 
     if round_number == 1:
-        # Download target file locally
-        target_filename = request["parameters"]["targets_file_key"]
-        target_filepath = str(settings.AGENT_TARGETS_DIR / target_filename)
-        await storage.download_file(
-            settings.AWS_S3_TARGETS_BUCKET_NAME, target_filename, target_filepath
-        )
+        if request["parameters"]["full"]:
+            # Full snapshot required, no targets file
+            target_filepath = None
+        else:
+            # Download target file locally
+            target_filename = request["parameters"]["targets_file_key"]
+            target_filepath = str(settings.AGENT_TARGETS_DIR / target_filename)
+            await storage.download_file(
+                settings.AWS_S3_TARGETS_BUCKET_NAME, target_filename, target_filepath
+            )
         csv_filepath = None
     else:
         # Download CSV probe file locally

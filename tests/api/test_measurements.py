@@ -34,6 +34,7 @@ def test_get_measurements(client, monkeypatch):
             {
                 "uuid": measurement_uuid,
                 "targets_file_key": targets_file_key,
+                "full": False,
                 "start_time": start_time,
                 "end_time": end_time,
             }
@@ -49,6 +50,7 @@ def test_get_measurements(client, monkeypatch):
                 "uuid": measurement_uuid,
                 "state": "finished",
                 "targets_file_key": targets_file_key,
+                "full": False,
                 "start_time": start_time,
                 "end_time": end_time,
             }
@@ -86,6 +88,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": user,
             "targets_file_key": targets_file_key,
+            "full": False,
             "protocol": protocol,
             "destination_port": destination_port,
             "min_ttl": min_ttl,
@@ -138,6 +141,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             }
         ],
         "targets_file_key": targets_file_key,
+        "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
         "min_ttl": min_ttl,
@@ -162,7 +166,7 @@ def test_get_measurement_by_uuid_not_found(client, monkeypatch):
     assert response.json() == {"detail": "Measurement not found"}
 
 
-# --- /v0/measurements/{measurement_uuid}/{agent_uuid} ---
+# --- GET /v0/measurements/{measurement_uuid}/{agent_uuid} ---
 
 
 def test_get_measurement_result(client, monkeypatch):
@@ -197,6 +201,7 @@ def test_get_measurement_result(client, monkeypatch):
             "user": "test",
             "agents": [str(uuid.uuid4())],
             "targets_file_key": "test.txt",
+            "full": False,
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,

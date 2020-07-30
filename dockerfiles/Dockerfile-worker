@@ -64,14 +64,19 @@ RUN apt-get update \
 WORKDIR /app
 
 # Diamond-Miner Reader
+ARG DEBUG
 RUN git clone https://github.com/dioptra-io/diamond-miner-cpp.git reader
 RUN mkdir -p reader/resources
 COPY statics/excluded_prefixes /app/reader/resources
 WORKDIR /app/reader
-RUN mkdir build && \
+RUN if [ "$DEBUG" = "on" ] ; then mkdir build && \
     cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCENTRAL=1 && \
-    make -j8
+    cmake .. -DCENTRAL=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j8 ; \
+    else mkdir build && \
+    cd build && \
+    cmake .. -DCENTRAL=1 && \
+    make -j8 ; fi
 
 WORKDIR /app
 
@@ -86,4 +91,4 @@ COPY iris iris
 
 RUN mkdir results
 
-CMD ["dramatiq", "iris.worker.hooks", "--watch", "iris/worker"]
+CMD ["dramatiq", "iris.worker.hooks"]

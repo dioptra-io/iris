@@ -108,6 +108,7 @@ async def get_measurements(
                 "uuid": measurement["uuid"],
                 "state": "finished" if state is None else state,
                 "targets_file_key": measurement["targets_file_key"],
+                "full": measurement["full"],
                 "start_time": measurement["start_time"],
                 "end_time": measurement["end_time"],
             }
@@ -141,16 +142,32 @@ async def post_measurement(
     username: str = Depends(authenticate),
 ):
     """Request a measurement."""
-    try:
-        await storage.get_file(
-            settings.AWS_S3_TARGETS_BUCKET_NAME, measurement.targets_file_key
-        )
-    except Exception:
-        raise HTTPException(status_code=404, detail="File object not found")
+    parameters = dict(measurement)
 
+    if measurement.full:
+        # Full snapshot requested
+        parameters["targets_file_key"] = None
+    elif measurement.targets_file_key:
+        # Targets based snapshot requested
+        # Verify that the targets file exists on AWS S3
+        try:
+            await storage.get_file(
+                settings.AWS_S3_TARGETS_BUCKET_NAME, measurement.targets_file_key
+            )
+        except Exception:
+            raise HTTPException(status_code=404, detail="File object not found")
+        parameters["full"] = False
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail="Either `targets_file_key` or `full` key is necessary",
+        )
+
+    # Get all connected agents
     agents = await request.app.redis.get_agents(state=False, parameters=False)
     agents = [agent["uuid"] for agent in agents]
 
+    # Filter out by `agents` key input if provided
     if measurement.agents:
         measurement.agents = list(measurement.agents)
         for agent in measurement.agents:
@@ -158,7 +175,7 @@ async def post_measurement(
                 raise HTTPException(status_code=404, detail="Agent not found")
         agents = measurement.agents
 
-    parameters = dict(measurement)
+    # Add mesurement metadata
     parameters["measurement_uuid"] = str(uuid4())
     parameters["user"] = username
     parameters["start_time"] = datetime.timestamp(datetime.now())

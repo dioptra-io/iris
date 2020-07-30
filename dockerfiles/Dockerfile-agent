@@ -57,16 +57,26 @@ RUN apt-get update
 RUN apt-get install -y gdb tcpdump traceroute nload
 
 # Diamond-Miner Prober
+ARG DEBUG
 RUN git clone https://github.com/dioptra-io/diamond-miner-cpp.git prober
 RUN mkdir prober/resources
 COPY statics/excluded_prefixes /app/prober/resources
 WORKDIR /app/prober
-RUN if [ "$PFRING" = "enable" ] ; then mkdir build && \
+RUN if [ "$PFRING" = "on" ] && ["$DEBUG" = "on"] ; then mkdir build && \
     cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Debug -DPROBER=1 -DPF_RING=1 && \
-    make -j8 ; else mkdir build && \
+    cmake .. -DPROBER=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPF_RING=1 && \
+    make -j8 ; \
+    elif [ "$PFRING" = "on" ] ; then mkdir build && \
     cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Debug -DPROBER=1 && \
+    cmake .. -DPROBER=1 -DPF_RING=1 && \
+    make -j8 ; \
+    elif [ "$DEBUG" = "on" ] ; then mkdir build && \
+    cd build && \
+    cmake .. -DPROBER=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j8 ; \
+    else mkdir build && \
+    cd build && \
+    cmake .. -DPROBER=1 && \
     make -j8 ; fi
 
 # Iris Agent
