@@ -1,4 +1,6 @@
 import aioboto3
+import asyncio
+import boto3
 
 from iris.commons.settings import CommonSettings
 
@@ -79,12 +81,13 @@ class Storage(object):
             ],
         }
 
+    def _upload_sync_file(self, bucket, filename, fin):
+        s3 = boto3.client("s3", **self.settings)
+        s3.upload_fileobj(fin, bucket, filename)
+
     async def upload_file(self, bucket, filename, fin):
-        """Upload a file in a bucket."""
-        async with aioboto3.client("s3", **self.settings) as s3:
-            await s3.upload_fileobj(
-                fin, bucket, filename,
-            )
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._upload_sync_file, bucket, filename, fin)
 
     async def download_file(self, bucket, filename, output_path):
         """Download a file from a bucket."""

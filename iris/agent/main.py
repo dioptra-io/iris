@@ -36,14 +36,20 @@ async def consumer(agent_uuid, queue):
     while True:
         measurement_uuid, measuremement = await queue.get()
 
-        logger.info(f"Set agent `{agent_uuid}` state to `working`")
+        logger_prefix = f"{measurement_uuid} :: {agent_uuid}"
+
+        logger.info(f"{logger_prefix} :: Set agent state to `working`")
         await robust_redis(redis, redis.set_agent_state("working"))
 
-        logger.info(f"Set measurement `{measurement_uuid}` state to `ongoing`")
-        await redis.set_measurement_state(measurement_uuid, "ongoing")
+        logger.info(f"{logger_prefix} Set measurement state to `ongoing`")
+        await robust_redis(
+            redis, redis.set_measurement_state(measurement_uuid, "ongoing")
+        )
+
+        logger.info(f"{logger_prefix} Launch measurement procudure")
         await measuremement
 
-        logger.info(f"Set agent `{agent_uuid}` state to `idle`")
+        logger.info(f"{logger_prefix} Set agent state to `idle`")
         await robust_redis(redis, redis.set_agent_state("idle"))
 
     await redis.close()
@@ -52,12 +58,12 @@ async def consumer(agent_uuid, queue):
 async def producer(redis, queue):
     """Wait a task and put in on the queue."""
     while True:
-        logger.info("Wait for a new request...")
+        logger.info(f"{redis.uuid} Wait for a new request...")
         parameters = await robust_redis(redis, redis.subscribe())
         if parameters is None:
             continue
 
-        logger.info("New request received! Putting in task queue")
+        logger.info(f"{redis.uuid} New request received! Putting in task queue")
         await queue.put(
             (parameters["measurement_uuid"], measuremement(redis.uuid, parameters))
         )
@@ -71,7 +77,7 @@ async def main():
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
-    logger.info(f"Connected to Redis with UUID `{agent_uuid}`")
+    logger.info(f"{agent_uuid} Connected to Redis with UUID")
 
     try:
 

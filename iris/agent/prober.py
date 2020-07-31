@@ -14,6 +14,7 @@ async def probe(
     starttime_filepath,
     csv_filepath=None,
     target_filepath=None,
+    logger_prefix="",
 ):
     """Execute measurement with Iris."""
     cmd = (
@@ -55,4 +56,6 @@ async def probe(
 
     logger.info(cmd)
 
-    await start_stream_subprocess(cmd, stdout=logger.info, stderr=logger.warning)
+    await start_stream_subprocess(
+        cmd, stdout=logger.info, stderr=logger.warning, prefix=logger_prefix
+    )
