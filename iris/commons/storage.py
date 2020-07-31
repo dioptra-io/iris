@@ -82,10 +82,12 @@ class Storage(object):
         }
 
     def _upload_sync_file(self, bucket, filename, fin):
+        """Underlying synchronous upload function."""
         s3 = boto3.client("s3", **self.settings)
         s3.upload_fileobj(fin, bucket, filename)
 
     async def upload_file(self, bucket, filename, fin):
+        """Upload a file in a bucket."""
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._upload_sync_file, bucket, filename, fin)
 
