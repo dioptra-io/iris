@@ -15,10 +15,10 @@ redis_broker = RedisBroker(
 dramatiq.set_broker(redis_broker)
 
 logger = logging.getLogger("worker")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG if settings.WORKER_DEBUG_MODE else logging.INFO)
 formatter = logging.Formatter("%(asctime)s :: %(levelname)s :: WORKER :: %(message)s")
 stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
+stream_handler.setLevel(logging.DEBUG if settings.WORKER_DEBUG_MODE else logging.INFO)
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 

@@ -72,7 +72,7 @@ async def pipeline(
     )
 
     if not settings.WORKER_DEBUG_MODE:
-        logger.info(f"{logger_prefix}  Remove local results file & start time log file")
+        logger.info(f"{logger_prefix} Remove local results file & start time log file")
         await aios.remove(result_filepath)
         await aios.remove(starttime_filepath)
 
@@ -307,6 +307,8 @@ async def callback(agents, measurement_parameters):
             "because no agent with parameters"
         )
 
+    measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
+
     if await redis.get_measurement_state(measurement_uuid) is None:
         # There is no measurement state, so the measurement hasn't started yet
         logger.info(f"{measurement_uuid} :: Set measurement state to `waiting`")
@@ -315,7 +317,6 @@ async def callback(agents, measurement_parameters):
         logger.info(
             f"{measurement_uuid} :: Create local measurement directory if not exists"
         )
-        measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
         try:
             await aios.mkdir(str(measurement_results_path))
         except FileExistsError:
