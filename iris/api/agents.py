@@ -7,6 +7,7 @@ from iris.api.schemas import (
     AgentsGetResponse,
     AgentsGetByUUIDResponse,
 )
+from uuid import UUID
 
 router = APIRouter()
 
@@ -40,11 +41,11 @@ async def get_agents(request: Request, username: str = Depends(authenticate)):
     summary="Get agent information from UUID",
 )
 async def get_agent_by_uuid(
-    request: Request, uuid: str, username: str = Depends(authenticate)
+    request: Request, uuid: UUID, username: str = Depends(authenticate)
 ):
     """Get agent information from UUID."""
     agents = await request.app.redis.get_agents(state=False, parameters=False)
-    filtered_agents = [agent["uuid"] for agent in agents if agent["uuid"] == uuid]
+    filtered_agents = [agent["uuid"] for agent in agents if agent["uuid"] == str(uuid)]
     if len(filtered_agents) == 0:
         raise HTTPException(status_code=404, detail="Agent not found")
     elif len(filtered_agents) > 1:

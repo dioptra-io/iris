@@ -4,6 +4,7 @@ import dramatiq
 from aiofiles import os as aios
 from aiohttp.client_exceptions import ServerTimeoutError
 from iris.commons.database import (
+    get_session,
     DatabaseMeasurementResults,
     DatabaseMeasurements,
     DatabaseAgents,
@@ -37,7 +38,8 @@ async def pipeline(
     starttime_filename,
 ):
     """Process results and eventually request a new round."""
-    database = DatabaseMeasurementResults(host=settings.DATABASE_HOST, logger=logger)
+    session = get_session()
+    database = DatabaseMeasurementResults(session, logger=logger)
 
     measurement_uuid = measurement_parameters["measurement_uuid"]
 
@@ -47,6 +49,7 @@ async def pipeline(
     round_number = extract_round_number(result_filename)
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
 
+    logger.info(f"{logger_prefix} Round {round_number}")
     logger.info(f"{logger_prefix} Download results file & start time log file")
     result_filepath = str(measurement_results_path / result_filename)
     await storage.download_file(
@@ -247,11 +250,8 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
 
         if shuffled_next_round_csv_filepath is None:
             logger.info(f"{logger_prefix} Measurement done for this agent")
-            database_measurement_agents = DatabaseAgentsInMeasurements(
-                host=settings.DATABASE_HOST,
-                table_name=settings.AGENTS_IN_MEASUREMENTS_TABLE_NAME,
-            )
-            await database_measurement_agents.stamp_finished(
+            session = get_session()
+            await DatabaseAgentsInMeasurements(session).stamp_finished(
                 measurement_uuid, agent_uuid
             )
             break
@@ -280,16 +280,10 @@ async def callback(agents, measurement_parameters):
     user = measurement_parameters["user"]
 
     logger.info(f"{measurement_uuid} :: New measurement received")
-    database_measurements = DatabaseMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME,
-    )
-    database_agents = DatabaseAgents(
-        host=settings.DATABASE_HOST, table_name=settings.AGENTS_TABLE_NAME,
-    )
-    database_measurement_agents = DatabaseAgentsInMeasurements(
-        host=settings.DATABASE_HOST,
-        table_name=settings.AGENTS_IN_MEASUREMENTS_TABLE_NAME,
-    )
+    session = get_session()
+    database_measurements = DatabaseMeasurements(session)
+    database_agents = DatabaseAgents(session)
+    database_measurement_agents = DatabaseAgentsInMeasurements(session)
 
     redis = Redis()
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)

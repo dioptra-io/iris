@@ -3,7 +3,7 @@
 from iris import __version__
 from iris.api import router
 from iris.api.settings import APISettings
-from iris.commons.database import DatabaseMeasurements
+from iris.commons.database import get_session, DatabaseMeasurements
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from fastapi import FastAPI
@@ -33,9 +33,8 @@ async def startup_event():
         pass
 
     # Create the database on Clickhouse
-    database = DatabaseMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME
-    )
+    session = get_session(settings.DATABASE_HOST)
+    database = DatabaseMeasurements(session)
     await database.create_datebase(settings.DATABASE_NAME)
     await database.create_table()
 

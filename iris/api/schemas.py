@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from uuid import UUID
 
 # --- Commons ----
 
@@ -27,7 +28,7 @@ class AgentParametersSummaryResponse(BaseModel):
 class AgentSummaryResponse(BaseModel):
     """Summary information about a agent (Response)."""
 
-    uuid: str
+    uuid: UUID
     state: str
     parameters: AgentParametersSummaryResponse
 
@@ -56,7 +57,7 @@ class AgentsGetResponse(BaseModel):
 class AgentsGetByUUIDResponse(BaseModel):
     """GET /agents/{uuid} (Response)."""
 
-    uuid: str
+    uuid: UUID
     state: str
     parameters: AgentParametersResponse
 
@@ -99,7 +100,7 @@ class TargetsDeleteResponse(BaseModel):
 class MeasurementSummaryResponse(BaseModel):
     """Summary information about a measurement (Response)."""
 
-    uuid: str
+    uuid: UUID
     state: str
     targets_file_key: Optional[str]
     full: bool
@@ -138,13 +139,13 @@ class MeasurementsPostBody(BaseModel):
 class MeasurementsPostResponse(BaseModel):
     """POST /measurements (Response)."""
 
-    uuid: str
+    uuid: UUID
 
 
 class MeasurementAgentInfoResponse(BaseModel):
     """Information about information of agents specific to a measurement (Response)."""
 
-    uuid: str
+    uuid: UUID
     state: str
     min_ttl: int
     max_ttl: int
@@ -154,7 +155,7 @@ class MeasurementAgentInfoResponse(BaseModel):
 class MeasurementInfoResponse(BaseModel):
     """Information about a measurement (Response)."""
 
-    uuid: str
+    uuid: UUID
     state: str
     agents: List[MeasurementAgentInfoResponse]
     targets_file_key: Optional[str]

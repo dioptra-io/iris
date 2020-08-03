@@ -62,7 +62,7 @@ def test_get_measurements(client, monkeypatch):
 
 
 def test_get_measurement_by_uuid(client, monkeypatch):
-    """Test get measurements UUID."""
+    """Test get measurement by UUID."""
 
     measurement_uuid = str(uuid.uuid4())
     user = "test"
@@ -152,7 +152,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
 
 
 def test_get_measurement_by_uuid_not_found(client, monkeypatch):
-    """Test get measurements UUID that don't exist."""
+    """Test get measurement by UUID that don't exist."""
 
     measurement_uuid = str(uuid.uuid4())
 
@@ -166,11 +166,17 @@ def test_get_measurement_by_uuid_not_found(client, monkeypatch):
     assert response.json() == {"detail": "Measurement not found"}
 
 
+def test_get_measurement_by_uuid_invalid_input(client):
+    """Test get measurement by UUID with invalid input."""
+    response = client.get("/v0/measurements/test")
+    assert response.status_code == 422
+
+
 # --- GET /v0/measurements/{measurement_uuid}/{agent_uuid} ---
 
 
-def test_get_measurement_result(client, monkeypatch):
-    """Test get measurements results."""
+def test_get_measurement_results(client, monkeypatch):
+    """Test get measurement results."""
 
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
@@ -195,7 +201,7 @@ def test_get_measurement_result(client, monkeypatch):
         }
     ]
 
-    async def get(self, username, measurement_uuid):
+    async def get_measurements(self, username, measurement_uuid):
         return {
             "uuid": measurement_uuid,
             "user": "test",
@@ -210,19 +216,30 @@ def test_get_measurement_result(client, monkeypatch):
             "end_time": datetime.now().isoformat(),
         }
 
-    async def get_results(self):
+    async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
+        return {"state": "finished"}
+
+    async def get_measurement_results(self):
         return results
 
-    class FakeDatabaseClient(object):
-        def __init__(self, *args, **kwargs):
-            pass
+    async def get_measurement_count(self):
+        return 1
 
-        async def execute(*args, **kwargs):
-            return [[1]]
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+    )
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseAgentsInMeasurements,
+        "get",
+        get_agents_in_measurement_results,
+    )
 
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
-    monkeypatch.setattr(iris.api.results.MeasurementResults, "get_results", get_results)
-    monkeypatch.setattr(iris.api.measurements.aioch, "Client", FakeDatabaseClient)
+    monkeypatch.setattr(
+        iris.api.results.MeasurementResults, "get_count", get_measurement_count
+    )
+    monkeypatch.setattr(
+        iris.api.results.MeasurementResults, "get_results", get_measurement_results
+    )
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.json() == {
@@ -233,13 +250,55 @@ def test_get_measurement_result(client, monkeypatch):
     }
 
 
-def test_get_measurement_no_result(client, monkeypatch):
-    """Test get measurements results that don't exist."""
+def test_get_measurement_results_not_finished(client, monkeypatch):
+    """Test get measurement results but the agent has not finished."""
 
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 
-    async def get(self, username, measurement_uuid):
+    async def get_measurements(self, username, measurement_uuid):
+        return {
+            "uuid": measurement_uuid,
+            "user": "test",
+            "agents": [str(uuid.uuid4())],
+            "targets_file_key": "test.txt",
+            "full": False,
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+            "start_time": datetime.now().isoformat(),
+            "end_time": datetime.now().isoformat(),
+        }
+
+    async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
+        return {"state": "ongoing"}
+
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+    )
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseAgentsInMeasurements,
+        "get",
+        get_agents_in_measurement_results,
+    )
+
+    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    assert response.json() == {
+        "count": 0,
+        "previous": None,
+        "next": None,
+        "results": [],
+    }
+
+
+def test_get_measurement_results_no_agent(client, monkeypatch):
+    """Test get measurement results that don't exist."""
+
+    measurement_uuid = str(uuid.uuid4())
+    agent_uuid = str(uuid.uuid4())
+
+    async def get_measurements(self, username, measurement_uuid):
         return {
             "uuid": measurement_uuid,
             "user": "test",
@@ -253,15 +312,17 @@ def test_get_measurement_no_result(client, monkeypatch):
             "end_time": datetime.now().isoformat(),
         }
 
-    class FakeClient(object):
-        def __init__(self, *args, **kwargs):
-            pass
+    async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
+        return None
 
-        async def execute(*args, **kwargs):
-            return [[0]]
-
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
-    monkeypatch.setattr(iris.api.measurements.aioch, "Client", FakeClient)
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+    )
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseAgentsInMeasurements,
+        "get",
+        get_agents_in_measurement_results,
+    )
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 404
@@ -274,7 +335,7 @@ def test_get_measurement_no_result(client, monkeypatch):
 
 
 def test_get_measurement_result_not_found(client, monkeypatch):
-    """Test get measurements result that don't exist."""
+    """Test get measurement results that don't exist."""
 
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
@@ -287,3 +348,19 @@ def test_get_measurement_result_not_found(client, monkeypatch):
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
+
+
+def test_get_measurement_by_uuid_invalid_measurement_uuid(client):
+    """Test get measurement results with invalid input."""
+    measurement_uuid = "test"
+    agent_uuid = str(uuid.uuid4())
+    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    assert response.status_code == 422
+
+
+def test_get_measurement_by_uuid_invalid_agent_uuid(client):
+    """Test get measurement results with invalid input."""
+    measurement_uuid = str(uuid.uuid4())
+    agent_uuid = "test"
+    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    assert response.status_code == 422

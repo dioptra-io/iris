@@ -1,7 +1,5 @@
 """Measurements operations."""
 
-import aioch
-
 from datetime import datetime
 from fastapi import (
     APIRouter,
@@ -24,6 +22,7 @@ from iris.api.schemas import (
 )
 from iris.api.settings import APISettings
 from iris.commons.database import (
+    get_session,
     DatabaseMeasurementResults,
     DatabaseMeasurements,
     DatabaseAgents,
@@ -31,7 +30,7 @@ from iris.commons.database import (
 )
 from iris.commons.storage import Storage
 from iris.worker.hooks import hook
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 
 router = APIRouter()
@@ -39,66 +38,15 @@ settings = APISettings()
 storage = Storage()
 
 
-async def session_measurements():
-    return DatabaseMeasurements(
-        host=settings.DATABASE_HOST, table_name=settings.MEASUREMENTS_TABLE_NAME
-    )
-
-
-async def session_agents():
-    return DatabaseAgents(
-        host=settings.DATABASE_HOST, table_name=settings.AGENTS_TABLE_NAME
-    )
-
-
-async def session_agents_in_measurements():
-    return DatabaseAgentsInMeasurements(
-        host=settings.DATABASE_HOST,
-        table_name=settings.AGENTS_IN_MEASUREMENTS_TABLE_NAME,
-    )
-
-
-async def measurement_formater_results(
-    request, measurement_uuid, agent_uuid, offset, limit
-):
-    """Measurement results for an agent.
-    Get the results from the database.
-    """
-    state = await request.app.redis.get_measurement_state(measurement_uuid)
-    if state is not None:
-        return {"count": 0, "next": None, "previous": None, "results": []}
-
-    client = aioch.Client(settings.DATABASE_HOST)
-    table_name = DatabaseMeasurementResults.forge_table_name(
-        measurement_uuid, agent_uuid
-    )
-    table_name = f"{settings.DATABASE_NAME}.{table_name}"
-
-    response = await client.execute(f"EXISTS TABLE {table_name}")
-    is_table_exists = bool(response[0][0])
-    if not is_table_exists:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                f"The agent `{agent_uuid}` "
-                f"did not participate to measurement `{measurement_uuid}`"
-            ),
-        )
-
-    querier = MeasurementResults(request, client, table_name, offset, limit)
-    return await querier.query()
-
-
 @router.get(
     "/", response_model=MeasurementsGetResponse, summary="Get all measurements",
 )
 async def get_measurements(
-    request: Request,
-    username: str = Depends(authenticate),
-    session: DatabaseMeasurements = Depends(session_measurements),
+    request: Request, username: str = Depends(authenticate),
 ):
     """Get all measurements."""
-    all_measurements = await session.all(username)
+    session = get_session()
+    all_measurements = await DatabaseMeasurements(session).all(username)
 
     measurements = []
     for measurement in all_measurements:
@@ -193,17 +141,11 @@ async def post_measurement(
     summary="Get measurement information by uuid",
 )
 async def get_measurement_by_uuid(
-    request: Request,
-    measurement_uuid: str,
-    username: str = Depends(authenticate),
-    session_measurement: DatabaseMeasurements = Depends(session_measurements),
-    session_agents: DatabaseAgents = Depends(session_agents),
-    session_agents_in_measurements: DatabaseAgentsInMeasurements = Depends(
-        session_agents_in_measurements
-    ),
+    request: Request, measurement_uuid: UUID, username: str = Depends(authenticate),
 ):
     """Get measurement information by uuid."""
-    measurement = await session_measurement.get(username, measurement_uuid)
+    session = get_session()
+    measurement = await DatabaseMeasurements(session).get(username, measurement_uuid)
     if measurement is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
 
@@ -213,13 +155,13 @@ async def get_measurement_by_uuid(
 
     del measurement["user"]
 
-    agents_in_measurement = await session_agents_in_measurements.all(
+    agents_in_measurement = await DatabaseAgentsInMeasurements(session).all(
         measurement["uuid"]
     )
 
     agents = []
     for agent in agents_in_measurement:
-        agent_info = await session_agents.get(agent["uuid"])
+        agent_info = await DatabaseAgents(session).get(agent["uuid"])
         agents.append(
             {
                 "uuid": agent["uuid"],
@@ -247,18 +189,40 @@ async def get_measurement_by_uuid(
 )
 async def get_measurement_results(
     request: Request,
-    measurement_uuid: str,
-    agent_uuid: str,
+    measurement_uuid: UUID,
+    agent_uuid: UUID,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     username: str = Depends(authenticate),
-    session: DatabaseMeasurements = Depends(session_measurements),
 ):
     """Get measurement results."""
-    measurement_info = await session.get(username, measurement_uuid)
+    session = get_session()
+    measurement_info = await DatabaseMeasurements(session).get(
+        username, measurement_uuid
+    )
     if measurement_info is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
 
-    return await measurement_formater_results(
-        request, measurement_uuid, agent_uuid, offset, limit
+    table_name = DatabaseMeasurementResults.forge_table_name(
+        measurement_uuid, agent_uuid
     )
+    table_name = f"{settings.DATABASE_NAME}.{table_name}"
+
+    agent_in_measurement_info = await DatabaseAgentsInMeasurements(session).get(
+        measurement_uuid, agent_uuid
+    )
+
+    if agent_in_measurement_info is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"The agent `{agent_uuid}` "
+                f"did not participate to measurement `{measurement_uuid}`"
+            ),
+        )
+
+    if agent_in_measurement_info["state"] != "finished":
+        return {"count": 0, "next": None, "previous": None, "results": []}
+
+    querier = MeasurementResults(request, session, table_name, offset, limit)
+    return await querier.query()

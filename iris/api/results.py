@@ -29,17 +29,19 @@ def packet_formater(row):
 class MeasurementResults(object):
     """Return measurement results paginated."""
 
-    def __init__(self, request, client, table_name, offset, limit):
+    def __init__(self, request, session, table_name, offset, limit):
         self.table_name = table_name
+
+        self.count = 0
         self.offset = offset
         self.limit = limit
 
         self.request = request
-        self.client = client
+        self.session = session
 
     async def get_count(self):
         """Get total count query."""
-        response = await self.client.execute(f"SELECT Count() FROM {self.table_name}")
+        response = await self.session.execute(f"SELECT Count() FROM {self.table_name}")
         self.count = response[0][0]
         return self.count
 
@@ -71,7 +73,7 @@ class MeasurementResults(object):
         """Get results from database according to offeset and limit parameters."""
         query = f"SELECT * FROM {self.table_name} LIMIT %(offset)s,%(limit)s"
 
-        response = await self.client.execute(
+        response = await self.session.execute(
             query, {"offset": self.offset, "limit": self.limit}
         )
         return [packet_formater(row) for row in response]

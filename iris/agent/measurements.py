@@ -63,14 +63,15 @@ async def measuremement(uuid, request):
     with Path(starttime_filepath).open("rb") as fin:
         await storage.upload_file(measurement_uuid, starttime_filename, fin)
 
-    logger.info(f"{logger_prefix} Remove local result file & start time log file")
-    await aios.remove(result_filepath)
-    await aios.remove(starttime_filepath)
+    if not settings.WORKER_DEBUG_MODE:
+        logger.info(f"{logger_prefix} Remove local result file & start time log file")
+        await aios.remove(result_filepath)
+        await aios.remove(starttime_filepath)
 
     if target_filepath is not None:
         logger.info(f"{logger_prefix} Remove local target file")
         await aios.remove(target_filepath)
-    if csv_filepath is not None:
+    if csv_filepath is not None and not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local CSV probe file")
         await aios.remove(csv_filepath)
 

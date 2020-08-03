@@ -77,7 +77,7 @@ async def main():
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
-    logger.info(f"{agent_uuid} Connected to Redis with UUID")
+    logger.info(f"{agent_uuid} Connected to Redis")
 
     try:
 

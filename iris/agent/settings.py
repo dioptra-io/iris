@@ -23,3 +23,5 @@ class AgentSettings(CommonSettings):
 
     AGENT_WAIT_FOR_START: int = 10  # seconds
     AGENT_RECOVER_TIME_REDIS_FAILURE: int = 10  # seconds
+
+    WORKER_DEBUG_MODE: bool = False

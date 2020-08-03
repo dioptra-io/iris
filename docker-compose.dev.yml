@@ -17,13 +17,15 @@ services:
     build:
       args:
         DEBUG: "on"
-    # environment:
-    #   WORKER_DEBUG_MODE: "true"
+    environment:
+      WORKER_DEBUG_MODE: "true"
 
   agent:
     build:
       args:
         DEBUG: "on"
+    environment:
+      AGENT_DEBUG_MODE: "true"
 
   grafana:
     ports:
