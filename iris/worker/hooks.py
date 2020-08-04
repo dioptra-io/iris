@@ -47,6 +47,7 @@ async def pipeline(
     logger.info(f"{logger_prefix} New files detected")
 
     round_number = extract_round_number(result_filename)
+    max_round = measurement_parameters["max_round"]
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
 
     logger.info(f"{logger_prefix} Round {round_number}")
@@ -129,7 +130,7 @@ async def pipeline(
     )
 
     next_round_csv_size = (await aios.stat(next_round_csv_filepath)).st_size
-    if next_round_csv_size != 0 and round_number < settings.WORKER_MAX_ROUND:
+    if next_round_csv_size != 0 and round_number < max_round:
         logger.info(f"{logger_prefix} Next round is required")
         logger.info(f"{logger_prefix} Shuffle next round CSV probe file")
         await shuffle_next_round_csv(

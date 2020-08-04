@@ -23,6 +23,4 @@ class WorkerSettings(CommonSettings):
     WORKER_SANITY_CHECK_RETRIES: int = 3
     WORKER_SANITY_CHECK_REFRESH: int = 1  # seconds
 
-    WORKER_MAX_ROUND: int = 10
-
     WORKER_DEBUG_MODE: bool = False

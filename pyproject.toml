@@ -31,7 +31,7 @@ pytest-cov = "^2.10.0"
 requests = "^2.24.0"
 
 [tool.pytest.ini_options]
-addopts = "--cov=iris --cov-report term-missing -vvs"
+addopts = "--ignore volumes --cov=iris --cov-report term-missing -vvs"
 filterwarnings = [
     "ignore::DeprecationWarning:aiofiles.*:",
     "ignore::DeprecationWarning:urllib3.*:",
