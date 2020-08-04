@@ -51,7 +51,7 @@ async def next_round_csv(
     csv_filepath,
     agent_parameters,
     measurement_parameters,
-    logger_prefx="",
+    logger_prefix="",
 ):
     """Compute the next round and output CSV file."""
     # Snapshot numbering is currently unused
@@ -85,7 +85,7 @@ async def next_round_csv(
     )
 
     await start_stream_subprocess(
-        cmd, stdout=logger.info, stderr=logger.warning, prefix=logger_prefx
+        cmd, stdout=logger.info, stderr=logger.warning, prefix=logger_prefix
     )
 
 

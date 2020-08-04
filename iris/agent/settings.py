@@ -18,10 +18,10 @@ class AgentSettings(CommonSettings):
 
     AGENT_PFRING: bool = False
 
-    AGENT_TARGETS_DIR: Path = Path("/app/targets")
-    AGENT_RESULTS_DIR: Path = Path("/app/results")
+    AGENT_TARGETS_DIR_PATH: Path = Path("/app/targets")
+    AGENT_RESULTS_DIR_PATH: Path = Path("/app/results")
 
     AGENT_WAIT_FOR_START: int = 10  # seconds
     AGENT_RECOVER_TIME_REDIS_FAILURE: int = 10  # seconds
 
-    WORKER_DEBUG_MODE: bool = False
+    AGENT_DEBUG_MODE: bool = False
