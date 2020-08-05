@@ -1,4 +1,5 @@
 from iris.commons.settings import CommonSettings
+from typing import Optional
 from pathlib import Path
 
 
@@ -7,6 +8,8 @@ class AgentSettings(CommonSettings):
 
     AGENT_D_MINER_PROBER_PATH: Path = Path("/app/prober/build/Heartbeat")
     AGENT_EXCLUSION_FILE_PATH: Path = Path("/app/prober/resources/excluded_prefixes")
+
+    AGENT_UUID: Optional[str] = None
 
     AGENT_PROBING_RATE: int = 1000  # pps
     AGENT_BUFFER_SNIFFER_SIZE: int = 100000  # kB

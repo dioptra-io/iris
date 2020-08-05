@@ -71,7 +71,7 @@ async def producer(redis, queue):
 
 async def main():
     """Main agent function."""
-    agent_uuid = str(uuid4())
+    agent_uuid = str(uuid4()) if settings.AGENT_UUID is None else settings.AGENT_UUID
     redis = AgentRedis(agent_uuid)
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
