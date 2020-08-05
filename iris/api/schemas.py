@@ -115,12 +115,20 @@ class MeasurementsGetResponse(BaseModel):
     results: List[MeasurementSummaryResponse]
 
 
+class MeasurementsAgentsPostBody(BaseModel):
+    """POST /measurements (Body)."""
+
+    uuid: UUID
+    min_ttl: int = Field(1, title="Minimum TTL", gt=0)
+    max_ttl: int = Field(30, title="Maximum TTL", gt=0)
+
+
 class MeasurementsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
     targets_file_key: Optional[str]
     full: Optional[bool]
-    agents: List[str] = Field(
+    agents: List[MeasurementsAgentsPostBody] = Field(
         None,
         title="Optional agent list",
         description="Publish the measurement to all agents if not set.",

@@ -295,9 +295,12 @@ async def callback(agents, measurement_parameters):
 
     logger.info(f"{logger_prefix} Getting agents parameters")
     agents_parameters = {}
-    for agent_uuid in agents:
+    for agent_info in agents:
+        agent_uuid = agent_info["uuid"]
         agent_parameters = await redis.get_agent_parameters(agent_uuid)
         if agent_parameters:
+            agent_parameters["min_ttl"] = agent_info["min_ttl"]
+            agent_parameters["max_ttl"] = agent_info["max_ttl"]
             agents_parameters[agent_uuid] = agent_parameters
 
     if not agents_parameters:
@@ -339,8 +342,8 @@ async def callback(agents, measurement_parameters):
             await database_measurement_agents.register(
                 measurement_uuid,
                 agent_uuid,
-                min_ttl=measurement_parameters["min_ttl"],
-                max_ttl=measurement_parameters["max_ttl"],
+                min_ttl=agent_parameters["min_ttl"],
+                max_ttl=agent_parameters["max_ttl"],
             )
 
         logger.info(f"{logger_prefix} Create bucket in AWS S3")
@@ -353,15 +356,23 @@ async def callback(agents, measurement_parameters):
         logger.info(f"{logger_prefix} Publish measurement to agents")
         measurement_request = {
             "measurement_uuid": measurement_uuid,
-            "measurement_tool": "iris",
+            "measurement_tool": "diamond-miner",
             "round": 1,
             "parameters": measurement_parameters,
         }
+
         if not measurement_parameters["agents"]:
+            # If no `agents` key in request input
             await redis.publish("all", measurement_request)
         else:
-            agents = measurement_parameters["agents"]
-            for agent_uuid in measurement_parameters["agents"]:
+            # Else, specific agents with custom parameters
+            for agent_uuid, agent_parameters in agents_parameters.items():
+                measurement_request["parameters"]["min_ttl"] = agent_parameters[
+                    "min_ttl"
+                ]
+                measurement_request["parameters"]["max_ttl"] = agent_parameters[
+                    "max_ttl"
+                ]
                 await redis.publish(agent_uuid, measurement_request)
     else:
         # We are in this state when the worker has fail and replaying the measurement

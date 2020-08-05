@@ -18,6 +18,9 @@ async def measuremement(uuid, request):
     measurement_uuid = request["measurement_uuid"]
     round_number = request["round"]
 
+    min_ttl = request["parameters"]["min_ttl"]
+    max_ttl = request["parameters"]["max_ttl"]
+
     logger_prefix = f"{measurement_uuid} :: {uuid} ::"
 
     measurement_results_path = settings.AGENT_RESULTS_DIR_PATH / measurement_uuid
@@ -32,9 +35,11 @@ async def measuremement(uuid, request):
     starttime_filename = f"{uuid}_starttime_{round_number}.log"
     starttime_filepath = str(measurement_results_path / starttime_filename)
 
-    logger.info(f"{logger_prefix} Round {round_number}")
-    if round_number == 1:
+    logger.info(f"{logger_prefix} Round : {round_number}")
+    logger.info(f"{logger_prefix} Minimum TTL : {min_ttl}")
+    logger.info(f"{logger_prefix} Maximum TTL : {max_ttl}")
 
+    if round_number == 1:
         if request["parameters"]["full"]:
             logger.info(f"{logger_prefix} Full snapshot required")
             target_filepath = None

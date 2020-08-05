@@ -46,7 +46,7 @@ async def consumer(agent_uuid, queue):
             redis, redis.set_measurement_state(measurement_uuid, "ongoing")
         )
 
-        logger.info(f"{logger_prefix} Launch measurement procudure")
+        logger.info(f"{logger_prefix} Launch measurement procedure")
         await measuremement
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")

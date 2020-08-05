@@ -38,9 +38,7 @@ settings = APISettings()
 storage = Storage()
 
 
-@router.get(
-    "/", response_model=MeasurementsGetResponse, summary="Get all measurements",
-)
+@router.get("/", response_model=MeasurementsGetResponse, summary="Get all measurements")
 async def get_measurements(
     request: Request, username: str = Depends(authenticate),
 ):
@@ -112,16 +110,35 @@ async def post_measurement(
         )
 
     # Get all connected agents
-    agents = await request.app.redis.get_agents(state=False, parameters=False)
-    agents = [agent["uuid"] for agent in agents]
+    active_agents = await request.app.redis.get_agents(state=False, parameters=False)
+    active_agents = [agent["uuid"] for agent in active_agents]
 
     # Filter out by `agents` key input if provided
+    parameters["agents"] = True
     if measurement.agents:
         measurement.agents = list(measurement.agents)
-        for agent in measurement.agents:
-            if agent not in agents:
+
+        agents = []
+        for agent_info in measurement.agents:
+            if str(agent_info.uuid) not in active_agents:
                 raise HTTPException(status_code=404, detail="Agent not found")
-        agents = measurement.agents
+            agents.append(
+                {
+                    "uuid": str(agent_info.uuid),
+                    "min_ttl": agent_info.min_ttl,
+                    "max_ttl": agent_info.max_ttl,
+                }
+            )
+    else:
+        parameters["agents"] = False
+        agents = [
+            {
+                "uuid": uuid,
+                "min_ttl": parameters["min_ttl"],
+                "max_ttl": parameters["max_ttl"],
+            }
+            for uuid in active_agents
+        ]
 
     # Add mesurement metadata
     parameters["measurement_uuid"] = str(uuid4())
@@ -165,7 +182,9 @@ async def get_measurement_by_uuid(
         agents.append(
             {
                 "uuid": agent["uuid"],
-                "state": agent["state"],
+                "state": "waiting"
+                if measurement["state"] == "waiting"
+                else agent["state"],
                 "min_ttl": agent["min_ttl"],
                 "max_ttl": agent["max_ttl"],
                 "parameters": {
