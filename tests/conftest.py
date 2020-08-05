@@ -39,7 +39,7 @@ class FakeRedis(Redis):
     async def publish(*args, **kwargs):
         pass
 
-    async def close(*args, **kwargs):
+    async def disconnect(*args, **kwargs):
         pass
 
 

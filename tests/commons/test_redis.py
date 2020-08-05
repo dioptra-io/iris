@@ -175,14 +175,14 @@ async def test_redis_publish():
 
 
 @pytest.mark.asyncio
-async def test_redis_close():
-    """Test of `Redis.close()` method."""
+async def test_redis_disconnect():
+    """Test of `Redis.disconnect()` method."""
     redis = Redis()
     redis._redis = FakeRedisConnection()
 
     redis._redis.assign("close", lambda: None)
     redis._redis.assign("wait_closed", fake(None))
-    assert await redis.close() is None
+    assert await redis.disconnect() is None
 
 
 @pytest.mark.asyncio

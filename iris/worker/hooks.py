@@ -417,7 +417,7 @@ async def callback(agents, measurement_parameters):
 
     logger.info(f"{logger_prefix} Measurement done")
     await redis.delete_measurement_state(measurement_uuid)
-    await redis.close()
+    await redis.disconnect()
 
 
 @dramatiq.actor(

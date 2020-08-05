@@ -42,6 +42,6 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     try:
-        await app.redis.close()
+        await app.redis.disconnect()
     except Exception:
         pass

@@ -52,7 +52,7 @@ async def consumer(agent_uuid, queue):
         logger.info(f"{logger_prefix} Set agent state to `idle`")
         await robust_redis(redis, redis.set_agent_state("idle"))
 
-    await redis.close()
+    await redis.disconnect()
 
 
 async def producer(redis, queue):
@@ -109,7 +109,7 @@ async def main():
         await redis.unsubscribe()
         await redis.delete_agent_state()
         await redis.delete_agent_parameters()
-        await redis.close()
+        await redis.disconnect()
 
 
 def app():

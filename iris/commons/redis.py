@@ -86,7 +86,7 @@ class Redis(object):
         """Publish a message via into a channel."""
         await self._redis.publish_json(f"{self.KEY_AGENT_LISTEN}:{channel}", data)
 
-    async def close(self):
+    async def disconnect(self):
         """Close the connection."""
         self._redis.close()
         await self._redis.wait_closed()
