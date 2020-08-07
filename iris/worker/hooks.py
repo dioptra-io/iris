@@ -109,6 +109,10 @@ async def pipeline(
     next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"
     next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
 
+    if next_round_number > max_round:
+        logger.warning(f"{logger_prefix} Maximum round reached. Stopping.")
+        return None
+
     if not agent_parameters:
         logger.error(f"{logger_prefix} No agent parameters")
 
@@ -129,8 +133,7 @@ async def pipeline(
         measurement_results_path / shuffled_next_round_csv_filename
     )
 
-    next_round_csv_size = (await aios.stat(next_round_csv_filepath)).st_size
-    if next_round_csv_size != 0 and round_number < max_round:
+    if (await aios.stat(next_round_csv_filepath)).st_size != 0:
         logger.info(f"{logger_prefix} Next round is required")
         logger.info(f"{logger_prefix} Shuffle next round CSV probe file")
         await shuffle_next_round_csv(
