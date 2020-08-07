@@ -140,7 +140,7 @@ cython_debug/
 # Local
 .vscode
 .DS_Store
-
+.clickhouse-client-history
 .config
 .docker
 .kube
@@ -153,7 +153,7 @@ resources
 
 # Internal deployment & scripts
 deployment
-scripts
+maintenance
 
 # Internal Kubernetes configuration
 kubernetes
