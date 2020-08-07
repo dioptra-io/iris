@@ -141,6 +141,13 @@ cython_debug/
 .vscode
 .DS_Store
 
+.config
+.docker
+.kube
+.local
+.ssh
+.bash*
+
 # Internal Resources
 resources
 
@@ -157,3 +164,7 @@ docker-compose.test.yml
 
 # Internal Documentation
 PRODUCTION.md
+
+# Internal third-parties
+diamond-miner
+pfring
