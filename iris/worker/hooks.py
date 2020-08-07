@@ -197,16 +197,31 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
     """Watch for a results from an agent."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
+
+    session = get_session()
+    database_agents_in_measurement = DatabaseAgentsInMeasurements(session)
+
     while True:
         logger.debug(f"{logger_prefix} Active watching")
 
         if settings.WORKER_SANITY_CHECK_ENABLE:
-            logger.debug(f"{logger_prefix} Perform sanity check")
+            logger.debug(f"{logger_prefix} Perform sanity checks")
+            # Check if the agent is down
             is_agent_alive = await sanity_check(redis, measurement_uuid, agent_uuid)
             if not is_agent_alive:
-                logger.warning(f"{logger_prefix} Stop watching agent, seems to be down")
+                logger.warning(f"{logger_prefix} Stop watching agent")
+                await database_agents_in_measurement.stamp_finished(
+                    measurement_uuid, agent_uuid
+                )
                 break
-
+            # Check if the measurement has been canceled
+            measurement_state = await redis.get_measurement_state(measurement_uuid)
+            if measurement_state is None:
+                logger.warning(f"{logger_prefix} Measurement canceled")
+                await database_agents_in_measurement.stamp_finished(
+                    measurement_uuid, agent_uuid
+                )
+                break
         try:
             remote_files = await storage.get_all_files(measurement_uuid)
         except ServerTimeoutError:
@@ -253,8 +268,7 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
 
         if shuffled_next_round_csv_filepath is None:
             logger.info(f"{logger_prefix} Measurement done for this agent")
-            session = get_session()
-            await DatabaseAgentsInMeasurements(session).stamp_finished(
+            await database_agents_in_measurement.stamp_finished(
                 measurement_uuid, agent_uuid
             )
             break

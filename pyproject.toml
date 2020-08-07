@@ -5,7 +5,7 @@ description = ""
 authors = ["matthieugouel <matthieu.gouel@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = ">=3.6"
+python = "^3.6"
 aioboto3 = "^8.0.3"
 aioch = "^0.0.2"
 aiofiles = "^0.5.0"
@@ -22,6 +22,7 @@ uvicorn = "^0.11.5"
 [tool.poetry.dev-dependencies]
 bumpversion = "^0.6.0"
 click = "^7.1.2"
+coverage = "^5.2.1"
 flake8 = "^3.8.3"
 jinja2 = "^2.11.2"
 mypy = "^0.782"

@@ -34,11 +34,19 @@ async def consumer(agent_uuid, queue):
     redis = AgentRedis(agent_uuid)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD, register=False)
     while True:
-        measurement_uuid, measuremement = await queue.get()
+        parameters = await queue.get()
+        measurement_uuid = parameters["measurement_uuid"]
 
-        logger_prefix = f"{measurement_uuid} :: {agent_uuid}"
+        logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
-        logger.info(f"{logger_prefix} :: Set agent state to `working`")
+        measurement_state = await robust_redis(
+            redis, redis.get_measurement_state(measurement_uuid)
+        )
+        if measurement_state is None:
+            logger.warning(f"{logger_prefix} The measurement has been canceled")
+            continue
+
+        logger.info(f"{logger_prefix} Set agent state to `working`")
         await robust_redis(redis, redis.set_agent_state("working"))
 
         logger.info(f"{logger_prefix} Set measurement state to `ongoing`")
@@ -47,7 +55,7 @@ async def consumer(agent_uuid, queue):
         )
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
-        await measuremement
+        await measuremement(redis, parameters)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
         await robust_redis(redis, redis.set_agent_state("idle"))
@@ -58,15 +66,13 @@ async def consumer(agent_uuid, queue):
 async def producer(redis, queue):
     """Wait a task and put in on the queue."""
     while True:
-        logger.info(f"{redis.uuid} Wait for a new request...")
+        logger.info(f"{redis.uuid} :: Wait for a new request...")
         parameters = await robust_redis(redis, redis.subscribe())
         if parameters is None:
             continue
 
-        logger.info(f"{redis.uuid} New request received! Putting in task queue")
-        await queue.put(
-            (parameters["measurement_uuid"], measuremement(redis.uuid, parameters))
-        )
+        logger.info(f"{redis.uuid} :: New request received! Putting in task queue")
+        await queue.put(parameters)
 
 
 async def main():
@@ -77,7 +83,7 @@ async def main():
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
-    logger.info(f"{agent_uuid} Connected to Redis")
+    logger.info(f"{agent_uuid} :: Connected to Redis")
 
     try:
 

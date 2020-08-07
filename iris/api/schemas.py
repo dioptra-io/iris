@@ -177,6 +177,12 @@ class MeasurementInfoResponse(BaseModel):
     end_time: Optional[str]
 
 
+class MeasurementsDeleteResponse(BaseModel):
+
+    uuid: UUID
+    action: str
+
+
 class PacketResponse(BaseModel):
     """Full information about a measurement (Response)."""
 

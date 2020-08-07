@@ -179,12 +179,16 @@ async def get_measurement_by_uuid(
     agents = []
     for agent in agents_in_measurement:
         agent_info = await DatabaseAgents(session).get(agent["uuid"])
+
+        if measurement["state"] == "waiting":
+            agent["state"] = "waiting"
+        elif measurement["state"] == "finished":
+            agent["state"] = "finished"
+
         agents.append(
             {
                 "uuid": agent["uuid"],
-                "state": "waiting"
-                if measurement["state"] == "waiting"
-                else agent["state"],
+                "state": agent["state"],
                 "min_ttl": agent["min_ttl"],
                 "max_ttl": agent["max_ttl"],
                 "parameters": {
@@ -198,6 +202,31 @@ async def get_measurement_by_uuid(
     measurement["agents"] = agents
 
     return measurement
+
+
+@router.delete(
+    "/{measurement_uuid}",
+    # response_model=MeasurementsResultsResponse,
+    responses={404: {"model": ExceptionResponse}},
+    summary="Cancel measurement",
+)
+async def delete_measurement(
+    request: Request, measurement_uuid: UUID, username: str = Depends(authenticate),
+):
+    """Cancel a measurement."""
+    session = get_session()
+    measurement_info = await DatabaseMeasurements(session).get(
+        username, measurement_uuid
+    )
+    if measurement_info is None:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+
+    state = await request.app.redis.get_measurement_state(measurement_uuid)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Measurement already finished")
+
+    await request.app.redis.delete_measurement_state(measurement_uuid)
+    return {"uuid": measurement_uuid, "action": "canceled"}
 
 
 @router.get(

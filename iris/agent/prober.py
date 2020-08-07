@@ -1,5 +1,7 @@
 """Prober executor."""
 
+import asyncio
+
 from iris.agent import logger
 from iris.agent.settings import AgentSettings
 from iris.commons.subprocess import start_stream_subprocess
@@ -8,15 +10,26 @@ from iris.commons.subprocess import start_stream_subprocess
 settings = AgentSettings()
 
 
+async def stopper(logger, redis, measurement_uuid, logger_prefix=""):
+    """Cancel prober conditions."""
+    while True:
+        measurement_state = await redis.get_measurement_state(measurement_uuid)
+        if measurement_state is None:
+            logger.warning(logger_prefix + "Measurement canceled")
+            raise Exception
+        await asyncio.sleep(settings.WORKER_STOPPER_REFRESH)
+
+
 async def probe(
     parameters,
     result_filepath,
     starttime_filepath,
     csv_filepath=None,
     target_filepath=None,
+    stopper=None,
     logger_prefix="",
 ):
-    """Execute measurement with Iris."""
+    """Execute measurement with Diamond-Miner."""
     cmd = (
         str(settings.AGENT_D_MINER_PROBER_PATH)
         + " -o "
@@ -56,6 +69,10 @@ async def probe(
 
     logger.info(cmd)
 
-    await start_stream_subprocess(
-        cmd, stdout=logger.info, stderr=logger.warning, prefix=logger_prefix
+    return await start_stream_subprocess(
+        cmd,
+        stdout=logger.info,
+        stderr=logger.warning,
+        stopper=stopper,
+        prefix=logger_prefix,
     )

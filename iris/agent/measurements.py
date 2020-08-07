@@ -2,7 +2,7 @@
 
 from aiofiles import os as aios
 from iris.agent import logger
-from iris.agent.prober import probe
+from iris.agent.prober import probe, stopper
 from iris.agent.settings import AgentSettings
 from iris.commons.storage import Storage
 from pathlib import Path
@@ -12,16 +12,16 @@ settings = AgentSettings()
 storage = Storage()
 
 
-async def measuremement(uuid, request):
+async def measuremement(redis, request):
     """Conduct a measurement."""
-    # Lock the client state
     measurement_uuid = request["measurement_uuid"]
+    agent_uuid = redis.uuid
     round_number = request["round"]
 
     min_ttl = request["parameters"]["min_ttl"]
     max_ttl = request["parameters"]["max_ttl"]
 
-    logger_prefix = f"{measurement_uuid} :: {uuid} ::"
+    logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
     measurement_results_path = settings.AGENT_RESULTS_DIR_PATH / measurement_uuid
     logger.info(f"{logger_prefix} Create local measurement directory")
@@ -30,9 +30,9 @@ async def measuremement(uuid, request):
     except FileExistsError:
         logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
-    result_filename = f"{uuid}_results_{round_number}.pcap"
+    result_filename = f"{agent_uuid}_results_{round_number}.pcap"
     result_filepath = str(measurement_results_path / result_filename)
-    starttime_filename = f"{uuid}_starttime_{round_number}.log"
+    starttime_filename = f"{agent_uuid}_starttime_{round_number}.log"
     starttime_filepath = str(measurement_results_path / starttime_filename)
 
     logger.info(f"{logger_prefix} Round : {round_number}")
@@ -60,20 +60,26 @@ async def measuremement(uuid, request):
         await storage.download_file(measurement_uuid, csv_filename, csv_filepath)
 
     logger.info(f"{logger_prefix} Starting Dimond-miner measurement")
-    await probe(
+    is_not_canceled = await probe(
         request,
         result_filepath,
         starttime_filepath,
         target_filepath=target_filepath,
         csv_filepath=csv_filepath,
+        stopper=stopper(
+            logger, redis, measurement_uuid, logger_prefix=logger_prefix + " "
+        ),
         logger_prefix=logger_prefix + " ",
     )
 
-    logger.info(f"{logger_prefix} Upload result file & start time log file into AWS S3")
-    with Path(result_filepath).open("rb") as fin:
-        await storage.upload_file(measurement_uuid, result_filename, fin)
-    with Path(starttime_filepath).open("rb") as fin:
-        await storage.upload_file(measurement_uuid, starttime_filename, fin)
+    if is_not_canceled:
+        logger.info(
+            f"{logger_prefix} Upload result file & start time log file into AWS S3"
+        )
+        with Path(result_filepath).open("rb") as fin:
+            await storage.upload_file(measurement_uuid, result_filename, fin)
+        with Path(starttime_filepath).open("rb") as fin:
+            await storage.upload_file(measurement_uuid, starttime_filename, fin)
 
     if not settings.AGENT_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local result file & start time log file")
