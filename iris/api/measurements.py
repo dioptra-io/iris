@@ -18,6 +18,7 @@ from iris.api.schemas import (
     MeasurementsGetResponse,
     MeasurementsPostBody,
     MeasurementsPostResponse,
+    MeasurementsDeleteResponse,
     MeasurementsResultsResponse,
 )
 from iris.api.settings import APISettings
@@ -206,7 +207,7 @@ async def get_measurement_by_uuid(
 
 @router.delete(
     "/{measurement_uuid}",
-    # response_model=MeasurementsResultsResponse,
+    response_model=MeasurementsDeleteResponse,
     responses={404: {"model": ExceptionResponse}},
     summary="Cancel measurement",
 )
