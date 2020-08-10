@@ -168,7 +168,6 @@ async def get_measurement_by_uuid(
         raise HTTPException(status_code=404, detail="Measurement not found")
 
     state = await request.app.redis.get_measurement_state(measurement_uuid)
-    measurement["uuid"] = measurement_uuid
     measurement["state"] = "finished" if state is None else state
 
     del measurement["user"]

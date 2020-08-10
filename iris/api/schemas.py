@@ -139,10 +139,10 @@ class MeasurementsPostBody(BaseModel):
         description="Must be either tcp or udp.",
         regex="(?i)^udp$|^tcp$",
     )
-    destination_port: int = Field(..., title="Destination port", ge=1, le=65_535)
-    min_ttl: int = Field(1, title="Minimum TTL", gt=0)
-    max_ttl: int = Field(30, title="Maximum TTL", gt=0)
-    max_round: int = Field(10, title="Maximum round", gt=0)
+    destination_port: int = Field(..., title="Destination port", gt=0, lt=65_536)
+    min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
+    max_ttl: int = Field(30, title="Maximum TTL", gt=0, lt=256)
+    max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
 
 
 class MeasurementsPostResponse(BaseModel):
@@ -173,6 +173,7 @@ class MeasurementInfoResponse(BaseModel):
     destination_port: int
     min_ttl: int
     max_ttl: int
+    max_round: int
     start_time: str
     end_time: Optional[str]
 

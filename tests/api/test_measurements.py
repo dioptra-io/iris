@@ -77,6 +77,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     destination_port = 33434
     min_ttl = 2
     max_ttl = 30
+    max_round = 10
     start_time = datetime.now().isoformat()
     end_time = datetime.now().isoformat()
 
@@ -93,6 +94,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "destination_port": destination_port,
             "min_ttl": min_ttl,
             "max_ttl": max_ttl,
+            "max_round": max_round,
             "start_time": start_time,
             "end_time": end_time,
         }
@@ -146,6 +148,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "destination_port": destination_port,
         "min_ttl": min_ttl,
         "max_ttl": max_ttl,
+        "max_round": max_round,
         "start_time": start_time,
         "end_time": end_time,
     }
@@ -267,6 +270,7 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
             "destination_port": 33434,
             "min_ttl": 2,
             "max_ttl": 30,
+            "max_round": 10,
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
         }
@@ -308,6 +312,7 @@ def test_get_measurement_results_no_agent(client, monkeypatch):
             "destination_port": 33434,
             "min_ttl": 2,
             "max_ttl": 30,
+            "max_round": 10,
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
         }

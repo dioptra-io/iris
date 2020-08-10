@@ -51,7 +51,7 @@ class DatabaseMeasurements(Database):
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, user String, targets_file_key Nullable(String), full UInt8, "
             "protocol String, destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
-            "start_time DateTime, "
+            "max_round UInt8, start_time DateTime, "
             "end_time Nullable(DateTime)) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
@@ -72,9 +72,10 @@ class DatabaseMeasurements(Database):
                 "destination_port": response[5],
                 "min_ttl": response[6],
                 "max_ttl": response[7],
-                "start_time": response[8].isoformat(),
-                "end_time": response[9].isoformat()
-                if response[9] is not None
+                "max_round": response[8],
+                "start_time": response[9].isoformat(),
+                "end_time": response[10].isoformat()
+                if response[10] is not None
                 else None,
             }
             for response in responses
@@ -100,8 +101,9 @@ class DatabaseMeasurements(Database):
             "destination_port": response[5],
             "min_ttl": response[6],
             "max_ttl": response[7],
-            "start_time": response[8].isoformat(),
-            "end_time": response[9].isoformat() if response[9] is not None else None,
+            "max_round": response[8],
+            "start_time": response[9].isoformat(),
+            "end_time": response[10].isoformat() if response[10] is not None else None,
         }
 
     async def register(self, agents, measurement_parameters):
@@ -118,6 +120,7 @@ class DatabaseMeasurements(Database):
                     "destination_port": measurement_parameters["destination_port"],
                     "min_ttl": measurement_parameters["min_ttl"],
                     "max_ttl": measurement_parameters["max_ttl"],
+                    "max_round": measurement_parameters["max_round"],
                     "start_time": datetime.fromtimestamp(
                         measurement_parameters["start_time"]
                     ),
