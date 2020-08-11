@@ -1,7 +1,6 @@
 import asyncio
 import socket
 
-from aioredis.errors import ConnectionClosedError
 from iris import __version__
 from iris.agent import logger
 from iris.agent.measurements import measuremement
@@ -14,21 +13,6 @@ from uuid import uuid4
 settings = AgentSettings()
 
 
-async def robust_redis(redis, redis_future):
-    """Perform a Redis query robust to Redis failure."""
-    result = None
-    try:
-        result = await redis_future
-    except ConnectionClosedError as error:
-        logger.error(error)
-        await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
-        try:
-            await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
-        except OSError:
-            pass
-    return result
-
-
 async def consumer(agent_uuid, queue):
     """Wait for a task in a queue and process it."""
     redis = AgentRedis(agent_uuid)
@@ -39,26 +23,31 @@ async def consumer(agent_uuid, queue):
 
         logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
-        measurement_state = await robust_redis(
-            redis, redis.get_measurement_state(measurement_uuid)
-        )
+        is_alive = await redis.test()
+        if not is_alive:
+            logger.error(f"{logger_prefix} Redis connection failed. Re-connecting...")
+            await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
+            try:
+                await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+            except OSError:
+                continue
+
+        measurement_state = await redis.get_measurement_state(measurement_uuid)
         if measurement_state is None:
             logger.warning(f"{logger_prefix} The measurement has been canceled")
             continue
 
         logger.info(f"{logger_prefix} Set agent state to `working`")
-        await robust_redis(redis, redis.set_agent_state("working"))
+        await redis.set_agent_state("working")
 
         logger.info(f"{logger_prefix} Set measurement state to `ongoing`")
-        await robust_redis(
-            redis, redis.set_measurement_state(measurement_uuid, "ongoing")
-        )
+        await redis.set_measurement_state(measurement_uuid, "ongoing")
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
         await measuremement(redis, parameters)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
-        await robust_redis(redis, redis.set_agent_state("idle"))
+        await redis.set_agent_state("idle")
 
     await redis.disconnect()
 
@@ -67,7 +56,7 @@ async def producer(redis, queue):
     """Wait a task and put in on the queue."""
     while True:
         logger.info(f"{redis.uuid} :: Wait for a new request...")
-        parameters = await robust_redis(redis, redis.subscribe())
+        parameters = await redis.subscribe()
         if parameters is None:
             continue
 

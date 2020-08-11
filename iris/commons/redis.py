@@ -2,6 +2,8 @@ import aioredis
 import aioredis.pubsub
 import json
 
+from aioredis.errors import ConnectionClosedError
+
 
 class Redis(object):
     """Redis interface."""
@@ -104,6 +106,14 @@ class AgentRedis(Redis):
         await super().connect(host, password=password)
         if register:
             await self._redis.client_setname(self.uuid)
+
+    async def test(self):
+        """Test redis connection."""
+        try:
+            await self.get_agent_state(self.uuid)
+        except ConnectionClosedError:
+            return False
+        return True
 
     async def set_agent_state(self, state):
         """Set agent state."""

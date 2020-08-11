@@ -3,6 +3,7 @@
 import aioredis
 import pytest
 
+from aioredis.errors import ConnectionClosedError
 from iris.commons.redis import Redis, AgentRedis
 
 
@@ -204,6 +205,40 @@ async def test_agent_redis_connect(monkeypatch):
     assert await redis.connect("test") is None
     assert await redis.connect("test", "password") is None
     assert await redis.connect("test", "password", register=False) is None
+
+
+@pytest.mark.asyncio
+async def test_redis_agent_test_success():
+    """Test of `AgentRedis.test()` method."""
+    redis = AgentRedis("test")
+    redis._redis = FakeRedisConnection()
+
+    redis._redis.assign("get", fake(b"idle"))
+    assert await redis.test() is True
+
+
+@pytest.mark.asyncio
+async def test_redis_agent_test_failed(monkeypatch):
+    """Test of `AgentRedis.test()` method."""
+    redis = AgentRedis("test")
+    redis._redis = FakeRedisConnection()
+
+    async def fake_create_redis(*args, **kwargs):
+        async def fake_method(*args, **kwargs):
+            return None
+
+        fake = FakeRedisConnection()
+        fake.assign("auth", fake_method)
+        fake.assign("client_setname", fake_method)
+        return fake
+
+    monkeypatch.setattr(aioredis, "create_redis", fake_create_redis)
+
+    async def fake_get(*args, **kwargs):
+        raise ConnectionClosedError
+
+    redis._redis.assign("get", fake_get)
+    assert await redis.test() is False
 
 
 @pytest.mark.asyncio
