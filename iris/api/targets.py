@@ -1,5 +1,7 @@
 """Targets operations."""
 
+import ipaddress
+
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -49,6 +51,17 @@ async def get_target_by_key(key: str, username: str = Depends(authenticate)):
     return target
 
 
+async def verify_targets_file(targets_file):
+    """Verify that a target file have a good structure."""
+    for line in targets_file.file.readlines():
+        try:
+            ipaddress.ip_address(line.decode("utf-8").strip())
+        except ValueError:
+            return False
+    targets_file.file.seek(0)
+    return True
+
+
 async def upload_targets_file(targets_file):
     """Upload targets file asynchronously."""
     await storage.upload_file(
@@ -68,6 +81,9 @@ async def post_target(
     username: str = Depends(authenticate),
 ):
     """Upload a targets list to object storage."""
+    is_correct = await verify_targets_file(targets_file)
+    if not is_correct:
+        raise HTTPException(status_code=412, detail="Bad targets file structure")
     background_tasks.add_task(upload_targets_file, targets_file)
     return {"key": targets_file.filename, "action": "upload"}
 
