@@ -12,49 +12,136 @@ from datetime import datetime
 def test_get_measurements_empty(client, monkeypatch):
     """Test get all measurements when no measurement in database."""
 
-    async def all(self, username):
+    async def all(self, user, offset, limit):
         return []
 
+    async def all_count(self):
+        return 0
+
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurements, "all_count", all_count
+    )
 
     response = client.get("/v0/measurements")
-    assert response.json() == {"count": 0, "results": []}
+    assert response.json() == {
+        "count": 0,
+        "next": None,
+        "previous": None,
+        "results": [],
+    }
 
 
 def test_get_measurements(client, monkeypatch):
     """Test get all measurements."""
 
-    measurement_uuid = str(uuid.uuid4())
-    targets_file_key = "test.txt"
-    start_time = datetime.now().isoformat()
-    end_time = datetime.now().isoformat()
+    measurements = [
+        {
+            "uuid": str(uuid.uuid4()),
+            "state": "finished",
+            "targets_file_key": "test.txt",
+            "full": False,
+            "start_time": datetime.now().isoformat(),
+            "end_time": datetime.now().isoformat(),
+        },
+        {
+            "uuid": str(uuid.uuid4()),
+            "state": "finished",
+            "targets_file_key": "test.txt",
+            "full": False,
+            "start_time": datetime.now().isoformat(),
+            "end_time": datetime.now().isoformat(),
+        },
+        {
+            "uuid": str(uuid.uuid4()),
+            "state": "finished",
+            "targets_file_key": "test.txt",
+            "full": False,
+            "start_time": datetime.now().isoformat(),
+            "end_time": datetime.now().isoformat(),
+        },
+    ]
 
-    async def all(self, username):
+    measurements = sorted(measurements, key=lambda x: x["start_time"], reverse=True)
+
+    async def all(self, user, offset, limit):
         return [
             {
-                "uuid": measurement_uuid,
-                "targets_file_key": targets_file_key,
-                "full": False,
-                "start_time": start_time,
-                "end_time": end_time,
-            }
+                "uuid": measurements[0]["uuid"],
+                "targets_file_key": measurements[0]["targets_file_key"],
+                "full": measurements[0]["full"],
+                "start_time": measurements[0]["start_time"],
+                "end_time": measurements[0]["end_time"],
+            },
+            {
+                "uuid": measurements[1]["uuid"],
+                "targets_file_key": measurements[1]["targets_file_key"],
+                "full": measurements[1]["full"],
+                "start_time": measurements[1]["start_time"],
+                "end_time": measurements[1]["end_time"],
+            },
+            {
+                "uuid": measurements[2]["uuid"],
+                "targets_file_key": measurements[2]["targets_file_key"],
+                "full": measurements[2]["full"],
+                "start_time": measurements[2]["start_time"],
+                "end_time": measurements[2]["end_time"],
+            },
+        ][
+            offset : offset + limit  # noqa : E203
         ]
 
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
+    async def all_count(self):
+        return 3
 
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurements, "all_count", all_count
+    )
+
+    # No (offset, limit)
     response = client.get("/v0/measurements")
     assert response.json() == {
-        "count": 1,
-        "results": [
-            {
-                "uuid": measurement_uuid,
-                "state": "finished",
-                "targets_file_key": targets_file_key,
-                "full": False,
-                "start_time": start_time,
-                "end_time": end_time,
-            }
-        ],
+        "count": 3,
+        "next": None,
+        "previous": None,
+        "results": measurements,
+    }
+
+    # All inclusive (0, 100)
+    response = client.get("/v0/measurements?offset=0&limit=100")
+    assert response.json() == {
+        "count": 3,
+        "next": None,
+        "previous": None,
+        "results": measurements,
+    }
+
+    # First result (0, 1)
+    response = client.get("/v0/measurements?offset=0&limit=1")
+    assert response.json() == {
+        "count": 3,
+        "next": "http://testserver/v0/measurements/?limit=1&offset=1",
+        "previous": None,
+        "results": measurements[0:1],
+    }
+
+    # Middle result (1, 1)
+    response = client.get("/v0/measurements?offset=1&limit=1")
+    assert response.json() == {
+        "count": 3,
+        "next": "http://testserver/v0/measurements/?limit=1&offset=2",
+        "previous": "http://testserver/v0/measurements/?limit=1",
+        "results": measurements[1:2],
+    }
+
+    # Last result (2, 1)
+    response = client.get("/v0/measurements?offset=2&limit=1")
+    assert response.json() == {
+        "count": 3,
+        "next": None,
+        "previous": "http://testserver/v0/measurements/?limit=1&offset=1",
+        "results": measurements[2:3],
     }
 
 
@@ -222,10 +309,10 @@ def test_get_measurement_results(client, monkeypatch):
     async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
         return {"state": "finished"}
 
-    async def get_measurement_results(self):
+    async def all_measurement_results(self, offset, limit):
         return results
 
-    async def get_measurement_count(self):
+    async def all_measurement_results_count(self):
         return 1
 
     monkeypatch.setattr(
@@ -238,10 +325,12 @@ def test_get_measurement_results(client, monkeypatch):
     )
 
     monkeypatch.setattr(
-        iris.api.results.MeasurementResults, "get_count", get_measurement_count
+        iris.commons.database.DatabaseMeasurementResults, "all", all_measurement_results
     )
     monkeypatch.setattr(
-        iris.api.results.MeasurementResults, "get_results", get_measurement_results
+        iris.commons.database.DatabaseMeasurementResults,
+        "all_count",
+        all_measurement_results_count,
     )
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")

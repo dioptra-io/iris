@@ -51,6 +51,8 @@ class AgentsGetResponse(BaseModel):
     """GET /agents (Response)."""
 
     count: int
+    next: Optional[str] = None
+    previous: Optional[str] = None
     results: List[AgentSummaryResponse]
 
 
@@ -77,6 +79,8 @@ class TargetsGetResponse(BaseModel):
     """GET /targets (Response)."""
 
     count: int
+    next: Optional[str] = None
+    previous: Optional[str] = None
     results: List[TargetResponse]
 
 
@@ -112,6 +116,8 @@ class MeasurementsGetResponse(BaseModel):
     """GET /measurements (Response)."""
 
     count: int
+    next: Optional[str] = None
+    previous: Optional[str] = None
     results: List[MeasurementSummaryResponse]
 
 

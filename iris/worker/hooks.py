@@ -38,9 +38,6 @@ async def pipeline(
     starttime_filename,
 ):
     """Process results and eventually request a new round."""
-    session = get_session()
-    database = DatabaseMeasurementResults(session, logger=logger)
-
     measurement_uuid = measurement_parameters["measurement_uuid"]
 
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
@@ -90,16 +87,19 @@ async def pipeline(
     if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
         logger.error(f"Impossible to remove result file `{starttime_filename}`")
 
+    session = get_session()
     table_name = (
         settings.DATABASE_NAME
         + "."
-        + database.forge_table_name(measurement_uuid, agent_uuid)
+        + DatabaseMeasurementResults.forge_table_name(measurement_uuid, agent_uuid)
     )
+    database = DatabaseMeasurementResults(session, table_name, logger=logger)
+
     logger.info(f"{logger_prefix} Create table `{table_name}`")
-    await database.create_table(table_name, drop=False)
+    await database.create_table(drop=False)
 
     logger.info(f"{logger_prefix} Insert CSV file into database")
-    await database.insert_csv(csv_filepath, table_name)
+    await database.insert_csv(csv_filepath)
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local CSV file")

@@ -10,7 +10,7 @@ from fastapi import (
     Request,
     status,
 )
-from iris.api.results import MeasurementResults
+from iris.api.pagination import DatabasePagination
 from iris.api.security import authenticate
 from iris.api.schemas import (
     ExceptionResponse,
@@ -41,14 +41,21 @@ storage = Storage()
 
 @router.get("/", response_model=MeasurementsGetResponse, summary="Get all measurements")
 async def get_measurements(
-    request: Request, username: str = Depends(authenticate),
+    request: Request,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=0, le=200),
+    username: str = Depends(authenticate),
 ):
     """Get all measurements."""
     session = get_session()
-    all_measurements = await DatabaseMeasurements(session).all(username)
+    database = DatabaseMeasurements(session)
 
+    querier = DatabasePagination(database, request, offset, limit)
+    output = await querier.query(user=username)
+
+    # Refine measurements output
     measurements = []
-    for measurement in all_measurements:
+    for measurement in output["results"]:
         state = await request.app.redis.get_measurement_state(measurement["uuid"])
         measurements.append(
             {
@@ -62,9 +69,11 @@ async def get_measurements(
         )
 
     # Sort measurements by `start_time`
-    measurements.sort(key=lambda x: x["start_time"])
+    measurements.sort(key=lambda x: x["start_time"], reverse=True)
 
-    return {"count": len(measurements), "results": measurements}
+    output["results"] = measurements
+
+    return output
 
 
 @router.post(
@@ -251,10 +260,11 @@ async def get_measurement_results(
     if measurement_info is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
 
-    table_name = DatabaseMeasurementResults.forge_table_name(
-        measurement_uuid, agent_uuid
+    table_name = (
+        settings.DATABASE_NAME
+        + "."
+        + DatabaseMeasurementResults.forge_table_name(measurement_uuid, agent_uuid)
     )
-    table_name = f"{settings.DATABASE_NAME}.{table_name}"
 
     agent_in_measurement_info = await DatabaseAgentsInMeasurements(session).get(
         measurement_uuid, agent_uuid
@@ -272,5 +282,6 @@ async def get_measurement_results(
     if agent_in_measurement_info["state"] != "finished":
         return {"count": 0, "next": None, "previous": None, "results": []}
 
-    querier = MeasurementResults(request, session, table_name, offset, limit)
+    database = DatabaseMeasurementResults(session, table_name)
+    querier = DatabasePagination(database, request, offset, limit)
     return await querier.query()

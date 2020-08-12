@@ -6,11 +6,14 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
-    UploadFile,
     File,
-    status,
     HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
 )
+from iris.api.pagination import ListPagination
 from iris.api.security import authenticate
 from iris.api.schemas import (
     ExceptionResponse,
@@ -30,10 +33,16 @@ storage = Storage()
 @router.get(
     "/", response_model=TargetsGetResponse, summary="Get all targets information"
 )
-async def get_targets(username: str = Depends(authenticate)):
+async def get_targets(
+    request: Request,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=0, le=200),
+    username: str = Depends(authenticate),
+):
     """Get all targets lists information."""
     targets = await storage.get_all_files(settings.AWS_S3_TARGETS_BUCKET_NAME)
-    return {"count": len(targets), "results": targets}
+    querier = ListPagination(targets, request, offset, limit)
+    return await querier.query()
 
 
 @router.get(

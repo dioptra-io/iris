@@ -1,6 +1,7 @@
 """agents operations."""
 
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
+from iris.api.pagination import ListPagination
 from iris.api.security import authenticate
 from iris.api.schemas import (
     ExceptionResponse,
@@ -13,7 +14,12 @@ router = APIRouter()
 
 
 @router.get("/", response_model=AgentsGetResponse, summary="Get all agents information")
-async def get_agents(request: Request, username: str = Depends(authenticate)):
+async def get_agents(
+    request: Request,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=0, le=200),
+    username: str = Depends(authenticate),
+):
     """Get all agents information."""
     agents_info = await request.app.redis.get_agents()
     agents = []
@@ -31,7 +37,9 @@ async def get_agents(request: Request, username: str = Depends(authenticate)):
                 },
             }
         )
-    return {"count": len(agents), "results": agents}
+
+    querier = ListPagination(agents, request, offset, limit)
+    return await querier.query()
 
 
 @router.get(

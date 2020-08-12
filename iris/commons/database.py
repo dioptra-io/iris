@@ -1,5 +1,7 @@
 """Interfaces with database."""
 
+import ipaddress
+
 from aioch import Client
 from datetime import datetime
 from iris.commons.subprocess import start_stream_subprocess
@@ -57,29 +59,35 @@ class DatabaseMeasurements(Database):
             "ORDER BY (uuid)",
         )
 
-    async def all(self, user):
+    def formatter(self, row):
+        """Database row -> response formater."""
+        return {
+            "uuid": str(row[0]),
+            "user": row[1],
+            "targets_file_key": row[2],
+            "full": bool(row[3]),
+            "protocol": row[4],
+            "destination_port": row[5],
+            "min_ttl": row[6],
+            "max_ttl": row[7],
+            "max_round": row[8],
+            "start_time": row[9].isoformat(),
+            "end_time": row[10].isoformat() if row[10] is not None else None,
+        }
+
+    async def all_count(self):
+        """Get the count of all results."""
+        response = await self.session.execute(f"SELECT Count() FROM {self.table_name}")
+        return response[0][0]
+
+    async def all(self, user, offset, limit):
         """Get all measurements uuid for a given user."""
         responses = await self.session.execute(
-            f"SELECT * FROM {self.table_name} WHERE user=%(user)s", {"user": user},
+            f"SELECT * FROM {self.table_name} "
+            "WHERE user=%(user)s LIMIT %(offset)s,%(limit)s",
+            {"user": user, "offset": offset, "limit": limit},
         )
-        return [
-            {
-                "uuid": str(response[0]),
-                "user": response[1],
-                "targets_file_key": response[2],
-                "full": bool(response[3]),
-                "protocol": response[4],
-                "destination_port": response[5],
-                "min_ttl": response[6],
-                "max_ttl": response[7],
-                "max_round": response[8],
-                "start_time": response[9].isoformat(),
-                "end_time": response[10].isoformat()
-                if response[10] is not None
-                else None,
-            }
-            for response in responses
-        ]
+        return [self.formatter(response) for response in responses]
 
     async def get(self, user, uuid):
         """Get all measurement information."""
@@ -92,19 +100,7 @@ class DatabaseMeasurements(Database):
         except IndexError:
             return None
 
-        return {
-            "uuid": str(response[0]),
-            "user": response[1],
-            "targets_file_key": response[2],
-            "full": bool(response[3]),
-            "protocol": response[4],
-            "destination_port": response[5],
-            "min_ttl": response[6],
-            "max_ttl": response[7],
-            "max_round": response[8],
-            "start_time": response[9].isoformat(),
-            "end_time": response[10].isoformat() if response[10] is not None else None,
-        }
+        return self.formatter(response)
 
     async def register(self, agents, measurement_parameters):
         """Register a measurement."""
@@ -161,6 +157,23 @@ class DatabaseAgents(Database):
             "ORDER BY (uuid)",
         )
 
+    def formatter(self, row):
+        """Database row -> response formater."""
+        return {
+            "uuid": str(row[0]),
+            "user": row[1],
+            "version": row[2],
+            "hostname": row[3],
+            "ip_address": str(row[4]),
+            "probing_rate": row[5],
+            "buffer_sniffer_size": row[6],
+            "inf_born": row[7],
+            "sup_born": row[8],
+            "ips_per_subnet": row[9],
+            "pfring": bool(row[10]),
+            "last_used": row[11].isoformat(),
+        }
+
     async def all(self, user="all"):
         """Get all measurements uuid for a given user."""
         responses = await self.session.execute(
@@ -177,21 +190,7 @@ class DatabaseAgents(Database):
             response = responses[0]
         except IndexError:
             return None
-
-        return {
-            "uuid": str(response[0]),
-            "user": response[1],
-            "version": response[2],
-            "hostname": response[3],
-            "ip_address": str(response[4]),
-            "probing_rate": response[5],
-            "buffer_sniffer_size": response[6],
-            "inf_born": response[7],
-            "sup_born": response[8],
-            "ips_per_subnet": response[9],
-            "pfring": bool(response[10]),
-            "last_used": response[11].isoformat(),
-        }
+        return self.formatter(response)
 
     async def register(self, uuid, parameters):
         """Register a physical agent."""
@@ -245,6 +244,15 @@ class DatabaseAgentsInMeasurements(Database):
             "ORDER BY (measurement_uuid)",
         )
 
+    def formatter(self, row):
+        """Database row -> response formater."""
+        return {
+            "uuid": str(row[1]),
+            "min_ttl": row[2],
+            "max_ttl": row[3],
+            "state": "finished" if bool(row[4]) else "ongoing",
+        }
+
     async def all(self, measurement_uuid):
         """Get all measurement information."""
         responses = await self.session.execute(
@@ -252,15 +260,7 @@ class DatabaseAgentsInMeasurements(Database):
             {"uuid": measurement_uuid},
         )
 
-        return [
-            {
-                "uuid": str(response[1]),
-                "min_ttl": response[2],
-                "max_ttl": response[3],
-                "state": "finished" if bool(response[4]) else "ongoing",
-            }
-            for response in responses
-        ]
+        return [self.formatter(response) for response in responses]
 
     async def get(self, measurement_uuid, agent_uuid):
         """Get measurement information about a agent."""
@@ -276,12 +276,7 @@ class DatabaseAgentsInMeasurements(Database):
         except IndexError:
             return None
 
-        return {
-            "uuid": str(response[1]),
-            "min_ttl": response[2],
-            "max_ttl": response[3],
-            "state": "finished" if bool(response[4]) else "ongoing",
-        }
+        return self.formatter(response)
 
     async def register(self, measurement_uuid, agent_uuid, min_ttl, max_ttl):
         await self.session.execute(
@@ -315,8 +310,9 @@ class DatabaseAgentsInMeasurements(Database):
 class DatabaseMeasurementResults(object):
     """Database interface to handle measurement results."""
 
-    def __init__(self, session, logger=None):
+    def __init__(self, session, table_name, logger=None):
         self.session = session
+        self.table_name = table_name
         self.host = session._client.connection.hosts[0][0]
         self.logger = logger
 
@@ -344,13 +340,13 @@ class DatabaseMeasurementResults(object):
             "agent_uuid": agent_uuid.replace("_", "-"),
         }
 
-    async def create_table(self, table_name, drop=False):
+    async def create_table(self, drop=False):
         """Create a table."""
         if drop:
-            self.drop(table_name)
+            self.drop(self.table_name)
 
         await self.session.execute(
-            f"CREATE TABLE IF NOT EXISTS {table_name}"
+            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(src_ip UInt32, dst_prefix UInt32, dst_ip UInt32, reply_ip UInt32, "
             "proto UInt8, src_port UInt16, dst_port UInt16, ttl UInt8, "
             "ttl_from_udp_length UInt8, type UInt8, "
@@ -359,7 +355,41 @@ class DatabaseMeasurementResults(object):
             "ORDER BY (src_ip, dst_prefix, dst_ip, ttl, src_port, dst_port, snapshot)",
         )
 
-    async def insert_csv(self, csv_filepath, table_name):
+    def formatter(self, row):
+        """Database row -> response formater."""
+        return {
+            "source_ip": str(ipaddress.ip_address(row[0])),
+            "destination_prefix": str(ipaddress.ip_address(row[1])),
+            "destination_ip": str(ipaddress.ip_address(row[2])),
+            "reply_ip": str(ipaddress.ip_address(row[3])),
+            "protocol": row[4],
+            "source_port": row[5],
+            "destination_port": row[6],
+            "ttl": row[7],
+            "ttl_check": row[8],  # implemented only in UDP
+            "type": row[9],
+            "code": row[10],
+            "rtt": row[11],
+            "reply_ttl": row[12],
+            "reply_size": row[13],
+            "round": row[14],
+            # "snapshot": row[14], # Not curently used
+        }
+
+    async def all_count(self):
+        """Get the count of all results."""
+        response = await self.session.execute(f"SELECT Count() FROM {self.table_name}")
+        return response[0][0]
+
+    async def all(self, offset, limit):
+        """Get all results given (offset, limit)."""
+        response = await self.session.execute(
+            f"SELECT * FROM {self.table_name} LIMIT %(offset)s,%(limit)s",
+            {"offset": offset, "limit": limit},
+        )
+        return [self.formatter(row) for row in response]
+
+    async def insert_csv(self, csv_filepath):
         """Insert CSV file into table."""
         # We could avoid using clickhouse-client for that,
         # but since we have it for the Reader, why not, at the moment.
@@ -369,7 +399,7 @@ class DatabaseMeasurementResults(object):
             + " | clickhouse-client --max_insert_block_size=100000 --host="
             + self.host
             + " --query='INSERT INTO "
-            + str(table_name)
+            + str(self.table_name)
             + " FORMAT CSV'"
         )
 
