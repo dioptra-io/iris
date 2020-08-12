@@ -2,9 +2,22 @@ import aioboto3
 import asyncio
 import boto3
 
+from aiohttp.client_exceptions import ClientConnectorError, ServerTimeoutError
 from iris.commons.settings import CommonSettings
 
 common_settings = CommonSettings()
+
+
+def retry_on_failure(func):
+    async def wrapper(*args, **kwargs):
+        for _ in range(common_settings.AWS_TIMEOUT_RETRIES):
+            try:
+                return await func(*args, **kwargs)
+            except (ServerTimeoutError, ClientConnectorError):
+                await asyncio.sleep(common_settings.AWS_TIMEOUT_WAIT)
+        raise Exception("AWS TimeOut error")
+
+    return wrapper
 
 
 class Storage(object):
@@ -24,6 +37,7 @@ class Storage(object):
             "region_name": settings.AWS_REGION_NAME,
         }
 
+    @retry_on_failure
     async def get_measurement_buckets(self):
         """Get bucket list that is not infrastructure."""
         infrastructure_buckets = ["targets"]
@@ -37,16 +51,19 @@ class Storage(object):
             buckets.append(bucket["Name"])
         return buckets
 
+    @retry_on_failure
     async def create_bucket(self, bucket):
         """Create a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             await s3.create_bucket(Bucket=bucket)
 
+    @retry_on_failure
     async def delete_bucket(self, bucket):
         """Delete a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             await s3.delete_bucket(Bucket=bucket)
 
+    @retry_on_failure
     async def get_all_files(self, bucket):
         """Get all files inside a bucket."""
         targets = []
@@ -64,6 +81,7 @@ class Storage(object):
                 )
         return targets
 
+    @retry_on_failure
     async def get_file(self, bucket, filename):
         """Get file information from a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
@@ -86,16 +104,19 @@ class Storage(object):
         s3 = boto3.client("s3", **self.settings)
         s3.upload_fileobj(fin, bucket, filename)
 
+    @retry_on_failure
     async def upload_file(self, bucket, filename, fin):
         """Upload a file in a bucket."""
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._upload_sync_file, bucket, filename, fin)
 
+    @retry_on_failure
     async def download_file(self, bucket, filename, output_path):
         """Download a file from a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             await s3.download_file(bucket, filename, output_path)
 
+    @retry_on_failure
     async def delete_file_check(self, bucket, filename):
         """Delete a file with a check that it exists."""
         async with aioboto3.client("s3", **self.settings) as s3:
@@ -105,11 +126,13 @@ class Storage(object):
 
             return await s3.delete_object(Bucket=bucket, Key=filename)
 
+    @retry_on_failure
     async def delete_file_no_check(self, bucket, filename):
         """Delete a file with no check that it exists."""
         async with aioboto3.client("s3", **self.settings) as s3:
             return await s3.delete_object(Bucket=bucket, Key=filename)
 
+    @retry_on_failure
     async def delete_all_files_from_bucket(self, bucket):
         """Delete all files from a bucket."""
         async with aioboto3.resource("s3", **self.settings) as s3:

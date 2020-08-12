@@ -2,7 +2,6 @@ import asyncio
 import dramatiq
 
 from aiofiles import os as aios
-from aiohttp.client_exceptions import ServerTimeoutError
 from iris.commons.database import (
     get_session,
     DatabaseMeasurementResults,
@@ -225,16 +224,11 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
                     measurement_uuid, agent_uuid
                 )
                 break
-        try:
-            remote_files = await storage.get_all_files(measurement_uuid)
-        except ServerTimeoutError:
-            logger.error(f"{logger_prefix} AWS Server timed out")
-            await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
-            continue
 
         # Search for result file & start time file
         result_files = []
         starttime_files = []
+        remote_files = await storage.get_all_files(measurement_uuid)
         for remote_file in remote_files:
             remote_filename = remote_file["key"]
             if remote_filename.startswith(f"{agent_uuid}_results"):

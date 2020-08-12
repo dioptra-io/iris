@@ -9,6 +9,8 @@ class CommonSettings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = "minioadmin"
     AWS_REGION_NAME: str = "local"
     AWS_S3_TARGETS_BUCKET_NAME = "targets"
+    AWS_TIMEOUT_RETRIES: int = 10
+    AWS_TIMEOUT_WAIT: int = 60  # in seconds
 
     DATABASE_HOST: str = "clickhouse"
     DATABASE_NAME: str = "iris"
