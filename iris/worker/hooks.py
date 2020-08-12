@@ -204,10 +204,7 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
     database_agents_in_measurement = DatabaseAgentsInMeasurements(session)
 
     while True:
-        logger.debug(f"{logger_prefix} Active watching")
-
         if settings.WORKER_SANITY_CHECK_ENABLE:
-            logger.debug(f"{logger_prefix} Perform sanity checks")
             # Check if the agent is down
             is_agent_alive = await sanity_check(redis, measurement_uuid, agent_uuid)
             if not is_agent_alive:

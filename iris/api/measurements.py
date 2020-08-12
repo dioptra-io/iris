@@ -280,8 +280,19 @@ async def get_measurement_results(
         )
 
     if agent_in_measurement_info["state"] != "finished":
-        return {"count": 0, "next": None, "previous": None, "results": []}
+        raise HTTPException(
+            status_code=412,
+            detail=(
+                f"The agent `{agent_uuid}` "
+                f"has not finished the measurement `{measurement_uuid}`"
+            ),
+        )
 
     database = DatabaseMeasurementResults(session, table_name)
+
+    is_table_exists = await database.is_exists()
+    if not is_table_exists:
+        return {"count": 0, "next": None, "previous": None, "results": []}
+
     querier = DatabasePagination(database, request, offset, limit)
     return await querier.query()

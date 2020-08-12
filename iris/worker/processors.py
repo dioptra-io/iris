@@ -41,7 +41,7 @@ async def pcap_to_csv(
     )
 
     await start_stream_subprocess(
-        cmd, stdout=logger.info, stderr=logger.warning, prefix=logger_prefix
+        cmd, stdout=logger.debug, stderr=logger.warning, prefix=logger_prefix
     )
 
 
@@ -85,7 +85,7 @@ async def next_round_csv(
     )
 
     await start_stream_subprocess(
-        cmd, stdout=logger.info, stderr=logger.warning, prefix=logger_prefix
+        cmd, stdout=logger.debug, stderr=logger.warning, prefix=logger_prefix
     )
 
 
@@ -104,5 +104,5 @@ async def shuffle_next_round_csv(csv_filepath, shuffled_csv_filepath, logger_pre
     )
 
     await start_stream_subprocess(
-        cmd, stdout=logger.info, stderr=logger.info, prefix=logger_prefix,
+        cmd, stdout=logger.debug, stderr=logger.info, prefix=logger_prefix,
     )

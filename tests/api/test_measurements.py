@@ -315,6 +315,9 @@ def test_get_measurement_results(client, monkeypatch):
     async def all_measurement_results_count(self):
         return 1
 
+    async def measurement_results_is_exists(self):
+        return 1
+
     monkeypatch.setattr(
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
     )
@@ -322,6 +325,12 @@ def test_get_measurement_results(client, monkeypatch):
         iris.commons.database.DatabaseAgentsInMeasurements,
         "get",
         get_agents_in_measurement_results,
+    )
+
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurementResults,
+        "is_exists",
+        measurement_results_is_exists,
     )
 
     monkeypatch.setattr(
@@ -339,6 +348,57 @@ def test_get_measurement_results(client, monkeypatch):
         "previous": None,
         "next": None,
         "results": results,
+    }
+
+
+def test_get_measurement_results_table_not_exists(client, monkeypatch):
+    """Test get measurement results if the table not exists."""
+
+    measurement_uuid = str(uuid.uuid4())
+    agent_uuid = str(uuid.uuid4())
+
+    async def get_measurements(self, username, measurement_uuid):
+        return {
+            "uuid": measurement_uuid,
+            "user": "test",
+            "agents": [str(uuid.uuid4())],
+            "targets_file_key": "test.txt",
+            "full": False,
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+            "start_time": datetime.now().isoformat(),
+            "end_time": datetime.now().isoformat(),
+        }
+
+    async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
+        return {"state": "finished"}
+
+    async def measurement_results_is_exists(self):
+        return 0
+
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+    )
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseAgentsInMeasurements,
+        "get",
+        get_agents_in_measurement_results,
+    )
+
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurementResults,
+        "is_exists",
+        measurement_results_is_exists,
+    )
+
+    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    assert response.json() == {
+        "count": 0,
+        "previous": None,
+        "next": None,
+        "results": [],
     }
 
 
@@ -377,12 +437,7 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
     )
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
-    assert response.json() == {
-        "count": 0,
-        "previous": None,
-        "next": None,
-        "results": [],
-    }
+    assert response.status_code == 412
 
 
 def test_get_measurement_results_no_agent(client, monkeypatch):

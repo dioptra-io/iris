@@ -389,6 +389,11 @@ class DatabaseMeasurementResults(object):
         )
         return [self.formatter(row) for row in response]
 
+    async def is_exists(self):
+        """Check if table exists."""
+        response = await self.session.execute(f"EXISTS TABLE {self.table_name}")
+        return bool(response[0][0])
+
     async def insert_csv(self, csv_filepath):
         """Insert CSV file into table."""
         # We could avoid using clickhouse-client for that,
