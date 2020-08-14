@@ -56,7 +56,7 @@ class DatabaseMeasurements(Database):
             "max_round UInt8, start_time DateTime, "
             "end_time Nullable(DateTime)) "
             "ENGINE=MergeTree() "
-            "ORDER BY (start_time)",
+            "ORDER BY (uuid)",
         )
 
     def formatter(self, row):
@@ -243,7 +243,7 @@ class DatabaseAgentsInMeasurements(Database):
             "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
             "finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
-            "ORDER BY (timestamp)",
+            "ORDER BY (measurement_uuid, agent_uuid)",
         )
 
     def formatter(self, row):
