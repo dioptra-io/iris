@@ -56,7 +56,7 @@ class DatabaseMeasurements(Database):
             "max_round UInt8, start_time DateTime, "
             "end_time Nullable(DateTime)) "
             "ENGINE=MergeTree() "
-            "ORDER BY (uuid)",
+            "ORDER BY (start_time)",
         )
 
     def formatter(self, row):
@@ -84,7 +84,9 @@ class DatabaseMeasurements(Database):
         """Get all measurements uuid for a given user."""
         responses = await self.session.execute(
             f"SELECT * FROM {self.table_name} "
-            "WHERE user=%(user)s LIMIT %(offset)s,%(limit)s",
+            "WHERE user=%(user)s "
+            "ORDER BY start_time DESC "
+            "LIMIT %(offset)s,%(limit)s",
             {"user": user, "offset": offset, "limit": limit},
         )
         return [self.formatter(response) for response in responses]
@@ -241,7 +243,7 @@ class DatabaseAgentsInMeasurements(Database):
             "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
             "finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
-            "ORDER BY (measurement_uuid)",
+            "ORDER BY (timestamp)",
         )
 
     def formatter(self, row):

@@ -68,9 +68,6 @@ async def get_measurements(
             }
         )
 
-    # Sort measurements by `start_time`
-    measurements.sort(key=lambda x: x["start_time"], reverse=True)
-
     output["results"] = measurements
 
     return output
