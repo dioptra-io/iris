@@ -1,5 +1,6 @@
 import asyncio
 import dramatiq
+import traceback
 
 from aiofiles import os as aios
 from iris.commons.database import (
@@ -433,4 +434,11 @@ async def callback(agents, measurement_parameters):
 )
 def hook(agents, measurement_parameters):
     """Hook a worker process to a measurement"""
-    asyncio.run(callback(agents, measurement_parameters))
+    try:
+        asyncio.run(callback(agents, measurement_parameters))
+    except Exception as exception:
+        measurement_uuid = measurement_parameters["measurement_uuid"]
+        traceback_content = traceback.format_exc()
+        for line in traceback_content.splitlines():
+            logger.critical(f"{measurement_uuid} :: {line}")
+        raise exception
