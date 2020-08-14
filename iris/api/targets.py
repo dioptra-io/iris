@@ -36,7 +36,7 @@ storage = Storage()
 async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=0, le=200),
+    limit: int = Query(20, ge=0, le=200),
     username: str = Depends(authenticate),
 ):
     """Get all targets lists information."""
