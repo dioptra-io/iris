@@ -96,6 +96,4 @@ COPY iris/agent/main.py main.py
 RUN mkdir targets
 RUN mkdir results
 
-RUN nginx
-
-CMD ["python", "-u", "main.py"]
+CMD nginx && python -u main.py

@@ -63,15 +63,3 @@ async def get_agent_by_uuid(
     agent_state = await request.app.redis.get_agent_state(agent_uuid)
     agent_parameters = await request.app.redis.get_agent_parameters(agent_uuid)
     return {"uuid": agent_uuid, "state": agent_state, "parameters": agent_parameters}
-
-
-# @router.post("/", summary="Deploy agents into Kubernetes cluster")
-# def post_agents(username: str = Depends(authenticate)):
-#     """Deploy agents into Kubernetes cluster."""
-#     raise HTTPException(501, detail="Not implemented")
-
-
-# @router.delete("/", summary="Undeploy agents from Kubernetes cluster")
-# def delete_agents(username: str = Depends(authenticate)):
-#     """Undeploy agents from Kubernetes cluster."""
-#     raise HTTPException(501, detail="Not implemented")

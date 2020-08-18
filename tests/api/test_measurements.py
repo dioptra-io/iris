@@ -1,4 +1,4 @@
-"""Test `measurements` section."""
+"""Test `measurements` operations."""
 
 import iris.commons.database
 import uuid

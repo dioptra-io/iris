@@ -62,6 +62,13 @@ async def get_target_by_key(key: str, username: str = Depends(authenticate)):
 
 async def verify_targets_file(targets_file):
     """Verify that a target file have a good structure."""
+    # Check if file is empty
+    targets_file.file.seek(0, 2)
+    if targets_file.file.tell() == 0:
+        return False
+    targets_file.file.seek(0)
+
+    # Check if all lines of the file is a valid IPv4 address
     for line in targets_file.file.readlines():
         try:
             ipaddress.ip_address(line.decode("utf-8").strip())
