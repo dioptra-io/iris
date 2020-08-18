@@ -224,7 +224,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                     "version": "0.0.0",
                     "hostname": "test",
                     "ip_address": "0.0.0.0",
-                    "probing_rate": 0,
                 },
             }
         ],
@@ -232,8 +231,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
-        "min_ttl": min_ttl,
-        "max_ttl": max_ttl,
         "max_round": max_round,
         "start_time": start_time,
         "end_time": end_time,
@@ -316,7 +313,6 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
                     "version": "0.0.0",
                     "hostname": "test",
                     "ip_address": "0.0.0.0",
-                    "probing_rate": 0,
                 },
             }
         ],
@@ -324,8 +320,6 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
-        "min_ttl": min_ttl,
-        "max_ttl": max_ttl,
         "max_round": max_round,
         "start_time": start_time,
         "end_time": end_time,

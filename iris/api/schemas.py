@@ -137,8 +137,8 @@ class MeasurementsPostBody(BaseModel):
     full: Optional[bool]
     agents: List[MeasurementsAgentsPostBody] = Field(
         None,
-        title="Optional agent list",
-        description="Publish the measurement to all agents if not set.",
+        title="Optional agent specific parameters",
+        description="If not set, publish the measurement to all agents.",
     )
     protocol: str = Field(
         ...,
