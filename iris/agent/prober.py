@@ -35,7 +35,7 @@ async def probe(
         + " -o "
         + str(result_filepath)
         + " -r "
-        + str(settings.AGENT_PROBING_RATE)
+        + str(parameters["probing_rate"])
         + " --buffer-sniffer-size="
         + str(settings.AGENT_BUFFER_SNIFFER_SIZE)
         + " -d "
@@ -45,13 +45,13 @@ async def probe(
         + " -s "
         + str(settings.AGENT_SUP_BORN)
         + " -p "
-        + str(parameters["parameters"]["protocol"])
+        + str(parameters["protocol"])
         + " --dport="
-        + str(parameters["parameters"]["destination_port"])
+        + str(parameters["destination_port"])
         + " --min-ttl="
-        + str(parameters["parameters"]["min_ttl"])
+        + str(parameters["min_ttl"])
         + " --max-ttl="
-        + str(parameters["parameters"]["max_ttl"])
+        + str(parameters["max_ttl"])
         + " -E "
         + str(settings.AGENT_EXCLUSION_FILE_PATH)
         + " --record-timestamp "
@@ -64,10 +64,10 @@ async def probe(
     elif csv_filepath is not None:
         cmd += " -F -f " + str(csv_filepath)
     else:
-        logger.error("Executable Invalid parameters")
+        logger.error(logger_prefix + "Invalid executable parameters")
         return
 
-    logger.info(cmd)
+    logger.info(logger_prefix + cmd)
 
     return await start_stream_subprocess(
         cmd,

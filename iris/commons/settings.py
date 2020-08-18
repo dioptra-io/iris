@@ -17,7 +17,7 @@ class CommonSettings(BaseSettings):
 
     TABLE_NAME_MEASUREMENTS: str = f"{DATABASE_NAME}.measurements"
     TABLE_NAME_AGENTS: str = f"{DATABASE_NAME}.agents"
-    TABLE_NAME_AGENTS_IN_MEASUREMENTS: str = f"{DATABASE_NAME}.agents_in_measurements"
+    TABLE_NAME_AGENTS_SPECIFIC: str = f"{DATABASE_NAME}.agents_specific"
 
     REDIS_URL: str = "redis://redis"
     REDIS_HOSTNAME: str = "redis"

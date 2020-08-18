@@ -104,7 +104,7 @@ class DatabaseMeasurements(Database):
 
         return self.formatter(response)
 
-    async def register(self, agents, measurement_parameters):
+    async def register(self, measurement_parameters):
         """Register a measurement."""
         await self.session.execute(
             f"INSERT INTO {self.table_name} VALUES",
@@ -226,10 +226,10 @@ class DatabaseAgents(Database):
         )
 
 
-class DatabaseAgentsInMeasurements(Database):
+class DatabaseAgentsSpecific(Database):
     """Interface that handle agents parameters specific by measurements history."""
 
-    def __init__(self, host, table_name=settings.TABLE_NAME_AGENTS_IN_MEASUREMENTS):
+    def __init__(self, host, table_name=settings.TABLE_NAME_AGENTS_SPECIFIC):
         super().__init__(host)
         self.table_name = table_name
 
@@ -241,7 +241,7 @@ class DatabaseAgentsInMeasurements(Database):
         await self.session.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
-            "finished UInt8, timestamp DateTime) "
+            "probing_rate UInt32, finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (measurement_uuid, agent_uuid)",
         )
@@ -252,7 +252,8 @@ class DatabaseAgentsInMeasurements(Database):
             "uuid": str(row[1]),
             "min_ttl": row[2],
             "max_ttl": row[3],
-            "state": "finished" if bool(row[4]) else "ongoing",
+            "probing_rate": row[4],
+            "state": "finished" if bool(row[5]) else "ongoing",
         }
 
     async def all(self, measurement_uuid):
@@ -280,15 +281,16 @@ class DatabaseAgentsInMeasurements(Database):
 
         return self.formatter(response)
 
-    async def register(self, measurement_uuid, agent_uuid, min_ttl, max_ttl):
+    async def register(self, measurement_uuid, agent_uuid, parameters):
         await self.session.execute(
             f"INSERT INTO {self.table_name} VALUES",
             [
                 {
                     "measurement_uuid": measurement_uuid,
                     "agent_uuid": agent_uuid,
-                    "min_ttl": min_ttl,
-                    "max_ttl": max_ttl,
+                    "min_ttl": parameters["min_ttl"],
+                    "max_ttl": parameters["max_ttl"],
+                    "probing_rate": parameters["probing_rate"],
                     "finished": int(False),
                     "timestamp": datetime.now(),
                 }

@@ -127,6 +127,7 @@ class MeasurementsAgentsPostBody(BaseModel):
     uuid: UUID
     min_ttl: int = Field(1, title="Minimum TTL", gt=0)
     max_ttl: int = Field(30, title="Maximum TTL", gt=0)
+    probing_rate: int = Field(None, title="Probing Rate", gt=0)
 
 
 class MeasurementsPostBody(BaseModel):
@@ -157,14 +158,29 @@ class MeasurementsPostResponse(BaseModel):
     uuid: UUID
 
 
+class MeasurementAgentSpecific(BaseModel):
+    """Information about agent specific information (Response)."""
+
+    min_ttl: int
+    max_ttl: int
+    probing_rate: int
+
+
+class MeasurementAgentParameters(BaseModel):
+    """Summary parameters information about a agent (Response)."""
+
+    version: str
+    hostname: str
+    ip_address: str
+
+
 class MeasurementAgentInfoResponse(BaseModel):
     """Information about information of agents specific to a measurement (Response)."""
 
     uuid: UUID
     state: str
-    min_ttl: int
-    max_ttl: int
-    parameters: AgentParametersSummaryResponse
+    specific: MeasurementAgentSpecific
+    parameters: MeasurementAgentParameters
 
 
 class MeasurementInfoResponse(BaseModel):
@@ -177,8 +193,6 @@ class MeasurementInfoResponse(BaseModel):
     full: bool
     protocol: str
     destination_port: int
-    min_ttl: int
-    max_ttl: int
     max_round: int
     start_time: str
     end_time: Optional[str]

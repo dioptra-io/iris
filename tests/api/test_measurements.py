@@ -157,6 +157,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "uuid": str(uuid.uuid4()),
         "min_ttl": 2,
         "max_ttl": 30,
+        "probing_rate": None,
         "state": "finished",
     }
     targets_file_key = "test.txt"
@@ -168,7 +169,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     start_time = datetime.now().isoformat()
     end_time = datetime.now().isoformat()
 
-    async def all_agents_in_measurements(self, measurement_uuid):
+    async def all_agents_specific(self, measurement_uuid):
         return [agent]
 
     async def get_measurements(self, username, measurement_uuid):
@@ -203,9 +204,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         }
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsInMeasurements,
-        "all",
-        all_agents_in_measurements,
+        iris.commons.database.DatabaseAgentsSpecific, "all", all_agents_specific,
     )
     monkeypatch.setattr(
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
@@ -218,14 +217,106 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "state": "finished",
         "agents": [
             {
-                **agent,
-                **{
-                    "parameters": {
-                        "version": "0.0.0",
-                        "hostname": "test",
-                        "ip_address": "0.0.0.0",
-                        "probing_rate": 0,
-                    }
+                "uuid": agent["uuid"],
+                "state": "finished",
+                "specific": {"min_ttl": 2, "max_ttl": 30, "probing_rate": 0},
+                "parameters": {
+                    "version": "0.0.0",
+                    "hostname": "test",
+                    "ip_address": "0.0.0.0",
+                    "probing_rate": 0,
+                },
+            }
+        ],
+        "targets_file_key": targets_file_key,
+        "full": False,
+        "protocol": protocol,
+        "destination_port": destination_port,
+        "min_ttl": min_ttl,
+        "max_ttl": max_ttl,
+        "max_round": max_round,
+        "start_time": start_time,
+        "end_time": end_time,
+    }
+
+
+def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
+    """Test get measurement by UUID."""
+
+    measurement_uuid = str(uuid.uuid4())
+    user = "test"
+    agent = {
+        "uuid": str(uuid.uuid4()),
+        "min_ttl": 2,
+        "max_ttl": 30,
+        "probing_rate": 100,
+        "state": "finished",
+    }
+    targets_file_key = "test.txt"
+    protocol = "udp"
+    destination_port = 33434
+    min_ttl = 2
+    max_ttl = 30
+    max_round = 10
+    start_time = datetime.now().isoformat()
+    end_time = datetime.now().isoformat()
+
+    async def all_agents_specific(self, measurement_uuid):
+        return [agent]
+
+    async def get_measurements(self, username, measurement_uuid):
+        return {
+            "uuid": measurement_uuid,
+            "user": user,
+            "targets_file_key": targets_file_key,
+            "full": False,
+            "protocol": protocol,
+            "destination_port": destination_port,
+            "min_ttl": min_ttl,
+            "max_ttl": max_ttl,
+            "max_round": max_round,
+            "start_time": start_time,
+            "end_time": end_time,
+        }
+
+    async def get_agents(self, uuid, user="all"):
+        return {
+            "uuid": agent["uuid"],
+            "user": "all",
+            "version": "0.0.0",
+            "hostname": "test",
+            "ip_address": "0.0.0.0",
+            "probing_rate": 0,
+            "buffer_sniffer_size": 0,
+            "inf_born": 0,
+            "sup_born": 0,
+            "ips_per_subnet": 0,
+            "pfring": False,
+            "last_used": datetime.now().isoformat(),
+        }
+
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseAgentsSpecific, "all", all_agents_specific,
+    )
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+    )
+    monkeypatch.setattr(iris.commons.database.DatabaseAgents, "get", get_agents)
+
+    response = client.get(f"/v0/measurements/{measurement_uuid}")
+    assert response.json() == {
+        "uuid": measurement_uuid,
+        "state": "finished",
+        "agents": [
+            {
+                "uuid": agent["uuid"],
+                "state": "finished",
+                "specific": {"min_ttl": 2, "max_ttl": 30, "probing_rate": 100},
+                "parameters": {
+                    "version": "0.0.0",
+                    "hostname": "test",
+                    "ip_address": "0.0.0.0",
+                    "probing_rate": 0,
                 },
             }
         ],
@@ -306,7 +397,7 @@ def test_get_measurement_results(client, monkeypatch):
             "end_time": datetime.now().isoformat(),
         }
 
-    async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
+    async def get_agents_specific_results(self, measurement_uuid, agent_uuid):
         return {"state": "finished"}
 
     async def all_measurement_results(self, offset, limit):
@@ -322,9 +413,9 @@ def test_get_measurement_results(client, monkeypatch):
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsInMeasurements,
+        iris.commons.database.DatabaseAgentsSpecific,
         "get",
-        get_agents_in_measurement_results,
+        get_agents_specific_results,
     )
 
     monkeypatch.setattr(
@@ -372,7 +463,7 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
             "end_time": datetime.now().isoformat(),
         }
 
-    async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
+    async def get_agents_specific_results(self, measurement_uuid, agent_uuid):
         return {"state": "finished"}
 
     async def measurement_results_is_exists(self):
@@ -382,9 +473,9 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsInMeasurements,
+        iris.commons.database.DatabaseAgentsSpecific,
         "get",
-        get_agents_in_measurement_results,
+        get_agents_specific_results,
     )
 
     monkeypatch.setattr(
@@ -424,16 +515,16 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
             "end_time": datetime.now().isoformat(),
         }
 
-    async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
+    async def get_agents_specific_results(self, measurement_uuid, agent_uuid):
         return {"state": "ongoing"}
 
     monkeypatch.setattr(
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsInMeasurements,
+        iris.commons.database.DatabaseAgentsSpecific,
         "get",
-        get_agents_in_measurement_results,
+        get_agents_specific_results,
     )
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
@@ -461,16 +552,16 @@ def test_get_measurement_results_no_agent(client, monkeypatch):
             "end_time": datetime.now().isoformat(),
         }
 
-    async def get_agents_in_measurement_results(self, measurement_uuid, agent_uuid):
+    async def get_agents_specific_results(self, measurement_uuid, agent_uuid):
         return None
 
     monkeypatch.setattr(
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsInMeasurements,
+        iris.commons.database.DatabaseAgentsSpecific,
         "get",
-        get_agents_in_measurement_results,
+        get_agents_specific_results,
     )
 
     response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")

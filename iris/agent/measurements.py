@@ -12,14 +12,31 @@ settings = AgentSettings()
 storage = Storage()
 
 
+async def build_prober_parameters(request):
+    """Build prober parameters depending on the request."""
+    parameters = {}
+    parameters["protocol"] = request["parameters"]["protocol"]
+    parameters["destination_port"] = request["parameters"]["destination_port"]
+    parameters["round"] = request["round"]
+    if request["specific"]:
+        # There is specific parameters for this agent
+        parameters["min_ttl"] = request["specific"]["min_ttl"]
+        parameters["max_ttl"] = request["specific"]["max_ttl"]
+        parameters["probing_rate"] = request["specific"]["probing_rate"]
+    else:
+        # Else, take measurement parameters + global agent parameters
+        parameters["min_ttl"] = request["parameters"]["min_ttl"]
+        parameters["max_ttl"] = request["parameters"]["max_ttl"]
+        parameters["probing_rate"] = settings.AGENT_PROBING_RATE
+
+    return parameters
+
+
 async def measuremement(redis, request):
     """Conduct a measurement."""
     measurement_uuid = request["measurement_uuid"]
     agent_uuid = redis.uuid
     round_number = request["round"]
-
-    min_ttl = request["parameters"]["min_ttl"]
-    max_ttl = request["parameters"]["max_ttl"]
 
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
@@ -34,10 +51,6 @@ async def measuremement(redis, request):
     result_filepath = str(measurement_results_path / result_filename)
     starttime_filename = f"{agent_uuid}_starttime_{round_number}.log"
     starttime_filepath = str(measurement_results_path / starttime_filename)
-
-    logger.info(f"{logger_prefix} Round : {round_number}")
-    logger.info(f"{logger_prefix} Minimum TTL : {min_ttl}")
-    logger.info(f"{logger_prefix} Maximum TTL : {max_ttl}")
 
     if round_number == 1:
         if request["parameters"]["full"]:
@@ -60,8 +73,13 @@ async def measuremement(redis, request):
         await storage.download_file(measurement_uuid, csv_filename, csv_filepath)
 
     logger.info(f"{logger_prefix} Starting Dimond-miner measurement")
+    parameters = await build_prober_parameters(request)
+    logger.info(f"{logger_prefix} Round : {parameters['round']}")
+    logger.info(f"{logger_prefix} Minimum TTL : {parameters['min_ttl']}")
+    logger.info(f"{logger_prefix} Maximum TTL : {parameters['max_ttl']}")
+    logger.info(f"{logger_prefix} Probing Rate : {parameters['probing_rate']}")
     is_not_canceled = await probe(
-        request,
+        parameters,
         result_filepath,
         starttime_filepath,
         target_filepath=target_filepath,

@@ -27,7 +27,7 @@ from iris.commons.database import (
     DatabaseMeasurementResults,
     DatabaseMeasurements,
     DatabaseAgents,
-    DatabaseAgentsInMeasurements,
+    DatabaseAgentsSpecific,
 )
 from iris.commons.storage import Storage
 from iris.worker.hooks import hook
@@ -121,31 +121,23 @@ async def post_measurement(
     active_agents = [agent["uuid"] for agent in active_agents]
 
     # Filter out by `agents` key input if provided
-    parameters["agents"] = True
     if measurement.agents:
         measurement.agents = list(measurement.agents)
 
-        agents = []
-        for agent_info in measurement.agents:
-            if str(agent_info.uuid) not in active_agents:
+        agents = {}
+        for agent in measurement.agents:
+            agent_uuid = str(agent.uuid)
+            if agent_uuid not in active_agents:
                 raise HTTPException(status_code=404, detail="Agent not found")
-            agents.append(
-                {
-                    "uuid": str(agent_info.uuid),
-                    "min_ttl": agent_info.min_ttl,
-                    "max_ttl": agent_info.max_ttl,
-                }
-            )
-    else:
-        parameters["agents"] = False
-        agents = [
-            {
-                "uuid": uuid,
-                "min_ttl": parameters["min_ttl"],
-                "max_ttl": parameters["max_ttl"],
+            agents[agent_uuid] = {
+                "uuid": agent_uuid,
+                "min_ttl": agent.min_ttl,
+                "max_ttl": agent.max_ttl,
+                "probing_rate": agent.probing_rate,
             }
-            for uuid in active_agents
-        ]
+    else:
+        agents = {uuid: {} for uuid in active_agents}
+    del parameters["agents"]
 
     # Add mesurement metadata
     parameters["measurement_uuid"] = str(uuid4())
@@ -176,32 +168,40 @@ async def get_measurement_by_uuid(
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     measurement["state"] = "finished" if state is None else state
 
+    # Remove unnecessary information
     del measurement["user"]
+    del measurement["min_ttl"]
+    del measurement["max_ttl"]
 
-    agents_in_measurement = await DatabaseAgentsInMeasurements(session).all(
-        measurement["uuid"]
-    )
+    agents_specific = await DatabaseAgentsSpecific(session).all(measurement["uuid"])
 
     agents = []
-    for agent in agents_in_measurement:
-        agent_info = await DatabaseAgents(session).get(agent["uuid"])
+    for agent_specific in agents_specific:
+        agent_info = await DatabaseAgents(session).get(agent_specific["uuid"])
 
         if measurement["state"] == "waiting":
-            agent["state"] = "waiting"
+            agent_specific["state"] = "waiting"
         elif measurement["state"] == "finished":
-            agent["state"] = "finished"
+            agent_specific["state"] = "finished"
+
+        if agent_specific["probing_rate"] is not None:
+            specific_probing_rate = agent_specific["probing_rate"]
+        else:
+            specific_probing_rate = agent_info["probing_rate"]
 
         agents.append(
             {
-                "uuid": agent["uuid"],
-                "state": agent["state"],
-                "min_ttl": agent["min_ttl"],
-                "max_ttl": agent["max_ttl"],
+                "uuid": agent_specific["uuid"],
+                "state": agent_specific["state"],
+                "specific": {
+                    "min_ttl": agent_specific["min_ttl"],
+                    "max_ttl": agent_specific["max_ttl"],
+                    "probing_rate": specific_probing_rate,
+                },
                 "parameters": {
                     "version": agent_info["version"],
                     "hostname": agent_info["hostname"],
                     "ip_address": agent_info["ip_address"],
-                    "probing_rate": agent_info["probing_rate"],
                 },
             }
         )
@@ -263,11 +263,11 @@ async def get_measurement_results(
         + DatabaseMeasurementResults.forge_table_name(measurement_uuid, agent_uuid)
     )
 
-    agent_in_measurement_info = await DatabaseAgentsInMeasurements(session).get(
+    agent_specific_info = await DatabaseAgentsSpecific(session).get(
         measurement_uuid, agent_uuid
     )
 
-    if agent_in_measurement_info is None:
+    if agent_specific_info is None:
         raise HTTPException(
             status_code=404,
             detail=(
@@ -276,7 +276,7 @@ async def get_measurement_results(
             ),
         )
 
-    if agent_in_measurement_info["state"] != "finished":
+    if agent_specific_info["state"] != "finished":
         raise HTTPException(
             status_code=412,
             detail=(

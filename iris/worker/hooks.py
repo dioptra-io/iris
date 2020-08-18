@@ -8,7 +8,7 @@ from iris.commons.database import (
     DatabaseMeasurementResults,
     DatabaseMeasurements,
     DatabaseAgents,
-    DatabaseAgentsInMeasurements,
+    DatabaseAgentsSpecific,
 )
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
@@ -202,7 +202,7 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
     session = get_session()
-    database_agents_in_measurement = DatabaseAgentsInMeasurements(session)
+    database_agents_specific = DatabaseAgentsSpecific(session)
 
     while True:
         if settings.WORKER_SANITY_CHECK_ENABLE:
@@ -210,7 +210,7 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
             is_agent_alive = await sanity_check(redis, measurement_uuid, agent_uuid)
             if not is_agent_alive:
                 logger.warning(f"{logger_prefix} Stop watching agent")
-                await database_agents_in_measurement.stamp_finished(
+                await database_agents_specific.stamp_finished(
                     measurement_uuid, agent_uuid
                 )
                 break
@@ -218,7 +218,7 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
             measurement_state = await redis.get_measurement_state(measurement_uuid)
             if measurement_state is None:
                 logger.warning(f"{logger_prefix} Measurement canceled")
-                await database_agents_in_measurement.stamp_finished(
+                await database_agents_specific.stamp_finished(
                     measurement_uuid, agent_uuid
                 )
                 break
@@ -263,9 +263,7 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
 
         if shuffled_next_round_csv_filepath is None:
             logger.info(f"{logger_prefix} Measurement done for this agent")
-            await database_agents_in_measurement.stamp_finished(
-                measurement_uuid, agent_uuid
-            )
+            await database_agents_specific.stamp_finished(measurement_uuid, agent_uuid)
             break
         else:
             logger.info(f"{logger_prefix} Publish next mesurement")
@@ -297,22 +295,24 @@ async def callback(agents, measurement_parameters):
     session = get_session()
     database_measurements = DatabaseMeasurements(session)
     database_agents = DatabaseAgents(session)
-    database_measurement_agents = DatabaseAgentsInMeasurements(session)
+    database_agents_specific = DatabaseAgentsSpecific(session)
 
     redis = Redis()
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
     logger.info(f"{logger_prefix} Getting agents parameters")
     agents_parameters = {}
-    for agent_info in agents:
-        agent_uuid = agent_info["uuid"]
+    for agent_uuid in agents:
         agent_parameters = await redis.get_agent_parameters(agent_uuid)
         if agent_parameters:
-            agent_parameters["min_ttl"] = agent_info["min_ttl"]
-            agent_parameters["max_ttl"] = agent_info["max_ttl"]
             agents_parameters[agent_uuid] = agent_parameters
 
-    if not agents_parameters:
+    # Filter out agents that don't have physical parameters
+    agents = {
+        uuid: specific for uuid, specific in agents.items() if uuid in agents_parameters
+    }
+
+    if not agents:
         logger.error(
             f"{logger_prefix} Stopping measurement because no agent with parameters"
         )
@@ -332,27 +332,30 @@ async def callback(agents, measurement_parameters):
 
         logger.info(f"{logger_prefix} Register measurement into database")
         await database_measurements.create_table()
-        await database_measurements.register(agents, measurement_parameters)
+        await database_measurements.register(measurement_parameters)
 
         logger.info(f"{logger_prefix} Register agents into database")
         await database_agents.create_table()
-        await database_measurement_agents.create_table()
-        for agent_uuid, agent_parameters in agents_parameters.items():
+        await database_agents_specific.create_table()
+        for agent_uuid, specific in agents.items():
             # Register information about the physical agent
             is_already_present = await database_agents.get(agent_uuid)
             if is_already_present is None:
                 # Physical agent not present, registering
-                await database_agents.register(agent_uuid, agent_parameters)
+                await database_agents.register(
+                    agent_uuid, agents_parameters[agent_uuid]
+                )
             else:
                 # Already present, updating last used
                 await database_agents.stamp_last_used(agent_uuid)
 
-            # Register information of agent specific of this measurement
-            await database_measurement_agents.register(
-                measurement_uuid,
-                agent_uuid,
-                min_ttl=agent_parameters["min_ttl"],
-                max_ttl=agent_parameters["max_ttl"],
+            # Register agent in this measurement and specific information
+            if not specific:
+                specific = measurement_parameters
+            if "probing_rate" not in specific or specific["probing_rate"] is None:
+                specific["probing_rate"] = agents_parameters[agent_uuid]["probing_rate"]
+            await database_agents_specific.register(
+                measurement_uuid, agent_uuid, specific
             )
 
         logger.info(f"{logger_prefix} Create bucket in AWS S3")
@@ -363,34 +366,28 @@ async def callback(agents, measurement_parameters):
             return
 
         logger.info(f"{logger_prefix} Publish measurement to agents")
-        measurement_request = {
+        request = {
             "measurement_uuid": measurement_uuid,
             "measurement_tool": "diamond-miner",
             "round": 1,
+            "specific": {},
             "parameters": measurement_parameters,
         }
 
-        if not measurement_parameters["agents"]:
-            # If no `agents` key in request input
-            await redis.publish("all", measurement_request)
+        if not all(agents.values()):
+            # If no agent specific parameters
+            await redis.publish("all", request)
         else:
-            # Else, specific agents with custom parameters
-            for agent_uuid, agent_parameters in agents_parameters.items():
-                measurement_request["parameters"]["min_ttl"] = agent_parameters[
-                    "min_ttl"
-                ]
-                measurement_request["parameters"]["max_ttl"] = agent_parameters[
-                    "max_ttl"
-                ]
-                await redis.publish(agent_uuid, measurement_request)
+            # Else, append specific parameter by agent
+            for agent_uuid, specific in agents.items():
+                request["specific"] = specific
+                await redis.publish(agent_uuid, request)
     else:
         # We are in this state when the worker has fail and replaying the measurement
         # So we stip off the agents those which are finished
-        agent_in_measurement_info = await database_measurement_agents.all(
-            measurement_uuid
-        )
+        agent_specific_info = await database_agents_specific.all(measurement_uuid)
         finished_agents = [
-            a["uuid"] for a in agent_in_measurement_info if a["state"] == "finished"
+            a["uuid"] for a in agent_specific_info if a["state"] == "finished"
         ]
         filtered_agents_parameters = {}
         for agent_uuid, agent_parameters in agents_parameters.items():
@@ -432,10 +429,10 @@ async def callback(agents, measurement_parameters):
 @dramatiq.actor(
     time_limit=settings.WORKER_TIME_LIMIT, max_age=settings.WORKER_MESSAGE_AGE_LIMIT
 )
-def hook(agents, measurement_parameters):
+def hook(agents_specific, measurement_parameters):
     """Hook a worker process to a measurement"""
     try:
-        asyncio.run(callback(agents, measurement_parameters))
+        asyncio.run(callback(agents_specific, measurement_parameters))
     except Exception as exception:
         measurement_uuid = measurement_parameters["measurement_uuid"]
         traceback_content = traceback.format_exc()
