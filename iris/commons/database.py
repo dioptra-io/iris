@@ -47,7 +47,7 @@ class DatabaseMeasurements(Database):
     async def create_table(self, drop=False):
         """Create the table with all registered measurements."""
         if drop:
-            self.drop(self.table_name)
+            await self.drop_table(self.table_name)
 
         await self.session.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
@@ -147,7 +147,7 @@ class DatabaseAgents(Database):
     async def create_table(self, drop=False):
         """Create the table with all registered agents."""
         if drop:
-            self.drop(self.table_name)
+            await self.drop_table(self.table_name)
 
         await self.session.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
@@ -236,7 +236,7 @@ class DatabaseAgentsSpecific(Database):
     async def create_table(self, drop=False):
         """Create the table with all registered agents."""
         if drop:
-            self.drop(self.table_name)
+            await self.drop_table(self.table_name)
 
         await self.session.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
@@ -311,7 +311,7 @@ class DatabaseAgentsSpecific(Database):
         )
 
 
-class DatabaseMeasurementResults(object):
+class DatabaseMeasurementResults(Database):
     """Database interface to handle measurement results."""
 
     def __init__(self, session, table_name, logger=None):
@@ -347,7 +347,7 @@ class DatabaseMeasurementResults(object):
     async def create_table(self, drop=False):
         """Create a table."""
         if drop:
-            self.drop(self.table_name)
+            await self.drop_table(self.table_name)
 
         await self.session.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"

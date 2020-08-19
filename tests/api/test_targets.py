@@ -80,7 +80,7 @@ async def test_verify_targets_file():
         def __init__(self):
             self.file = tempfile.SpooledTemporaryFile()
 
-        def assign(self, content):
+        def register(self, content):
             self.file = tempfile.SpooledTemporaryFile()
             self.file.write(content)
             self.file.seek(0)
@@ -88,23 +88,23 @@ async def test_verify_targets_file():
     file_container = FileContainer()
 
     # Test with empty file
-    file_container.assign(b"")
+    file_container.register(b"")
     assert await verify_targets_file(file_container) is False
 
     # Test with adhequate file
-    file_container.assign(b"1.1.1.1\n2.2.2.2")
+    file_container.register(b"1.1.1.1\n2.2.2.2")
     assert await verify_targets_file(file_container) is True
 
     # Test with inadhequate file
-    file_container.assign(b"1.1.1.1\ntest\n2.2.2.2")
+    file_container.register(b"1.1.1.1\ntest\n2.2.2.2")
     assert await verify_targets_file(file_container) is False
 
     # Test with adhequate file with one trailing lines
-    file_container.assign(b"1.1.1.1\n2.2.2.2\n")
+    file_container.register(b"1.1.1.1\n2.2.2.2\n")
     assert await verify_targets_file(file_container) is True
 
     # Test with adhequate file with multiple trailing lines
-    file_container.assign(b"1.1.1.1\n2.2.2.2\n\n")
+    file_container.register(b"1.1.1.1\n2.2.2.2\n\n")
     assert await verify_targets_file(file_container) is False
 
 
