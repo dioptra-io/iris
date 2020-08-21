@@ -1,4 +1,4 @@
-"""Test `targets` operations."""
+"""Test of `targets` operations."""
 
 import tempfile
 import pytest

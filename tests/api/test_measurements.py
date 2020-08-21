@@ -1,4 +1,4 @@
-"""Test `measurements` operations."""
+"""Test of `measurements` operations."""
 
 import iris.commons.database
 import uuid
@@ -142,6 +142,179 @@ def test_get_measurements(client, monkeypatch):
         "next": None,
         "previous": "http://testserver/v0/measurements/?limit=1&offset=1",
         "results": measurements[2:3],
+    }
+
+
+# --- POST /v0/measurements/ ---
+
+
+def test_post_measurement_with_targets_file_key(client, monkeypatch):
+    """Test post measurement with targets file key."""
+
+    class FakeStorage(object):
+        async def get_file(*args, **kwargs):
+            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file_key": "test.txt",
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_post_measurement_with_full(client, monkeypatch):
+    """Test post measurement with full snapshot option."""
+
+    class FakeStorage(object):
+        async def get_file(*args, **kwargs):
+            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "full": True,
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_post_measurement_with_agents(client, monkeypatch):
+    """Test post measurement with agent specific parameters."""
+
+    class FakeStorage(object):
+        async def get_file(*args, **kwargs):
+            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file_key": "test.txt",
+            "agents": [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"}],
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_post_measurement_with_agents_not_found(client, monkeypatch):
+    """Test post measurement with agents that don't exist."""
+
+    class FakeStorage(object):
+        async def get_file(*args, **kwargs):
+            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file_key": "test.txt",
+            "agents": [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776551"}],
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Agent not found"}
+
+
+def test_post_measurement_targets_file_not_found(client, monkeypatch):
+    """Test post measurement when targets file is not found."""
+
+    class FakeStorage(object):
+        async def get_file(*args, **kwargs):
+            raise Exception
+
+    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file_key": "test.txt",
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "File object not found"}
+
+
+def test_post_measurement_invalid_input(client, monkeypatch):
+    """Test post measurement when no `targets_file_key` nor `full`."""
+
+    monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "Either `targets_file_key` or `full` key is necessary"
+    }
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "protocol": "udp",
+            "full": False,
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "Either `targets_file_key` or `full` key is necessary"
     }
 
 
@@ -326,6 +499,101 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
     }
 
 
+def test_get_measurement_by_uuid_waiting(client, monkeypatch):
+    """Test get measurement by UUID."""
+
+    measurement_uuid = str(uuid.uuid4())
+    user = "test"
+    agent = {
+        "uuid": str(uuid.uuid4()),
+        "min_ttl": 2,
+        "max_ttl": 30,
+        "probing_rate": 100,
+        "state": "finished",
+    }
+    targets_file_key = "test.txt"
+    protocol = "udp"
+    destination_port = 33434
+    min_ttl = 2
+    max_ttl = 30
+    max_round = 10
+    start_time = datetime.now().isoformat()
+    end_time = datetime.now().isoformat()
+
+    async def all_agents_specific(self, measurement_uuid):
+        return [agent]
+
+    async def get_measurements(self, username, measurement_uuid):
+        return {
+            "uuid": measurement_uuid,
+            "user": user,
+            "targets_file_key": targets_file_key,
+            "full": False,
+            "protocol": protocol,
+            "destination_port": destination_port,
+            "min_ttl": min_ttl,
+            "max_ttl": max_ttl,
+            "max_round": max_round,
+            "start_time": start_time,
+            "end_time": end_time,
+        }
+
+    async def get_agents(self, uuid, user="all"):
+        return {
+            "uuid": agent["uuid"],
+            "user": "all",
+            "version": "0.0.0",
+            "hostname": "test",
+            "ip_address": "0.0.0.0",
+            "probing_rate": 0,
+            "buffer_sniffer_size": 0,
+            "inf_born": 0,
+            "sup_born": 0,
+            "ips_per_subnet": 0,
+            "pfring": False,
+            "last_used": datetime.now().isoformat(),
+        }
+
+    class FakeRedis(object):
+        async def get_measurement_state(*args, **kwargs):
+            return "waiting"
+
+    client.app.redis = FakeRedis()
+
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseAgentsSpecific, "all", all_agents_specific,
+    )
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+    )
+    monkeypatch.setattr(iris.commons.database.DatabaseAgents, "get", get_agents)
+
+    response = client.get(f"/v0/measurements/{measurement_uuid}")
+    assert response.json() == {
+        "uuid": measurement_uuid,
+        "state": "waiting",
+        "agents": [
+            {
+                "uuid": agent["uuid"],
+                "state": "waiting",
+                "specific": {"min_ttl": 2, "max_ttl": 30, "probing_rate": 100},
+                "parameters": {
+                    "version": "0.0.0",
+                    "hostname": "test",
+                    "ip_address": "0.0.0.0",
+                },
+            }
+        ],
+        "targets_file_key": targets_file_key,
+        "full": False,
+        "protocol": protocol,
+        "destination_port": destination_port,
+        "max_round": max_round,
+        "start_time": start_time,
+        "end_time": end_time,
+    }
+
+
 def test_get_measurement_by_uuid_not_found(client, monkeypatch):
     """Test get measurement by UUID that don't exist."""
 
@@ -345,6 +613,66 @@ def test_get_measurement_by_uuid_invalid_input(client):
     """Test get measurement by UUID with invalid input."""
     response = client.get("/v0/measurements/test")
     assert response.status_code == 422
+
+
+# -- DELETE /v0/measurements/{measurement_uuid}/{agent_uuid} ---
+
+
+def test_delete_measurement_by_uuid(client, monkeypatch):
+    """Test delete measurement by UUID."""
+
+    measurement_uuid = str(uuid.uuid4())
+
+    class FakeRedis(object):
+        async def get_measurement_state(*args, **kwargs):
+            return "ongoing"
+
+        async def delete_measurement_state(*args, **kwargs):
+            pass
+
+    async def get(self, username, measurement_uuid):
+        return {"uuid": "uuid"}
+
+    client.app.redis = FakeRedis()
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
+
+    response = client.delete(f"/v0/measurements/{measurement_uuid}")
+    assert response.json() == {"uuid": measurement_uuid, "action": "canceled"}
+
+
+def test_delete_measurement_by_uuid_not_found(client, monkeypatch):
+    """Test delete measurement by UUID that don't exist."""
+
+    measurement_uuid = str(uuid.uuid4())
+
+    async def get(self, username, measurement_uuid):
+        return None
+
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
+
+    response = client.delete(f"/v0/measurements/{measurement_uuid}")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Measurement not found"}
+
+
+def test_delete_measurement_by_uuid_already_finished(client, monkeypatch):
+    """Test delete measurement by UUID that is already finished."""
+
+    measurement_uuid = str(uuid.uuid4())
+
+    class FakeRedis(object):
+        async def get_measurement_state(*args, **kwargs):
+            return None
+
+    async def get(self, username, measurement_uuid):
+        return {"uuid": "uuid"}
+
+    client.app.redis = FakeRedis()
+    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
+
+    response = client.delete(f"/v0/measurements/{measurement_uuid}")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Measurement already finished"}
 
 
 # --- GET /v0/measurements/{measurement_uuid}/{agent_uuid} ---
@@ -584,7 +912,7 @@ def test_get_measurement_result_not_found(client, monkeypatch):
     assert response.json() == {"detail": "Measurement not found"}
 
 
-def test_get_measurement_by_uuid_invalid_measurement_uuid(client):
+def test_get_measurement_results_invalid_measurement_uuid(client):
     """Test get measurement results with invalid input."""
     measurement_uuid = "test"
     agent_uuid = str(uuid.uuid4())
@@ -592,7 +920,7 @@ def test_get_measurement_by_uuid_invalid_measurement_uuid(client):
     assert response.status_code == 422
 
 
-def test_get_measurement_by_uuid_invalid_agent_uuid(client):
+def test_get_measurement_results_invalid_agent_uuid(client):
     """Test get measurement results with invalid input."""
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = "test"

@@ -49,7 +49,6 @@ class Redis(object):
                 agent_state = await self.get_agent_state(agent_uuid)
                 agent["state"] = agent_state
             if parameters:
-
                 agent_parameters = await self.get_agent_parameters(agent_uuid)
                 agent["parameters"] = agent_parameters
 

@@ -196,7 +196,9 @@ async def sanity_check(redis, measurement_uuid, agent_uuid):
     return True
 
 
-async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
+async def watch(
+    redis, agent_uuid, agent_parameters, measurement_parameters, specific_parameters
+):
     """Watch for a results from an agent."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
@@ -279,6 +281,7 @@ async def watch(redis, agent_uuid, agent_parameters, measurement_parameters):
                     "measurement_uuid": measurement_uuid,
                     "measurement_tool": "diamond_miner",
                     "round": round_number,
+                    "specific": specific_parameters,
                     "parameters": measurement_parameters,
                 },
             )
@@ -398,7 +401,13 @@ async def callback(agents, measurement_parameters):
     logger.info(f"{logger_prefix} Watching ...")
     await asyncio.gather(
         *[
-            watch(redis, agent_uuid, agent_parameters, measurement_parameters)
+            watch(
+                redis,
+                agent_uuid,
+                agent_parameters,
+                measurement_parameters,
+                agents[agent_uuid],
+            )
             for agent_uuid, agent_parameters in agents_parameters.items()
         ]
     )

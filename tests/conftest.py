@@ -1,5 +1,4 @@
 import pytest
-import uuid
 
 from fastapi.testclient import TestClient
 from iris.api.main import app
@@ -16,7 +15,23 @@ class FakeRedis(Redis):
         pass
 
     async def get_agents(*args, **kwargs):
-        return [{"uuid": uuid.uuid4(), "state": "idle", "parameters": {}}]
+        return [
+            {
+                "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                "state": "idle",
+                "parameters": {
+                    "version": "0.1.0",
+                    "hostname": "test",
+                    "ip_address": "1.2.3.4",
+                    "probing_rate": 1000,
+                    "buffer_sniffer_size": 500000,
+                    "inf_born": 0,
+                    "sup_born": 4294967295,
+                    "ips_per_subnet": 6,
+                    "pfring": False,
+                },
+            }
+        ]
 
     async def get_agent_state(*args, **kwargs):
         return "idle"
