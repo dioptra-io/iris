@@ -18,7 +18,7 @@ python-multipart = "^0.0.5"
 redis = "^3.5.3"
 starlette_exporter = "^0.4.1"
 uvicorn = "^0.11.5"
-retrying = "^1.3.3"
+tenacity = "^6.2.0"
 
 [tool.poetry.dev-dependencies]
 bumpversion = "^0.6.0"

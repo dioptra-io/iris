@@ -27,10 +27,7 @@ async def startup_event():
     await app.redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
     # Create `targets` bucket in AWS S3
-    try:
-        await Storage().create_bucket(settings.AWS_S3_TARGETS_BUCKET_NAME)
-    except Exception:
-        pass
+    await Storage().create_bucket(settings.AWS_S3_TARGETS_BUCKET_NAME)
 
     # Create the database on Clickhouse
     session = get_session(settings.DATABASE_HOST)

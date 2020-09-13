@@ -3,7 +3,7 @@ import asyncio
 import boto3
 
 from iris.commons.settings import CommonSettings
-from retrying import retry
+from tenacity import retry, stop_after_delay, wait_exponential
 
 common_settings = CommonSettings()
 
@@ -26,9 +26,12 @@ class Storage(object):
         }
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def get_measurement_buckets(self):
         """Get bucket list that is not infrastructure."""
@@ -44,19 +47,28 @@ class Storage(object):
         return buckets
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def create_bucket(self, bucket):
         """Create a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
-            await s3.create_bucket(Bucket=bucket)
+            try:
+                await s3.create_bucket(Bucket=bucket)
+            except s3.exceptions.BucketAlreadyOwnedByYou:
+                pass
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def delete_bucket(self, bucket):
         """Delete a bucket."""
@@ -64,9 +76,12 @@ class Storage(object):
             await s3.delete_bucket(Bucket=bucket)
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def get_all_files(self, bucket):
         """Get all files inside a bucket."""
@@ -86,9 +101,12 @@ class Storage(object):
         return targets
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def get_file(self, bucket, filename):
         """Get file information from a bucket."""
@@ -113,9 +131,12 @@ class Storage(object):
         s3.upload_fileobj(fin, bucket, filename)
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def upload_file(self, bucket, filename, fin):
         """Upload a file in a bucket."""
@@ -123,9 +144,12 @@ class Storage(object):
         await loop.run_in_executor(None, self._upload_sync_file, bucket, filename, fin)
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def download_file(self, bucket, filename, output_path):
         """Download a file from a bucket."""
@@ -133,9 +157,12 @@ class Storage(object):
             await s3.download_file(bucket, filename, output_path)
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def delete_file_check(self, bucket, filename):
         """Delete a file with a check that it exists."""
@@ -147,9 +174,12 @@ class Storage(object):
             return await s3.delete_object(Bucket=bucket, Key=filename)
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def delete_file_no_check(self, bucket, filename):
         """Delete a file with no check that it exists."""
@@ -157,9 +187,12 @@ class Storage(object):
             return await s3.delete_object(Bucket=bucket, Key=filename)
 
     @retry(
-        stop_max_attempt_number=common_settings.AWS_TIMEOUT_RETRIES,
-        wait_exponential_multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-        wait_exponential_max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        ),
     )
     async def delete_all_files_from_bucket(self, bucket):
         """Delete all files from a bucket."""
