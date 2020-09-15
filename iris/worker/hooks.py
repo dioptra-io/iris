@@ -19,7 +19,6 @@ from iris.worker.processors import (
     shuffle_next_round_csv,
 )
 from iris.worker.settings import WorkerSettings
-from pathlib import Path
 
 
 settings = WorkerSettings()
@@ -147,10 +146,11 @@ async def pipeline(
             await aios.remove(next_round_csv_filepath)
 
         logger.info(f"{logger_prefix} Uploading shuffled next round CSV probe file")
-        with Path(shuffled_next_round_csv_filepath).open("rb") as fin:
-            await storage.upload_file(
-                measurement_uuid, shuffled_next_round_csv_filename, fin
-            )
+        await storage.upload_file(
+            measurement_uuid,
+            shuffled_next_round_csv_filename,
+            shuffled_next_round_csv_filepath,
+        )
 
         if not settings.WORKER_DEBUG_MODE:
             logger.info(

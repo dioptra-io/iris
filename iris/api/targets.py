@@ -80,7 +80,7 @@ async def verify_targets_file(targets_file):
 
 async def upload_targets_file(targets_file):
     """Upload targets file asynchronously."""
-    await storage.upload_file(
+    await storage.upload_file_no_retry(
         settings.AWS_S3_TARGETS_BUCKET_NAME, targets_file.filename, targets_file.file
     )
 

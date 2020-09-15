@@ -1,5 +1,6 @@
 import asyncio
 import socket
+import traceback
 
 from iris import __version__
 from iris.agent import logger
@@ -97,6 +98,12 @@ async def main():
             asyncio.create_task(consumer(redis.uuid, queue)),
         ]
         await asyncio.gather(*tasks)
+
+    except Exception as exception:
+        traceback_content = traceback.format_exc()
+        for line in traceback_content.splitlines():
+            logger.critical(f"{agent_uuid} :: {line}")
+        raise exception
 
     finally:
         for task in tasks:

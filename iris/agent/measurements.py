@@ -5,7 +5,6 @@ from iris.agent import logger
 from iris.agent.prober import probe, stopper
 from iris.agent.settings import AgentSettings
 from iris.commons.storage import Storage
-from pathlib import Path
 
 
 settings = AgentSettings()
@@ -94,10 +93,10 @@ async def measuremement(redis, request):
         logger.info(
             f"{logger_prefix} Upload result file & start time log file into AWS S3"
         )
-        with Path(result_filepath).open("rb") as fin:
-            await storage.upload_file(measurement_uuid, result_filename, fin)
-        with Path(starttime_filepath).open("rb") as fin:
-            await storage.upload_file(measurement_uuid, starttime_filename, fin)
+        await storage.upload_file(measurement_uuid, result_filename, result_filepath)
+        await storage.upload_file(
+            measurement_uuid, starttime_filename, starttime_filepath
+        )
 
     if not settings.AGENT_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local result file & start time log file")

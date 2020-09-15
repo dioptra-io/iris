@@ -13,6 +13,8 @@ class CommonSettings(BaseSettings):
     AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
+    AWS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
+    AWS_TIMEOUT_RANDOM_MAX: int = 10 * 60  # in seconds
 
     DATABASE_HOST: str = "clickhouse"
     DATABASE_NAME: str = "iris"

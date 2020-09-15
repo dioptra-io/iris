@@ -1,9 +1,18 @@
 import aioboto3
 import asyncio
 import boto3
+import logging
 
+from iris.commons import logger
 from iris.commons.settings import CommonSettings
-from tenacity import retry, stop_after_delay, wait_exponential
+from tenacity import (
+    retry,
+    stop_after_delay,
+    wait_exponential,
+    wait_random,
+    before_sleep_log,
+)
+from pathlib import Path
 
 common_settings = CommonSettings()
 
@@ -31,7 +40,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def get_measurement_buckets(self):
         """Get bucket list that is not infrastructure."""
@@ -52,7 +66,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def create_bucket(self, bucket):
         """Create a bucket."""
@@ -68,7 +87,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def delete_bucket(self, bucket):
         """Delete a bucket."""
@@ -81,7 +105,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def get_all_files(self, bucket):
         """Get all files inside a bucket."""
@@ -106,7 +135,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def get_file(self, bucket, filename):
         """Get file information from a bucket."""
@@ -136,12 +170,25 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
-    async def upload_file(self, bucket, filename, fin):
+    async def upload_file(self, bucket, filename, filepath):
         """Upload a file in a bucket."""
+        with Path(filepath).open("rb") as fd:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, self._upload_sync_file, bucket, filename, fd
+            )
+
+    async def upload_file_no_retry(self, bucket, filename, fd):
+        """Upload a file in a bucket with no retry."""
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._upload_sync_file, bucket, filename, fin)
+        await loop.run_in_executor(None, self._upload_sync_file, bucket, filename, fd)
 
     @retry(
         stop=stop_after_delay(common_settings.AWS_TIMEOUT),
@@ -149,7 +196,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def download_file(self, bucket, filename, output_path):
         """Download a file from a bucket."""
@@ -162,7 +214,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def delete_file_check(self, bucket, filename):
         """Delete a file with a check that it exists."""
@@ -179,7 +236,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def delete_file_no_check(self, bucket, filename):
         """Delete a file with no check that it exists."""
@@ -192,7 +254,12 @@ class Storage(object):
             multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
             min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
             max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.AWS_TIMEOUT_RANDOM_MIN,
+            common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
+        before_sleep=before_sleep_log(logger, logging.CRITICAL),
     )
     async def delete_all_files_from_bucket(self, bucket):
         """Delete all files from a bucket."""
