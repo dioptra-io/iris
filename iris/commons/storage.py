@@ -45,7 +45,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def get_measurement_buckets(self):
         """Get bucket list that is not infrastructure."""
@@ -71,7 +71,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def create_bucket(self, bucket):
         """Create a bucket."""
@@ -92,7 +92,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def delete_bucket(self, bucket):
         """Delete a bucket."""
@@ -110,7 +110,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def get_all_files(self, bucket):
         """Get all files inside a bucket."""
@@ -140,7 +140,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def get_file(self, bucket, filename):
         """Get file information from a bucket."""
@@ -175,7 +175,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def upload_file(self, bucket, filename, filepath):
         """Upload a file in a bucket."""
@@ -201,7 +201,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def download_file(self, bucket, filename, output_path):
         """Download a file from a bucket."""
@@ -219,7 +219,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def delete_file_check(self, bucket, filename):
         """Delete a file with a check that it exists."""
@@ -241,7 +241,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def delete_file_no_check(self, bucket, filename):
         """Delete a file with no check that it exists."""
@@ -259,7 +259,7 @@ class Storage(object):
             common_settings.AWS_TIMEOUT_RANDOM_MIN,
             common_settings.AWS_TIMEOUT_RANDOM_MAX,
         ),
-        before_sleep=before_sleep_log(logger, logging.CRITICAL),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def delete_all_files_from_bucket(self, bucket):
         """Delete all files from a bucket."""
