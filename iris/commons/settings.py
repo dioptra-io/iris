@@ -27,6 +27,12 @@ class CommonSettings(BaseSettings):
     REDIS_HOSTNAME: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = "redispass"
+    REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
+    REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
+    REDIS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
+    REDIS_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
+    REDIS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
+    REDIS_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
 
     LOKI_URL: str = "http://loki:3100/loki/api/v1/push"
     LOKI_VERSION: str = "1"
