@@ -11,8 +11,6 @@ RUN apt-get update
 
 # PF RING
 ARG PFRING
-ENV AGENT_PFRING=${PFRING:+on}
-ENV AGENT_PFRING=${PFRING:-off}
 RUN if [ "$PFRING" = "on" ] ; then apt-get update && \
     apt-get -y -q install wget lsb-release && \
     wget -q http://apt.ntop.org/16.04/all/apt-ntop.deb && dpkg -i apt-ntop.deb && \
@@ -47,6 +45,7 @@ ENV TMPDIR /app/reader/resources/
 ENV MEMORY 24
 
 # Web page
+RUN apt-get update
 RUN apt-get -y install nginx
 RUN rm -f /var/www/html/*
 COPY statics/index.html /var/www/html/index.html
@@ -57,8 +56,8 @@ RUN apt-get update
 RUN apt-get install -y gdb tcpdump traceroute nload
 
 # Diamond-Miner Prober
-ARG DEBUG=off
-ARG DIAMOND_MINER_VERSION=v0.1.0
+ARG DEBUG
+ARG DIAMOND_MINER_VERSION
 RUN git clone -b $DIAMOND_MINER_VERSION --single-branch --depth 1 https://github.com/dioptra-io/diamond-miner-cpp.git prober
 RUN mkdir prober/resources
 COPY statics/excluded_prefixes /app/prober/resources
