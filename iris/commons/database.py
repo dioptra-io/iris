@@ -1,6 +1,7 @@
 """Interfaces with database."""
 
 import ipaddress
+import uuid
 
 from aioch import Client
 from datetime import datetime
@@ -35,6 +36,72 @@ class Database(object):
     async def disconnect(self):
         """Disconnect agent."""
         await self.session.disconnect()
+
+
+class DatabaseUsers(Database):
+    """Interface that handle users"""
+
+    def __init__(self, host, table_name=settings.TABLE_NAME_USERS):
+        super().__init__(host)
+        self.table_name = table_name
+
+    async def create_table(self, drop=False):
+        """Create the table with all registered users."""
+        if drop:
+            await self.drop_table(self.table_name)
+
+        await self.session.execute(
+            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
+            "(uuid UUID, username String, email String, hashed_password String, "
+            "is_active UInt8, is_admin UInt8, is_full_capable UInt8, "
+            "register_date DateTime) "
+            "ENGINE=MergeTree() "
+            "ORDER BY (uuid)",
+        )
+
+    def formatter(self, row):
+        """Database row -> response formater."""
+        return {
+            "uuid": str(row[0]),
+            "username": str(row[1]),
+            "email": str(row[2]),
+            "hashed_password": str(row[3]),
+            "is_active": bool(row[4]),
+            "is_admin": bool(row[5]),
+            "is_full_capable": bool(row[6]),
+            "register_date": row[7].isoformat(),
+        }
+
+    async def get(self, username):
+        """Get all measurement information."""
+        responses = await self.session.execute(
+            f"SELECT * FROM {self.table_name} WHERE username=%(username)s",
+            {"username": username},
+        )
+        try:
+            response = responses[0]
+        except IndexError:
+            return None
+
+        return self.formatter(response)
+
+    async def register(self, parameters):
+        """Register a measurement."""
+        await self.session.execute(
+            f"INSERT INTO {self.table_name} VALUES",
+            [
+                {
+                    "uuid": uuid.uuid4(),
+                    "username": parameters["username"],
+                    "email": parameters["email"],
+                    "hashed_password": parameters["hashed_password"],
+                    "is_active": int(parameters["is_active"]),
+                    "is_admin": int(parameters["is_admin"]),
+                    "is_full_capable": int(parameters["is_full_capable"]),
+                    "register_date": parameters["register_date"],
+                }
+            ],
+        )
 
 
 class DatabaseMeasurements(Database):
@@ -75,9 +142,12 @@ class DatabaseMeasurements(Database):
             "end_time": row[10].isoformat() if row[10] is not None else None,
         }
 
-    async def all_count(self):
+    async def all_count(self, user):
         """Get the count of all results."""
-        response = await self.session.execute(f"SELECT Count() FROM {self.table_name}")
+        response = await self.session.execute(
+            f"SELECT Count() FROM {self.table_name} WHERE user=%(user)s",
+            {"user": user},
+        )
         return response[0][0]
 
     async def all(self, user, offset, limit):

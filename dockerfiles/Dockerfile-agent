@@ -63,7 +63,7 @@ RUN git clone -b $DIAMOND_MINER_VERSION --single-branch --depth 1 https://github
 RUN mkdir prober/resources
 COPY statics/excluded_prefixes /app/prober/resources
 WORKDIR /app/prober
-RUN if [ "$PFRING" = "on" ] && ["$DEBUG" = "on"] ; then mkdir build && \
+RUN if [ "$PFRING" = "on" ] && [ "$DEBUG" = "on" ] ; then mkdir build && \
     cd build && \
     cmake .. -DPROBER=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPF_RING=1 && \
     make -j8 ; \

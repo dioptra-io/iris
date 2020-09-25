@@ -1,6 +1,6 @@
 """agents operations."""
 
-from fastapi import APIRouter, Depends, Query, Request, HTTPException
+from fastapi import APIRouter, Depends, Query, Request, HTTPException, status
 from iris.api.pagination import ListPagination
 from iris.api.security import authenticate
 from iris.api.schemas import (
@@ -55,9 +55,14 @@ async def get_agent_by_uuid(
     agents = await request.app.redis.get_agents(state=False, parameters=False)
     filtered_agents = [agent["uuid"] for agent in agents if agent["uuid"] == str(uuid)]
     if len(filtered_agents) == 0:
-        raise HTTPException(status_code=404, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
     elif len(filtered_agents) > 1:
-        raise HTTPException(status_code=500, detail="Duplicate Redis UUID")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Duplicate Redis UUID",
+        )
 
     agent_uuid = filtered_agents[0]
     agent_state = await request.app.redis.get_agent_state(agent_uuid)

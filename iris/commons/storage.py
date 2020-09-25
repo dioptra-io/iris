@@ -129,6 +129,23 @@ class Storage(object):
                 )
         return targets
 
+    async def get_all_files_no_retry(self, bucket):
+        """Get all files inside a bucket."""
+        targets = []
+        async with aioboto3.resource("s3", **self.settings) as s3:
+            bucket = await s3.Bucket(bucket)
+            async for file_object in bucket.objects.all():
+                file_size = await file_object.size
+                last_modified = str(await file_object.last_modified)
+                targets.append(
+                    {
+                        "key": file_object.key,
+                        "size": file_size,
+                        "last_modified": last_modified,
+                    }
+                )
+        return targets
+
     @retry(
         stop=stop_after_delay(common_settings.AWS_TIMEOUT),
         wait=wait_exponential(
@@ -143,6 +160,23 @@ class Storage(object):
         before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def get_file(self, bucket, filename):
+        """Get file information from a bucket."""
+        async with aioboto3.client("s3", **self.settings) as s3:
+            file_object = await s3.get_object(Bucket=bucket, Key=filename)
+            async with file_object["Body"] as stream:
+                await stream.read()
+
+        return {
+            "key": filename,
+            "size": int(
+                file_object["ResponseMetadata"]["HTTPHeaders"]["content-length"]
+            ),
+            "last_modified": file_object["ResponseMetadata"]["HTTPHeaders"][
+                "last-modified"
+            ],
+        }
+
+    async def get_file_no_retry(self, bucket, filename):
         """Get file information from a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
@@ -208,20 +242,7 @@ class Storage(object):
         async with aioboto3.client("s3", **self.settings) as s3:
             await s3.download_file(bucket, filename, output_path)
 
-    @retry(
-        stop=stop_after_delay(common_settings.AWS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.AWS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.AWS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.AWS_TIMEOUT_RANDOM_MIN,
-            common_settings.AWS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
-    async def delete_file_check(self, bucket, filename):
+    async def delete_file_check_no_retry(self, bucket, filename):
         """Delete a file with a check that it exists."""
         async with aioboto3.client("s3", **self.settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)

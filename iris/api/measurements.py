@@ -24,6 +24,7 @@ from iris.api.schemas import (
 from iris.api.settings import APISettings
 from iris.commons.database import (
     get_session,
+    DatabaseUsers,
     DatabaseMeasurementResults,
     DatabaseMeasurements,
     DatabaseAgents,
@@ -97,22 +98,39 @@ async def post_measurement(
     """Request a measurement."""
     parameters = dict(measurement)
 
+    session = get_session()
+    users_database = DatabaseUsers(session)
+
+    user_info = await users_database.get(username)
+    if not user_info["is_active"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Account inactive",
+        )
+
     if measurement.full:
         # Full snapshot requested
         parameters["targets_file_key"] = None
+        if not user_info["is_full_capable"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Full capabilities not allowed",
+            )
     elif measurement.targets_file_key:
         # Targets based snapshot requested
         # Verify that the targets file exists on AWS S3
         try:
-            await storage.get_file(
-                settings.AWS_S3_TARGETS_BUCKET_NAME, measurement.targets_file_key
+            await storage.get_file_no_retry(
+                settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
+                measurement.targets_file_key,
             )
         except Exception:
-            raise HTTPException(status_code=404, detail="File object not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
+            )
         parameters["full"] = False
     else:
         raise HTTPException(
-            status_code=422,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Either `targets_file_key` or `full` key is necessary",
         )
 
@@ -128,7 +146,9 @@ async def post_measurement(
         for agent in measurement.agents:
             agent_uuid = str(agent.uuid)
             if agent_uuid not in active_agents:
-                raise HTTPException(status_code=404, detail="Agent not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+                )
             agents[agent_uuid] = {
                 "uuid": agent_uuid,
                 "min_ttl": agent.min_ttl,
@@ -163,7 +183,9 @@ async def get_measurement_by_uuid(
     session = get_session()
     measurement = await DatabaseMeasurements(session).get(username, measurement_uuid)
     if measurement is None:
-        raise HTTPException(status_code=404, detail="Measurement not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
+        )
 
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     measurement["state"] = "finished" if state is None else state
@@ -225,11 +247,15 @@ async def delete_measurement(
         username, measurement_uuid
     )
     if measurement_info is None:
-        raise HTTPException(status_code=404, detail="Measurement not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
+        )
 
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     if state is None:
-        raise HTTPException(status_code=404, detail="Measurement already finished")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Measurement already finished"
+        )
 
     await request.app.redis.delete_measurement_state(measurement_uuid)
     return {"uuid": measurement_uuid, "action": "canceled"}
@@ -255,7 +281,9 @@ async def get_measurement_results(
         username, measurement_uuid
     )
     if measurement_info is None:
-        raise HTTPException(status_code=404, detail="Measurement not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
+        )
 
     table_name = (
         settings.DATABASE_NAME
@@ -269,7 +297,7 @@ async def get_measurement_results(
 
     if agent_specific_info is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=(
                 f"The agent `{agent_uuid}` "
                 f"did not participate to measurement `{measurement_uuid}`"
@@ -278,7 +306,7 @@ async def get_measurement_results(
 
     if agent_specific_info["state"] != "finished":
         raise HTTPException(
-            status_code=412,
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail=(
                 f"The agent `{agent_uuid}` "
                 f"has not finished the measurement `{measurement_uuid}`"

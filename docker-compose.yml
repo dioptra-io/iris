@@ -1,20 +1,58 @@
 version: "3"
 
 services:
-  redis:
-    image: redis:latest
-    command: redis-server --appendonly yes --requirepass redispass
+  traefik:
+    image: traefik:v2.2
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.redis.address=:6379"
+      - "--api=true"
+      - "--api.insecure=true"
+      - "--providers.docker"
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "6379:6379"
     volumes:
-      - ./volumes/redis:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      default:
+        aliases:
+          - api.docker.localhost
+          - grafana.docker.localhost
+          - loki.docker.localhost
+          - minio.docker.localhost
+          - prometheus.docker.localhost
 
   clickhouse:
     image: "yandex/clickhouse-server:latest"
+    labels:
+      - traefik.enable=false
     volumes:
       - "./volumes/clickhouse:/var/lib/clickhouse"
+
+  redis:
+    image: redis:latest
+    command: redis-server --appendonly yes --requirepass redispass
+    expose:
+      - "6379"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.redis.entrypoints=redis"
+      - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
+    volumes:
+      - ./volumes/redis:/data
 
   minio:
     image: minio/minio:latest
     command: server /data
+    environment:
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.entrypoints=web"
+      - "traefik.http.routers.minio.rule=Host(`minio.docker.localhost`)"
     volumes:
       - ./volumes/minio:/data
 
@@ -23,7 +61,20 @@ services:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-api
     environment:
-      MODULE_NAME: iris.api.main
+      MODULE_NAME: "iris.api.main"
+      API_ADMIN_USERNAME: "admin"
+      API_ADMIN_EMAIL: "admin@iris.docker.localhost"
+      API_ADMIN_HASHED_PASSWORD: "$$2b$$12$$DOA6t1HC4zlT/AqFgQcrzuxwcTVAV2HuyZrzxORdBDxhctmMfIbUi"
+      REDIS_URL: "redis://redis"
+      REDIS_HOSTNAME: "redis"
+      REDIS_PASSWORD: "redispass"
+      AWS_S3_HOST: "http://minio.docker.localhost"
+      AWS_ACCESS_KEY_ID: "minioadmin"
+      AWS_SECRET_ACCESS_KEY: "minioadmin"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.rule=Host(`api.docker.localhost`)"
     volumes:
       - ./iris:/app/iris
     depends_on:
@@ -36,6 +87,20 @@ services:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-worker
+      args:
+        DEBUG: "on"
+        DIAMOND_MINER_VERSION: "v0.1.0"
+    environment:
+      REDIS_URL: "redis://redis"
+      REDIS_HOSTNAME: "redis"
+      REDIS_PASSWORD: "redispass"
+      AWS_S3_HOST: "http://minio.docker.localhost"
+      AWS_ACCESS_KEY_ID: "minioadmin"
+      AWS_SECRET_ACCESS_KEY: "minioadmin"
+      LOKI_URL: "http://loki.docker.localhost/loki/api/v1/push"
+      WORKER_DEBUG_MODE: "true"
+    labels:
+      - traefik.enable=false
     volumes:
       - ./iris:/app/iris
     depends_on:
@@ -48,8 +113,22 @@ services:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile-agent
+      args:
+        DEBUG: "on"
+        DIAMOND_MINER_VERSION: "v0.1.0"
+    environment:
+      REDIS_URL: "redis://redis"
+      REDIS_HOSTNAME: "redis"
+      REDIS_PASSWORD: "redispass"
+      AWS_S3_HOST: "http://minio.docker.localhost"
+      AWS_ACCESS_KEY_ID: "minioadmin"
+      AWS_SECRET_ACCESS_KEY: "minioadmin"
+      LOKI_URL: "http://loki.docker.localhost/loki/api/v1/push"
+      AGENT_DEBUG_MODE: "true"
     cap_add:
       - SYS_PTRACE
+    labels:
+      - traefik.enable=false
     volumes:
       - ./iris:/app/iris
     depends_on:
@@ -60,22 +139,35 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.11.1
-    volumes:
-      - "./volumes/prometheus:/prometheus"
-      - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=365d"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.docker.localhost`)"
+    volumes:
+      - "./volumes/prometheus:/prometheus"
+      - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
 
   loki:
     image: grafana/loki:1.5.0
     command: -config.file=/etc/loki/loki.yaml
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.loki.entrypoints=web"
+      - "traefik.http.routers.loki.rule=Host(`loki.docker.localhost`)"
     volumes:
       - "./volumes/loki:/loki"
       - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
 
   grafana:
     image: grafana/grafana:master
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.docker.localhost`)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     volumes:
       - "./volumes/grafana:/var/lib/grafana"

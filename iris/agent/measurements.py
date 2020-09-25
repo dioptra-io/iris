@@ -14,6 +14,7 @@ storage = Storage()
 async def build_prober_parameters(request):
     """Build prober parameters depending on the request."""
     parameters = {}
+    parameters["username"] = request["username"]
     parameters["protocol"] = request["parameters"]["protocol"]
     parameters["destination_port"] = request["parameters"]["destination_port"]
     parameters["round"] = request["round"]
@@ -33,8 +34,10 @@ async def build_prober_parameters(request):
 
 async def measuremement(redis, request):
     """Conduct a measurement."""
-    measurement_uuid = request["measurement_uuid"]
     agent_uuid = redis.uuid
+
+    measurement_uuid = request["measurement_uuid"]
+    username = request["username"]
     round_number = request["round"]
 
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
@@ -61,7 +64,9 @@ async def measuremement(redis, request):
             target_filename = request["parameters"]["targets_file_key"]
             target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
             await storage.download_file(
-                settings.AWS_S3_TARGETS_BUCKET_NAME, target_filename, target_filepath
+                settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
+                target_filename,
+                target_filepath,
             )
         csv_filepath = None
     else:
@@ -73,6 +78,7 @@ async def measuremement(redis, request):
 
     logger.info(f"{logger_prefix} Starting Dimond-miner measurement")
     parameters = await build_prober_parameters(request)
+    logger.info(f"{logger_prefix} Username : {parameters['username']}")
     logger.info(f"{logger_prefix} Round : {parameters['round']}")
     logger.info(f"{logger_prefix} Minimum TTL : {parameters['min_ttl']}")
     logger.info(f"{logger_prefix} Maximum TTL : {parameters['max_ttl']}")

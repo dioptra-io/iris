@@ -8,7 +8,7 @@ class CommonSettings(BaseSettings):
     AWS_ACCESS_KEY_ID: str = "minioadmin"
     AWS_SECRET_ACCESS_KEY: str = "minioadmin"
     AWS_REGION_NAME: str = "local"
-    AWS_S3_TARGETS_BUCKET_NAME = "targets"
+    AWS_S3_TARGETS_BUCKET_PREFIX = "targets-"
     AWS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
@@ -19,6 +19,7 @@ class CommonSettings(BaseSettings):
     DATABASE_HOST: str = "clickhouse"
     DATABASE_NAME: str = "iris"
 
+    TABLE_NAME_USERS: str = f"{DATABASE_NAME}.users"
     TABLE_NAME_MEASUREMENTS: str = f"{DATABASE_NAME}.measurements"
     TABLE_NAME_AGENTS: str = f"{DATABASE_NAME}.agents"
     TABLE_NAME_AGENTS_SPECIFIC: str = f"{DATABASE_NAME}.agents_specific"

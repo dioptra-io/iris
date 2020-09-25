@@ -15,7 +15,7 @@ def test_get_measurements_empty(client, monkeypatch):
     async def all(self, user, offset, limit):
         return []
 
-    async def all_count(self):
+    async def all_count(self, *args, **kwargs):
         return 0
 
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
@@ -91,7 +91,7 @@ def test_get_measurements(client, monkeypatch):
             offset : offset + limit  # noqa : E203
         ]
 
-    async def all_count(self):
+    async def all_count(self, *args, **kwargs):
         return 3
 
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
@@ -152,15 +152,21 @@ def test_post_measurement_with_targets_file_key(client, monkeypatch):
     """Test post measurement with targets file key."""
 
     class FakeStorage(object):
-        async def get_file(*args, **kwargs):
+        async def get_file_no_retry(*args, **kwargs):
             return {"key": "test.txt", "size": 42, "last_modified": "test"}
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "is_full_capable": True}
+
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers, "get", get_users,
+    )
 
     response = client.post(
         "/v0/measurements/",
@@ -179,15 +185,21 @@ def test_post_measurement_with_full(client, monkeypatch):
     """Test post measurement with full snapshot option."""
 
     class FakeStorage(object):
-        async def get_file(*args, **kwargs):
+        async def get_file_no_retry(*args, **kwargs):
             return {"key": "test.txt", "size": 42, "last_modified": "test"}
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "is_full_capable": True}
+
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers, "get", get_users,
+    )
 
     response = client.post(
         "/v0/measurements/",
@@ -206,15 +218,21 @@ def test_post_measurement_with_agents(client, monkeypatch):
     """Test post measurement with agent specific parameters."""
 
     class FakeStorage(object):
-        async def get_file(*args, **kwargs):
+        async def get_file_no_retry(*args, **kwargs):
             return {"key": "test.txt", "size": 42, "last_modified": "test"}
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "is_full_capable": True}
+
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers, "get", get_users,
+    )
 
     response = client.post(
         "/v0/measurements/",
@@ -234,15 +252,21 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
     """Test post measurement with agents that don't exist."""
 
     class FakeStorage(object):
-        async def get_file(*args, **kwargs):
+        async def get_file_no_retry(*args, **kwargs):
             return {"key": "test.txt", "size": 42, "last_modified": "test"}
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "is_full_capable": True}
+
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers, "get", get_users,
+    )
 
     response = client.post(
         "/v0/measurements/",
@@ -266,8 +290,14 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
         async def get_file(*args, **kwargs):
             raise Exception
 
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "is_full_capable": True}
+
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers, "get", get_users,
+    )
 
     response = client.post(
         "/v0/measurements/",
@@ -286,7 +316,13 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
 def test_post_measurement_invalid_input(client, monkeypatch):
     """Test post measurement when no `targets_file_key` nor `full`."""
 
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "is_full_capable": True}
+
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers, "get", get_users,
+    )
 
     response = client.post(
         "/v0/measurements/",
@@ -316,6 +352,58 @@ def test_post_measurement_invalid_input(client, monkeypatch):
     assert response.json() == {
         "detail": "Either `targets_file_key` or `full` key is necessary"
     }
+
+
+def test_post_measurement_inactive_user(client, monkeypatch):
+    """Test post measurement when no inactive account."""
+
+    async def get_users(*args, **kwargs):
+        return {"is_active": False, "is_full_capable": True}
+
+    monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers, "get", get_users,
+    )
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file_key": "test.txt",
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Account inactive"}
+
+
+def test_post_measurement_no_full_capabilities(client, monkeypatch):
+    """Test post measurement when no full capabilities"""
+
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "is_full_capable": False}
+
+    monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers, "get", get_users,
+    )
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "full": True,
+            "protocol": "udp",
+            "destination_port": 33434,
+            "min_ttl": 2,
+            "max_ttl": 30,
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Full capabilities not allowed"}
 
 
 # --- GET /v0/measurements/{measurement_uuid} ---

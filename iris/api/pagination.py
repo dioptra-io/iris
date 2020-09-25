@@ -47,7 +47,7 @@ class Pagination(ABC):
 
     async def query(self, *args, **kwargs):
         """Paginate and returns the results."""
-        self.count = await self.get_count()
+        self.count = await self.get_count(*args, **kwargs)
         results = await self.get_results(*args, **kwargs)
         return {
             "count": self.count,
@@ -78,9 +78,9 @@ class DatabasePagination(Pagination):
         super().__init__(*args, **kwargs)
         self.database = database
 
-    async def get_count(self):
+    async def get_count(self, *args, **kwargs):
         """Database count."""
-        return await self.database.all_count()
+        return await self.database.all_count(*args, **kwargs)
 
     async def get_results(self, *args, **kwargs):
         """Database results."""

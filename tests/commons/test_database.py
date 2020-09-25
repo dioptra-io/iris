@@ -51,7 +51,7 @@ async def test_database_measurements(monkeypatch):
 
     # Test of `.all_count() method`
     session = FakeSession(response=[(10,)])
-    assert await DatabaseMeasurements(session).all_count() == 10
+    assert await DatabaseMeasurements(session).all_count(user="admin") == 10
 
     measurement_uuid_1 = uuid.uuid4()
     fake_database_response_1 = (

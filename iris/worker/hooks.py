@@ -201,6 +201,8 @@ async def watch(
 ):
     """Watch for a results from an agent."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
+    username = measurement_parameters["user"]
+
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
     session = get_session()
@@ -280,6 +282,7 @@ async def watch(
                 {
                     "measurement_uuid": measurement_uuid,
                     "measurement_tool": "diamond_miner",
+                    "username": username,
                     "round": round_number,
                     "specific": specific_parameters,
                     "parameters": measurement_parameters,
@@ -290,7 +293,7 @@ async def watch(
 async def callback(agents, measurement_parameters):
     """Asynchronous callback."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
-    user = measurement_parameters["user"]
+    username = measurement_parameters["user"]
 
     logger_prefix = f"{measurement_uuid} ::"
 
@@ -372,6 +375,7 @@ async def callback(agents, measurement_parameters):
         request = {
             "measurement_uuid": measurement_uuid,
             "measurement_tool": "diamond-miner",
+            "username": username,
             "round": 1,
             "specific": {},
             "parameters": measurement_parameters,
@@ -428,7 +432,7 @@ async def callback(agents, measurement_parameters):
         logger.error(f"{logger_prefix} Impossible to remove bucket")
 
     logger.info(f"{logger_prefix} Stamp the end time for measurement")
-    await database_measurements.stamp_end_time(user, measurement_uuid)
+    await database_measurements.stamp_end_time(username, measurement_uuid)
 
     logger.info(f"{logger_prefix} Measurement done")
     await redis.delete_measurement_state(measurement_uuid)

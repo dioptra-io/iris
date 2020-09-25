@@ -40,7 +40,14 @@ async def get_targets(
     username: str = Depends(authenticate),
 ):
     """Get all targets lists information."""
-    targets = await storage.get_all_files(settings.AWS_S3_TARGETS_BUCKET_NAME)
+    try:
+        targets = await storage.get_all_files_no_retry(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
+        )
     querier = ListPagination(targets, request, offset, limit)
     return await querier.query()
 
@@ -54,9 +61,13 @@ async def get_targets(
 async def get_target_by_key(key: str, username: str = Depends(authenticate)):
     """"Get a targets list information by key."""
     try:
-        target = await storage.get_file(settings.AWS_S3_TARGETS_BUCKET_NAME, key)
+        target = await storage.get_file_no_retry(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
+        )
     except Exception:
-        raise HTTPException(status_code=404, detail="File object not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
+        )
     return target
 
 
@@ -78,10 +89,10 @@ async def verify_targets_file(targets_file):
     return True
 
 
-async def upload_targets_file(targets_file):
+async def upload_targets_file(target_bucket, targets_file):
     """Upload targets file asynchronously."""
     await storage.upload_file_no_retry(
-        settings.AWS_S3_TARGETS_BUCKET_NAME, targets_file.filename, targets_file.file
+        target_bucket, targets_file.filename, targets_file.file,
     )
 
 
@@ -99,8 +110,12 @@ async def post_target(
     """Upload a targets list to object storage."""
     is_correct = await verify_targets_file(targets_file)
     if not is_correct:
-        raise HTTPException(status_code=412, detail="Bad targets file structure")
-    background_tasks.add_task(upload_targets_file, targets_file)
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail="Bad targets file structure",
+        )
+    target_bucket = settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+    background_tasks.add_task(upload_targets_file, target_bucket, targets_file)
     return {"key": targets_file.filename, "action": "upload"}
 
 
@@ -113,12 +128,17 @@ async def post_target(
 async def delete_target_by_key(key: str, username: str = Depends(authenticate)):
     """Delete a targets list from object storage."""
     try:
-        response = await storage.delete_file_check(
-            settings.AWS_S3_TARGETS_BUCKET_NAME, key
+        response = await storage.delete_file_check_no_retry(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
         )
     except Exception:
-        raise HTTPException(status_code=404, detail="File object not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
+        )
 
     if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
-        raise HTTPException(status_code=500, detail="Error while removing file object")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error while removing file object",
+        )
     return {"key": key, "action": "delete"}
