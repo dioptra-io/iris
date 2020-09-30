@@ -89,7 +89,7 @@ services:
       dockerfile: ./dockerfiles/Dockerfile-worker
       args:
         DEBUG: "on"
-        DIAMOND_MINER_VERSION: "v0.1.1"
+        DIAMOND_MINER_VERSION: "v0.1.2"
     environment:
       REDIS_URL: "redis://redis"
       REDIS_HOSTNAME: "redis"
@@ -115,7 +115,7 @@ services:
       dockerfile: ./dockerfiles/Dockerfile-agent
       args:
         DEBUG: "on"
-        DIAMOND_MINER_VERSION: "v0.1.1"
+        DIAMOND_MINER_VERSION: "v0.1.2"
         PFRING: "off"
     environment:
       REDIS_URL: "redis://redis"

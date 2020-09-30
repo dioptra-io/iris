@@ -65,7 +65,7 @@ WORKDIR /app
 
 # Diamond-Miner Reader
 ARG DEBUG=on
-ARG DIAMOND_MINER_VERSION=v0.1.1
+ARG DIAMOND_MINER_VERSION=v0.1.2
 RUN git clone -b $DIAMOND_MINER_VERSION --single-branch --depth 1 https://github.com/dioptra-io/diamond-miner-cpp.git reader
 RUN mkdir -p reader/resources
 COPY statics/excluded_prefixes /app/reader/resources
