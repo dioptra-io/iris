@@ -17,7 +17,7 @@ services:
     build:
       args:
         DEBUG: "on"
-        DIAMOND_MINER_VERSION: "v0.1.0"
+        DIAMOND_MINER_VERSION: "v0.1.1"
     environment:
       WORKER_DEBUG_MODE: "true"
 
@@ -25,7 +25,7 @@ services:
     build:
       args:
         DEBUG: "on"
-        DIAMOND_MINER_VERSION: "v0.1.0"
+        DIAMOND_MINER_VERSION: "v0.1.1"
     environment:
       AGENT_DEBUG_MODE: "true"
 

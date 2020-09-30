@@ -18,6 +18,10 @@ class CommonSettings(BaseSettings):
 
     DATABASE_HOST: str = "clickhouse"
     DATABASE_NAME: str = "iris"
+    DATABASE_MAX_BLOCK_SIZE: int = 8192
+    DATABASE_CONNECT_TIMEOUT: int = 10
+    DATABASE_SEND_RECEIVE_TIMEOUT: int = 300
+    DATABASE_SYNC_REQUEST_TIMEOUT: int = 5
 
     TABLE_NAME_USERS: str = f"{DATABASE_NAME}.users"
     TABLE_NAME_MEASUREMENTS: str = f"{DATABASE_NAME}.measurements"
