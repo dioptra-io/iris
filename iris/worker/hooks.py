@@ -357,7 +357,7 @@ async def callback(agents, measurement_parameters):
 
             # Register agent in this measurement and specific information
             if not specific:
-                specific = measurement_parameters
+                specific = measurement_parameters.copy()
             if "probing_rate" not in specific or specific["probing_rate"] is None:
                 specific["probing_rate"] = agents_parameters[agent_uuid]["probing_rate"]
             await database_agents_specific.register(
