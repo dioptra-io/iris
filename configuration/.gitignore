@@ -1,2 +1,3 @@
-*.prod.yml
+*.prod.json
 *.prod.xml
+*.prod.yml
