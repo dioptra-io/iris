@@ -133,7 +133,6 @@ services:
     volumes:
       - ./iris:/app/iris
     depends_on:
-      - clickhouse
       - loki
       - minio
       - redis

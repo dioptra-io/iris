@@ -1,5 +1,6 @@
 import asyncio
 import dramatiq
+import ssl
 import traceback
 
 from aiofiles import os as aios
@@ -22,6 +23,7 @@ from iris.worker.settings import WorkerSettings
 
 
 settings = WorkerSettings()
+settings_redis_ssl = ssl.SSLContext() if settings.REDIS_SSL else None
 storage = Storage()
 
 
@@ -304,7 +306,9 @@ async def callback(agents, measurement_parameters):
     database_agents_specific = DatabaseAgentsSpecific(session)
 
     redis = Redis()
-    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+    await redis.connect(
+        settings.REDIS_URL, settings.REDIS_PASSWORD, ssl=settings_redis_ssl
+    )
 
     logger.info(f"{logger_prefix} Getting agents parameters")
     agents_parameters = {}

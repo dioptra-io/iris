@@ -1,6 +1,9 @@
 FROM tiangolo/uvicorn-gunicorn:python3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@gmail.com>"
 
+RUN apt-get update
+RUN apt -y install --reinstall ca-certificates
+
 WORKDIR /app
 
 RUN pip install --upgrade pip

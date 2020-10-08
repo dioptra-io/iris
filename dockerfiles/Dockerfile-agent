@@ -6,6 +6,7 @@ WORKDIR /app
 # Compilation tools
 RUN apt-get update
 RUN apt-get -y install gnupg gcc g++ cmake libboost-all-dev git autoconf automake build-essential
+RUN apt -y install --reinstall ca-certificates
 RUN apt-get -y clean all
 RUN apt-get update
 

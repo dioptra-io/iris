@@ -32,6 +32,7 @@ class CommonSettings(BaseSettings):
     REDIS_HOSTNAME: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = "redispass"
+    REDIS_SSL: bool = False
     REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds

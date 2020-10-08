@@ -42,9 +42,9 @@ class Redis(object):
         ),
         before_sleep=before_sleep_log(logger, logging.ERROR),
     )
-    async def connect(self, host, password=None):
+    async def connect(self, host, password=None, ssl=None):
         """Connect to Redis instance."""
-        self._redis = await aioredis.create_redis(host)
+        self._redis = await aioredis.create_redis(host, ssl=ssl)
         if password:
             await self._redis.auth(password)
 
@@ -255,9 +255,9 @@ class AgentRedis(Redis):
         ),
         before_sleep=before_sleep_log(logger, logging.ERROR),
     )
-    async def connect(self, host, password=None, register=True):
+    async def connect(self, host, password=None, ssl=None, register=True):
         """Connect to Redis instance."""
-        await super().connect(host, password=password)
+        await super().connect(host, password=password, ssl=ssl)
         if register:
             await self._redis.client_setname(self.uuid)
 

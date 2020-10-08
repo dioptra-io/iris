@@ -1,5 +1,6 @@
 import asyncio
 import socket
+import ssl
 import traceback
 
 from iris import __version__
@@ -12,12 +13,18 @@ from uuid import uuid4
 
 
 settings = AgentSettings()
+settings_redis_ssl = ssl.SSLContext() if settings.REDIS_SSL else None
 
 
 async def consumer(agent_uuid, queue):
     """Wait for a task in a queue and process it."""
     redis = AgentRedis(agent_uuid)
-    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD, register=False)
+    await redis.connect(
+        settings.REDIS_URL,
+        settings.REDIS_PASSWORD,
+        ssl=settings_redis_ssl,
+        register=False,
+    )
     while True:
         parameters = await queue.get()
         measurement_uuid = parameters["measurement_uuid"]
@@ -29,7 +36,9 @@ async def consumer(agent_uuid, queue):
             logger.error(f"{logger_prefix} Redis connection failed. Re-connecting...")
             await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
             try:
-                await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+                await redis.connect(
+                    settings.REDIS_URL, settings.REDIS_PASSWORD, ssl=settings_redis_ssl
+                )
             except OSError:
                 continue
 
@@ -71,7 +80,9 @@ async def main():
     redis = AgentRedis(agent_uuid)
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
-    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+    await redis.connect(
+        settings.REDIS_URL, settings.REDIS_PASSWORD, ssl=settings_redis_ssl
+    )
 
     logger.info(f"{agent_uuid} :: Connected to Redis")
 

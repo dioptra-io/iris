@@ -1,5 +1,7 @@
 """API Entrypoint."""
 
+import ssl
+
 from datetime import datetime
 from iris import __version__
 from iris.api import router
@@ -12,6 +14,7 @@ from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 
 settings = APISettings()
+settings_redis_ssl = ssl.SSLContext() if settings.REDIS_SSL else None
 
 app = FastAPI(title="Iris", description="Iris API", version=__version__,)
 
@@ -25,7 +28,9 @@ app.include_router(router, prefix="/v0")
 async def startup_event():
     # Connect into Redis
     app.redis = Redis()
-    await app.redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+    await app.redis.connect(
+        settings.REDIS_URL, settings.REDIS_PASSWORD, ssl=settings_redis_ssl
+    )
 
     session = get_session(settings.DATABASE_HOST)
 
