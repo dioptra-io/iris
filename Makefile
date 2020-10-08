@@ -6,6 +6,12 @@ shell:
 update:
 	@poetry update
 
+build:
+	@docker-compose -f docker-compose.prod.yml build
+
+build-dev:
+	@docker-compose build
+
 run:
 	@docker-compose -f docker-compose.prod.yml up -d --build
 
