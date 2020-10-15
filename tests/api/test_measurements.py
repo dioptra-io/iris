@@ -498,7 +498,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
-        "max_round": max_round,
         "start_time": start_time,
         "end_time": end_time,
     }
@@ -593,7 +592,6 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
-        "max_round": max_round,
         "start_time": start_time,
         "end_time": end_time,
     }
@@ -694,7 +692,6 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
-        "max_round": max_round,
         "start_time": start_time,
         "end_time": end_time,
     }

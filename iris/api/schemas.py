@@ -195,7 +195,6 @@ class MeasurementInfoResponse(BaseModel):
     full: bool
     protocol: str
     destination_port: int
-    max_round: int
     start_time: str
     end_time: Optional[str]
 

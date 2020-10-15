@@ -195,6 +195,7 @@ async def get_measurement_by_uuid(
     del measurement["user"]
     del measurement["min_ttl"]
     del measurement["max_ttl"]
+    del measurement["max_round"]
 
     agents_specific = await DatabaseAgentsSpecific(session).all(measurement["uuid"])
 
