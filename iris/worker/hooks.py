@@ -35,6 +35,7 @@ async def pipeline(
     agent_uuid,
     agent_parameters,
     measurement_parameters,
+    specific_parameters,
     result_filename,
     starttime_filename,
 ):
@@ -45,7 +46,11 @@ async def pipeline(
     logger.info(f"{logger_prefix} New files detected")
 
     round_number = extract_round_number(result_filename)
-    max_round = measurement_parameters["max_round"]
+    max_round = (
+        measurement_parameters["max_round"]
+        if not specific_parameters
+        else specific_parameters["max_round"]
+    )
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
 
     logger.info(f"{logger_prefix} Round {round_number}")
@@ -263,6 +268,7 @@ async def watch(
             agent_uuid,
             agent_parameters,
             measurement_parameters,
+            specific_parameters,
             result_filename,
             starttime_filename,
         )

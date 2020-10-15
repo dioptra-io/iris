@@ -236,17 +236,18 @@ async def test_database_agents_specific(monkeypatch):
 
     measurement_uuid_1 = uuid.uuid4()
     agent_uuid_1 = uuid.uuid4()
-    fake_database_response_1 = (measurement_uuid_1, agent_uuid_1, 2, 30, 1000, 0)
+    fake_database_response_1 = (measurement_uuid_1, agent_uuid_1, 2, 30, 1000, 10, 0)
 
     measurement_uuid_2 = uuid.uuid4()
     agent_uuid_2 = uuid.uuid4()
-    fake_database_response_2 = (measurement_uuid_2, agent_uuid_2, 2, 30, 1000, 1)
+    fake_database_response_2 = (measurement_uuid_2, agent_uuid_2, 2, 30, 1000, 10, 1)
 
     fake_formated_response_1 = {
         "uuid": str(agent_uuid_1),
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": 1000,
+        "max_round": 10,
         "state": "ongoing",
     }
 
@@ -255,6 +256,7 @@ async def test_database_agents_specific(monkeypatch):
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": 1000,
+        "max_round": 10,
         "state": "finished",
     }
 
@@ -286,6 +288,7 @@ async def test_database_agents_specific(monkeypatch):
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": 1000,
+        "max_round": 10,
     }
 
     # Test of `.register() method`

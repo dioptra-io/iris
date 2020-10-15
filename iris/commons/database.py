@@ -343,7 +343,7 @@ class DatabaseAgentsSpecific(Database):
         await self.session.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
-            "probing_rate UInt32, finished UInt8, timestamp DateTime) "
+            "probing_rate UInt32, max_round UInt8, finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (measurement_uuid, agent_uuid)",
             settings=settings,
@@ -356,7 +356,8 @@ class DatabaseAgentsSpecific(Database):
             "min_ttl": row[2],
             "max_ttl": row[3],
             "probing_rate": row[4],
-            "state": "finished" if bool(row[5]) else "ongoing",
+            "max_round": int(row[5]),
+            "state": "finished" if bool(row[6]) else "ongoing",
         }
 
     async def all(self, measurement_uuid):
@@ -396,6 +397,7 @@ class DatabaseAgentsSpecific(Database):
                     "min_ttl": parameters["min_ttl"],
                     "max_ttl": parameters["max_ttl"],
                     "probing_rate": parameters["probing_rate"],
+                    "max_round": parameters["max_round"],
                     "finished": int(False),
                     "timestamp": datetime.now(),
                 }

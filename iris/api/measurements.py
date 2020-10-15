@@ -154,6 +154,7 @@ async def post_measurement(
                 "min_ttl": agent.min_ttl,
                 "max_ttl": agent.max_ttl,
                 "probing_rate": agent.probing_rate,
+                "max_round": agent.max_round,
             }
     else:
         agents = {uuid: {} for uuid in active_agents}
@@ -219,6 +220,7 @@ async def get_measurement_by_uuid(
                     "min_ttl": agent_specific["min_ttl"],
                     "max_ttl": agent_specific["max_ttl"],
                     "probing_rate": specific_probing_rate,
+                    "max_round": agent_specific["max_round"],
                 },
                 "parameters": {
                     "version": agent_info["version"],

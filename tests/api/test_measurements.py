@@ -419,6 +419,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": None,
+        "max_round": 10,
         "state": "finished",
     }
     targets_file_key = "test.txt"
@@ -480,7 +481,12 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             {
                 "uuid": agent["uuid"],
                 "state": "finished",
-                "specific": {"min_ttl": 2, "max_ttl": 30, "probing_rate": 0},
+                "specific": {
+                    "min_ttl": 2,
+                    "max_ttl": 30,
+                    "probing_rate": 0,
+                    "max_round": 10,
+                },
                 "parameters": {
                     "version": "0.0.0",
                     "hostname": "test",
@@ -508,6 +514,7 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": 100,
+        "max_round": 10,
         "state": "finished",
     }
     targets_file_key = "test.txt"
@@ -569,7 +576,12 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
             {
                 "uuid": agent["uuid"],
                 "state": "finished",
-                "specific": {"min_ttl": 2, "max_ttl": 30, "probing_rate": 100},
+                "specific": {
+                    "min_ttl": 2,
+                    "max_ttl": 30,
+                    "probing_rate": 100,
+                    "max_round": 10,
+                },
                 "parameters": {
                     "version": "0.0.0",
                     "hostname": "test",
@@ -597,6 +609,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": 100,
+        "max_round": 10,
         "state": "finished",
     }
     targets_file_key = "test.txt"
@@ -664,7 +677,12 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
             {
                 "uuid": agent["uuid"],
                 "state": "waiting",
-                "specific": {"min_ttl": 2, "max_ttl": 30, "probing_rate": 100},
+                "specific": {
+                    "min_ttl": 2,
+                    "max_ttl": 30,
+                    "probing_rate": 100,
+                    "max_round": 10,
+                },
                 "parameters": {
                     "version": "0.0.0",
                     "hostname": "test",
