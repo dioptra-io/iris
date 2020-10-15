@@ -4,12 +4,11 @@ import ssl
 import traceback
 
 from iris import __version__
-from iris.agent import logger
+from iris.agent import AGENT_UUID, logger
 from iris.agent.measurements import measuremement
 from iris.commons.redis import AgentRedis
 from iris.commons.utils import get_own_ip_address
 from iris.agent.settings import AgentSettings
-from uuid import uuid4
 
 
 settings = AgentSettings()
@@ -76,15 +75,14 @@ async def producer(redis, queue):
 
 async def main():
     """Main agent function."""
-    agent_uuid = str(uuid4()) if settings.AGENT_UUID is None else settings.AGENT_UUID
-    redis = AgentRedis(agent_uuid)
+    redis = AgentRedis(AGENT_UUID)
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
     await redis.connect(
         settings.REDIS_URL, settings.REDIS_PASSWORD, ssl=settings_redis_ssl
     )
 
-    logger.info(f"{agent_uuid} :: Connected to Redis")
+    logger.info(f"{AGENT_UUID} :: Connected to Redis")
 
     try:
 
@@ -113,7 +111,7 @@ async def main():
     except Exception as exception:
         traceback_content = traceback.format_exc()
         for line in traceback_content.splitlines():
-            logger.critical(f"{agent_uuid} :: {line}")
+            logger.critical(f"{AGENT_UUID} :: {line}")
         raise exception
 
     finally:
