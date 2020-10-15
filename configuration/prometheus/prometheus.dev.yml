@@ -1,9 +1,15 @@
 scrape_configs:
-  - job_name: "node"
-
+  - job_name: "api"
     scrape_interval: 1m
-
     static_configs:
       - targets: ["api:80"]
+        labels:
+          group: "development"
+
+  - job_name: "cadvisor"
+    scrape_interval: 10s
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["cadvisor:8080"]
         labels:
           group: "development"

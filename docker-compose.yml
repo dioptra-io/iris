@@ -19,6 +19,7 @@ services:
       default:
         aliases:
           - api.docker.localhost
+          - cadvisor.docker.localhost
           - grafana.docker.localhost
           - loki.docker.localhost
           - minio.docker.localhost
@@ -136,6 +137,18 @@ services:
       - loki
       - minio
       - redis
+
+  cadvisor:
+    image: gcr.io/google-containers/cadvisor:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cadvisor.entrypoints=web"
+      - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.docker.localhost`)"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
 
   prometheus:
     image: prom/prometheus:v2.11.1
