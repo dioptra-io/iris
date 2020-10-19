@@ -48,6 +48,10 @@ async def get_targets(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
         )
+    targets = [
+        {**target, **{"type": target.get("metadata", {}).get("type")}}
+        for target in targets
+    ]
     querier = ListPagination(targets, request, offset, limit)
     return await querier.query()
 
@@ -64,6 +68,7 @@ async def get_target_by_key(key: str, username: str = Depends(authenticate)):
         target = await storage.get_file_no_retry(
             settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
         )
+        target["type"] = target.get("metadata", {}).get("type", "targets-list")
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
@@ -71,7 +76,7 @@ async def get_target_by_key(key: str, username: str = Depends(authenticate)):
     return target
 
 
-async def verify_targets_file(targets_file):
+async def verify_targets_file(targets_file, target_type):
     """Verify that a target file have a good structure."""
     # Check if file is empty
     targets_file.file.seek(0, 2)
@@ -82,17 +87,22 @@ async def verify_targets_file(targets_file):
     # Check if all lines of the file is a valid IPv4 address
     for line in targets_file.file.readlines():
         try:
-            ipaddress.ip_address(line.decode("utf-8").strip())
+            if target_type == "targets-list":
+                ipaddress.ip_address(line.decode("utf-8").strip())
+            elif target_type == "prefixes-list":
+                ipaddress.ip_network(line.decode("utf-8").strip())
+            else:
+                return False
         except ValueError:
             return False
     targets_file.file.seek(0)
     return True
 
 
-async def upload_targets_file(target_bucket, targets_file):
+async def upload_targets_file(target_bucket, targets_file, metadata):
     """Upload targets file asynchronously."""
     await storage.upload_file_no_retry(
-        target_bucket, targets_file.filename, targets_file.file,
+        target_bucket, targets_file.filename, targets_file.file, {"type": metadata},
     )
 
 
@@ -105,18 +115,21 @@ async def upload_targets_file(target_bucket, targets_file):
 async def post_target(
     background_tasks: BackgroundTasks,
     targets_file: UploadFile = File(...),
+    metadata: str = Query("targets-list", regex="targets-list|prefixes-list"),
     username: str = Depends(authenticate),
 ):
     """Upload a targets list to object storage."""
-    is_correct = await verify_targets_file(targets_file)
+    is_correct = await verify_targets_file(targets_file, metadata)
     if not is_correct:
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail="Bad targets file structure",
         )
     target_bucket = settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
-    background_tasks.add_task(upload_targets_file, target_bucket, targets_file)
-    return {"key": targets_file.filename, "action": "upload"}
+    background_tasks.add_task(
+        upload_targets_file, target_bucket, targets_file, metadata
+    )
+    return {"key": targets_file.filename, "type": metadata, "action": "upload"}
 
 
 @router.delete(

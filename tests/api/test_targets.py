@@ -13,7 +13,14 @@ def test_get_targets(client, monkeypatch):
 
     class FakeStorage(object):
         async def get_all_files_no_retry(*args, **kwargs):
-            return [{"key": "test", "size": 42, "last_modified": "test"}]
+            return [
+                {
+                    "key": "test",
+                    "size": 42,
+                    "last_modified": "test",
+                    "metadata": {"type": "target-list"},
+                }
+            ]
 
     monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
     response = client.get("/v0/targets")
@@ -21,7 +28,9 @@ def test_get_targets(client, monkeypatch):
         "count": 1,
         "next": None,
         "previous": None,
-        "results": [{"key": "test", "size": 42, "last_modified": "test"}],
+        "results": [
+            {"key": "test", "size": 42, "type": "target-list", "last_modified": "test"}
+        ],
     }
 
 
@@ -50,11 +59,21 @@ def test_get_targets_by_key(client, monkeypatch):
 
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
-            return {"key": "test", "size": 42, "last_modified": "test"}
+            return {
+                "key": "test",
+                "size": 42,
+                "last_modified": "test",
+                "metadata": {"type": "target-list"},
+            }
 
     monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
     response = client.get("/v0/targets/test")
-    assert response.json() == {"key": "test", "size": 42, "last_modified": "test"}
+    assert response.json() == {
+        "key": "test",
+        "size": 42,
+        "type": "target-list",
+        "last_modified": "test",
+    }
 
 
 def test_get_targets_by_key_not_found(client, monkeypatch):
@@ -73,7 +92,7 @@ def test_get_targets_by_key_not_found(client, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_verify_targets_file():
+async def test_verify_targets_list_file():
     """Test file verification."""
 
     class FileContainer(object):
@@ -89,23 +108,67 @@ async def test_verify_targets_file():
 
     # Test with empty file
     file_container.register(b"")
-    assert await verify_targets_file(file_container) is False
+    assert await verify_targets_file(file_container, "targets-list") is False
 
     # Test with adhequate file
     file_container.register(b"1.1.1.1\n2.2.2.2")
-    assert await verify_targets_file(file_container) is True
+    assert await verify_targets_file(file_container, "targets-list") is True
 
     # Test with inadhequate file
     file_container.register(b"1.1.1.1\ntest\n2.2.2.2")
-    assert await verify_targets_file(file_container) is False
+    assert await verify_targets_file(file_container, "targets-list") is False
 
     # Test with adhequate file with one trailing lines
     file_container.register(b"1.1.1.1\n2.2.2.2\n")
-    assert await verify_targets_file(file_container) is True
+    assert await verify_targets_file(file_container, "targets-list") is True
 
     # Test with adhequate file with multiple trailing lines
     file_container.register(b"1.1.1.1\n2.2.2.2\n\n")
-    assert await verify_targets_file(file_container) is False
+    assert await verify_targets_file(file_container, "targets-list") is False
+
+    # Test with wrong file_type
+    file_container.register(b"1.1.1.1\n2.2.2.2")
+    assert await verify_targets_file(file_container, "test") is False
+
+
+@pytest.mark.asyncio
+async def test_verify_prefixes_list_file():
+    """Test file verification."""
+
+    class FileContainer(object):
+        def __init__(self):
+            self.file = tempfile.SpooledTemporaryFile()
+
+        def register(self, content):
+            self.file = tempfile.SpooledTemporaryFile()
+            self.file.write(content)
+            self.file.seek(0)
+
+    file_container = FileContainer()
+
+    # Test with empty file
+    file_container.register(b"")
+    assert await verify_targets_file(file_container, "prefixes-list") is False
+
+    # Test with adhequate file
+    file_container.register(b"1.1.1.0/24\n2.2.2.0/24")
+    assert await verify_targets_file(file_container, "prefixes-list") is True
+
+    # Test with inadhequate file
+    file_container.register(b"1.1.1.1\ntest\n2.2.2.0/24")
+    assert await verify_targets_file(file_container, "prefixes-list") is False
+
+    # Test with adhequate file with one trailing lines
+    file_container.register(b"1.1.1.0/24\n2.2.2.0/24\n")
+    assert await verify_targets_file(file_container, "prefixes-list") is True
+
+    # Test with adhequate file with multiple trailing lines
+    file_container.register(b"1.1.1.0/24\n2.2.2.0/24\n\n")
+    assert await verify_targets_file(file_container, "prefixes-list") is False
+
+    # Test with wrong file_type
+    file_container.register(b"1.1.1.0/24\n2.2.2.0/24")
+    assert await verify_targets_file(file_container, "test") is False
 
 
 # --- DELETE /v0/targets/{key} ---

@@ -117,14 +117,20 @@ class Storage(object):
         targets = []
         async with aioboto3.resource("s3", **self.settings) as s3:
             bucket = await s3.Bucket(bucket)
-            async for file_object in bucket.objects.all():
-                file_size = await file_object.size
-                last_modified = str(await file_object.last_modified)
+            async for obj_summary in bucket.objects.all():
+                obj_meta = await obj_summary.get()
                 targets.append(
                     {
-                        "key": file_object.key,
-                        "size": file_size,
-                        "last_modified": last_modified,
+                        "key": obj_summary.key,
+                        "size": int(
+                            obj_meta["ResponseMetadata"]["HTTPHeaders"][
+                                "content-length"
+                            ]
+                        ),
+                        "metadata": obj_meta["Metadata"],
+                        "last_modified": obj_meta["ResponseMetadata"]["HTTPHeaders"][
+                            "last-modified"
+                        ],
                     }
                 )
         return targets
@@ -134,14 +140,20 @@ class Storage(object):
         targets = []
         async with aioboto3.resource("s3", **self.settings) as s3:
             bucket = await s3.Bucket(bucket)
-            async for file_object in bucket.objects.all():
-                file_size = await file_object.size
-                last_modified = str(await file_object.last_modified)
+            async for obj_summary in bucket.objects.all():
+                obj_meta = await obj_summary.get()
                 targets.append(
                     {
-                        "key": file_object.key,
-                        "size": file_size,
-                        "last_modified": last_modified,
+                        "key": obj_summary.key,
+                        "size": int(
+                            obj_meta["ResponseMetadata"]["HTTPHeaders"][
+                                "content-length"
+                            ]
+                        ),
+                        "metadata": obj_meta["Metadata"],
+                        "last_modified": obj_meta["ResponseMetadata"]["HTTPHeaders"][
+                            "last-modified"
+                        ],
                     }
                 )
         return targets
@@ -165,12 +177,12 @@ class Storage(object):
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
                 await stream.read()
-
         return {
             "key": filename,
             "size": int(
                 file_object["ResponseMetadata"]["HTTPHeaders"]["content-length"]
             ),
+            "metadata": file_object["Metadata"],
             "last_modified": file_object["ResponseMetadata"]["HTTPHeaders"][
                 "last-modified"
             ],
@@ -188,15 +200,17 @@ class Storage(object):
             "size": int(
                 file_object["ResponseMetadata"]["HTTPHeaders"]["content-length"]
             ),
+            "metadata": file_object["Metadata"],
             "last_modified": file_object["ResponseMetadata"]["HTTPHeaders"][
                 "last-modified"
             ],
         }
 
-    def _upload_sync_file(self, bucket, filename, fin):
+    def _upload_sync_file(self, bucket, filename, fin, metadata=None):
         """Underlying synchronous upload function."""
         s3 = boto3.client("s3", **self.settings)
-        s3.upload_fileobj(fin, bucket, filename)
+        extraargs = {"Metadata": metadata} if metadata else None
+        s3.upload_fileobj(fin, bucket, filename, ExtraArgs=extraargs)
 
     @retry(
         stop=stop_after_delay(common_settings.AWS_TIMEOUT),
@@ -211,18 +225,20 @@ class Storage(object):
         ),
         before_sleep=before_sleep_log(logger, logging.ERROR),
     )
-    async def upload_file(self, bucket, filename, filepath):
+    async def upload_file(self, bucket, filename, filepath, metadata=None):
         """Upload a file in a bucket."""
         with Path(filepath).open("rb") as fd:
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(
-                None, self._upload_sync_file, bucket, filename, fd
+                None, self._upload_sync_file, bucket, filename, fd, metadata
             )
 
-    async def upload_file_no_retry(self, bucket, filename, fd):
+    async def upload_file_no_retry(self, bucket, filename, fd, metadata=None):
         """Upload a file in a bucket with no retry."""
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._upload_sync_file, bucket, filename, fd)
+        await loop.run_in_executor(
+            None, self._upload_sync_file, bucket, filename, fd, metadata
+        )
 
     @retry(
         stop=stop_after_delay(common_settings.AWS_TIMEOUT),

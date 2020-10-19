@@ -63,6 +63,10 @@ async def measuremement(redis, request):
             logger.info(f"{logger_prefix} Download target file locally")
             target_filename = request["parameters"]["targets_file_key"]
             target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
+            target = await storage.get_file(
+                settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, target_filename
+            )
+            target_type = target.get("metadata", {}).get("type", "targets-list")
             await storage.download_file(
                 settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
                 target_filename,
@@ -72,6 +76,7 @@ async def measuremement(redis, request):
     else:
         logger.info(f"{logger_prefix} Download CSV probe file locally")
         target_filepath = None
+        target_type = None
         csv_filename = request["parameters"]["csv_probe_file"]
         csv_filepath = str(settings.AGENT_TARGETS_DIR_PATH / csv_filename)
         await storage.download_file(measurement_uuid, csv_filename, csv_filepath)
@@ -88,6 +93,7 @@ async def measuremement(redis, request):
         result_filepath,
         starttime_filepath,
         target_filepath=target_filepath,
+        target_type=target_type,
         csv_filepath=csv_filepath,
         stopper=stopper(
             logger, redis, measurement_uuid, logger_prefix=logger_prefix + " "

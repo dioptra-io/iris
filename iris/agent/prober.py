@@ -26,6 +26,7 @@ async def probe(
     starttime_filepath,
     csv_filepath=None,
     target_filepath=None,
+    target_type=None,
     stopper=None,
     logger_prefix="",
 ):
@@ -60,7 +61,10 @@ async def probe(
     )
     if parameters["round"] == 1:
         if target_filepath is not None:
-            cmd += " -T -t " + str(target_filepath)
+            if target_type == "targets-list":
+                cmd += " -T -t " + str(target_filepath)
+            elif target_type == "prefixes-list":
+                cmd += " -P --prefix-file=" + str(target_filepath)
     elif csv_filepath is not None:
         cmd += " -F -f " + str(csv_filepath)
     else:

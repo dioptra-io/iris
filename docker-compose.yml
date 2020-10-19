@@ -14,7 +14,7 @@ services:
       - "8080:8080"
       - "6379:6379"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       default:
         aliases:
@@ -126,6 +126,7 @@ services:
       AWS_ACCESS_KEY_ID: "minioadmin"
       AWS_SECRET_ACCESS_KEY: "minioadmin"
       LOKI_URL: "http://loki.docker.localhost/loki/api/v1/push"
+      AGENT_PROBING_RATE: 100
       AGENT_DEBUG_MODE: "true"
     cap_add:
       - SYS_PTRACE

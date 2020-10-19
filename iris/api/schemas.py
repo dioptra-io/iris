@@ -71,6 +71,7 @@ class TargetResponse(BaseModel):
     """Information about a target (Response)."""
 
     key: str
+    type: str
     size: int
     last_modified: str
 
@@ -88,6 +89,7 @@ class TargetsPostResponse(BaseModel):
     """POST /targets (Response)."""
 
     key: str
+    type: str
     action: str
 
 
