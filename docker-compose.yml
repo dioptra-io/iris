@@ -2,7 +2,7 @@ version: "3"
 
 services:
   traefik:
-    image: traefik:v2.2
+    image: "traefik:v2.2"
     command:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.redis.address=:6379"
@@ -14,27 +14,27 @@ services:
       - "8080:8080"
       - "6379:6379"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       default:
         aliases:
-          - api.docker.localhost
-          - cadvisor.docker.localhost
-          - grafana.docker.localhost
-          - loki.docker.localhost
-          - minio.docker.localhost
-          - prometheus.docker.localhost
+          - "api.docker.localhost"
+          - "cadvisor.docker.localhost"
+          - "grafana.docker.localhost"
+          - "loki.docker.localhost"
+          - "minio.docker.localhost"
+          - "prometheus.docker.localhost"
 
   clickhouse:
     image: "yandex/clickhouse-server:latest"
     labels:
-      - traefik.enable=false
+      - "traefik.enable=false"
     volumes:
       - "./volumes/clickhouse:/var/lib/clickhouse"
 
   redis:
-    image: redis:latest
-    command: redis-server --appendonly yes --requirepass redispass
+    image: "redis:latest"
+    command: "redis-server --appendonly yes --requirepass redispass"
     expose:
       - "6379"
     labels:
@@ -42,11 +42,11 @@ services:
       - "traefik.tcp.routers.redis.entrypoints=redis"
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
     volumes:
-      - ./volumes/redis:/data
+      - "./volumes/redis:/data"
 
   minio:
-    image: minio/minio:latest
-    command: server /data
+    image: "minio/minio:latest"
+    command: "server /data"
     environment:
       MINIO_ACCESS_KEY: "minioadmin"
       MINIO_SECRET_KEY: "minioadmin"
@@ -55,12 +55,12 @@ services:
       - "traefik.http.routers.minio.entrypoints=web"
       - "traefik.http.routers.minio.rule=Host(`minio.docker.localhost`)"
     volumes:
-      - ./volumes/minio:/data
+      - "./volumes/minio:/data"
 
   api:
     build:
       context: .
-      dockerfile: ./dockerfiles/Dockerfile-api
+      dockerfile: "./dockerfiles/Dockerfile-api"
     environment:
       MODULE_NAME: "iris.api.main"
       API_ADMIN_USERNAME: "admin"
@@ -77,7 +77,7 @@ services:
       - "traefik.http.routers.api.entrypoints=web"
       - "traefik.http.routers.api.rule=Host(`api.docker.localhost`)"
     volumes:
-      - ./iris:/app/iris
+      - "./iris:/app/iris"
     depends_on:
       - clickhouse
       - loki
@@ -87,10 +87,10 @@ services:
   worker:
     build:
       context: .
-      dockerfile: ./dockerfiles/Dockerfile-worker
+      dockerfile: "./dockerfiles/Dockerfile-worker"
       args:
         DEBUG: "on"
-        DIAMOND_MINER_VERSION: "v0.1.2"
+        DIAMOND_MINER_VERSION: "v0.1.3"
     environment:
       REDIS_URL: "redis://redis"
       REDIS_HOSTNAME: "redis"
@@ -101,9 +101,9 @@ services:
       LOKI_URL: "http://loki.docker.localhost/loki/api/v1/push"
       WORKER_DEBUG_MODE: "true"
     labels:
-      - traefik.enable=false
+      - "traefik.enable=false"
     volumes:
-      - ./iris:/app/iris
+      - "./iris:/app/iris"
     depends_on:
       - clickhouse
       - loki
@@ -113,10 +113,10 @@ services:
   agent:
     build:
       context: .
-      dockerfile: ./dockerfiles/Dockerfile-agent
+      dockerfile: "./dockerfiles/Dockerfile-agent"
       args:
         DEBUG: "on"
-        DIAMOND_MINER_VERSION: "v0.1.2"
+        DIAMOND_MINER_VERSION: "v0.1.3"
         PFRING: "off"
     environment:
       REDIS_URL: "redis://redis"
@@ -126,33 +126,33 @@ services:
       AWS_ACCESS_KEY_ID: "minioadmin"
       AWS_SECRET_ACCESS_KEY: "minioadmin"
       LOKI_URL: "http://loki.docker.localhost/loki/api/v1/push"
-      AGENT_PROBING_RATE: 100
+      AGENT_PROBING_RATE: "100"
       AGENT_DEBUG_MODE: "true"
     cap_add:
       - SYS_PTRACE
     labels:
-      - traefik.enable=false
+      - "traefik.enable=false"
     volumes:
-      - ./iris:/app/iris
+      - "./iris:/app/iris"
     depends_on:
       - loki
       - minio
       - redis
 
   cadvisor:
-    image: gcr.io/google-containers/cadvisor:latest
+    image: "gcr.io/google-containers/cadvisor:latest"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.cadvisor.entrypoints=web"
       - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.docker.localhost`)"
     volumes:
-      - /:/rootfs:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
+      - "/:/rootfs:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker/:/var/lib/docker:ro"
 
   prometheus:
-    image: prom/prometheus:v2.11.1
+    image: "prom/prometheus:v2.11.1"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -166,8 +166,8 @@ services:
       - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
 
   loki:
-    image: grafana/loki:1.5.0
-    command: -config.file=/etc/loki/loki.yaml
+    image: "grafana/loki:1.5.0"
+    command: "-config.file=/etc/loki/loki.yaml"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.loki.entrypoints=web"
@@ -177,7 +177,7 @@ services:
       - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
 
   grafana:
-    image: grafana/grafana:master
+    image: "grafana/grafana:master"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.entrypoints=web"

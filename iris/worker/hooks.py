@@ -206,7 +206,7 @@ async def sanity_check(redis, measurement_uuid, agent_uuid):
 async def watch(
     redis, agent_uuid, agent_parameters, measurement_parameters, specific_parameters
 ):
-    """Watch for a results from an agent."""
+    """Watch for results from an agent."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
     username = measurement_parameters["user"]
 

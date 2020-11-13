@@ -13,6 +13,36 @@ class ExceptionResponse(BaseModel):
     detail: str
 
 
+# --- Profile ---
+
+
+class ProfileRIPEPutResponse(BaseModel):
+    """Profile RIPE information (Response)."""
+
+    account: Optional[str]
+    key: Optional[str]
+
+
+class ProfileRIPEPutBody(BaseModel):
+    """Profile RIPE information (Body)."""
+
+    account: Optional[str]
+    key: Optional[str]
+
+
+class ProfileGetResponse(BaseModel):
+    """Profile nformation (Response)."""
+
+    uuid: UUID
+    username: str
+    email: str
+    is_active: bool
+    is_admin: bool
+    is_full_capable: bool
+    register_date: str
+    ripe: ProfileRIPEPutResponse
+
+
 # --- Agents ---
 
 

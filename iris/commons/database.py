@@ -71,7 +71,8 @@ class DatabaseUsers(Database):
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, username String, email String, hashed_password String, "
             "is_active UInt8, is_admin UInt8, is_full_capable UInt8, "
-            "register_date DateTime) "
+            "register_date DateTime, "
+            "ripe_account Nullable(String), ripe_key Nullable(String)) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
             settings=settings,
@@ -87,7 +88,9 @@ class DatabaseUsers(Database):
             "is_active": bool(row[4]),
             "is_admin": bool(row[5]),
             "is_full_capable": bool(row[6]),
-            "register_date": row[7].isoformat(),
+            "ripe_account": str(row[7]) if row[7] is not None else None,
+            "ripe_key": str(row[8]) if row[8] is not None else None,
+            "register_date": row[9].isoformat(),
         }
 
     async def get(self, username):
@@ -105,7 +108,7 @@ class DatabaseUsers(Database):
         return self.formatter(response)
 
     async def register(self, parameters):
-        """Register a measurement."""
+        """Register a user."""
         await self.session.execute(
             f"INSERT INTO {self.table_name} VALUES",
             [
@@ -118,10 +121,34 @@ class DatabaseUsers(Database):
                     "is_admin": int(parameters["is_admin"]),
                     "is_full_capable": int(parameters["is_full_capable"]),
                     "register_date": parameters["register_date"],
+                    "ripe_account": None,
+                    "ripe_key": None,
                 }
             ],
             settings=settings,
         )
+
+    async def register_ripe(self, username, ripe_account, ripe_key):
+        """Register RIPE information of a user."""
+        if ripe_account is None or ripe_key is None:
+            print("Test")
+            await self.session.execute(
+                f"ALTER TABLE {self.table_name} UPDATE "
+                "ripe_account = NULL, ripe_key =  NULL "
+                "WHERE username=%(username)s",
+                {"username": username},
+            )
+        else:
+            await self.session.execute(
+                f"ALTER TABLE {self.table_name} UPDATE "
+                "ripe_account = %(ripe_account)s, ripe_key = %(ripe_key)s "
+                "WHERE username=%(username)s",
+                {
+                    "ripe_account": ripe_account,
+                    "ripe_key": ripe_key,
+                    "username": username,
+                },
+            )
 
 
 class DatabaseMeasurements(Database):
