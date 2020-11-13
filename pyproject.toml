@@ -2,7 +2,7 @@
 name = "iris"
 version = "0.3.0"
 description = ""
-authors = ["matthieugouel <matthieu.gouel@gmail.com>"]
+authors = ["matthieugouel <matthieu.gouel@lip6.fr>"]
 
 [tool.poetry.dependencies]
 python = "^3.6"
@@ -20,6 +20,7 @@ starlette_exporter = "^0.4.1"
 uvicorn = "^0.11.5"
 tenacity = "^6.2.0"
 passlib = {extras = ["bcrypt"], version = "^1.7.2"}
+diamond-miner-core = {path = "vendors/diamond-miner-core"}
 
 [tool.poetry.dev-dependencies]
 bumpversion = "^0.6.0"

@@ -1,9 +1,15 @@
 import asyncio
 import dramatiq
+import ipaddress
 import ssl
 import traceback
 
 from aiofiles import os as aios
+from diamond_miner_core import (
+    compute_next_round,
+    MeasurementParameters,
+    ReverseByteOrderFlowMapper,
+)
 from iris.commons.database import (
     get_session,
     DatabaseMeasurementResults,
@@ -16,7 +22,6 @@ from iris.commons.storage import Storage
 from iris.worker import logger
 from iris.worker.processors import (
     pcap_to_csv,
-    next_round_csv,
     shuffle_next_round_csv,
 )
 from iris.worker.settings import WorkerSettings
@@ -46,6 +51,16 @@ async def pipeline(
     logger.info(f"{logger_prefix} New files detected")
 
     round_number = extract_round_number(result_filename)
+    min_ttl = (
+        measurement_parameters["min_ttl"]
+        if not specific_parameters
+        else specific_parameters["min_ttl"]
+    )
+    max_ttl = (
+        measurement_parameters["max_ttl"]
+        if not specific_parameters
+        else specific_parameters["max_ttl"]
+    )
     max_round = (
         measurement_parameters["max_round"]
         if not specific_parameters
@@ -123,13 +138,25 @@ async def pipeline(
         logger.error(f"{logger_prefix} No agent parameters")
 
     logger.info(f"{logger_prefix} Compute the next round CSV probe file")
-    await next_round_csv(
-        round_number,
+
+    # Maybe cleaner to re-write the lib in an asynchonous way
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        None,
+        compute_next_round,
+        settings.DATABASE_HOST,
         table_name,
+        MeasurementParameters(
+            source_ip=int(ipaddress.IPv4Address(agent_parameters["ip_address"])),
+            source_port=24000,  # TODO Put in measurement parameters ?
+            destination_port=measurement_parameters["destination_port"],
+            min_ttl=min_ttl,
+            max_ttl=max_ttl,
+            round_number=round_number,
+        ),
         next_round_csv_filepath,
-        agent_parameters,
-        measurement_parameters,
-        logger_prefix=logger_prefix + " ",
+        ReverseByteOrderFlowMapper(),
+        False,
     )
 
     shuffled_next_round_csv_filename = (

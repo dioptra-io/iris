@@ -298,6 +298,23 @@ version = "0.6"
 
 [[package]]
 category = "main"
+description = ""
+develop = true
+name = "diamond-miner-core"
+optional = false
+python-versions = "^3.6"
+version = "0.1.0"
+
+[package.dependencies]
+clickhouse-driver = "^0.1.5"
+
+[package.source]
+reference = ""
+type = "directory"
+url = "vendors/diamond-miner-core"
+
+[[package]]
+category = "main"
 description = "Docutils -- Python Documentation Utilities"
 name = "docutils"
 optional = false
@@ -1020,7 +1037,7 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "cbf0c3363681f4fcb1763c08f01c5f3da19923917ecfbcc0be447fc588ca03b2"
+content-hash = "70a5515a0f9548d2f0618577bb8be9b8be412c2f3e40ae4be9fa7f89c45af3e0"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -1261,6 +1278,7 @@ dataclasses = [
     {file = "dataclasses-0.6-py3-none-any.whl", hash = "sha256:454a69d788c7fda44efd71e259be79577822f5e3f53f029a22d08004e951dc9f"},
     {file = "dataclasses-0.6.tar.gz", hash = "sha256:6988bd2b895eef432d562370bb707d540f32f7360ab13da45340101bc2307d84"},
 ]
+diamond-miner-core = []
 docutils = [
     {file = "docutils-0.15.2-py2-none-any.whl", hash = "sha256:9e4d7ecfc600058e07ba661411a2b7de2fd0fafa17d1a7f7361cd47b1175c827"},
     {file = "docutils-0.15.2-py3-none-any.whl", hash = "sha256:6c4f696463b79f1fb8ba0c594b63840ebd41f059e92b31957c46b74a4599b6d0"},

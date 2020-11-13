@@ -6,6 +6,9 @@ RUN apt -y install --reinstall ca-certificates
 
 WORKDIR /app
 
+RUN mkdir vendors
+COPY vendors/diamond-miner-core vendors/diamond-miner-core
+
 RUN pip install --upgrade pip
 RUN pip install poetry
 RUN poetry config virtualenvs.create false

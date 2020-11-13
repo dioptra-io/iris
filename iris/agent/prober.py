@@ -55,16 +55,19 @@ async def probe(
         + str(parameters["max_ttl"])
         + " -E "
         + str(settings.AGENT_EXCLUSION_FILE_PATH)
-        + " --record-timestamp "
+        + " --record-timestamp"
+        + " --experimental-host-offset"
         + " --start-time-log-file="
         + str(starttime_filepath)
     )
     if parameters["round"] == 1:
         if target_filepath is not None:
-            if target_type == "targets-list":
-                cmd += " -T -t " + str(target_filepath)
-            elif target_type == "prefixes-list":
+            if target_type == "prefixes-list":
+                # `prefixes-list` target file
                 cmd += " -P --prefix-file=" + str(target_filepath)
+            else:
+                # `targets-list` target file
+                cmd += " -T -t " + str(target_filepath)
     elif csv_filepath is not None:
         cmd += " -F -f " + str(csv_filepath)
     else:
