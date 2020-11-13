@@ -25,4 +25,4 @@ type:
 	@$(ENVRUN) mypy --ignore-missing-imports iris
 
 test:
-	@$(ENVRUN) pytest
+	@$(ENVRUN) pytest tests
