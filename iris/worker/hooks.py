@@ -20,10 +20,7 @@ from iris.commons.database import (
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from iris.worker import logger
-from iris.worker.processors import (
-    pcap_to_csv,
-    shuffle_next_round_csv,
-)
+from iris.worker.processors import pcap_to_csv, shuffle_next_round_csv
 from iris.worker.settings import WorkerSettings
 
 
@@ -51,6 +48,7 @@ async def pipeline(
     logger.info(f"{logger_prefix} New files detected")
 
     round_number = extract_round_number(result_filename)
+
     min_ttl = (
         measurement_parameters["min_ttl"]
         if not specific_parameters
@@ -66,17 +64,16 @@ async def pipeline(
         if not specific_parameters
         else specific_parameters["max_round"]
     )
+
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
 
     logger.info(f"{logger_prefix} Round {round_number}")
     logger.info(f"{logger_prefix} Download results file & start time log file")
     result_filepath = str(measurement_results_path / result_filename)
-    await storage.download_file(
-        measurement_uuid, result_filename, result_filepath,
-    )
+    await storage.download_file(measurement_uuid, result_filename, result_filepath)
     starttime_filepath = str(measurement_results_path / starttime_filename)
     await storage.download_file(
-        measurement_uuid, starttime_filename, starttime_filepath,
+        measurement_uuid, starttime_filename, starttime_filepath
     )
 
     logger.info(

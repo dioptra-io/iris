@@ -58,6 +58,7 @@ async def measuremement(redis, request):
         if request["parameters"]["full"]:
             logger.info(f"{logger_prefix} Full snapshot required")
             target_filepath = None
+            target_type = None
         else:
             logger.info(f"{logger_prefix} Target file based snapshot required")
             logger.info(f"{logger_prefix} Download target file locally")
