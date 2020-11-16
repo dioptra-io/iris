@@ -28,4 +28,4 @@ jobs:
           poetry run flake8 iris --max-line-length=88
       - name: Tests
         run: |
-          poetry run pytest
+          poetry run pytest tests
