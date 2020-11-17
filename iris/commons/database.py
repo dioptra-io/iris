@@ -5,8 +5,9 @@ import uuid
 
 from aioch import Client
 from datetime import datetime
-from iris.commons.subprocess import start_stream_subprocess
+from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.settings import CommonSettings
+from iris.commons.subprocess import start_stream_subprocess
 
 settings = CommonSettings()
 
@@ -370,7 +371,8 @@ class DatabaseAgentsSpecific(Database):
         await self.session.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
-            "probing_rate UInt32, max_round UInt8, finished UInt8, timestamp DateTime) "
+            "probing_rate UInt32, max_round UInt8, targets_file_key Nullable(String), "
+            "finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (measurement_uuid, agent_uuid)",
             settings=settings,
@@ -384,7 +386,8 @@ class DatabaseAgentsSpecific(Database):
             "max_ttl": row[3],
             "probing_rate": row[4],
             "max_round": int(row[5]),
-            "state": "finished" if bool(row[6]) else "ongoing",
+            "targets_file_key": row[6],
+            "state": "finished" if bool(row[7]) else "ongoing",
         }
 
     async def all(self, measurement_uuid):
@@ -414,17 +417,18 @@ class DatabaseAgentsSpecific(Database):
 
         return self.formatter(response)
 
-    async def register(self, measurement_uuid, agent_uuid, parameters):
+    async def register(self, parameters: ParametersDataclass):
         await self.session.execute(
             f"INSERT INTO {self.table_name} VALUES",
             [
                 {
-                    "measurement_uuid": measurement_uuid,
-                    "agent_uuid": agent_uuid,
-                    "min_ttl": parameters["min_ttl"],
-                    "max_ttl": parameters["max_ttl"],
-                    "probing_rate": parameters["probing_rate"],
-                    "max_round": parameters["max_round"],
+                    "measurement_uuid": parameters.measurement_uuid,
+                    "agent_uuid": parameters.agent_uuid,
+                    "min_ttl": parameters.min_ttl,
+                    "max_ttl": parameters.max_ttl,
+                    "probing_rate": parameters.probing_rate,
+                    "max_round": parameters.max_round,
+                    "targets_file_key": parameters.targets_file_key,
                     "finished": int(False),
                     "timestamp": datetime.now(),
                 }

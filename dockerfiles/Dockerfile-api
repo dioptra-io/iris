@@ -1,5 +1,5 @@
 FROM tiangolo/uvicorn-gunicorn:python3.8
-LABEL key="Matthieu Gouel <matthieu.gouel@gmail.com>"
+LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
 RUN apt-get update
 RUN apt -y install --reinstall ca-certificates

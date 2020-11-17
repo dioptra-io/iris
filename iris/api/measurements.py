@@ -31,7 +31,7 @@ from iris.commons.database import (
     DatabaseAgentsSpecific,
 )
 from iris.commons.storage import Storage
-from iris.worker.hooks import hook
+from iris.worker.hook import hook
 from uuid import UUID, uuid4
 
 
@@ -150,7 +150,7 @@ async def post_measurement(
                     status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
                 )
             agents[agent_uuid] = {
-                "uuid": agent_uuid,
+                "targets_file_key": agent.targets_file_key,
                 "min_ttl": agent.min_ttl,
                 "max_ttl": agent.max_ttl,
                 "probing_rate": agent.probing_rate,

@@ -1,5 +1,5 @@
 FROM python:3.8
-LABEL key="Matthieu Gouel <matthieu.gouel@gmail.com>"
+LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
 WORKDIR /app
 

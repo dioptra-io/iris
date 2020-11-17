@@ -13,7 +13,7 @@ async def pcap_to_csv(
     result_filepath,
     starttime_filepath,
     csv_filepath,
-    parameters,
+    destination_port,
     logger_prefix="",
 ):
     """Transform a PCAP & start time log file into CSV using D-Miner Reader."""
@@ -34,7 +34,7 @@ async def pcap_to_csv(
         + " -s "
         + str(snapshot_number)
         + " --dport="
-        + str(parameters["destination_port"])
+        + str(destination_port)
         + " --compute-rtt "
         + " --start-time-log-file="
         + str(starttime_filepath)
