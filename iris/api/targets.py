@@ -49,7 +49,7 @@ async def get_targets(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
         )
     targets = [
-        {**target, **{"type": target.get("metadata", {}).get("type")}}
+        {**target, **{"type": target.get("metadata", {}).get("type", "targets-list")}}
         for target in targets
     ]
     querier = ListPagination(targets, request, offset, limit)
