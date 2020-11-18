@@ -45,7 +45,7 @@ async def measuremement(redis, request):
     starttime_filepath = str(measurement_results_path / starttime_filename)
 
     if round_number == 1:
-        if parameters["full"]:
+        if parameters["full"] and parameters["targets_file_key"] is None:
             logger.info(f"{logger_prefix} Full snapshot required")
             target_filepath = None
             target_type = None
