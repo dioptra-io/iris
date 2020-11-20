@@ -24,9 +24,7 @@ async def probe(
     parameters,
     result_filepath,
     starttime_filepath,
-    csv_filepath=None,
-    target_filepath=None,
-    target_type=None,
+    probes_filepath,
     stopper=None,
     logger_prefix="",
 ):
@@ -39,40 +37,15 @@ async def probe(
         + str(parameters["probing_rate"])
         + " --buffer-sniffer-size="
         + str(settings.AGENT_BUFFER_SNIFFER_SIZE)
-        + " -d "
-        + str(settings.AGENT_IPS_PER_SUBNET)
-        + " -i "
-        + str(settings.AGENT_INF_BORN)
-        + " -s "
-        + str(settings.AGENT_SUP_BORN)
         + " -p "
         + str(parameters["protocol"])
-        + " --dport="
-        + str(parameters["destination_port"])
-        + " --min-ttl="
+        + " --filter-min-ttl="
         + str(parameters["min_ttl"])
-        + " --max-ttl="
+        + " --filter-max-ttl="
         + str(parameters["max_ttl"])
-        + " -E "
-        + str(settings.AGENT_EXCLUSION_FILE_PATH)
-        + " --record-timestamp"
-        + " --experimental-host-offset"
         + " --start-time-log-file="
         + str(starttime_filepath)
     )
-    if parameters["round"] == 1:
-        if target_filepath is not None:
-            if target_type == "prefixes-list":
-                # `prefixes-list` target file
-                cmd += " -P --prefix-file=" + str(target_filepath)
-            else:
-                # `targets-list` target file
-                cmd += " -T -t " + str(target_filepath)
-    elif csv_filepath is not None:
-        cmd += " -F -f " + str(csv_filepath)
-    else:
-        logger.error(logger_prefix + "Invalid executable parameters")
-        return
 
     logger.info(logger_prefix + cmd)
 
