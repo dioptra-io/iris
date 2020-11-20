@@ -53,7 +53,7 @@ RUN apt-get install -y gdb tcpdump traceroute nload
 
 # Diamond-Miner Prober
 ARG DEBUG=on
-ARG DIAMOND_MINER_VERSION=v0.1.4
+ARG DIAMOND_MINER_VERSION=v0.1.6
 RUN git clone -b $DIAMOND_MINER_VERSION --single-branch --depth 1 https://github.com/dioptra-io/diamond-miner-cpp.git prober
 RUN mkdir prober/resources
 COPY statics/excluded_prefixes /app/prober/resources

@@ -245,6 +245,7 @@ async def test_database_agents_specific(monkeypatch):
         1000,
         10,
         "test.txt",
+        10,
         0,
     )
 
@@ -258,6 +259,7 @@ async def test_database_agents_specific(monkeypatch):
         1000,
         10,
         None,
+        20,
         1,
     )
 
@@ -268,6 +270,7 @@ async def test_database_agents_specific(monkeypatch):
         "probing_rate": 1000,
         "max_round": 10,
         "targets_file_key": "test.txt",
+        "seed": 10,
         "state": "ongoing",
     }
 
@@ -278,6 +281,7 @@ async def test_database_agents_specific(monkeypatch):
         "probing_rate": 1000,
         "max_round": 10,
         "targets_file_key": None,
+        "seed": 20,
         "state": "finished",
     }
 

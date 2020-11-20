@@ -1,6 +1,7 @@
 """Test of commons dataclasses."""
 
 import pytest
+import random
 import uuid
 
 from iris.commons.dataclasses import ParametersDataclass
@@ -12,6 +13,7 @@ def test_parameters_dataclass():
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 
+    random.seed(27)
     agent = ParametersDataclass(
         agent_uuid,
         {
@@ -54,6 +56,7 @@ def test_parameters_dataclass():
     assert agent.targets_file_key == "test.txt"
     assert agent.min_ttl == 5
     assert agent.max_ttl == 20
+    assert agent.seed == 2785274337
 
     with pytest.raises(AttributeError):
         assert agent.test
@@ -67,6 +70,7 @@ def test_parameters_dataclass():
         "min_ttl": 5,
         "max_ttl": 20,
         "max_round": 10,
+        "seed": 2785274337,
         "measurement_uuid": measurement_uuid,
         "user": "admin",
         "start_time": 1605630993.092607,

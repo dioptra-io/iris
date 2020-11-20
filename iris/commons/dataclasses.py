@@ -1,3 +1,6 @@
+import random
+
+
 class ParametersDataclass(object):
     def __init__(
         self,
@@ -14,6 +17,7 @@ class ParametersDataclass(object):
             **measurement_parameters,
             **{k: v for k, v in specific_parameters.items() if v is not None},
             **{"agent_uuid": agent_uuid},
+            **{"seed": random.randint(0, (2 ** 32) - 1)},
         }
 
     def __getattr__(self, parameter):
