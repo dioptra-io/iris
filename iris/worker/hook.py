@@ -220,6 +220,13 @@ async def callback(agents_information, measurement_parameters):
             logger.error(f"{logger_prefix} Impossible to create bucket")
             return
 
+        # TODO Compute the first round probes depending on user input
+        # TODO Excluded prefxes file
+        # -> Full snapshot
+        # -> Targets files
+        # -> Prefixes file
+
+        # TODO Parametrize the tool selection
         logger.info(f"{logger_prefix} Publish measurement to agents")
         request = {
             "measurement_uuid": measurement_uuid,
@@ -239,7 +246,7 @@ async def callback(agents_information, measurement_parameters):
                 request["parameters"] = agent.to_dict()
                 await redis.publish(agent.agent_uuid, request)
     else:
-        # We are in this state when the worker has fail and replaying the measurement
+        # We are in this state when the worker has failed and replays the measurement
         # So we stip off the agents those which are finished
         agent_specific_info = await database_agents_specific.all(measurement_uuid)
         finished_agents = [

@@ -106,7 +106,8 @@ async def diamond_miner_pipeline(
         return None
 
     logger.info(f"{logger_prefix} Compute the next round CSV probe file")
-    # TODO Maybe cleaner to re-write the lib in an asynchonous way
+    # TODO MRe-write the lib in an asynchonous way
+    # TODO Excluded prefixes file
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(
         None,
