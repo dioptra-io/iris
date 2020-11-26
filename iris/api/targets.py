@@ -102,7 +102,7 @@ async def verify_targets_file(targets_file, target_type):
 async def upload_targets_file(target_bucket, targets_file, metadata):
     """Upload targets file asynchronously."""
     await storage.upload_file_no_retry(
-        target_bucket, targets_file.filename, targets_file.file, {"type": metadata},
+        target_bucket, targets_file.filename, targets_file.file, {"type": metadata}
     )
 
 

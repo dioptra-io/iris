@@ -118,19 +118,13 @@ class Storage(object):
         async with aioboto3.resource("s3", **self.settings) as s3:
             bucket = await s3.Bucket(bucket)
             async for obj_summary in bucket.objects.all():
-                obj_meta = await obj_summary.get()
+                obj = await obj_summary.Object()
                 targets.append(
                     {
                         "key": obj_summary.key,
-                        "size": int(
-                            obj_meta["ResponseMetadata"]["HTTPHeaders"][
-                                "content-length"
-                            ]
-                        ),
-                        "metadata": obj_meta["Metadata"],
-                        "last_modified": obj_meta["ResponseMetadata"]["HTTPHeaders"][
-                            "last-modified"
-                        ],
+                        "size": await obj_summary.size,
+                        "metadata": await obj.metadata,
+                        "last_modified": str(await obj_summary.last_modified),
                     }
                 )
         return targets
@@ -141,19 +135,13 @@ class Storage(object):
         async with aioboto3.resource("s3", **self.settings) as s3:
             bucket = await s3.Bucket(bucket)
             async for obj_summary in bucket.objects.all():
-                obj_meta = await obj_summary.get()
+                obj = await obj_summary.Object()
                 targets.append(
                     {
                         "key": obj_summary.key,
-                        "size": int(
-                            obj_meta["ResponseMetadata"]["HTTPHeaders"][
-                                "content-length"
-                            ]
-                        ),
-                        "metadata": obj_meta["Metadata"],
-                        "last_modified": obj_meta["ResponseMetadata"]["HTTPHeaders"][
-                            "last-modified"
-                        ],
+                        "size": await obj_summary.size,
+                        "metadata": await obj.metadata,
+                        "last_modified": str(await obj_summary.last_modified),
                     }
                 )
         return targets
