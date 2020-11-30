@@ -24,7 +24,9 @@ async def probe(
     parameters,
     result_filepath,
     starttime_filepath,
-    probes_filepath,
+    stdin=None,
+    prefix_incl_filepath=None,
+    probes_filepath=None,
     stopper=None,
     logger_prefix="",
 ):
@@ -47,11 +49,28 @@ async def probe(
         + str(starttime_filepath)
     )
 
+    # In case of prefixes-list input
+    if prefix_incl_filepath is not None:
+        cmd += f" --filter-from-prefix-file-incl={prefix_incl_filepath}"
+
+    # Excluded prefixes
+    if settings.AGENT_D_MINER_EXCLUDE_PATH is not None:
+        cmd += f" --filter-from-prefix-file-excl={settings.AGENT_D_MINER_EXCLUDE_PATH}"
+
+    # Probes file for round > 0
+    if probes_filepath is not None:
+        cmd += f" --input-file={probes_filepath}"
+
+    if probes_filepath and stdin:
+        logger.error("Cannot pass `probes_filepath` and `stdin` at the same time")
+        return
+
     logger.info(logger_prefix + cmd)
 
     return await start_stream_subprocess(
         cmd,
         stdout=logger.info,
+        stdin=stdin,  # In case of exhaustive round or targets-list input
         stderr=logger.warning,
         stopper=stopper,
         prefix=logger_prefix,

@@ -3,9 +3,14 @@ import os
 import signal
 
 
-async def start_stream_subprocess(cmd, stdout, stderr, stopper=None, prefix=""):
+async def start_stream_subprocess(
+    cmd, stdout, stderr, stdin=None, stopper=None, prefix=""
+):
     proc = await asyncio.create_subprocess_shell(
-        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stdin=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
 
     aws = [
@@ -14,8 +19,10 @@ async def start_stream_subprocess(cmd, stdout, stderr, stopper=None, prefix=""):
     ]
     if stopper:
         aws.append(stopper)
+    if stdin:
+        aws.append(write_stream(proc.stdin, handler=stdin))
 
-    done, pending = await asyncio.wait(aws, return_when=asyncio.FIRST_COMPLETED)
+    done, pending = await asyncio.wait(aws, return_when=asyncio.FIRST_EXCEPTION)
     for task in pending:
         task.cancel()
     for task in done:
@@ -32,3 +39,9 @@ async def log_stream(stream, handler, prefix):
             handler(prefix + line.decode("utf-8").rstrip("\n"))
         else:
             break
+
+
+async def write_stream(stream, handler):
+    async for data in handler:
+        await stream.write(data)
+    await stream.close()

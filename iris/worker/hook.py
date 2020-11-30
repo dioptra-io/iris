@@ -220,12 +220,6 @@ async def callback(agents_information, measurement_parameters):
             logger.error(f"{logger_prefix} Impossible to create bucket")
             return
 
-        # TODO Compute the first round probes depending on user input
-        # TODO Excluded prefxes file
-        # -> Full snapshot
-        # -> Targets files
-        # -> Prefixes file
-
         # TODO Parametrize the tool selection
         logger.info(f"{logger_prefix} Publish measurement to agents")
         request = {

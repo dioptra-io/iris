@@ -7,6 +7,7 @@ class AgentSettings(CommonSettings):
     """Agent specific settings."""
 
     AGENT_D_MINER_PROBER_PATH: Path = Path("/app/diamond-miner-prober")
+    AGENT_D_MINER_EXCLUDE_PATH: Path = None
 
     AGENT_UUID: Optional[str] = None
 

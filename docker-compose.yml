@@ -114,10 +114,6 @@ services:
     build:
       context: .
       dockerfile: "./dockerfiles/Dockerfile-agent"
-      args:
-        DEBUG: "on"
-        DIAMOND_MINER_VERSION: "v0.1.6"
-        PFRING: "off"
     environment:
       REDIS_URL: "redis://redis"
       REDIS_HOSTNAME: "redis"
