@@ -74,7 +74,6 @@ class AgentParametersResponse(BaseModel):
     inf_born: int
     sup_born: int
     ips_per_subnet: int
-    pfring: bool
 
 
 class AgentsGetResponse(BaseModel):

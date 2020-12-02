@@ -37,7 +37,7 @@ async def probe(
         + str(result_filepath)
         + " -r "
         + str(parameters["probing_rate"])
-        + " --buffer-sniffer-size="
+        + " --sniffer-buffer-size="
         + str(settings.AGENT_BUFFER_SNIFFER_SIZE)
         + " -p "
         + str(parameters["protocol"])
@@ -48,6 +48,9 @@ async def probe(
         + " --start-time-log-file="
         + str(starttime_filepath)
     )
+
+    if settings.AGENT_DEBUG_MODE:
+        cmd += f" --log-level=trace"
 
     # In case of prefixes-list input
     if prefix_incl_filepath is not None:

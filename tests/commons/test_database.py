@@ -176,7 +176,6 @@ async def test_database_agents(monkeypatch):
         0,
         32,
         6,
-        0,
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
     )
 
@@ -191,7 +190,6 @@ async def test_database_agents(monkeypatch):
         "inf_born": 0,
         "sup_born": 32,
         "ips_per_subnet": 6,
-        "pfring": False,
         "last_used": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
     }
 
@@ -217,7 +215,6 @@ async def test_database_agents(monkeypatch):
         "inf_born": 0,
         "sup_born": 32,
         "ips_per_subnet": 6,
-        "pfring": False,
     }
 
     # Test of `.register() method`

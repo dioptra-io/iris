@@ -38,7 +38,6 @@ def test_parameters_dataclass():
             "inf_born": 0,
             "sup_born": 32,
             "ips_per_subnet": 6,
-            "pfring": False,
         },
         {
             "targets_file_key": None,
@@ -82,5 +81,4 @@ def test_parameters_dataclass():
         "inf_born": 0,
         "sup_born": 32,
         "ips_per_subnet": 6,
-        "pfring": False,
     }

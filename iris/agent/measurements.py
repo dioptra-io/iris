@@ -1,7 +1,7 @@
 """Measurement interface."""
 
 import aiofiles
-import itertools
+import aiofiles.os
 
 from iris.agent import logger
 from iris.agent.prober import probe, stopper
@@ -49,17 +49,20 @@ async def measuremement(redis, request):
     stdin = None
     prefix_incl_filepath = None
     probes_filepath = None
+    probes_filename = None
 
     if parameters["round"] == 1:
         # Round = 1
         if parameters["full"] and parameters["targets_file_key"] is None:
             # Exhaustive snapshot
             logger.info(f"{logger_prefix} Full snapshot required")
-            stdin = itertools.starmap(
-                probe_to_csv,
-                exhaustive_round(
-                    RandomFlowMapper, dst_port=parameters["destination_port"]
-                ),
+            stdin = (
+                probe_to_csv(*x)
+                async for x in exhaustive_round(
+                    RandomFlowMapper(parameters["seed"]),
+                    dst_port=parameters["destination_port"],
+                    n_flows=settings.AGENT_IPS_PER_SUBNET,
+                )
             )
         else:
             # Targets-list or prefixes-list
@@ -80,19 +83,21 @@ async def measuremement(redis, request):
                 # Targets-list file
                 async with aiofiles.open(targets_filepath) as fd:
                     targets_list = await fd.readlines()
-                stdin = itertools.starmap(
-                    probe_to_csv,
-                    targets_round(
+                stdin = (
+                    probe_to_csv(*x)
+                    async for x in targets_round(
                         targets_list, dst_port=parameters["destination_port"]
-                    ),
+                    )
                 )
             elif targets_type == "prefixes-list":
                 # Prefixes-list file
-                stdin = itertools.starmap(
-                    probe_to_csv,
-                    exhaustive_round(
-                        RandomFlowMapper, dst_port=parameters["destination_port"]
-                    ),
+                stdin = (
+                    probe_to_csv(*x)
+                    async for x in exhaustive_round(
+                        RandomFlowMapper(parameters["seed"]),
+                        dst_port=parameters["destination_port"],
+                        n_flows=settings.AGENT_IPS_PER_SUBNET,
+                    )
                 )
                 prefix_incl_filepath = targets_filepath
             else:
@@ -151,7 +156,8 @@ async def measuremement(redis, request):
         logger.info(f"{logger_prefix} Remove local CSV probes file")
         await aiofiles.os.remove(probes_filepath)
 
-    logger.info(f"{logger_prefix} Remove CSV probe file from AWS S3")
-    response = await storage.delete_file_no_check(measurement_uuid, probes_filename)
-    if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
-        logger.error(f"Impossible to remove result file `{probes_filename}`")
+    if probes_filename:
+        logger.info(f"{logger_prefix} Remove CSV probe file from AWS S3")
+        response = await storage.delete_file_no_check(measurement_uuid, probes_filename)
+        if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
+            logger.error(f"Impossible to remove result file `{probes_filename}`")

@@ -28,7 +28,6 @@ class FakeRedis(Redis):
                     "inf_born": 0,
                     "sup_born": 4294967295,
                     "ips_per_subnet": 6,
-                    "pfring": False,
                 },
             }
         ]

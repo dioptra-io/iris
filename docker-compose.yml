@@ -146,6 +146,8 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "/sys:/sys:ro"
       - "/var/lib/docker/:/var/lib/docker:ro"
+      - "/dev/mapper:/dev/mapper:ro"
+    privileged: true
 
   prometheus:
     image: "prom/prometheus:v2.11.1"

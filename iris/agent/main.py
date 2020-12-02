@@ -97,7 +97,6 @@ async def main():
                 "inf_born": settings.AGENT_INF_BORN,
                 "sup_born": settings.AGENT_SUP_BORN,
                 "ips_per_subnet": settings.AGENT_IPS_PER_SUBNET,
-                "pfring": settings.AGENT_PFRING,
             }
         )
 

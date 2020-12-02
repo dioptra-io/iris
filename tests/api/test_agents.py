@@ -19,7 +19,6 @@ def test_get_agents(client):
                         "inf_born": 0,
                         "sup_born": 4294967295,
                         "ips_per_subnet": 6,
-                        "pfring": False,
                     },
                 }
             ]
@@ -66,7 +65,6 @@ def test_get_agent_by_uuid(client):
                 "inf_born": 0,
                 "sup_born": 4294967295,
                 "ips_per_subnet": 6,
-                "pfring": False,
             }
 
     client.app.redis = FakeRedis()
@@ -84,7 +82,6 @@ def test_get_agent_by_uuid(client):
             "inf_born": 0,
             "sup_born": 4294967295,
             "ips_per_subnet": 6,
-            "pfring": False,
         },
     }
 

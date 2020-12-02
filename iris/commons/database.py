@@ -89,9 +89,9 @@ class DatabaseUsers(Database):
             "is_active": bool(row[4]),
             "is_admin": bool(row[5]),
             "is_full_capable": bool(row[6]),
-            "ripe_account": str(row[7]) if row[7] is not None else None,
-            "ripe_key": str(row[8]) if row[8] is not None else None,
-            "register_date": row[9].isoformat(),
+            "register_date": row[7].isoformat(),
+            "ripe_account": str(row[8]) if row[8] is not None else None,
+            "ripe_key": str(row[9]) if row[9] is not None else None,
         }
 
     async def get(self, username):
@@ -278,7 +278,7 @@ class DatabaseAgents(Database):
             "(uuid UUID, user String, version String, hostname String, "
             "ip_address IPv4, probing_rate UInt32, buffer_sniffer_size UInt32, "
             "inf_born UInt32, sup_born UInt32, ips_per_subnet UInt32, "
-            "pfring UInt8, last_used DateTime) "
+            "last_used DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
             settings=settings,
@@ -297,8 +297,7 @@ class DatabaseAgents(Database):
             "inf_born": row[7],
             "sup_born": row[8],
             "ips_per_subnet": row[9],
-            "pfring": bool(row[10]),
-            "last_used": row[11].isoformat(),
+            "last_used": row[10].isoformat(),
         }
 
     async def all(self, user="all"):
@@ -338,7 +337,6 @@ class DatabaseAgents(Database):
                     "inf_born": parameters["inf_born"],
                     "sup_born": parameters["sup_born"],
                     "ips_per_subnet": parameters["ips_per_subnet"],
-                    "pfring": bool(parameters["pfring"]),
                     "last_used": datetime.now(),
                 }
             ],
