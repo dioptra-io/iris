@@ -49,7 +49,6 @@ async def measuremement(redis, request):
     stdin = None
     prefix_incl_filepath = None
     probes_filepath = None
-    probes_filename = None
 
     if parameters["round"] == 1:
         # Round = 1
@@ -152,11 +151,15 @@ async def measuremement(redis, request):
                 f"{logger_prefix} Impossible to remove local measurement directory"
             )
 
-    if not settings.AGENT_DEBUG_MODE:
-        logger.info(f"{logger_prefix} Remove local CSV probes file")
-        await aiofiles.os.remove(probes_filepath)
+    if targets_filepath is not None:
+        logger.info(f"{logger_prefix} Remove local target file")
+        await aiofiles.os.remove(targets_filepath)
 
-    if probes_filename:
+    if probes_filepath is not None:
+        if not settings.AGENT_DEBUG_MODE:
+            logger.info(f"{logger_prefix} Remove local CSV probes file")
+            await aiofiles.os.remove(probes_filepath)
+
         logger.info(f"{logger_prefix} Remove CSV probe file from AWS S3")
         response = await storage.delete_file_no_check(measurement_uuid, probes_filename)
         if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
