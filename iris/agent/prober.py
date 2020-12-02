@@ -50,7 +50,7 @@ async def probe(
     )
 
     if settings.AGENT_DEBUG_MODE:
-        cmd += f" --log-level=trace"
+        cmd += " --log-level=trace"
 
     # In case of prefixes-list input
     if prefix_incl_filepath is not None:
