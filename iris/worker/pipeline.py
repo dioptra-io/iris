@@ -123,7 +123,7 @@ async def diamond_miner_pipeline(
             round_number=round_number,
         ),
         next_round_csv_filepath,
-        RandomFlowMapper(parameters.seed),
+        RandomFlowMapper(parameters.seed, n_array=1000),
         False,
     )
 

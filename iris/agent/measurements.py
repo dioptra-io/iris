@@ -59,7 +59,7 @@ async def measuremement(redis, request):
             stdin = (
                 probe_to_csv(*x)
                 async for x in exhaustive_round(
-                    RandomFlowMapper(parameters["seed"]),
+                    RandomFlowMapper(parameters["seed"], n_array=1000),
                     dst_port=parameters["destination_port"],
                     n_flows=settings.AGENT_IPS_PER_SUBNET,
                 )
@@ -94,7 +94,7 @@ async def measuremement(redis, request):
                 stdin = (
                     probe_to_csv(*x)
                     async for x in exhaustive_round(
-                        RandomFlowMapper(parameters["seed"]),
+                        RandomFlowMapper(parameters["seed"], n_array=1000),
                         dst_port=parameters["destination_port"],
                         n_flows=settings.AGENT_IPS_PER_SUBNET,
                     )
