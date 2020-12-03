@@ -48,6 +48,7 @@ async def measuremement(redis, request):
 
     stdin = None
     prefix_incl_filepath = None
+    targets_filepath = None
     probes_filepath = None
 
     if parameters["round"] == 1:

@@ -16,7 +16,7 @@ async def stopper(logger, redis, measurement_uuid, logger_prefix=""):
         measurement_state = await redis.get_measurement_state(measurement_uuid)
         if measurement_state is None:
             logger.warning(logger_prefix + "Measurement canceled")
-            raise Exception
+            raise Exception("Measurement canceled")
         await asyncio.sleep(settings.WORKER_STOPPER_REFRESH)
 
 
