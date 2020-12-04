@@ -42,3 +42,4 @@ class CommonSettings(BaseSettings):
 
     LOKI_URL: str = "http://loki:3100/loki/api/v1/push"
     LOKI_VERSION: str = "1"
+    LOKI_QUEUE_SIZE: int = 1000

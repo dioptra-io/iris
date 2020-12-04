@@ -27,7 +27,9 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 loki_handler = logging_loki.LokiQueueHandler(
-    Queue(-1), url=settings.LOKI_URL, version=settings.LOKI_VERSION
+    Queue(settings.LOKI_QUEUE_SIZE),
+    url=settings.LOKI_URL,
+    version=settings.LOKI_VERSION,
 )
 loki_handler.setLevel(logging.INFO)
 logger.addHandler(loki_handler)

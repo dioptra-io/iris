@@ -2,8 +2,10 @@ import asyncio
 import os
 import signal
 
+
 class CancelProcessException(Exception):
     pass
+
 
 async def start_stream_subprocess(
     cmd, stdout, stderr, stdin=None, stopper=None, prefix=""
@@ -42,7 +44,9 @@ async def start_stream_subprocess(
         if task.exception():
             exception_occured = True
             if isinstance(task.exception(), (BrokenPipeError, ConnectionResetError)):
-                print(f"{log_prefix} exception: process exited without consuming all the input")
+                print(
+                    f"{log_prefix} exception: process exited before reading all input"
+                )
             elif isinstance(task.exception(), CancelProcessException):
                 print(f"{log_prefix} exception: process cancellation requested")
             else:
