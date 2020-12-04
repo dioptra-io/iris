@@ -29,18 +29,19 @@ async def probe(
     probes_filepath=None,
     stopper=None,
     logger_prefix="",
+    n_packets=None,
 ):
     """Execute measurement with Diamond-Miner."""
     cmd = (
         str(settings.AGENT_D_MINER_PROBER_PATH)
-        + " -o "
+        + " --output-file "
         + str(result_filepath)
-        + " -r "
+        + " --probing-rate "
         + str(parameters["probing_rate"])
+        + " --protocol "
+        + str(parameters["protocol"])
         + " --sniffer-buffer-size="
         + str(settings.AGENT_BUFFER_SNIFFER_SIZE)
-        + " -p "
-        + str(parameters["protocol"])
         + " --filter-min-ttl="
         + str(parameters["min_ttl"])
         + " --filter-max-ttl="
@@ -67,6 +68,9 @@ async def probe(
     if probes_filepath and stdin:
         logger.error("Cannot pass `probes_filepath` and `stdin` at the same time")
         return
+
+    if n_packets:
+        cmd += f" --n-packets={n_packets}"
 
     logger.info(logger_prefix + cmd)
 
