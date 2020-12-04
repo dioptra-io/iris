@@ -4,7 +4,7 @@ import asyncio
 
 from iris.agent import logger
 from iris.agent.settings import AgentSettings
-from iris.commons.subprocess import start_stream_subprocess
+from iris.commons.subprocess import CancelProcessException, start_stream_subprocess
 
 
 settings = AgentSettings()
@@ -16,7 +16,7 @@ async def stopper(logger, redis, measurement_uuid, logger_prefix=""):
         measurement_state = await redis.get_measurement_state(measurement_uuid)
         if measurement_state is None:
             logger.warning(logger_prefix + "Measurement canceled")
-            raise Exception("Measurement canceled")
+            raise CancelProcessException
         await asyncio.sleep(settings.WORKER_STOPPER_REFRESH)
 
 
