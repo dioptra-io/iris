@@ -35,20 +35,20 @@ async def start_stream_subprocess(
     # This will return when either stopper raises an exception, or all the stream
     # handlers have terminated.
     done, pending = await asyncio.wait(aws, return_when=asyncio.FIRST_COMPLETED)
-    exception_occured = False
+    was_cancelled = False
 
     for task in pending:
         task.cancel()
 
     for task in done:
         if task.exception():
-            exception_occured = True
             if isinstance(task.exception(), (BrokenPipeError, ConnectionResetError)):
                 print(
                     f"{log_prefix} exception: process exited before reading all input"
                 )
             elif isinstance(task.exception(), CancelProcessException):
                 print(f"{log_prefix} exception: process cancellation requested")
+                was_cancelled = True
             else:
                 print(f"{log_prefix} exception: {task.exception()}")
 
@@ -61,7 +61,7 @@ async def start_stream_subprocess(
     except Exception as e:
         print(f"{log_prefix} cleanup: unable to terminate the subprocess: {e}")
 
-    return not exception_occured
+    return not was_cancelled
 
 
 async def log_stream(stream, handler, prefix):

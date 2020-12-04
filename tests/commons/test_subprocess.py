@@ -73,7 +73,7 @@ async def test_subprocess():
     res = await start_stream_subprocess(
         "yes | head -n 100", stdout=crash_handler(), stderr=crash_handler()
     )
-    assert res == False
+    assert res == True
 
     # Input handler exception
     res = await start_stream_subprocess(
@@ -82,7 +82,7 @@ async def test_subprocess():
         stderr=count_handler(),
         stdin=arange_crash(100),
     )
-    assert res == False
+    assert res == True
 
     # Cancel exception: check that the subprocess is cancelled when requested.
     stdout = count_handler()
