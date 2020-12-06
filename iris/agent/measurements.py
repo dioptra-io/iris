@@ -50,11 +50,9 @@ async def measuremement(redis, request):
     prefix_incl_filepath = None
     targets_filepath = None
     probes_filepath = None
-    n_packets = 1
 
     if parameters["round"] == 1:
         # Round = 1
-        n_packets = 2
         if parameters["full"] and parameters["targets_file_key"] is None:
             # Exhaustive snapshot
             logger.info(f"{logger_prefix} Full snapshot required")
@@ -129,7 +127,6 @@ async def measuremement(redis, request):
             logger, redis, measurement_uuid, logger_prefix=logger_prefix + " "
         ),
         logger_prefix=logger_prefix + " ",
-        n_packets=n_packets,
     )
 
     if is_not_canceled:
