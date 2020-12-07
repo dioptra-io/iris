@@ -8,7 +8,7 @@ from aiofiles import os as aios
 from diamond_miner_core import (
     compute_next_round,
     MeasurementParameters,
-    ReverseByteOrderFlowMapper,
+    SequentialFlowMapper,
 )
 
 from iris.commons.database import get_session, DatabaseMeasurementResults
@@ -123,7 +123,7 @@ async def diamond_miner_pipeline(
             round_number=round_number,
         ),
         next_round_csv_filepath,
-        ReverseByteOrderFlowMapper(),
+        SequentialFlowMapper(),
         False,
     )
 
