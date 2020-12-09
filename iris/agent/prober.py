@@ -4,7 +4,7 @@ import asyncio
 
 from iris.agent import logger
 from iris.agent.settings import AgentSettings
-from iris.commons.subprocess import start_stream_subprocess
+from iris.commons.subprocess import CancelProcessException, start_stream_subprocess
 
 
 settings = AgentSettings()
@@ -16,7 +16,7 @@ async def stopper(logger, redis, measurement_uuid, logger_prefix=""):
         measurement_state = await redis.get_measurement_state(measurement_uuid)
         if measurement_state is None:
             logger.warning(logger_prefix + "Measurement canceled")
-            raise Exception
+            raise CancelProcessException
         await asyncio.sleep(settings.WORKER_STOPPER_REFRESH)
 
 
@@ -24,58 +24,60 @@ async def probe(
     parameters,
     result_filepath,
     starttime_filepath,
-    csv_filepath=None,
-    target_filepath=None,
-    target_type=None,
+    stdin=None,
+    prefix_incl_filepath=None,
+    probes_filepath=None,
     stopper=None,
     logger_prefix="",
+    n_packets=None,
 ):
     """Execute measurement with Diamond-Miner."""
     cmd = (
         str(settings.AGENT_D_MINER_PROBER_PATH)
-        + " -o "
+        + " --output-file "
         + str(result_filepath)
-        + " -r "
+        + " --probing-rate "
         + str(parameters["probing_rate"])
-        + " --buffer-sniffer-size="
-        + str(settings.AGENT_BUFFER_SNIFFER_SIZE)
-        + " -d "
-        + str(settings.AGENT_IPS_PER_SUBNET)
-        + " -i "
-        + str(settings.AGENT_INF_BORN)
-        + " -s "
-        + str(settings.AGENT_SUP_BORN)
-        + " -p "
+        + " --protocol "
         + str(parameters["protocol"])
-        + " --dport="
-        + str(parameters["destination_port"])
-        + " --min-ttl="
+        + " --sniffer-buffer-size="
+        + str(settings.AGENT_BUFFER_SNIFFER_SIZE)
+        + " --filter-min-ttl="
         + str(parameters["min_ttl"])
-        + " --max-ttl="
+        + " --filter-max-ttl="
         + str(parameters["max_ttl"])
-        + " -E "
-        + str(settings.AGENT_EXCLUSION_FILE_PATH)
-        + " --record-timestamp "
         + " --start-time-log-file="
         + str(starttime_filepath)
     )
-    if parameters["round"] == 1:
-        if target_filepath is not None:
-            if target_type == "targets-list":
-                cmd += " -T -t " + str(target_filepath)
-            elif target_type == "prefixes-list":
-                cmd += " -P --prefix-file=" + str(target_filepath)
-    elif csv_filepath is not None:
-        cmd += " -F -f " + str(csv_filepath)
-    else:
-        logger.error(logger_prefix + "Invalid executable parameters")
+
+    if settings.AGENT_DEBUG_MODE:
+        cmd += " --log-level=trace"
+
+    # In case of prefixes-list input
+    if prefix_incl_filepath is not None:
+        cmd += f" --filter-from-prefix-file-incl={prefix_incl_filepath}"
+
+    # Excluded prefixes
+    if settings.AGENT_D_MINER_EXCLUDE_PATH is not None:
+        cmd += f" --filter-from-prefix-file-excl={settings.AGENT_D_MINER_EXCLUDE_PATH}"
+
+    # Probes file for round > 0
+    if probes_filepath is not None:
+        cmd += f" --input-file={probes_filepath}"
+
+    if probes_filepath and stdin:
+        logger.error("Cannot pass `probes_filepath` and `stdin` at the same time")
         return
+
+    if n_packets:
+        cmd += f" --n-packets={n_packets}"
 
     logger.info(logger_prefix + cmd)
 
     return await start_stream_subprocess(
         cmd,
         stdout=logger.info,
+        stdin=stdin,  # In case of exhaustive round or targets-list input
         stderr=logger.warning,
         stopper=stopper,
         prefix=logger_prefix,

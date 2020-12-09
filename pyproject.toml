@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "iris"
-version = "0.3.0"
+version = "0.3.2"
 description = ""
-authors = ["matthieugouel <matthieu.gouel@gmail.com>"]
+authors = ["matthieugouel <matthieu.gouel@lip6.fr>"]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.8"
 aioboto3 = "^8.0.3"
 aioch = "^0.0.2"
 aiofiles = "^0.5.0"
@@ -20,6 +20,7 @@ starlette_exporter = "^0.4.1"
 uvicorn = "^0.11.5"
 tenacity = "^6.2.0"
 passlib = {extras = ["bcrypt"], version = "^1.7.2"}
+diamond-miner-core = {path = "vendors/diamond-miner-core"}
 
 [tool.poetry.dev-dependencies]
 bumpversion = "^0.6.0"

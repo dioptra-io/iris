@@ -74,7 +74,6 @@ class AgentParametersResponse(BaseModel):
     inf_born: int
     sup_born: int
     ips_per_subnet: int
-    pfring: bool
 
 
 class AgentsGetResponse(BaseModel):
@@ -157,10 +156,11 @@ class MeasurementsAgentsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
     uuid: UUID
-    min_ttl: int = Field(1, title="Minimum TTL", gt=0)
-    max_ttl: int = Field(30, title="Maximum TTL", gt=0)
+    targets_file_key: str = Field(None, title="Target file key")
+    min_ttl: int = Field(None, title="Minimum TTL", gt=0)
+    max_ttl: int = Field(None, title="Maximum TTL", gt=0)
     probing_rate: int = Field(None, title="Probing Rate", gt=0)
-    max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
+    max_round: int = Field(None, title="Maximum round", gt=0, lt=256)
 
 
 class MeasurementsPostBody(BaseModel):

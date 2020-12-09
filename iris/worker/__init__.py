@@ -2,6 +2,8 @@ import dramatiq
 import logging
 import logging_loki
 
+# import ssl
+
 from dramatiq.brokers.redis import RedisBroker
 from iris.worker.settings import WorkerSettings
 from multiprocessing import Queue
@@ -11,6 +13,8 @@ redis_broker = RedisBroker(
     host=settings.REDIS_HOSTNAME,
     port=settings.REDIS_PORT,
     password=settings.REDIS_PASSWORD,
+    # ssl=ssl.SSLContext(),
+    # ssl_cert_reqs=None,
 )
 dramatiq.set_broker(redis_broker)
 
@@ -23,7 +27,9 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 loki_handler = logging_loki.LokiQueueHandler(
-    Queue(-1), url=settings.LOKI_URL, version=settings.LOKI_VERSION
+    Queue(settings.LOKI_QUEUE_SIZE),
+    url=settings.LOKI_URL,
+    version=settings.LOKI_VERSION,
 )
 loki_handler.setLevel(logging.INFO)
 logger.addHandler(loki_handler)

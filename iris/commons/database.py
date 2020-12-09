@@ -5,8 +5,9 @@ import uuid
 
 from aioch import Client
 from datetime import datetime
-from iris.commons.subprocess import start_stream_subprocess
+from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.settings import CommonSettings
+from iris.commons.subprocess import start_stream_subprocess
 
 settings = CommonSettings()
 
@@ -88,9 +89,9 @@ class DatabaseUsers(Database):
             "is_active": bool(row[4]),
             "is_admin": bool(row[5]),
             "is_full_capable": bool(row[6]),
-            "ripe_account": str(row[7]) if row[7] is not None else None,
-            "ripe_key": str(row[8]) if row[8] is not None else None,
-            "register_date": row[9].isoformat(),
+            "register_date": row[7].isoformat(),
+            "ripe_account": str(row[8]) if row[8] is not None else None,
+            "ripe_key": str(row[9]) if row[9] is not None else None,
         }
 
     async def get(self, username):
@@ -277,7 +278,7 @@ class DatabaseAgents(Database):
             "(uuid UUID, user String, version String, hostname String, "
             "ip_address IPv4, probing_rate UInt32, buffer_sniffer_size UInt32, "
             "inf_born UInt32, sup_born UInt32, ips_per_subnet UInt32, "
-            "pfring UInt8, last_used DateTime) "
+            "last_used DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
             settings=settings,
@@ -296,8 +297,7 @@ class DatabaseAgents(Database):
             "inf_born": row[7],
             "sup_born": row[8],
             "ips_per_subnet": row[9],
-            "pfring": bool(row[10]),
-            "last_used": row[11].isoformat(),
+            "last_used": row[10].isoformat(),
         }
 
     async def all(self, user="all"):
@@ -337,7 +337,6 @@ class DatabaseAgents(Database):
                     "inf_born": parameters["inf_born"],
                     "sup_born": parameters["sup_born"],
                     "ips_per_subnet": parameters["ips_per_subnet"],
-                    "pfring": bool(parameters["pfring"]),
                     "last_used": datetime.now(),
                 }
             ],
@@ -370,7 +369,8 @@ class DatabaseAgentsSpecific(Database):
         await self.session.execute(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
-            "probing_rate UInt32, max_round UInt8, finished UInt8, timestamp DateTime) "
+            "probing_rate UInt32, max_round UInt8, targets_file_key Nullable(String), "
+            "seed UInt32, finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (measurement_uuid, agent_uuid)",
             settings=settings,
@@ -384,7 +384,9 @@ class DatabaseAgentsSpecific(Database):
             "max_ttl": row[3],
             "probing_rate": row[4],
             "max_round": int(row[5]),
-            "state": "finished" if bool(row[6]) else "ongoing",
+            "targets_file_key": row[6],
+            "seed": int(row[7]),
+            "state": "finished" if bool(row[8]) else "ongoing",
         }
 
     async def all(self, measurement_uuid):
@@ -414,17 +416,19 @@ class DatabaseAgentsSpecific(Database):
 
         return self.formatter(response)
 
-    async def register(self, measurement_uuid, agent_uuid, parameters):
+    async def register(self, parameters: ParametersDataclass):
         await self.session.execute(
             f"INSERT INTO {self.table_name} VALUES",
             [
                 {
-                    "measurement_uuid": measurement_uuid,
-                    "agent_uuid": agent_uuid,
-                    "min_ttl": parameters["min_ttl"],
-                    "max_ttl": parameters["max_ttl"],
-                    "probing_rate": parameters["probing_rate"],
-                    "max_round": parameters["max_round"],
+                    "measurement_uuid": parameters.measurement_uuid,
+                    "agent_uuid": parameters.agent_uuid,
+                    "min_ttl": parameters.min_ttl,
+                    "max_ttl": parameters.max_ttl,
+                    "probing_rate": parameters.probing_rate,
+                    "max_round": parameters.max_round,
+                    "targets_file_key": parameters.targets_file_key,
+                    "seed": parameters.seed,
                     "finished": int(False),
                     "timestamp": datetime.now(),
                 }

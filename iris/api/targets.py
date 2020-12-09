@@ -49,7 +49,7 @@ async def get_targets(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
         )
     targets = [
-        {**target, **{"type": target.get("metadata", {}).get("type")}}
+        {**target, **{"type": target.get("metadata", {}).get("type", "targets-list")}}
         for target in targets
     ]
     querier = ListPagination(targets, request, offset, limit)
@@ -102,7 +102,7 @@ async def verify_targets_file(targets_file, target_type):
 async def upload_targets_file(target_bucket, targets_file, metadata):
     """Upload targets file asynchronously."""
     await storage.upload_file_no_retry(
-        target_bucket, targets_file.filename, targets_file.file, {"type": metadata},
+        target_bucket, targets_file.filename, targets_file.file, {"type": metadata}
     )
 
 

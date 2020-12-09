@@ -6,8 +6,8 @@ from pathlib import Path
 class AgentSettings(CommonSettings):
     """Agent specific settings."""
 
-    AGENT_D_MINER_PROBER_PATH: Path = Path("/app/prober/build/Heartbeat")
-    AGENT_EXCLUSION_FILE_PATH: Path = Path("/app/prober/resources/excluded_prefixes")
+    AGENT_D_MINER_PROBER_PATH: Path = Path("/usr/bin/diamond-miner-prober")
+    AGENT_D_MINER_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
 
     AGENT_UUID: Optional[str] = None
 
@@ -18,8 +18,6 @@ class AgentSettings(CommonSettings):
     AGENT_SUP_BORN: int = (2 ** 32) - 1
 
     AGENT_IPS_PER_SUBNET: int = 6
-
-    AGENT_PFRING: bool = False
 
     AGENT_TARGETS_DIR_PATH: Path = Path("/app/targets")
     AGENT_RESULTS_DIR_PATH: Path = Path("/app/results")

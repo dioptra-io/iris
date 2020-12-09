@@ -7,10 +7,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.8, 3.9]
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          token: ${{ secrets.PAT_ACCESS }}
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -25,4 +28,4 @@ jobs:
           poetry run flake8 iris --max-line-length=88
       - name: Tests
         run: |
-          poetry run pytest
+          poetry run pytest tests

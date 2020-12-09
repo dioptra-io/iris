@@ -11,6 +11,7 @@ from iris.commons.database import (
     DatabaseAgentsSpecific,
     DatabaseMeasurementResults,
 )
+from iris.worker.hook import ParametersDataclass
 
 
 class FakeConnection:
@@ -175,7 +176,6 @@ async def test_database_agents(monkeypatch):
         0,
         32,
         6,
-        0,
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
     )
 
@@ -190,7 +190,6 @@ async def test_database_agents(monkeypatch):
         "inf_born": 0,
         "sup_born": 32,
         "ips_per_subnet": 6,
-        "pfring": False,
         "last_used": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
     }
 
@@ -216,7 +215,6 @@ async def test_database_agents(monkeypatch):
         "inf_born": 0,
         "sup_born": 32,
         "ips_per_subnet": 6,
-        "pfring": False,
     }
 
     # Test of `.register() method`
@@ -236,11 +234,31 @@ async def test_database_agents_specific(monkeypatch):
 
     measurement_uuid_1 = uuid.uuid4()
     agent_uuid_1 = uuid.uuid4()
-    fake_database_response_1 = (measurement_uuid_1, agent_uuid_1, 2, 30, 1000, 10, 0)
+    fake_database_response_1 = (
+        measurement_uuid_1,
+        agent_uuid_1,
+        2,
+        30,
+        1000,
+        10,
+        "test.txt",
+        10,
+        0,
+    )
 
     measurement_uuid_2 = uuid.uuid4()
     agent_uuid_2 = uuid.uuid4()
-    fake_database_response_2 = (measurement_uuid_2, agent_uuid_2, 2, 30, 1000, 10, 1)
+    fake_database_response_2 = (
+        measurement_uuid_2,
+        agent_uuid_2,
+        2,
+        30,
+        1000,
+        10,
+        None,
+        20,
+        1,
+    )
 
     fake_formated_response_1 = {
         "uuid": str(agent_uuid_1),
@@ -248,6 +266,8 @@ async def test_database_agents_specific(monkeypatch):
         "max_ttl": 30,
         "probing_rate": 1000,
         "max_round": 10,
+        "targets_file_key": "test.txt",
+        "seed": 10,
         "state": "ongoing",
     }
 
@@ -257,6 +277,8 @@ async def test_database_agents_specific(monkeypatch):
         "max_ttl": 30,
         "probing_rate": 1000,
         "max_round": 10,
+        "targets_file_key": None,
+        "seed": 20,
         "state": "finished",
     }
 
@@ -284,21 +306,22 @@ async def test_database_agents_specific(monkeypatch):
         is None
     )
 
-    parameters = {
-        "min_ttl": 2,
-        "max_ttl": 30,
-        "probing_rate": 1000,
-        "max_round": 10,
-    }
+    agent = ParametersDataclass(
+        "agent_uuid",
+        {
+            "measurement_uuid": "test",
+            "targets_file_key": None,
+            "min_ttl": 2,
+            "max_ttl": 30,
+            "max_round": 10,
+        },
+        {"probing_rate": 2000},
+        {},
+    )
 
     # Test of `.register() method`
     session = FakeSession(response=[])
-    assert (
-        await DatabaseAgentsSpecific(session).register(
-            measurement_uuid_1, agent_uuid_1, parameters
-        )
-        is None
-    )
+    assert await DatabaseAgentsSpecific(session).register(agent) is None
 
     # Test of `.stamp_finished() method`
     session = FakeSession(response=None)

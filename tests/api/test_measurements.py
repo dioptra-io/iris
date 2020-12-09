@@ -461,7 +461,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "inf_born": 0,
             "sup_born": 0,
             "ips_per_subnet": 0,
-            "pfring": False,
             "last_used": datetime.now().isoformat(),
         }
 
@@ -555,7 +554,6 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
             "inf_born": 0,
             "sup_born": 0,
             "ips_per_subnet": 0,
-            "pfring": False,
             "last_used": datetime.now().isoformat(),
         }
 
@@ -649,7 +647,6 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
             "inf_born": 0,
             "sup_born": 0,
             "ips_per_subnet": 0,
-            "pfring": False,
             "last_used": datetime.now().isoformat(),
         }
 
