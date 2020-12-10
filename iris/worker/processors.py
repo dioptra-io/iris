@@ -16,7 +16,10 @@ async def pcap_to_csv(
     destination_port,
     logger_prefix="",
 ):
-    """Transform a PCAP & start time log file into CSV using D-Miner Reader."""
+    """
+    [OBSELETE]
+    Transform a PCAP & start time log file into CSV using D-Miner Reader.
+    """
     # Snapshot numbering is currently unused
     snapshot_number = 1
 
@@ -53,7 +56,10 @@ async def next_round_csv(
     measurement_parameters,
     logger_prefix="",
 ):
-    """Compute the next round and output CSV file."""
+    """
+    [OBSELETE]
+    Compute the next round and output CSV file.
+    """
     # Snapshot numbering is currently unused
     snapshot_number = 1
 

@@ -84,39 +84,23 @@ async def watch(redis, parameters):
                 )
                 break
 
-        # Search for result file & start time file
-        result_files = []
-        starttime_files = []
+        # Search for results file
+        results_filename = None
         remote_files = await storage.get_all_files(parameters.measurement_uuid)
         for remote_file in remote_files:
             remote_filename = remote_file["key"]
             if remote_filename.startswith(f"{parameters.agent_uuid}_results"):
-                result_files.append(remote_filename)
-            elif remote_filename.startswith(f"{parameters.agent_uuid}_starttime"):
-                starttime_files.append(remote_filename)
-
-        if len(result_files) == 0 or len(starttime_files) == 0:
-            # The result file & start time file are not present, watch again
+                results_filename = remote_filename
+                break
+        else:
+            # The results file is not present, watch again
             await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
             continue
-
-        result_files.sort(key=lambda x: extract_round_number(x))
-        starttime_files.sort(key=lambda x: extract_round_number(x))
-
-        lowest_round_result_files = extract_round_number(result_files[0])
-        lowest_round_starttime_files = extract_round_number(starttime_files[0])
-
-        if lowest_round_result_files != lowest_round_starttime_files:
-            # The lowest round numbers don't match, watch again
-            await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
-            continue
-
-        result_filename, starttime_filename = result_files[0], starttime_files[0]
 
         # If found, then execute process pipeline
         # TODO Select pipeline depending on the `measurement_tool`
         shuffled_next_round_csv_filename = await diamond_miner_pipeline(
-            parameters, result_filename, starttime_filename,
+            parameters, results_filename
         )
 
         if shuffled_next_round_csv_filename is None:
@@ -127,9 +111,7 @@ async def watch(redis, parameters):
             break
         else:
             logger.info(f"{logger_prefix} Publish next mesurement")
-
             round_number = extract_round_number(shuffled_next_round_csv_filename)
-
             await redis.publish(
                 parameters.agent_uuid,
                 {
