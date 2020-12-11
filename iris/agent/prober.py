@@ -33,7 +33,7 @@ async def probe(
     """Execute measurement with Diamond-Miner."""
     cmd = (
         str(settings.AGENT_D_MINER_PROBER_PATH)
-        + " --output-file "
+        + " --output-file-csv "
         + str(results_filepath)
         + " --probing-rate "
         + str(parameters["probing_rate"])
