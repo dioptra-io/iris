@@ -1,10 +1,11 @@
 """Interfaces with database."""
 
-import aiofiles
+import asyncio
 import ipaddress
 import uuid
 
 from aioch import Client
+from clickhouse_driver import Client as SyncClient
 from datetime import datetime
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.settings import CommonSettings
@@ -485,7 +486,28 @@ class DatabaseMeasurementResults(Database):
             "reply_ttl": row[12],
             "reply_size": row[13],
             "round": row[14],
-            # "snapshot": row[14], # NOTE Not curently used
+            "snapshot": row[15],  # Not curently used
+        }
+
+    def csv_formatter(self, row):
+        """Database csv -> row formater."""
+        return {
+            "src_ip": int(row[0]),
+            "dst_prefix": int(row[1]),
+            "dst_ip": int(row[2]),
+            "reply_ip": int(row[3]),
+            "proto": int(row[4]),
+            "src_port": int(row[5]),
+            "dst_port": int(row[6]),
+            "ttl": int(row[7]),
+            "ttl_from_udp_length": int(row[8]),  # implemented only in UDP
+            "type": int(row[9]),
+            "code": int(row[10]),
+            "rtt": float(row[11]),
+            "reply_ttl": int(row[12]),
+            "reply_size": int(row[13]),
+            "round": int(row[14]),
+            "snapshot": int(row[15]),  # Not curently used
         }
 
     async def all_count(self):
@@ -510,11 +532,29 @@ class DatabaseMeasurementResults(Database):
         )
         return bool(response[0][0])
 
+    def _sync_insert_csv(self, csv_filepath, round_number):
+        snapshot_number = 1  # NOTE Not currently used
+        with open(csv_filepath) as fd:
+            gen = (
+                self.csv_formatter(
+                    line.strip().split(",") + [round_number, snapshot_number]
+                )
+                for line in fd
+            )
+            SyncClient(settings.DATABASE_HOST).execute(
+                f"INSERT INTO {self.table_name} VALUES",
+                gen,
+                settings={
+                    "max_block_size": settings.DATABASE_MAX_BLOCK_SIZE,
+                    "connect_timeout": settings.DATABASE_CONNECT_TIMEOUT,
+                    "send_timeout": settings.DATABASE_SEND_RECEIVE_TIMEOUT,
+                    "receive_timeout": settings.DATABASE_SEND_RECEIVE_TIMEOUT,
+                },
+            )
+
     async def insert_csv(self, csv_filepath, round_number):
         """Insert CSV file into table."""
-        snapshot_number = 1  # NOTE Not currently used
-        async with aiofiles.open(csv_filepath) as fd:
-            gen = (
-                line.split(",") + [round_number, snapshot_number] async for line in fd
-            )
-            self.session.execute(f"INSERT INTO {self.table_name} VALUES", gen)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None, self._sync_insert_csv, csv_filepath, round_number,
+        )
