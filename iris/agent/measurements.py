@@ -8,7 +8,7 @@ from iris.agent.prober import probe, stopper
 from iris.agent.settings import AgentSettings
 from iris.commons.storage import Storage
 
-from diamond_miner_core import SequentialFlowMapper
+from diamond_miner_core import BetterFlowMapper
 from diamond_miner_core.rounds import exhaustive_round, targets_round, probe_to_csv
 
 
@@ -57,7 +57,7 @@ async def measuremement(redis, request):
             stdin = (
                 probe_to_csv(*x)
                 async for x in exhaustive_round(
-                    SequentialFlowMapper(),
+                    BetterFlowMapper(),
                     dst_port=parameters["destination_port"],
                     n_flows=settings.AGENT_IPS_PER_SUBNET,
                 )
@@ -92,7 +92,7 @@ async def measuremement(redis, request):
                 stdin = (
                     probe_to_csv(*x)
                     async for x in exhaustive_round(
-                        SequentialFlowMapper(),
+                        BetterFlowMapper(),
                         dst_port=parameters["destination_port"],
                         n_flows=settings.AGENT_IPS_PER_SUBNET,
                     )
