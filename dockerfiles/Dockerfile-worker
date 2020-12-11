@@ -10,77 +10,11 @@ RUN apt -y install --reinstall ca-certificates
 RUN apt-get -y clean all
 RUN apt-get update
 
-# Libcperm
-RUN git clone https://github.com/lancealt/libcperm.git
-RUN cd libcperm && \
-    ./autogen.sh && \
-    ./configure && \
-    make -j8 && \
-    make install
-
-# Libtins
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libpcap-dev libssl-dev
-RUN git clone https://github.com/mfontanini/libtins.git
-RUN cd libtins && \
-    mkdir build && \
-    cd build && \
-    cmake .. -DLIBTINS_ENABLE_CXX11=1 && \
-    make -j8 && \
-    make install
-RUN ldconfig
-
 # Terashuf
 RUN git clone https://github.com/alexandres/terashuf.git
 RUN cd terashuf && make -j8 && cd ..
 ENV TMPDIR /app/reader/resources/
 ENV MEMORY 24
-
-# Clickhouse
-WORKDIR /root
-RUN git clone https://github.com/ClickHouse/clickhouse-cpp.git
-RUN cd clickhouse-cpp && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make -j8
-ARG repository="deb http://repo.yandex.ru/clickhouse/deb/stable/ main/"
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends \
-        apt-transport-https \
-        dirmngr \
-        gnupg \
-    && mkdir -p /etc/apt/sources.list.d \
-    && apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 \
-    && echo $repository > /etc/apt/sources.list.d/clickhouse.list \
-    && apt-get update \
-    && env DEBIAN_FRONTEND=noninteractive \
-        apt-get install --allow-unauthenticated --yes --no-install-recommends \
-            clickhouse-client \
-            clickhouse-common-static \
-            locales \
-            tzdata \
-    && rm -rf /var/lib/apt/lists/* /var/cache/debconf \
-    && apt-get clean
-
-WORKDIR /app
-
-# Diamond-Miner Reader
-ARG DEBUG=on
-ARG DIAMOND_MINER_VERSION=v0.1.6
-RUN git clone -b $DIAMOND_MINER_VERSION --single-branch --depth 1 https://github.com/dioptra-io/diamond-miner-cpp.git reader
-RUN mkdir -p reader/resources
-COPY statics/excluded_prefixes /app/reader/resources
-WORKDIR /app/reader
-RUN if [ "$DEBUG" = "on" ] ; then mkdir build && \
-    cd build && \
-    cmake .. -DCENTRAL=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
-    make -j8 ; \
-    else mkdir build && \
-    cd build && \
-    cmake .. -DCENTRAL=1 && \
-    make -j8 ; fi
-
-WORKDIR /app
 
 RUN mkdir vendors
 COPY vendors/diamond-miner-core vendors/diamond-miner-core

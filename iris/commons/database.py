@@ -1,5 +1,6 @@
 """Interfaces with database."""
 
+import aiofiles
 import ipaddress
 import uuid
 
@@ -7,7 +8,6 @@ from aioch import Client
 from datetime import datetime
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.settings import CommonSettings
-from iris.commons.subprocess import start_stream_subprocess
 
 settings = CommonSettings()
 
@@ -26,30 +26,18 @@ class Database(object):
     def __init__(self, session, logger=None):
         self.session = session
         self.logger = logger
-        self.settings = {
-            "max_block_size": settings.DATABASE_MAX_BLOCK_SIZE,
-            "connect_timeout": settings.DATABASE_CONNECT_TIMEOUT,
-            "send_timeout": settings.DATABASE_SEND_RECEIVE_TIMEOUT,
-            "receive_timeout": settings.DATABASE_SEND_RECEIVE_TIMEOUT,
-        }
 
     async def create_datebase(self, database_name=settings.DATABASE_NAME):
         """Create a database if not exists."""
-        await self.session.execute(
-            f"CREATE DATABASE IF NOT EXISTS {database_name}", settings=settings
-        )
+        await self.session.execute(f"CREATE DATABASE IF NOT EXISTS {database_name}")
 
     async def drop_table(self, table_name):
         """Drop a table."""
-        await self.session.execute(
-            f"DROP TABLE IF EXISTS {table_name}", settings=settings
-        )
+        await self.session.execute(f"DROP TABLE IF EXISTS {table_name}")
 
     async def clean_table(self, table_name):
         """Clean a table."""
-        await self.session.execute(
-            f"ALTER TABLE {table_name} DELETE WHERE 1=1", settings=settings
-        )
+        await self.session.execute(f"ALTER TABLE {table_name} DELETE WHERE 1=1")
 
     async def disconnect(self):
         """Disconnect agent."""
@@ -76,7 +64,6 @@ class DatabaseUsers(Database):
             "ripe_account Nullable(String), ripe_key Nullable(String)) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
-            settings=settings,
         )
 
     def formatter(self, row):
@@ -99,7 +86,6 @@ class DatabaseUsers(Database):
         responses = await self.session.execute(
             f"SELECT * FROM {self.table_name} WHERE username=%(username)s",
             {"username": username},
-            settings=settings,
         )
         try:
             response = responses[0]
@@ -126,7 +112,6 @@ class DatabaseUsers(Database):
                     "ripe_key": None,
                 }
             ],
-            settings=settings,
         )
 
     async def register_ripe(self, username, ripe_account, ripe_key):
@@ -172,7 +157,6 @@ class DatabaseMeasurements(Database):
             "end_time Nullable(DateTime)) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
-            settings=settings,
         )
 
     def formatter(self, row):
@@ -196,7 +180,6 @@ class DatabaseMeasurements(Database):
         response = await self.session.execute(
             f"SELECT Count() FROM {self.table_name} WHERE user=%(user)s",
             {"user": user},
-            settings=settings,
         )
         return response[0][0]
 
@@ -208,7 +191,6 @@ class DatabaseMeasurements(Database):
             "ORDER BY start_time DESC "
             "LIMIT %(offset)s,%(limit)s",
             {"user": user, "offset": offset, "limit": limit},
-            settings=settings,
         )
         return [self.formatter(response) for response in responses]
 
@@ -217,7 +199,6 @@ class DatabaseMeasurements(Database):
         responses = await self.session.execute(
             f"SELECT * FROM {self.table_name} WHERE user=%(user)s AND uuid=%(uuid)s",
             {"user": user, "uuid": uuid},
-            settings=settings,
         )
         try:
             response = responses[0]
@@ -247,7 +228,6 @@ class DatabaseMeasurements(Database):
                     "end_time": None,
                 }
             ],
-            settings=settings,
         )
 
     async def stamp_end_time(self, user, uuid):
@@ -257,7 +237,6 @@ class DatabaseMeasurements(Database):
             "UPDATE end_time=toDateTime(%(end_time)s) "
             "WHERE user=%(user)s AND uuid=%(uuid)s",
             {"end_time": datetime.now(), "user": user, "uuid": uuid},
-            settings=settings,
         )
 
 
@@ -281,7 +260,6 @@ class DatabaseAgents(Database):
             "last_used DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
-            settings=settings,
         )
 
     def formatter(self, row):
@@ -303,9 +281,7 @@ class DatabaseAgents(Database):
     async def all(self, user="all"):
         """Get all measurements uuid for a given user."""
         responses = await self.session.execute(
-            f"SELECT uuid FROM {self.table_name} WHERE user=%(user)s",
-            {"user": user},
-            settings=settings,
+            f"SELECT uuid FROM {self.table_name} WHERE user=%(user)s", {"user": user},
         )
         return [str(response[0]) for response in responses]
 
@@ -313,7 +289,6 @@ class DatabaseAgents(Database):
         responses = await self.session.execute(
             f"SELECT * FROM {self.table_name} WHERE user=%(user)s AND uuid=%(uuid)s",
             {"user": user, "uuid": uuid},
-            settings=settings,
         )
         try:
             response = responses[0]
@@ -340,7 +315,6 @@ class DatabaseAgents(Database):
                     "last_used": datetime.now(),
                 }
             ],
-            settings=settings,
         )
 
     async def stamp_last_used(self, uuid, user="all"):
@@ -350,7 +324,6 @@ class DatabaseAgents(Database):
             "UPDATE last_used=toDateTime(%(last_used)s) "
             "WHERE user=%(user)s AND uuid=%(uuid)s",
             {"last_used": datetime.now(), "user": user, "uuid": uuid},
-            settings=settings,
         )
 
 
@@ -373,7 +346,6 @@ class DatabaseAgentsSpecific(Database):
             "seed UInt32, finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (measurement_uuid, agent_uuid)",
-            settings=settings,
         )
 
     def formatter(self, row):
@@ -394,7 +366,6 @@ class DatabaseAgentsSpecific(Database):
         responses = await self.session.execute(
             f"SELECT * FROM {self.table_name} WHERE measurement_uuid=%(uuid)s",
             {"uuid": measurement_uuid},
-            settings=settings,
         )
 
         return [self.formatter(response) for response in responses]
@@ -406,7 +377,6 @@ class DatabaseAgentsSpecific(Database):
             "WHERE measurement_uuid=%(measurement_uuid)s "
             "AND agent_uuid=%(agent_uuid)s",
             {"measurement_uuid": measurement_uuid, "agent_uuid": agent_uuid},
-            settings=settings,
         )
 
         try:
@@ -433,7 +403,6 @@ class DatabaseAgentsSpecific(Database):
                     "timestamp": datetime.now(),
                 }
             ],
-            settings=settings,
         )
 
     async def stamp_finished(self, measurement_uuid, agent_uuid):
@@ -447,7 +416,6 @@ class DatabaseAgentsSpecific(Database):
                 "measurement_uuid": measurement_uuid,
                 "agent_uuid": agent_uuid,
             },
-            settings=settings,
         )
 
 
@@ -497,7 +465,6 @@ class DatabaseMeasurementResults(Database):
             "code UInt8, rtt Float64, reply_ttl UInt8, "
             "reply_size UInt16, round UInt32, snapshot UInt16) ENGINE=MergeTree() "
             "ORDER BY (src_ip, dst_prefix, dst_ip, ttl, src_port, dst_port, snapshot)",
-            settings=settings,
         )
 
     def formatter(self, row):
@@ -518,7 +485,7 @@ class DatabaseMeasurementResults(Database):
             "reply_ttl": row[12],
             "reply_size": row[13],
             "round": row[14],
-            # "snapshot": row[14], # Not curently used
+            # "snapshot": row[14], # NOTE Not curently used
         }
 
     async def all_count(self):
@@ -533,7 +500,6 @@ class DatabaseMeasurementResults(Database):
         response = await self.session.execute(
             f"SELECT * FROM {self.table_name} LIMIT %(offset)s,%(limit)s",
             {"offset": offset, "limit": limit},
-            settings=settings,
         )
         return [self.formatter(row) for row in response]
 
@@ -544,20 +510,11 @@ class DatabaseMeasurementResults(Database):
         )
         return bool(response[0][0])
 
-    async def insert_csv(self, csv_filepath):
+    async def insert_csv(self, csv_filepath, round_number):
         """Insert CSV file into table."""
-        # We could avoid using clickhouse-client for that,
-        # but since we have it for the Reader, why not, at the moment.
-        cmd = (
-            "cat "
-            + str(csv_filepath)
-            + " | clickhouse-client --max_insert_block_size=100000 --host="
-            + self.host
-            + " --query='INSERT INTO "
-            + str(self.table_name)
-            + " FORMAT CSV'"
-        )
-
-        await start_stream_subprocess(
-            cmd, stdout=self.logger.info, stderr=self.logger.error
-        )
+        snapshot_number = 1  # NOTE Not currently used
+        async with aiofiles.open(csv_filepath) as fd:
+            gen = (
+                line.split(",") + [round_number, snapshot_number] async for line in fd
+            )
+            self.session.execute(f"INSERT INTO {self.table_name} VALUES", gen)

@@ -36,17 +36,14 @@ async def diamond_miner_pipeline(parameters, result_filename):
     logger.info(f"{logger_prefix} New files detected")
 
     round_number = extract_round_number(result_filename)
-
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
 
     logger.info(f"{logger_prefix} Round {round_number}")
-    logger.info(f"{logger_prefix} Download results file file")
+    logger.info(f"{logger_prefix} Download results file")
     results_filepath = str(measurement_results_path / result_filename)
     await storage.download_file(measurement_uuid, result_filename, results_filepath)
 
-    logger.info(
-        f"{logger_prefix} Delete results file & start time log file from AWS S3"
-    )
+    logger.info(f"{logger_prefix} Delete results file from AWS S3")
     response = await storage.delete_file_no_check(measurement_uuid, result_filename)
     if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
         logger.error(f"Impossible to remove result file `{result_filename}`")
@@ -63,23 +60,35 @@ async def diamond_miner_pipeline(parameters, result_filename):
     await database.create_table(drop=False)
 
     logger.info(f"{logger_prefix} Insert CSV file into database")
-    await database.insert_csv(results_filepath)
+    await database.insert_csv(results_filepath, round_number=round_number)
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local CSV file")
         await aios.remove(results_filepath)
+
+    # If the targets_file_key is `targets-list`, then the max round is 1
+    if parameters.targets_file_key is not None:
+        targets_info = await storage.get_file(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + parameters.username,
+            parameters.targets_file_key,
+        )
+        targets_type = targets_info.get("metadata", {}).get("type", "targets-list")
+        if targets_type == "targets-list":
+            logger.info(
+                f"{logger_prefix} Maximum round reached for `targets-list`. Stopping."
+            )
+            return None
 
     next_round_number = round_number + 1
     next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"
     next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
 
     if next_round_number > parameters.max_round:
-        logger.warning(f"{logger_prefix} Maximum round reached. Stopping.")
+        logger.info(f"{logger_prefix} Maximum round reached. Stopping.")
         return None
 
     logger.info(f"{logger_prefix} Compute the next round CSV probe file")
-    # TODO MRe-write the lib in an asynchonous way
-    # TODO Excluded prefixes file
+    # TODO Rewrite the lib in an asynchonous way
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(
         None,
@@ -96,7 +105,7 @@ async def diamond_miner_pipeline(parameters, result_filename):
         ),
         next_round_csv_filepath,
         SequentialFlowMapper(),
-        False,
+        False,  # No max-ttl exploration feature
     )
 
     shuffled_next_round_csv_filename = (

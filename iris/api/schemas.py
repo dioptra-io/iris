@@ -255,7 +255,7 @@ class PacketResponse(BaseModel):
     reply_ttl: int
     reply_size: int
     round: int
-    # snapshot: int # Not curently used
+    # snapshot: int # NOTE Not curently used
 
 
 class MeasurementsResultsResponse(BaseModel):
