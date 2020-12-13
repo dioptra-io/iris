@@ -69,7 +69,7 @@ async def diamond_miner_pipeline(parameters, result_filename):
     # If the targets_file_key is `targets-list`, then the max round is 1
     if parameters.targets_file_key is not None:
         targets_info = await storage.get_file(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + parameters.username,
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + parameters.user,
             parameters.targets_file_key,
         )
         targets_type = targets_info.get("metadata", {}).get("type", "targets-list")

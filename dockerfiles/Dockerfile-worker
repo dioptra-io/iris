@@ -1,30 +1,38 @@
+FROM ubuntu:20.04 AS builder
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y -q --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/alexandres/terashuf.git /tmp/terashuf \
+    && cd /tmp/terashuf \
+    && make -j8
+
 FROM python:3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
-WORKDIR /app
-
-# Compilation tools
-RUN apt-get update
-RUN apt-get -y install gnupg gcc g++ cmake libboost-all-dev git autoconf automake build-essential
-RUN apt -y install --reinstall ca-certificates
-RUN apt-get -y clean all
-RUN apt-get update
-
-# Terashuf
-RUN git clone https://github.com/alexandres/terashuf.git
-RUN cd terashuf && make -j8 && cd ..
 ENV TMPDIR /app/reader/resources/
 ENV MEMORY 24
+
+WORKDIR /app
+COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf
 
 RUN mkdir vendors
 COPY vendors/diamond-miner-core vendors/diamond-miner-core
 
-RUN pip install --upgrade pip
-RUN pip install poetry uvicorn
+RUN pip install --upgrade pip \
+    && pip install poetry uvicorn \
+    && rm -rf /root/.cache/*
+
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
-RUN poetry install --no-root --no-dev
+RUN poetry install --no-root --no-dev \
+    && rm -rf /root/.cache/*
 
 COPY iris iris
 
