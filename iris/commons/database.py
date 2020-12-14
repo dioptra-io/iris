@@ -1,14 +1,14 @@
 """Interfaces with database."""
 
-import asyncio
 import ipaddress
 import uuid
 
 from aioch import Client
-from clickhouse_driver import Client as SyncClient
 from datetime import datetime
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.settings import CommonSettings
+from iris.commons.subprocess import start_stream_subprocess
+
 
 settings = CommonSettings()
 
@@ -532,29 +532,20 @@ class DatabaseMeasurementResults(Database):
         )
         return bool(response[0][0])
 
-    def _sync_insert_csv(self, csv_filepath, round_number):
-        snapshot_number = 1  # NOTE Not currently used
-        with open(csv_filepath) as fd:
-            gen = (
-                self.csv_formatter(
-                    line.strip().split(",") + [round_number, snapshot_number]
-                )
-                for line in fd
-            )
-            SyncClient(settings.DATABASE_HOST).execute(
-                f"INSERT INTO {self.table_name} VALUES",
-                gen,
-                settings={
-                    "max_block_size": settings.DATABASE_MAX_BLOCK_SIZE,
-                    "connect_timeout": settings.DATABASE_CONNECT_TIMEOUT,
-                    "send_timeout": settings.DATABASE_SEND_RECEIVE_TIMEOUT,
-                    "receive_timeout": settings.DATABASE_SEND_RECEIVE_TIMEOUT,
-                },
-            )
-
-    async def insert_csv(self, csv_filepath, round_number):
+    async def insert_csv(self, csv_filepath):
         """Insert CSV file into table."""
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None, self._sync_insert_csv, csv_filepath, round_number,
+        # We could avoid using clickhouse-client for that,
+        # but since we have it for the Reader, why not, at the moment.
+        cmd = (
+            "cat "
+            + str(csv_filepath)
+            + " | clickhouse-client --max_insert_block_size=100000 --host="
+            + self.host
+            + " --query='INSERT INTO "
+            + str(self.table_name)
+            + " FORMAT CSV'"
+        )
+
+        await start_stream_subprocess(
+            cmd, stdout=self.logger.info, stderr=self.logger.error
         )

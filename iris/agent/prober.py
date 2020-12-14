@@ -45,6 +45,8 @@ async def probe(
         + str(parameters["min_ttl"])
         + " --filter-max-ttl="
         + str(parameters["max_ttl"])
+        + " --meta-round="
+        + str(parameters["round"])
     )
 
     if settings.AGENT_DEBUG_MODE:

@@ -60,7 +60,7 @@ async def diamond_miner_pipeline(parameters, result_filename):
     await database.create_table(drop=False)
 
     logger.info(f"{logger_prefix} Insert CSV file into database")
-    await database.insert_csv(results_filepath, round_number=round_number)
+    await database.insert_csv(results_filepath)
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local CSV file")
