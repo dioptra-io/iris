@@ -15,8 +15,22 @@ RUN git clone https://github.com/alexandres/terashuf.git /tmp/terashuf \
 FROM python:3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
+ENV DEBIAN_FRONTEND=noninteractive
 ENV TMPDIR /app/reader/resources/
 ENV MEMORY 24
+
+RUN apt-get update \
+    && apt-get install -y -q --no-install-recommends \
+        apt-transport-https ca-certificates dirmngr \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
+    && echo "deb https://repo.clickhouse.tech/deb/stable/ main/" > \
+        /etc/apt/sources.list.d/clickhouse.list \
+    && apt-get update \
+    && apt-get install -y -q --no-install-recommends \
+        clickhouse-client \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf
