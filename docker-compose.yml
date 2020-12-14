@@ -183,3 +183,8 @@ services:
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     volumes:
       - "./volumes/grafana:/var/lib/grafana"
+
+  node-exporter:
+    image: "prom/node-exporter"
+    labels:
+      - "traefik.enable=false"
