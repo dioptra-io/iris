@@ -22,8 +22,7 @@ async def stopper(logger, redis, measurement_uuid, logger_prefix=""):
 
 async def probe(
     parameters,
-    result_filepath,
-    starttime_filepath,
+    results_filepath,
     stdin=None,
     prefix_incl_filepath=None,
     probes_filepath=None,
@@ -34,8 +33,8 @@ async def probe(
     """Execute measurement with Diamond-Miner."""
     cmd = (
         str(settings.AGENT_D_MINER_PROBER_PATH)
-        + " --output-file "
-        + str(result_filepath)
+        + " --output-file-csv "
+        + str(results_filepath)
         + " --probing-rate "
         + str(parameters["probing_rate"])
         + " --protocol "
@@ -46,8 +45,8 @@ async def probe(
         + str(parameters["min_ttl"])
         + " --filter-max-ttl="
         + str(parameters["max_ttl"])
-        + " --start-time-log-file="
-        + str(starttime_filepath)
+        + " --meta-round="
+        + str(parameters["round"])
     )
 
     if settings.AGENT_DEBUG_MODE:

@@ -381,6 +381,7 @@ async def test_database_measurement_results(monkeypatch):
         56,
         46,
         1,
+        1,
     ]
 
     fake_formated_response_1 = {
@@ -399,6 +400,7 @@ async def test_database_measurement_results(monkeypatch):
         "reply_ttl": 56,
         "reply_size": 46,
         "round": 1,
+        "snapshot": 1,
     }
 
     # Test of `.all() method`

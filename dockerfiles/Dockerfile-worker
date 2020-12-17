@@ -1,96 +1,52 @@
+FROM ubuntu:20.04 AS builder
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y -q --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/alexandres/terashuf.git /tmp/terashuf \
+    && cd /tmp/terashuf \
+    && make -j8
+
 FROM python:3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
-WORKDIR /app
-
-# Compilation tools
-RUN apt-get update
-RUN apt-get -y install gnupg gcc g++ cmake libboost-all-dev git autoconf automake build-essential
-RUN apt -y install --reinstall ca-certificates
-RUN apt-get -y clean all
-RUN apt-get update
-
-# Libcperm
-RUN git clone https://github.com/lancealt/libcperm.git
-RUN cd libcperm && \
-    ./autogen.sh && \
-    ./configure && \
-    make -j8 && \
-    make install
-
-# Libtins
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libpcap-dev libssl-dev
-RUN git clone https://github.com/mfontanini/libtins.git
-RUN cd libtins && \
-    mkdir build && \
-    cd build && \
-    cmake .. -DLIBTINS_ENABLE_CXX11=1 && \
-    make -j8 && \
-    make install
-RUN ldconfig
-
-# Terashuf
-RUN git clone https://github.com/alexandres/terashuf.git
-RUN cd terashuf && make -j8 && cd ..
+ENV DEBIAN_FRONTEND=noninteractive
 ENV TMPDIR /app/reader/resources/
 ENV MEMORY 24
 
-# Clickhouse
-WORKDIR /root
-RUN git clone https://github.com/ClickHouse/clickhouse-cpp.git
-RUN cd clickhouse-cpp && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make -j8
-ARG repository="deb http://repo.yandex.ru/clickhouse/deb/stable/ main/"
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends \
-        apt-transport-https \
-        dirmngr \
-        gnupg \
-    && mkdir -p /etc/apt/sources.list.d \
-    && apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 \
-    && echo $repository > /etc/apt/sources.list.d/clickhouse.list \
+    && apt-get install -y -q --no-install-recommends \
+        apt-transport-https ca-certificates dirmngr \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
+    && echo "deb https://repo.clickhouse.tech/deb/stable/ main/" > \
+        /etc/apt/sources.list.d/clickhouse.list \
     && apt-get update \
-    && env DEBIAN_FRONTEND=noninteractive \
-        apt-get install --allow-unauthenticated --yes --no-install-recommends \
-            clickhouse-client \
-            clickhouse-common-static \
-            locales \
-            tzdata \
-    && rm -rf /var/lib/apt/lists/* /var/cache/debconf \
-    && apt-get clean
+    && apt-get install -y -q --no-install-recommends \
+        clickhouse-client \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-# Diamond-Miner Reader
-ARG DEBUG=on
-ARG DIAMOND_MINER_VERSION=v0.1.6
-RUN git clone -b $DIAMOND_MINER_VERSION --single-branch --depth 1 https://github.com/dioptra-io/diamond-miner-cpp.git reader
-RUN mkdir -p reader/resources
-COPY statics/excluded_prefixes /app/reader/resources
-WORKDIR /app/reader
-RUN if [ "$DEBUG" = "on" ] ; then mkdir build && \
-    cd build && \
-    cmake .. -DCENTRAL=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
-    make -j8 ; \
-    else mkdir build && \
-    cd build && \
-    cmake .. -DCENTRAL=1 && \
-    make -j8 ; fi
-
-WORKDIR /app
+COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf
 
 RUN mkdir vendors
 COPY vendors/diamond-miner-core vendors/diamond-miner-core
 
-RUN pip install --upgrade pip
-RUN pip install poetry uvicorn
+RUN pip install --upgrade pip \
+    && pip install poetry uvicorn \
+    && rm -rf /root/.cache/*
+
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
-RUN poetry install --no-root --no-dev
+RUN poetry install --no-root --no-dev \
+    && rm -rf /root/.cache/*
 
 COPY iris iris
 

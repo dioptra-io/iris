@@ -8,7 +8,7 @@ from iris.agent.prober import probe, stopper
 from iris.agent.settings import AgentSettings
 from iris.commons.storage import Storage
 
-from diamond_miner_core import SequentialFlowMapper
+from diamond_miner_core import BetterFlowMapper
 from diamond_miner_core.rounds import exhaustive_round, targets_round, probe_to_csv
 
 
@@ -42,9 +42,7 @@ async def measuremement(redis, request):
         logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
     result_filename = f"{agent_uuid}_results_{parameters['round']}.pcap"
-    result_filepath = str(measurement_results_path / result_filename)
-    starttime_filename = f"{agent_uuid}_starttime_{parameters['round']}.log"
-    starttime_filepath = str(measurement_results_path / starttime_filename)
+    results_filepath = str(measurement_results_path / result_filename)
 
     stdin = None
     prefix_incl_filepath = None
@@ -59,7 +57,7 @@ async def measuremement(redis, request):
             stdin = (
                 probe_to_csv(*x)
                 async for x in exhaustive_round(
-                    SequentialFlowMapper(),
+                    BetterFlowMapper(),
                     dst_port=parameters["destination_port"],
                     n_flows=settings.AGENT_IPS_PER_SUBNET,
                 )
@@ -94,7 +92,7 @@ async def measuremement(redis, request):
                 stdin = (
                     probe_to_csv(*x)
                     async for x in exhaustive_round(
-                        SequentialFlowMapper(),
+                        BetterFlowMapper(),
                         dst_port=parameters["destination_port"],
                         n_flows=settings.AGENT_IPS_PER_SUBNET,
                     )
@@ -118,8 +116,7 @@ async def measuremement(redis, request):
     logger.info(f"{logger_prefix} Probing Rate : {parameters['probing_rate']}")
     is_not_canceled = await probe(
         parameters,
-        result_filepath,
-        starttime_filepath,
+        results_filepath,
         stdin=stdin,
         prefix_incl_filepath=prefix_incl_filepath,
         probes_filepath=probes_filepath,
@@ -130,18 +127,12 @@ async def measuremement(redis, request):
     )
 
     if is_not_canceled:
-        logger.info(
-            f"{logger_prefix} Upload result file & start time log file into AWS S3"
-        )
-        await storage.upload_file(measurement_uuid, result_filename, result_filepath)
-        await storage.upload_file(
-            measurement_uuid, starttime_filename, starttime_filepath
-        )
+        logger.info(f"{logger_prefix} Upload results file into AWS S3")
+        await storage.upload_file(measurement_uuid, result_filename, results_filepath)
 
     if not settings.AGENT_DEBUG_MODE:
-        logger.info(f"{logger_prefix} Remove local result file & start time log file")
-        await aiofiles.os.remove(result_filepath)
-        await aiofiles.os.remove(starttime_filepath)
+        logger.info(f"{logger_prefix} Remove local result file")
+        await aiofiles.os.remove(results_filepath)
 
     if not settings.AGENT_DEBUG_MODE:
         logger.info(f"{logger_prefix} Removing local measurement directory")

@@ -13,3 +13,10 @@ scrape_configs:
       - targets: ["cadvisor:8080"]
         labels:
           group: "development"
+
+  - job_name: "node"
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          group: "development"

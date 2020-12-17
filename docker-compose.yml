@@ -88,9 +88,6 @@ services:
     build:
       context: .
       dockerfile: "./dockerfiles/Dockerfile-worker"
-      args:
-        DEBUG: "on"
-        DIAMOND_MINER_VERSION: "v0.1.6"
     environment:
       REDIS_URL: "redis://redis"
       REDIS_HOSTNAME: "redis"
@@ -183,3 +180,8 @@ services:
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     volumes:
       - "./volumes/grafana:/var/lib/grafana"
+
+  node-exporter:
+    image: "prom/node-exporter"
+    labels:
+      - "traefik.enable=false"

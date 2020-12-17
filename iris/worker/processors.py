@@ -16,9 +16,11 @@ async def pcap_to_csv(
     destination_port,
     logger_prefix="",
 ):
-    """Transform a PCAP & start time log file into CSV using D-Miner Reader."""
-    # Snapshot numbering is currently unused
-    snapshot_number = 1
+    """
+    [OBSELETE]
+    Transform a PCAP & start time log file into CSV using D-Miner Reader.
+    """
+    snapshot_number = 1  # NOTE Not currently used
 
     cmd = (
         str(settings.WORKER_D_MINER_READER_PATH)
@@ -53,9 +55,11 @@ async def next_round_csv(
     measurement_parameters,
     logger_prefix="",
 ):
-    """Compute the next round and output CSV file."""
-    # Snapshot numbering is currently unused
-    snapshot_number = 1
+    """
+    [OBSELETE]
+    Compute the next round and output CSV file.
+    """
+    snapshot_number = 1  # NOTE Not currently used
 
     cmd = (
         str(settings.WORKER_D_MINER_READER_PATH)
@@ -76,7 +80,6 @@ async def next_round_csv(
         + " --dport="
         + str(measurement_parameters["destination_port"])
         + " --encoded-ttl-from=udp-length"
-        # Not curently used
         # + " --skip-prefixes="
         # + options.heartbeat_dir
         # + "resources/"
