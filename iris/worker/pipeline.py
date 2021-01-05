@@ -8,7 +8,7 @@ from aiofiles import os as aios
 from diamond_miner_core import (
     compute_next_round,
     MeasurementParameters,
-    BetterFlowMapper,
+    HeidemannFlowMapper,
 )
 
 from iris.commons.database import get_session, DatabaseMeasurementResults
@@ -104,7 +104,7 @@ async def diamond_miner_pipeline(parameters, result_filename):
             round_number=round_number,
         ),
         next_round_csv_filepath,
-        BetterFlowMapper(),
+        HeidemannFlowMapper(),
         False,  # No max-ttl exploration feature
     )
 
