@@ -29,7 +29,7 @@ RUN mkdir results
 
 COPY statics/excluded_prefixes statics/excluded_prefixes
 COPY statics/index.html statics/index.html
-# TODO: Expose another port to avoid conflict with traefik (on heartbeat)
+
 EXPOSE 80
 
 ENTRYPOINT []
