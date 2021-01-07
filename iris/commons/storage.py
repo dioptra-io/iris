@@ -228,6 +228,11 @@ class Storage(object):
             None, self._upload_sync_file, bucket, filename, fd, metadata
         )
 
+    def _download_sync_file(self, bucket, filename, fd):
+        """Underlying synchronous download function."""
+        s3 = boto3.client("s3", **self.settings)
+        s3.download_fileobj(bucket, filename, fd)
+
     @retry(
         stop=stop_after_delay(common_settings.AWS_TIMEOUT),
         wait=wait_exponential(
@@ -242,9 +247,12 @@ class Storage(object):
         before_sleep=before_sleep_log(logger, logging.ERROR),
     )
     async def download_file(self, bucket, filename, output_path):
-        """Download a file from a bucket."""
-        async with aioboto3.client("s3", **self.settings) as s3:
-            await s3.download_file(bucket, filename, output_path)
+        """Download a file in a bucket."""
+        loop = asyncio.get_running_loop()
+        with Path(output_path).open("wb") as fd:
+            await loop.run_in_executor(
+                None, self._download_sync_file, bucket, filename, fd
+            )
 
     async def delete_file_check_no_retry(self, bucket, filename):
         """Delete a file with a check that it exists."""
