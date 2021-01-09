@@ -106,6 +106,7 @@ async def diamond_miner_pipeline(parameters, result_filename):
         next_round_csv_filepath,
         HeidemannFlowMapper(),
         False,  # No max-ttl exploration feature
+        True,  # Skip unpopulated TTLs
     )
 
     shuffled_next_round_csv_filename = (
