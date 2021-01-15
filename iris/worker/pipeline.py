@@ -5,6 +5,7 @@ import ipaddress
 import ssl
 
 from aiofiles import os as aios
+from concurrent.futures import ProcessPoolExecutor
 from diamond_miner_core import (
     compute_next_round,
     MeasurementParameters,
@@ -91,7 +92,7 @@ async def diamond_miner_pipeline(parameters, result_filename):
     # TODO Rewrite the lib in an asynchonous way
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(
-        None,
+        ProcessPoolExecutor(),
         compute_next_round,
         settings.DATABASE_HOST,
         table_name,

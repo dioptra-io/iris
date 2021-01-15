@@ -8,6 +8,7 @@ class AgentSettings(CommonSettings):
 
     AGENT_D_MINER_PROBER_PATH: Path = Path("/usr/bin/diamond-miner-prober")
     AGENT_D_MINER_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
+    AGENT_D_MINER_BGP_PREFIXES: Optional[str] = None
 
     AGENT_UUID: Optional[str] = None
 

@@ -54,6 +54,7 @@ async def measuremement(redis, request):
         if parameters["full"] and parameters["targets_file_key"] is None:
             # Exhaustive snapshot
             logger.info(f"{logger_prefix} Full snapshot required")
+            prefix_incl_filepath = settings.AGENT_D_MINER_BGP_PREFIXES
             stdin = (
                 probe_to_csv(*x)
                 async for x in exhaustive_round(
