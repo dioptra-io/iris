@@ -16,7 +16,7 @@ FROM python:3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV TMPDIR /app/reader/resources/
+ENV TMPDIR /app/results
 ENV MEMORY 24
 
 RUN apt-get update \
