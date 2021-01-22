@@ -5,6 +5,7 @@ from pathlib import Path
 class WorkerSettings(CommonSettings):
     """Worker specific settings."""
 
+    # TODO: Obselete
     WORKER_D_MINER_READER_PATH: Path = Path("/app/reader/build/Reader")
     WORKER_EXCLUSION_FILE_PATH: Path = Path("/app/reader/resources/excluded_prefixes")
 
@@ -12,7 +13,7 @@ class WorkerSettings(CommonSettings):
 
     WORKER_TERASHUF_PATH: Path = Path("/app/terashuf/terashuf")
     WORKER_TERASHUF_MEMORY: int = 40  # GB
-    WORKER_TERASHUF_TMP_DIR_PATH: Path = Path("/app/reader/resources/")
+    WORKER_TERASHUF_TMP_DIR_PATH: Path = Path("/app/results/")
 
     WORKER_TIME_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)
     WORKER_MESSAGE_AGE_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)
