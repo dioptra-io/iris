@@ -1,11 +1,10 @@
-FROM matthieugouel/diamond-miner-prober:0.1.12
+FROM matthieugouel/diamond-miner-prober:0.2.5
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3-pip \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -13,8 +12,7 @@ WORKDIR /app
 RUN mkdir vendors
 COPY vendors/diamond-miner-core vendors/diamond-miner-core
 
-RUN pip3 install poetry \
-    && rm -rf /root/.cache/*
+RUN pip3 install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
@@ -33,4 +31,4 @@ COPY statics/index.html statics/index.html
 EXPOSE 80
 
 ENTRYPOINT []
-CMD python3 -m http.server -d statics/ 80 & python3 -u main.py
+CMD ["sh", "-c", "python3 -m http.server -d statics/ 80 & python3 -u main.py"]
