@@ -9,7 +9,7 @@ from concurrent.futures import ProcessPoolExecutor
 from diamond_miner_core import (
     compute_next_round,
     MeasurementParameters,
-    HeidemannFlowMapper,
+    flow,
 )
 
 from iris.commons.database import get_session, DatabaseMeasurementResults
@@ -92,6 +92,11 @@ async def diamond_miner_pipeline(parameters, result_filename):
         return None
 
     logger.info(f"{logger_prefix} Compute the next round CSV probe file")
+
+    flow_mapper_cls = getattr(flow, parameters.flow_mapper)
+    flow_mapper_kwargs = parameters.flow_mapper_kwargs or {}
+    flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
+
     # TODO Rewrite the lib in an asynchonous way
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(
@@ -108,7 +113,7 @@ async def diamond_miner_pipeline(parameters, result_filename):
             round_number=round_number,
         ),
         next_round_csv_filepath,
-        HeidemannFlowMapper(),
+        flow_mapper,
         False,  # No max-ttl exploration feature
         True,  # Skip unpopulated TTLs
     )
