@@ -180,8 +180,8 @@ class MeasurementsPostBody(BaseModel):
     protocol: str = Field(
         ...,
         title="Probing transport protocol",
-        description="Must be either tcp or udp.",
-        regex="(?i)^udp$|^tcp$",
+        description="Must be either icmp, tcp or udp.",
+        regex="(?i)^icmp$|^udp$|^tcp$",
     )
     destination_port: int = Field(..., title="Destination port", gt=0, lt=65_536)
     min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
