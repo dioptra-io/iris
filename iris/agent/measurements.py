@@ -41,7 +41,7 @@ async def measuremement(redis, request):
     except FileExistsError:
         logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
-    result_filename = f"{agent_uuid}_results_{parameters['round']}.pcap"
+    result_filename = f"{agent_uuid}_results_{parameters['round']}.csv"
     results_filepath = str(measurement_results_path / result_filename)
 
     stdin = None
