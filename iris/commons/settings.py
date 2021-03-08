@@ -22,6 +22,12 @@ class CommonSettings(BaseSettings):
     DATABASE_CONNECT_TIMEOUT: int = 10
     DATABASE_SEND_RECEIVE_TIMEOUT: int = 300
     DATABASE_SYNC_REQUEST_TIMEOUT: int = 5
+    DATABASE_TIMEOUT: int = 2 * 60 * 60  # in seconds
+    DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
+    DATABASE_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
+    DATABASE_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
+    DATABASE_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
+    DATABASE_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
 
     TABLE_NAME_USERS: str = f"{DATABASE_NAME}.users"
     TABLE_NAME_MEASUREMENTS: str = f"{DATABASE_NAME}.measurements"

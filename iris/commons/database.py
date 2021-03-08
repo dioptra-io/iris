@@ -1,25 +1,34 @@
 """Interfaces with database."""
 
 import ipaddress
+import logging
 import uuid
 
 from aioch import Client
 from datetime import datetime
+from iris.commons import logger
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.settings import CommonSettings
 from iris.commons.subprocess import start_stream_subprocess
 
+from tenacity import (
+    retry,
+    stop_after_delay,
+    wait_exponential,
+    wait_random,
+    before_sleep_log,
+)
 
-settings = CommonSettings()
+common_settings = CommonSettings()
 
 
-def get_session(host=settings.DATABASE_HOST):
+def get_session(host=common_settings.DATABASE_HOST):
     """Get database session."""
     return Client(
         host,
-        connect_timeout=settings.DATABASE_CONNECT_TIMEOUT,
-        send_receive_timeout=settings.DATABASE_SEND_RECEIVE_TIMEOUT,
-        sync_request_timeout=settings.DATABASE_SYNC_REQUEST_TIMEOUT,
+        connect_timeout=common_settings.DATABASE_CONNECT_TIMEOUT,
+        send_receive_timeout=common_settings.DATABASE_SEND_RECEIVE_TIMEOUT,
+        sync_request_timeout=common_settings.DATABASE_SYNC_REQUEST_TIMEOUT,
     )
 
 
@@ -28,17 +37,33 @@ class Database(object):
         self.session = session
         self.logger = logger
 
-    async def create_datebase(self, database_name=settings.DATABASE_NAME):
+    @retry(
+        stop=stop_after_delay(common_settings.DATABASE_TIMEOUT),
+        wait=wait_exponential(
+            multiplier=common_settings.DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+            min=common_settings.DATABASE_TIMEOUT_EXPONENTIAL_MIN,
+            max=common_settings.DATABASE_TIMEOUT_EXPONENTIAL_MAX,
+        )
+        + wait_random(
+            common_settings.DATABASE_TIMEOUT_RANDOM_MIN,
+            common_settings.DATABASE_TIMEOUT_RANDOM_MAX,
+        ),
+        before_sleep=before_sleep_log(logger, logging.ERROR),
+    )
+    async def call(self, *args, **kwargs):
+        return await self.session.execute(*args, **kwargs)
+
+    async def create_datebase(self, database_name=common_settings.DATABASE_NAME):
         """Create a database if not exists."""
-        await self.session.execute(f"CREATE DATABASE IF NOT EXISTS {database_name}")
+        await self.call(f"CREATE DATABASE IF NOT EXISTS {database_name}")
 
     async def drop_table(self, table_name):
         """Drop a table."""
-        await self.session.execute(f"DROP TABLE IF EXISTS {table_name}")
+        await self.call(f"DROP TABLE IF EXISTS {table_name}")
 
     async def clean_table(self, table_name):
         """Clean a table."""
-        await self.session.execute(f"ALTER TABLE {table_name} DELETE WHERE 1=1")
+        await self.call(f"ALTER TABLE {table_name} DELETE WHERE 1=1")
 
     async def disconnect(self):
         """Disconnect agent."""
@@ -48,7 +73,7 @@ class Database(object):
 class DatabaseUsers(Database):
     """Interface that handle users"""
 
-    def __init__(self, host, table_name=settings.TABLE_NAME_USERS):
+    def __init__(self, host, table_name=common_settings.TABLE_NAME_USERS):
         super().__init__(host)
         self.table_name = table_name
 
@@ -57,7 +82,7 @@ class DatabaseUsers(Database):
         if drop:
             await self.drop_table(self.table_name)
 
-        await self.session.execute(
+        await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, username String, email String, hashed_password String, "
             "is_active UInt8, is_admin UInt8, is_full_capable UInt8, "
@@ -84,7 +109,7 @@ class DatabaseUsers(Database):
 
     async def get(self, username):
         """Get all measurement information."""
-        responses = await self.session.execute(
+        responses = await self.call(
             f"SELECT * FROM {self.table_name} WHERE username=%(username)s",
             {"username": username},
         )
@@ -97,7 +122,7 @@ class DatabaseUsers(Database):
 
     async def register(self, parameters):
         """Register a user."""
-        await self.session.execute(
+        await self.call(
             f"INSERT INTO {self.table_name} VALUES",
             [
                 {
@@ -118,15 +143,14 @@ class DatabaseUsers(Database):
     async def register_ripe(self, username, ripe_account, ripe_key):
         """Register RIPE information of a user."""
         if ripe_account is None or ripe_key is None:
-            print("Test")
-            await self.session.execute(
+            await self.call(
                 f"ALTER TABLE {self.table_name} UPDATE "
                 "ripe_account = NULL, ripe_key =  NULL "
                 "WHERE username=%(username)s",
                 {"username": username},
             )
         else:
-            await self.session.execute(
+            await self.call(
                 f"ALTER TABLE {self.table_name} UPDATE "
                 "ripe_account = %(ripe_account)s, ripe_key = %(ripe_key)s "
                 "WHERE username=%(username)s",
@@ -141,7 +165,7 @@ class DatabaseUsers(Database):
 class DatabaseMeasurements(Database):
     """Interface that handle measurements history."""
 
-    def __init__(self, host, table_name=settings.TABLE_NAME_MEASUREMENTS):
+    def __init__(self, host, table_name=common_settings.TABLE_NAME_MEASUREMENTS):
         super().__init__(host)
         self.table_name = table_name
 
@@ -150,7 +174,7 @@ class DatabaseMeasurements(Database):
         if drop:
             await self.drop_table(self.table_name)
 
-        await self.session.execute(
+        await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, user String, targets_file_key Nullable(String), full UInt8, "
             "protocol String, destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
@@ -178,7 +202,7 @@ class DatabaseMeasurements(Database):
 
     async def all_count(self, user):
         """Get the count of all results."""
-        response = await self.session.execute(
+        response = await self.call(
             f"SELECT Count() FROM {self.table_name} WHERE user=%(user)s",
             {"user": user},
         )
@@ -186,7 +210,7 @@ class DatabaseMeasurements(Database):
 
     async def all(self, user, offset, limit):
         """Get all measurements uuid for a given user."""
-        responses = await self.session.execute(
+        responses = await self.call(
             f"SELECT * FROM {self.table_name} "
             "WHERE user=%(user)s "
             "ORDER BY start_time DESC "
@@ -197,7 +221,7 @@ class DatabaseMeasurements(Database):
 
     async def get(self, user, uuid):
         """Get all measurement information."""
-        responses = await self.session.execute(
+        responses = await self.call(
             f"SELECT * FROM {self.table_name} WHERE user=%(user)s AND uuid=%(uuid)s",
             {"user": user, "uuid": uuid},
         )
@@ -210,7 +234,7 @@ class DatabaseMeasurements(Database):
 
     async def register(self, measurement_parameters):
         """Register a measurement."""
-        await self.session.execute(
+        await self.call(
             f"INSERT INTO {self.table_name} VALUES",
             [
                 {
@@ -233,7 +257,7 @@ class DatabaseMeasurements(Database):
 
     async def stamp_end_time(self, user, uuid):
         """Stamp the end time for a measurement."""
-        await self.session.execute(
+        await self.call(
             f"ALTER TABLE {self.table_name} "
             "UPDATE end_time=toDateTime(%(end_time)s) "
             "WHERE user=%(user)s AND uuid=%(uuid)s",
@@ -244,7 +268,7 @@ class DatabaseMeasurements(Database):
 class DatabaseAgents(Database):
     """Interface that handle agents history."""
 
-    def __init__(self, host, table_name=settings.TABLE_NAME_AGENTS):
+    def __init__(self, host, table_name=common_settings.TABLE_NAME_AGENTS):
         super().__init__(host)
         self.table_name = table_name
 
@@ -253,7 +277,7 @@ class DatabaseAgents(Database):
         if drop:
             await self.drop_table(self.table_name)
 
-        await self.session.execute(
+        await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, user String, version String, hostname String, "
             "ip_address IPv4, probing_rate UInt32, buffer_sniffer_size UInt32, "
@@ -281,13 +305,14 @@ class DatabaseAgents(Database):
 
     async def all(self, user="all"):
         """Get all measurements uuid for a given user."""
-        responses = await self.session.execute(
-            f"SELECT uuid FROM {self.table_name} WHERE user=%(user)s", {"user": user},
+        responses = await self.call(
+            f"SELECT uuid FROM {self.table_name} WHERE user=%(user)s",
+            {"user": user},
         )
         return [str(response[0]) for response in responses]
 
     async def get(self, uuid, user="all"):
-        responses = await self.session.execute(
+        responses = await self.call(
             f"SELECT * FROM {self.table_name} WHERE user=%(user)s AND uuid=%(uuid)s",
             {"user": user, "uuid": uuid},
         )
@@ -299,7 +324,7 @@ class DatabaseAgents(Database):
 
     async def register(self, uuid, parameters):
         """Register a physical agent."""
-        await self.session.execute(
+        await self.call(
             f"INSERT INTO {self.table_name} VALUES",
             [
                 {
@@ -320,7 +345,7 @@ class DatabaseAgents(Database):
 
     async def stamp_last_used(self, uuid, user="all"):
         """Stamp the last used for an agent."""
-        await self.session.execute(
+        await self.call(
             f"ALTER TABLE {self.table_name} "
             "UPDATE last_used=toDateTime(%(last_used)s) "
             "WHERE user=%(user)s AND uuid=%(uuid)s",
@@ -331,7 +356,7 @@ class DatabaseAgents(Database):
 class DatabaseAgentsSpecific(Database):
     """Interface that handle agents parameters specific by measurements history."""
 
-    def __init__(self, host, table_name=settings.TABLE_NAME_AGENTS_SPECIFIC):
+    def __init__(self, host, table_name=common_settings.TABLE_NAME_AGENTS_SPECIFIC):
         super().__init__(host)
         self.table_name = table_name
 
@@ -340,7 +365,7 @@ class DatabaseAgentsSpecific(Database):
         if drop:
             await self.drop_table(self.table_name)
 
-        await self.session.execute(
+        await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
             "probing_rate UInt32, max_round UInt8, targets_file_key Nullable(String), "
@@ -364,7 +389,7 @@ class DatabaseAgentsSpecific(Database):
 
     async def all(self, measurement_uuid):
         """Get all measurement information."""
-        responses = await self.session.execute(
+        responses = await self.call(
             f"SELECT * FROM {self.table_name} WHERE measurement_uuid=%(uuid)s",
             {"uuid": measurement_uuid},
         )
@@ -373,7 +398,7 @@ class DatabaseAgentsSpecific(Database):
 
     async def get(self, measurement_uuid, agent_uuid):
         """Get measurement information about a agent."""
-        responses = await self.session.execute(
+        responses = await self.call(
             f"SELECT * FROM {self.table_name} "
             "WHERE measurement_uuid=%(measurement_uuid)s "
             "AND agent_uuid=%(agent_uuid)s",
@@ -388,7 +413,7 @@ class DatabaseAgentsSpecific(Database):
         return self.formatter(response)
 
     async def register(self, parameters: ParametersDataclass):
-        await self.session.execute(
+        await self.call(
             f"INSERT INTO {self.table_name} VALUES",
             [
                 {
@@ -407,7 +432,7 @@ class DatabaseAgentsSpecific(Database):
         )
 
     async def stamp_finished(self, measurement_uuid, agent_uuid):
-        await self.session.execute(
+        await self.call(
             f"ALTER TABLE {self.table_name} "
             "UPDATE finished=%(finished)s "
             "WHERE measurement_uuid=%(measurement_uuid)s "
@@ -431,7 +456,8 @@ class DatabaseMeasurementResults(Database):
 
     @staticmethod
     def forge_table_name(
-        measurement_uuid, agent_uuid,
+        measurement_uuid,
+        agent_uuid,
     ):
         """Forge the table name from measurement UUID and agent UUID."""
         sanitized_measurement_uuid = str(measurement_uuid).replace("-", "_")
@@ -458,7 +484,7 @@ class DatabaseMeasurementResults(Database):
         if drop:
             await self.drop_table(self.table_name)
 
-        await self.session.execute(
+        await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(src_ip UInt32, dst_prefix UInt32, dst_ip UInt32, reply_ip UInt32, "
             "proto UInt8, src_port UInt16, dst_port UInt16, ttl UInt8, "
@@ -512,14 +538,14 @@ class DatabaseMeasurementResults(Database):
 
     async def all_count(self):
         """Get the count of all results."""
-        response = await self.session.execute(
-            f"SELECT Count() FROM {self.table_name}", settings=settings
+        response = await self.call(
+            f"SELECT Count() FROM {self.table_name}", settings=common_settings
         )
         return response[0][0]
 
     async def all(self, offset, limit):
         """Get all results given (offset, limit)."""
-        response = await self.session.execute(
+        response = await self.call(
             f"SELECT * FROM {self.table_name} LIMIT %(offset)s,%(limit)s",
             {"offset": offset, "limit": limit},
         )
@@ -527,8 +553,8 @@ class DatabaseMeasurementResults(Database):
 
     async def is_exists(self):
         """Check if table exists."""
-        response = await self.session.execute(
-            f"EXISTS TABLE {self.table_name}", settings=settings
+        response = await self.call(
+            f"EXISTS TABLE {self.table_name}", settings=common_settings
         )
         return bool(response[0][0])
 

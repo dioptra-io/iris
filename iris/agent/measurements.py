@@ -109,8 +109,9 @@ async def measuremement(redis, request):
         probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
         await storage.download_file(measurement_uuid, probes_filename, probes_filepath)
 
-    logger.info(f"{logger_prefix} Tool : {parameters['measurement_tool']}")
     logger.info(f"{logger_prefix} Username : {parameters['username']}")
+    logger.info(f"{logger_prefix} Tool : {parameters['measurement_tool']}")
+    logger.info(f"{logger_prefix} Protocol : {parameters['protocol']}")
     logger.info(f"{logger_prefix} Round : {parameters['round']}")
     logger.info(f"{logger_prefix} Minimum TTL : {parameters['min_ttl']}")
     logger.info(f"{logger_prefix} Maximum TTL : {parameters['max_ttl']}")

@@ -1,4 +1,4 @@
-FROM matthieugouel/diamond-miner-prober:0.1.12
+FROM matthieugouel/diamond-miner-prober:0.2.5
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
 ENV DEBIAN_FRONTEND=noninteractive
