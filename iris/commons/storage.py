@@ -162,7 +162,10 @@ class Storage(object):
     async def get_file(self, bucket, filename):
         """Get file information from a bucket."""
         async with aioboto3.client("s3", **self.settings) as s3:
-            file_object = await s3.get_object(Bucket=bucket, Key=filename)
+            try:
+                file_object = await s3.get_object(Bucket=bucket, Key=filename)
+            except s3.exceptions.NoSuchKey:
+                return None
             async with file_object["Body"] as stream:
                 await stream.read()
         return {

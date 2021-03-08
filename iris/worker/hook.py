@@ -248,6 +248,7 @@ async def callback(agents_information, measurement_parameters):
 
     logger.info(f"{logger_prefix} Delete bucket")
     try:
+        await storage.delete_all_files_from_bucket(bucket=measurement_uuid)
         await storage.delete_bucket(bucket=measurement_uuid)
     except Exception:
         logger.error(f"{logger_prefix} Impossible to remove bucket")
