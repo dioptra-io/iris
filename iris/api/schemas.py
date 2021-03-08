@@ -194,6 +194,7 @@ class MeasurementsPostResponse(BaseModel):
 class MeasurementAgentSpecific(BaseModel):
     """Information about agent specific information (Response)."""
 
+    targets_file_key: Optional[str]
     min_ttl: int
     max_ttl: int
     probing_rate: int
@@ -223,7 +224,6 @@ class MeasurementInfoResponse(BaseModel):
     uuid: UUID
     state: str
     agents: List[MeasurementAgentInfoResponse]
-    targets_file_key: Optional[str]
     full: bool
     protocol: str
     destination_port: int

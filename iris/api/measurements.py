@@ -104,7 +104,8 @@ async def post_measurement(
     user_info = await users_database.get(username)
     if not user_info["is_active"]:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Account inactive",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account inactive",
         )
 
     if measurement.full:
@@ -178,7 +179,9 @@ async def post_measurement(
     summary="Get measurement information by uuid",
 )
 async def get_measurement_by_uuid(
-    request: Request, measurement_uuid: UUID, username: str = Depends(authenticate),
+    request: Request,
+    measurement_uuid: UUID,
+    username: str = Depends(authenticate),
 ):
     """Get measurement information by uuid."""
     session = get_session()
@@ -190,12 +193,6 @@ async def get_measurement_by_uuid(
 
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     measurement["state"] = "finished" if state is None else state
-
-    # Remove unnecessary information
-    del measurement["user"]
-    del measurement["min_ttl"]
-    del measurement["max_ttl"]
-    del measurement["max_round"]
 
     agents_specific = await DatabaseAgentsSpecific(session).all(measurement["uuid"])
 
@@ -218,6 +215,7 @@ async def get_measurement_by_uuid(
                 "uuid": agent_specific["uuid"],
                 "state": agent_specific["state"],
                 "specific": {
+                    "targets_file_key": agent_specific["targets_file_key"],
                     "min_ttl": agent_specific["min_ttl"],
                     "max_ttl": agent_specific["max_ttl"],
                     "probing_rate": specific_probing_rate,
@@ -242,7 +240,9 @@ async def get_measurement_by_uuid(
     summary="Cancel measurement",
 )
 async def delete_measurement(
-    request: Request, measurement_uuid: UUID, username: str = Depends(authenticate),
+    request: Request,
+    measurement_uuid: UUID,
+    username: str = Depends(authenticate),
 ):
     """Cancel a measurement."""
     session = get_session()

@@ -165,7 +165,9 @@ def test_post_measurement_with_targets_file_key(client, monkeypatch):
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers, "get", get_users,
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
     )
 
     response = client.post(
@@ -198,7 +200,9 @@ def test_post_measurement_with_full(client, monkeypatch):
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers, "get", get_users,
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
     )
 
     response = client.post(
@@ -231,7 +235,9 @@ def test_post_measurement_with_agents(client, monkeypatch):
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers, "get", get_users,
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
     )
 
     response = client.post(
@@ -265,7 +271,9 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers, "get", get_users,
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
     )
 
     response = client.post(
@@ -296,7 +304,9 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
     monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
     monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers, "get", get_users,
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
     )
 
     response = client.post(
@@ -321,7 +331,9 @@ def test_post_measurement_invalid_input(client, monkeypatch):
 
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
     monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers, "get", get_users,
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
     )
 
     response = client.post(
@@ -362,7 +374,9 @@ def test_post_measurement_inactive_user(client, monkeypatch):
 
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
     monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers, "get", get_users,
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
     )
 
     response = client.post(
@@ -388,7 +402,9 @@ def test_post_measurement_no_full_capabilities(client, monkeypatch):
 
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
     monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers, "get", get_users,
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
     )
 
     response = client.post(
@@ -416,13 +432,13 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
+        "targets_file_key": "test.txt",
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": None,
         "max_round": 10,
         "state": "finished",
     }
-    targets_file_key = "test.txt"
     protocol = "udp"
     destination_port = 33434
     min_ttl = 2
@@ -438,7 +454,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         return {
             "uuid": measurement_uuid,
             "user": user,
-            "targets_file_key": targets_file_key,
+            "targets_file_key": "test.txt",
             "full": False,
             "protocol": protocol,
             "destination_port": destination_port,
@@ -465,7 +481,9 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         }
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsSpecific, "all", all_agents_specific,
+        iris.commons.database.DatabaseAgentsSpecific,
+        "all",
+        all_agents_specific,
     )
     monkeypatch.setattr(
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
@@ -481,6 +499,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                 "uuid": agent["uuid"],
                 "state": "finished",
                 "specific": {
+                    "targets_file_key": "test.txt",
                     "min_ttl": 2,
                     "max_ttl": 30,
                     "probing_rate": 0,
@@ -493,7 +512,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                 },
             }
         ],
-        "targets_file_key": targets_file_key,
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
@@ -509,13 +527,13 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
+        "targets_file_key": "test.txt",
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": 100,
         "max_round": 10,
         "state": "finished",
     }
-    targets_file_key = "test.txt"
     protocol = "udp"
     destination_port = 33434
     min_ttl = 2
@@ -531,7 +549,7 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
         return {
             "uuid": measurement_uuid,
             "user": user,
-            "targets_file_key": targets_file_key,
+            "targets_file_key": "test.txt",
             "full": False,
             "protocol": protocol,
             "destination_port": destination_port,
@@ -558,7 +576,9 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
         }
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsSpecific, "all", all_agents_specific,
+        iris.commons.database.DatabaseAgentsSpecific,
+        "all",
+        all_agents_specific,
     )
     monkeypatch.setattr(
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
@@ -574,6 +594,7 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
                 "uuid": agent["uuid"],
                 "state": "finished",
                 "specific": {
+                    "targets_file_key": "test.txt",
                     "min_ttl": 2,
                     "max_ttl": 30,
                     "probing_rate": 100,
@@ -586,7 +607,6 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
                 },
             }
         ],
-        "targets_file_key": targets_file_key,
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
@@ -602,13 +622,13 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
+        "targets_file_key": "test.txt",
         "min_ttl": 2,
         "max_ttl": 30,
         "probing_rate": 100,
         "max_round": 10,
         "state": "finished",
     }
-    targets_file_key = "test.txt"
     protocol = "udp"
     destination_port = 33434
     min_ttl = 2
@@ -624,7 +644,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
         return {
             "uuid": measurement_uuid,
             "user": user,
-            "targets_file_key": targets_file_key,
+            "targets_file_key": "test.txt",
             "full": False,
             "protocol": protocol,
             "destination_port": destination_port,
@@ -657,7 +677,9 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     client.app.redis = FakeRedis()
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsSpecific, "all", all_agents_specific,
+        iris.commons.database.DatabaseAgentsSpecific,
+        "all",
+        all_agents_specific,
     )
     monkeypatch.setattr(
         iris.commons.database.DatabaseMeasurements, "get", get_measurements
@@ -673,6 +695,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                 "uuid": agent["uuid"],
                 "state": "waiting",
                 "specific": {
+                    "targets_file_key": "test.txt",
                     "min_ttl": 2,
                     "max_ttl": 30,
                     "probing_rate": 100,
@@ -685,7 +708,6 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                 },
             }
         ],
-        "targets_file_key": targets_file_key,
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
