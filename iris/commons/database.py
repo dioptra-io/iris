@@ -3,57 +3,66 @@
 import ipaddress
 import logging
 import uuid
+from datetime import datetime
 
 from aioch import Client
-from datetime import datetime
-from iris.commons import logger
-from iris.commons.dataclasses import ParametersDataclass
-from iris.commons.settings import CommonSettings
-from iris.commons.subprocess import start_stream_subprocess
-
 from tenacity import (
+    before_sleep_log,
     retry,
     stop_after_delay,
     wait_exponential,
     wait_random,
-    before_sleep_log,
 )
 
-common_settings = CommonSettings()
+from iris.commons.dataclasses import ParametersDataclass
+from iris.commons.subprocess import start_stream_subprocess
 
 
-def get_session(host=common_settings.DATABASE_HOST):
+def get_session(settings):
     """Get database session."""
     return Client(
-        host,
-        connect_timeout=common_settings.DATABASE_CONNECT_TIMEOUT,
-        send_receive_timeout=common_settings.DATABASE_SEND_RECEIVE_TIMEOUT,
-        sync_request_timeout=common_settings.DATABASE_SYNC_REQUEST_TIMEOUT,
+        settings.DATABASE_HOST,
+        connect_timeout=settings.DATABASE_CONNECT_TIMEOUT,
+        send_receive_timeout=settings.DATABASE_SEND_RECEIVE_TIMEOUT,
+        sync_request_timeout=settings.DATABASE_SYNC_REQUEST_TIMEOUT,
     )
 
 
 class Database(object):
-    def __init__(self, session, logger=None):
+    def __init__(self, session, settings, logger=None):
         self.session = session
+        self.settings = settings
         self.logger = logger
 
-    @retry(
-        stop=stop_after_delay(common_settings.DATABASE_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.DATABASE_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.DATABASE_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.DATABASE_TIMEOUT_RANDOM_MIN,
-            common_settings.DATABASE_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    def fault_tolerant(func):
+        """Exponential back-off strategy."""
+
+        async def wrapper(*args, **kwargs):
+            cls = args[0]
+            settings, logger = cls.settings, cls.logger
+            return await retry(
+                stop=stop_after_delay(settings.DATABASE_TIMEOUT),
+                wait=wait_exponential(
+                    multiplier=settings.DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                    min=settings.DATABASE_TIMEOUT_EXPONENTIAL_MIN,
+                    max=settings.DATABASE_TIMEOUT_EXPONENTIAL_MAX,
+                )
+                + wait_random(
+                    settings.DATABASE_TIMEOUT_RANDOM_MIN,
+                    settings.DATABASE_TIMEOUT_RANDOM_MAX,
+                ),
+                before_sleep=(
+                    before_sleep_log(logger, logging.ERROR) if logger else None
+                ),
+            )(func)(*args, **kwargs)
+
+        return wrapper
+
+    @fault_tolerant
     async def call(self, *args, **kwargs):
         return await self.session.execute(*args, **kwargs)
 
-    async def create_datebase(self, database_name=common_settings.DATABASE_NAME):
+    async def create_database(self, database_name):
         """Create a database if not exists."""
         await self.call(f"CREATE DATABASE IF NOT EXISTS {database_name}")
 
@@ -73,9 +82,9 @@ class Database(object):
 class DatabaseUsers(Database):
     """Interface that handle users"""
 
-    def __init__(self, host, table_name=common_settings.TABLE_NAME_USERS):
-        super().__init__(host)
-        self.table_name = table_name
+    def __init__(self, session, settings, logger=None):
+        super().__init__(session, settings, logger=logger)
+        self.table_name = settings.TABLE_NAME_USERS
 
     async def create_table(self, drop=False):
         """Create the table with all registered users."""
@@ -165,9 +174,9 @@ class DatabaseUsers(Database):
 class DatabaseMeasurements(Database):
     """Interface that handle measurements history."""
 
-    def __init__(self, host, table_name=common_settings.TABLE_NAME_MEASUREMENTS):
-        super().__init__(host)
-        self.table_name = table_name
+    def __init__(self, session, settings, logger=None):
+        super().__init__(session, settings, logger=logger)
+        self.table_name = settings.TABLE_NAME_MEASUREMENTS
 
     async def create_table(self, drop=False):
         """Create the table with all registered measurements."""
@@ -268,9 +277,9 @@ class DatabaseMeasurements(Database):
 class DatabaseAgents(Database):
     """Interface that handle agents history."""
 
-    def __init__(self, host, table_name=common_settings.TABLE_NAME_AGENTS):
-        super().__init__(host)
-        self.table_name = table_name
+    def __init__(self, session, settings, logger=None):
+        super().__init__(session, settings, logger=logger)
+        self.table_name = settings.TABLE_NAME_AGENTS
 
     async def create_table(self, drop=False):
         """Create the table with all registered agents."""
@@ -356,9 +365,9 @@ class DatabaseAgents(Database):
 class DatabaseAgentsSpecific(Database):
     """Interface that handle agents parameters specific by measurements history."""
 
-    def __init__(self, host, table_name=common_settings.TABLE_NAME_AGENTS_SPECIFIC):
-        super().__init__(host)
-        self.table_name = table_name
+    def __init__(self, session, settings, logger=None):
+        super().__init__(session, settings, logger=logger)
+        self.table_name = settings.TABLE_NAME_AGENTS_SPECIFIC
 
     async def create_table(self, drop=False):
         """Create the table with all registered agents."""
@@ -448,8 +457,9 @@ class DatabaseAgentsSpecific(Database):
 class DatabaseMeasurementResults(Database):
     """Database interface to handle measurement results."""
 
-    def __init__(self, session, table_name, logger=None):
+    def __init__(self, session, settings, table_name, logger=None):
         self.session = session
+        self.settings = settings
         self.table_name = table_name
         self.host = session._client.connection.hosts[0][0]
         self.logger = logger
@@ -538,9 +548,7 @@ class DatabaseMeasurementResults(Database):
 
     async def all_count(self):
         """Get the count of all results."""
-        response = await self.call(
-            f"SELECT Count() FROM {self.table_name}", settings=common_settings
-        )
+        response = await self.call(f"SELECT Count() FROM {self.table_name}")
         return response[0][0]
 
     async def all(self, offset, limit):
@@ -553,9 +561,7 @@ class DatabaseMeasurementResults(Database):
 
     async def is_exists(self):
         """Check if table exists."""
-        response = await self.call(
-            f"EXISTS TABLE {self.table_name}", settings=common_settings
-        )
+        response = await self.call(f"EXISTS TABLE {self.table_name}")
         return bool(response[0][0])
 
     async def insert_csv(self, csv_filepath):

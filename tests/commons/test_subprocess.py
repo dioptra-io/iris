@@ -1,6 +1,7 @@
 """Test of common subprocess functions."""
 
 import asyncio
+
 import pytest
 
 from iris.commons.subprocess import CancelProcessException, start_stream_subprocess
@@ -44,7 +45,7 @@ async def test_subprocess():
     )
     assert stdout.calls == 100
     assert stderr.calls == 0
-    assert res == True
+    assert res is True
 
     # EOF: check that the consuming process stops when the input iterator is finished.
     stdout = count_handler()
@@ -54,7 +55,7 @@ async def test_subprocess():
     )
     assert stdout.calls == 2
     assert stderr.calls == 0
-    assert res == True
+    assert res is True
 
     # Early exit: check that start_stream_subprocess does not crash if the subprocess
     # terminates without having consumed the full input.
@@ -68,12 +69,12 @@ async def test_subprocess():
         assert stdout.calls == 5
         assert stderr.calls == 0
 
-    # Output handler exception: check that start_stream_subprocess does not crash if there
-    # is an exception in the handlers.
+    # Output handler exception: check that start_stream_subprocess does not crash
+    # if there is an exception in the handlers.
     res = await start_stream_subprocess(
         "yes | head -n 100", stdout=crash_handler(), stderr=crash_handler()
     )
-    assert res == True
+    assert res is True
 
     # Input handler exception
     res = await start_stream_subprocess(
@@ -82,7 +83,7 @@ async def test_subprocess():
         stderr=count_handler(),
         stdin=arange_crash(100),
     )
-    assert res == True
+    assert res is True
 
     # Cancel exception: check that the subprocess is cancelled when requested.
     stdout = count_handler()
@@ -95,4 +96,4 @@ async def test_subprocess():
     )
     assert stdout.calls == 1
     assert stderr.calls == 0
-    assert res == False
+    assert res is False

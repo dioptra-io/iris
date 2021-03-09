@@ -1,10 +1,9 @@
 """Test of `measurements` operations."""
 
-import iris.commons.database
 import uuid
-
 from datetime import datetime
 
+import iris.commons.database
 
 # --- GET /v0/measurements ---
 
@@ -162,7 +161,8 @@ def test_post_measurement_with_targets_file_key(client, monkeypatch):
     async def get_users(*args, **kwargs):
         return {"is_active": True, "is_full_capable": True}
 
-    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     monkeypatch.setattr(
         iris.commons.database.DatabaseUsers,
@@ -197,7 +197,8 @@ def test_post_measurement_with_full(client, monkeypatch):
     async def get_users(*args, **kwargs):
         return {"is_active": True, "is_full_capable": True}
 
-    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     monkeypatch.setattr(
         iris.commons.database.DatabaseUsers,
@@ -232,7 +233,8 @@ def test_post_measurement_with_agents(client, monkeypatch):
     async def get_users(*args, **kwargs):
         return {"is_active": True, "is_full_capable": True}
 
-    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     monkeypatch.setattr(
         iris.commons.database.DatabaseUsers,
@@ -268,7 +270,8 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
     async def get_users(*args, **kwargs):
         return {"is_active": True, "is_full_capable": True}
 
-    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     monkeypatch.setattr(
         iris.commons.database.DatabaseUsers,
@@ -301,7 +304,8 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
     async def get_users(*args, **kwargs):
         return {"is_active": True, "is_full_capable": True}
 
-    monkeypatch.setattr("iris.api.measurements.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
     monkeypatch.setattr(
         iris.commons.database.DatabaseUsers,

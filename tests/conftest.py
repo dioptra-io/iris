@@ -1,8 +1,11 @@
+import logging
 import pytest
 
 from fastapi.testclient import TestClient
+
 from iris.api.main import app
 from iris.api.security import authenticate
+from iris.api.settings import APISettings
 from iris.commons.redis import Redis
 
 
@@ -10,7 +13,14 @@ def override_authenticate():
     return "test"
 
 
+class TestSettings(APISettings):
+    pass
+
+
 class FakeRedis(Redis):
+    def __init__(*args, **kwargs):
+        pass
+
     def connect(*args, **kwargs):
         pass
 
@@ -61,5 +71,8 @@ class FakeRedis(Redis):
 def client():
     client = TestClient(app)
     app.dependency_overrides[authenticate] = override_authenticate
+
     app.redis = FakeRedis()
+    app.logger = logging.getLogger("test")
+    app.settings = TestSettings()
     return client

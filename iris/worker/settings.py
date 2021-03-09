@@ -1,9 +1,12 @@
-from iris.commons.settings import CommonSettings
 from pathlib import Path
+
+from iris.commons.settings import CommonSettings
 
 
 class WorkerSettings(CommonSettings):
     """Worker specific settings."""
+
+    SETTINGS_CLASS = "worker"
 
     # TODO: Obselete
     WORKER_D_MINER_READER_PATH: Path = Path("/app/reader/build/Reader")

@@ -3,17 +3,11 @@
 import aiofiles
 import aiofiles.os
 
-from iris.agent import logger
-from iris.agent.prober import probe, stopper
-from iris.agent.settings import AgentSettings
-from iris.commons.storage import Storage
-
 from diamond_miner_core import HeidemannFlowMapper
-from diamond_miner_core.rounds import exhaustive_round, targets_round, probe_to_csv
+from diamond_miner_core.rounds import exhaustive_round, probe_to_csv, targets_round
 
-
-settings = AgentSettings()
-storage = Storage()
+from iris.agent.prober import probe, stopper
+from iris.commons.storage import Storage
 
 
 async def build_prober_parameters(request):
@@ -23,12 +17,14 @@ async def build_prober_parameters(request):
     return {**request, **request_parameters}
 
 
-async def measuremement(redis, request):
+async def measuremement(settings, redis, request, logger):
     """Conduct a measurement."""
     measurement_uuid = request["measurement_uuid"]
     agent_uuid = redis.uuid
 
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
+
+    storage = Storage(settings, logger)
 
     parameters = await build_prober_parameters(request)
     if agent_uuid != parameters["agent_uuid"]:
@@ -117,13 +113,15 @@ async def measuremement(redis, request):
     logger.info(f"{logger_prefix} Maximum TTL : {parameters['max_ttl']}")
     logger.info(f"{logger_prefix} Probing Rate : {parameters['probing_rate']}")
     is_not_canceled = await probe(
+        settings,
         parameters,
         results_filepath,
+        logger,
         stdin=stdin,
         prefix_incl_filepath=prefix_incl_filepath,
         probes_filepath=probes_filepath,
         stopper=stopper(
-            logger, redis, measurement_uuid, logger_prefix=logger_prefix + " "
+            settings, redis, measurement_uuid, logger, logger_prefix=logger_prefix + " "
         ),
         logger_prefix=logger_prefix + " ",
     )

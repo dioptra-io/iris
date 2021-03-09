@@ -1,29 +1,20 @@
 import asyncio
 import socket
-import ssl
 import traceback
 
 from iris import __version__
-from iris.agent import AGENT_UUID, logger
 from iris.agent.measurements import measuremement
+from iris.agent.settings import AgentSettings
+from iris.commons.logger import create_logger
 from iris.commons.redis import AgentRedis
 from iris.commons.utils import get_own_ip_address
-from iris.agent.settings import AgentSettings
 
 
-settings = AgentSettings()
-settings_redis_ssl = ssl.SSLContext() if settings.REDIS_SSL else None
-
-
-async def consumer(agent_uuid, queue):
+async def consumer(settings, agent_uuid, queue, logger):
     """Wait for a task in a queue and process it."""
-    redis = AgentRedis(agent_uuid)
-    await redis.connect(
-        settings.REDIS_URL,
-        settings.REDIS_PASSWORD,
-        ssl=settings_redis_ssl,
-        register=False,
-    )
+    redis = AgentRedis(agent_uuid, settings=settings, logger=logger)
+    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD, register=False)
+
     while True:
         parameters = await queue.get()
         measurement_uuid = parameters["measurement_uuid"]
@@ -35,9 +26,7 @@ async def consumer(agent_uuid, queue):
             logger.error(f"{logger_prefix} Redis connection failed. Re-connecting...")
             await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
             try:
-                await redis.connect(
-                    settings.REDIS_URL, settings.REDIS_PASSWORD, ssl=settings_redis_ssl
-                )
+                await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
             except OSError:
                 continue
 
@@ -53,15 +42,13 @@ async def consumer(agent_uuid, queue):
         await redis.set_measurement_state(measurement_uuid, "ongoing")
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
-        await measuremement(redis, parameters)
+        await measuremement(settings, redis, parameters, logger)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
         await redis.set_agent_state("idle")
 
-    await redis.disconnect()
 
-
-async def producer(redis, queue):
+async def producer(redis, queue, logger):
     """Wait a task and put in on the queue."""
     while True:
         logger.info(f"{redis.uuid} :: Wait for a new request...")
@@ -75,15 +62,16 @@ async def producer(redis, queue):
 
 async def main():
     """Main agent function."""
-    redis = AgentRedis(AGENT_UUID)
+    settings = AgentSettings()
+    logger = create_logger(settings, tags={"agent_uuid": settings.AGENT_UUID})
+
+    redis = AgentRedis(settings.AGENT_UUID, settings=settings, logger=logger)
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
-    await redis.connect(
-        settings.REDIS_URL, settings.REDIS_PASSWORD, ssl=settings_redis_ssl
-    )
+    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
-    logger.info(f"{AGENT_UUID} :: Connected to Redis")
-
+    logger.info(f"{settings.AGENT_UUID} :: Connected to Redis")
+    tasks = []
     try:
 
         await redis.set_agent_state("idle")
@@ -102,15 +90,15 @@ async def main():
 
         queue = asyncio.Queue()
         tasks = [
-            asyncio.create_task(producer(redis, queue)),
-            asyncio.create_task(consumer(redis.uuid, queue)),
+            asyncio.create_task(producer(redis, queue, logger)),
+            asyncio.create_task(consumer(settings, redis.uuid, queue, logger)),
         ]
         await asyncio.gather(*tasks)
 
     except Exception as exception:
         traceback_content = traceback.format_exc()
         for line in traceback_content.splitlines():
-            logger.critical(f"{AGENT_UUID} :: {line}")
+            logger.critical(f"{settings.AGENT_UUID} :: {line}")
         raise exception
 
     finally:

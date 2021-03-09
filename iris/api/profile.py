@@ -1,29 +1,30 @@
 """Profile operations."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from iris.commons.database import (
-    get_session,
-    DatabaseUsers,
-)
-from iris.api.security import authenticate
+
 from iris.api.schemas import (
     ProfileGetResponse,
-    ProfileRIPEPutResponse,
     ProfileRIPEPutBody,
+    ProfileRIPEPutResponse,
 )
+from iris.api.security import authenticate
+from iris.commons.database import DatabaseUsers, get_session
 
 router = APIRouter()
 
 
 @router.get(
-    "/", response_model=ProfileGetResponse, summary="Get profile information",
+    "/",
+    response_model=ProfileGetResponse,
+    summary="Get profile information",
 )
 async def get_profile(
-    request: Request, username: str = Depends(authenticate),
+    request: Request,
+    username: str = Depends(authenticate),
 ):
     """Get profile information."""
-    session = get_session()
-    users_database = DatabaseUsers(session)
+    session = get_session(request.app.settings)
+    users_database = DatabaseUsers(session, request.app.settings, request.app.logger)
 
     profile_info = await users_database.get(username)
     profile_info["ripe"] = {
@@ -44,8 +45,8 @@ async def put_ripe_profile(
     ripe_info: ProfileRIPEPutBody,
     username: str = Depends(authenticate),
 ):
-    session = get_session()
-    users_database = DatabaseUsers(session)
+    session = get_session(request.app.settings)
+    users_database = DatabaseUsers(session, request.app.settings, request.app.logger)
 
     if not isinstance(ripe_info.account, type(ripe_info.key)):
         raise HTTPException(

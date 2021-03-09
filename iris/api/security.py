@@ -1,21 +1,21 @@
 """Authentication and security handlers."""
 
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from iris.commons.database import get_session, DatabaseUsers
-from iris.api.settings import APISettings
 from passlib.context import CryptContext
 
-settings = APISettings()
-security = HTTPBasic()
+from iris.commons.database import DatabaseUsers, get_session
 
+security = HTTPBasic()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-async def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
-    session = get_session()
-    database = DatabaseUsers(session)
+async def authenticate(
+    request: Request, credentials: HTTPBasicCredentials = Depends(security)
+):
+    session = get_session(request.app.settings)
+    database = DatabaseUsers(session, request.app.settings, request.app.logger)
     user = await database.get(credentials.username)
 
     is_verified = False

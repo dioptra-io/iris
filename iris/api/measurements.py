@@ -1,43 +1,33 @@
 """Measurements operations."""
 
 from datetime import datetime
-from fastapi import (
-    APIRouter,
-    Body,
-    Depends,
-    HTTPException,
-    Query,
-    Request,
-    status,
-)
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
+
 from iris.api.pagination import DatabasePagination
-from iris.api.security import authenticate
 from iris.api.schemas import (
     ExceptionResponse,
     MeasurementInfoResponse,
+    MeasurementsDeleteResponse,
     MeasurementsGetResponse,
     MeasurementsPostBody,
     MeasurementsPostResponse,
-    MeasurementsDeleteResponse,
     MeasurementsResultsResponse,
 )
-from iris.api.settings import APISettings
+from iris.api.security import authenticate
 from iris.commons.database import (
-    get_session,
-    DatabaseUsers,
-    DatabaseMeasurementResults,
-    DatabaseMeasurements,
     DatabaseAgents,
     DatabaseAgentsSpecific,
+    DatabaseMeasurementResults,
+    DatabaseMeasurements,
+    DatabaseUsers,
+    get_session,
 )
-from iris.commons.storage import Storage
 from iris.worker.hook import hook
-from uuid import UUID, uuid4
 
 
 router = APIRouter()
-settings = APISettings()
-storage = Storage()
 
 
 @router.get("/", response_model=MeasurementsGetResponse, summary="Get all measurements")
@@ -48,8 +38,8 @@ async def get_measurements(
     username: str = Depends(authenticate),
 ):
     """Get all measurements."""
-    session = get_session()
-    database = DatabaseMeasurements(session)
+    session = get_session(request.app.settings)
+    database = DatabaseMeasurements(session, request.app.settings, request.app.logger)
 
     querier = DatabasePagination(database, request, offset, limit)
     output = await querier.query(user=username)
@@ -98,8 +88,8 @@ async def post_measurement(
     """Request a measurement."""
     parameters = dict(measurement)
 
-    session = get_session()
-    users_database = DatabaseUsers(session)
+    session = get_session(request.app.settings)
+    users_database = DatabaseUsers(session, request.app.settings, request.app.logger)
 
     user_info = await users_database.get(username)
     if not user_info["is_active"]:
@@ -120,8 +110,8 @@ async def post_measurement(
         # Targets based snapshot requested
         # Verify that the targets file exists on AWS S3
         try:
-            await storage.get_file_no_retry(
-                settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
+            await request.app.storage.get_file_no_retry(
+                request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
                 measurement.targets_file_key,
             )
         except Exception:
@@ -184,8 +174,10 @@ async def get_measurement_by_uuid(
     username: str = Depends(authenticate),
 ):
     """Get measurement information by uuid."""
-    session = get_session()
-    measurement = await DatabaseMeasurements(session).get(username, measurement_uuid)
+    session = get_session(request.app.settings)
+    measurement = await DatabaseMeasurements(
+        session, request.app.settings, request.app.logger
+    ).get(username, measurement_uuid)
     if measurement is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -194,11 +186,15 @@ async def get_measurement_by_uuid(
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     measurement["state"] = "finished" if state is None else state
 
-    agents_specific = await DatabaseAgentsSpecific(session).all(measurement["uuid"])
+    agents_specific = await DatabaseAgentsSpecific(
+        session, request.app.settings, request.app.logger
+    ).all(measurement["uuid"])
 
     agents = []
     for agent_specific in agents_specific:
-        agent_info = await DatabaseAgents(session).get(agent_specific["uuid"])
+        agent_info = await DatabaseAgents(
+            session, request.app.settings, request.app.logger
+        ).get(agent_specific["uuid"])
 
         if measurement["state"] == "waiting":
             agent_specific["state"] = "waiting"
@@ -245,10 +241,11 @@ async def delete_measurement(
     username: str = Depends(authenticate),
 ):
     """Cancel a measurement."""
-    session = get_session()
-    measurement_info = await DatabaseMeasurements(session).get(
-        username, measurement_uuid
-    )
+    session = get_session(request.app.settings)
+
+    measurement_info = await DatabaseMeasurements(
+        session, request.app.settings, request.app.logger
+    ).get(username, measurement_uuid)
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -279,24 +276,26 @@ async def get_measurement_results(
     username: str = Depends(authenticate),
 ):
     """Get measurement results."""
-    session = get_session()
-    measurement_info = await DatabaseMeasurements(session).get(
-        username, measurement_uuid
-    )
+
+    session = get_session(request.app.settings)
+
+    measurement_info = await DatabaseMeasurements(
+        session, request.app.settings, request.app.logger
+    ).get(username, measurement_uuid)
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
     table_name = (
-        settings.DATABASE_NAME
+        request.app.settings.DATABASE_NAME
         + "."
         + DatabaseMeasurementResults.forge_table_name(measurement_uuid, agent_uuid)
     )
 
-    agent_specific_info = await DatabaseAgentsSpecific(session).get(
-        measurement_uuid, agent_uuid
-    )
+    agent_specific_info = await DatabaseAgentsSpecific(
+        session, request.app.settings, request.app.logger
+    ).get(measurement_uuid, agent_uuid)
 
     if agent_specific_info is None:
         raise HTTPException(
@@ -316,7 +315,9 @@ async def get_measurement_results(
             ),
         )
 
-    database = DatabaseMeasurementResults(session, table_name)
+    database = DatabaseMeasurementResults(
+        session, request.app.settings, table_name, request.app.logger
+    )
 
     is_table_exists = await database.is_exists()
     if not is_table_exists:

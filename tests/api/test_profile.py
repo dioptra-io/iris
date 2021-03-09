@@ -1,8 +1,8 @@
 """Test of `profile` operation."""
 
-import iris.commons.database
 import uuid
 
+import iris.commons.database
 
 # --- GET /v0/profile ---
 

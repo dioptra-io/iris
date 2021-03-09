@@ -1,14 +1,16 @@
 """agents operations."""
 
-from fastapi import APIRouter, Depends, Query, Request, HTTPException, status
-from iris.api.pagination import ListPagination
-from iris.api.security import authenticate
-from iris.api.schemas import (
-    ExceptionResponse,
-    AgentsGetResponse,
-    AgentsGetByUUIDResponse,
-)
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+
+from iris.api.pagination import ListPagination
+from iris.api.schemas import (
+    AgentsGetByUUIDResponse,
+    AgentsGetResponse,
+    ExceptionResponse,
+)
+from iris.api.security import authenticate
 
 router = APIRouter()
 

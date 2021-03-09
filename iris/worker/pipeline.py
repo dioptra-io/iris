@@ -2,39 +2,33 @@
 
 import asyncio
 import ipaddress
-import ssl
+from concurrent.futures import ProcessPoolExecutor
 
 from aiofiles import os as aios
-from concurrent.futures import ProcessPoolExecutor
 from diamond_miner_core import (
-    compute_next_round,
-    MeasurementParameters,
     HeidemannFlowMapper,
+    MeasurementParameters,
+    compute_next_round,
 )
 
-from iris.commons.database import get_session, DatabaseMeasurementResults
+from iris.commons.database import DatabaseMeasurementResults, get_session
 from iris.commons.storage import Storage
-from iris.worker import logger
-from iris.worker.processors import shuffle_next_round_csv
-from iris.worker.settings import WorkerSettings
-
-
-settings = WorkerSettings()
-settings_redis_ssl = ssl.SSLContext() if settings.REDIS_SSL else None
-storage = Storage()
+from iris.worker.shuffle import shuffle_next_round_csv
 
 
 def extract_round_number(filename):
     return int(filename.split("_")[-1].split(".")[0])
 
 
-async def diamond_miner_pipeline(parameters, result_filename):
+async def diamond_miner_pipeline(settings, parameters, result_filename, logger):
     """Process results and eventually request a new round."""
     measurement_uuid = parameters.measurement_uuid
     agent_uuid = parameters.agent_uuid
 
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
     logger.info(f"{logger_prefix} New files detected")
+
+    storage = Storage(settings, logger)
 
     round_number = extract_round_number(result_filename)
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
@@ -49,16 +43,16 @@ async def diamond_miner_pipeline(parameters, result_filename):
     if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
         logger.error(f"Impossible to remove result file `{result_filename}`")
 
-    session = get_session()
+    session = get_session(settings)
     table_name = (
         settings.DATABASE_NAME
         + "."
         + DatabaseMeasurementResults.forge_table_name(measurement_uuid, agent_uuid)
     )
-    database = DatabaseMeasurementResults(session, table_name, logger=logger)
+    database = DatabaseMeasurementResults(session, settings, table_name, logger=logger)
 
     logger.info(f"{logger_prefix} Create table `{table_name}`")
-    await database.create_table(drop=False)
+    await database.create_table()
 
     logger.info(f"{logger_prefix} Insert CSV file into database")
     await database.insert_csv(results_filepath)
@@ -126,8 +120,10 @@ async def diamond_miner_pipeline(parameters, result_filename):
         logger.info(f"{logger_prefix} Next round is required")
         logger.info(f"{logger_prefix} Shuffle next round CSV probe file")
         await shuffle_next_round_csv(
+            settings,
             next_round_csv_filepath,
             shuffled_next_round_csv_filepath,
+            logger,
             logger_prefix=logger_prefix + " ",
         )
 

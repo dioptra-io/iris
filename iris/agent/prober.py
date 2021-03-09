@@ -2,15 +2,10 @@
 
 import asyncio
 
-from iris.agent import logger
-from iris.agent.settings import AgentSettings
 from iris.commons.subprocess import CancelProcessException, start_stream_subprocess
 
 
-settings = AgentSettings()
-
-
-async def stopper(logger, redis, measurement_uuid, logger_prefix=""):
+async def stopper(settings, redis, measurement_uuid, logger, logger_prefix=""):
     """Cancel prober conditions."""
     while True:
         measurement_state = await redis.get_measurement_state(measurement_uuid)
@@ -21,8 +16,10 @@ async def stopper(logger, redis, measurement_uuid, logger_prefix=""):
 
 
 async def probe(
+    settings,
     parameters,
     results_filepath,
+    logger,
     stdin=None,
     prefix_incl_filepath=None,
     probes_filepath=None,

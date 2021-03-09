@@ -1,36 +1,8 @@
 """API initialization."""
 
-import logging
-import logging_loki
+from fastapi import APIRouter
 
-from iris.api.settings import APISettings
-from multiprocessing import Queue
-
-settings = APISettings()
-
-# Set logger
-logger = logging.getLogger("api")
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s :: %(levelname)s :: API :: %(message)s")
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
-stream_handler.setFormatter(formatter)
-logger.addHandler(stream_handler)
-
-loki_handler = logging_loki.LokiQueueHandler(
-    Queue(settings.LOKI_QUEUE_SIZE),
-    url=settings.LOKI_URL,
-    version=settings.LOKI_VERSION,
-)
-loki_handler.setLevel(logging.INFO)
-logger.addHandler(loki_handler)
-
-logger.propagate = False
-
-
-from fastapi import APIRouter  # noqa
-from iris.api import profile, agents, targets, measurements  # noqa
-
+from iris.api import agents, measurements, profile, targets
 
 # Register API routes
 router = APIRouter()

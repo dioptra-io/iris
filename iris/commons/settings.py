@@ -4,6 +4,8 @@ from pydantic import BaseSettings
 class CommonSettings(BaseSettings):
     """Common settings."""
 
+    SETTINGS_CLASS = "commons"
+
     AWS_S3_HOST: str = "http://minio:9000"
     AWS_ACCESS_KEY_ID: str = "minioadmin"
     AWS_SECRET_ACCESS_KEY: str = "minioadmin"

@@ -1,8 +1,9 @@
 """Test of commons dataclasses."""
 
-import pytest
 import random
 import uuid
+
+import pytest
 
 from iris.commons.dataclasses import ParametersDataclass
 
