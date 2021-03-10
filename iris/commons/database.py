@@ -187,8 +187,8 @@ class DatabaseMeasurements(Database):
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, user String, targets_file_key Nullable(String), full UInt8, "
             "protocol String, destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
-            "max_round UInt8, start_time DateTime, "
-            "end_time Nullable(DateTime)) "
+            "max_round UInt8, tags Array(String), "
+            "start_time DateTime, end_time Nullable(DateTime)) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
         )
@@ -205,8 +205,9 @@ class DatabaseMeasurements(Database):
             "min_ttl": row[6],
             "max_ttl": row[7],
             "max_round": row[8],
-            "start_time": row[9].isoformat(),
-            "end_time": row[10].isoformat() if row[10] is not None else None,
+            "tags": row[9],
+            "start_time": row[10].isoformat(),
+            "end_time": row[11].isoformat() if row[11] is not None else None,
         }
 
     async def all_count(self, user):
@@ -256,6 +257,7 @@ class DatabaseMeasurements(Database):
                     "min_ttl": measurement_parameters["min_ttl"],
                     "max_ttl": measurement_parameters["max_ttl"],
                     "max_round": measurement_parameters["max_round"],
+                    "tags": measurement_parameters["tags"],
                     "start_time": datetime.fromtimestamp(
                         measurement_parameters["start_time"]
                     ),

@@ -54,6 +54,7 @@ async def get_measurements(
                 "state": "finished" if state is None else state,
                 "targets_file_key": measurement["targets_file_key"],
                 "full": measurement["full"],
+                "tags": measurement["tags"],
                 "start_time": measurement["start_time"],
                 "end_time": measurement["end_time"],
             }

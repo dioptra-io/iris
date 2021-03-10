@@ -40,6 +40,7 @@ def test_get_measurements(client, monkeypatch):
             "state": "finished",
             "targets_file_key": "test.txt",
             "full": False,
+            "tags": [],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
         },
@@ -48,6 +49,7 @@ def test_get_measurements(client, monkeypatch):
             "state": "finished",
             "targets_file_key": "test.txt",
             "full": False,
+            "tags": [],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
         },
@@ -56,6 +58,7 @@ def test_get_measurements(client, monkeypatch):
             "state": "finished",
             "targets_file_key": "test.txt",
             "full": False,
+            "tags": ["test"],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
         },
@@ -69,6 +72,7 @@ def test_get_measurements(client, monkeypatch):
                 "uuid": measurements[0]["uuid"],
                 "targets_file_key": measurements[0]["targets_file_key"],
                 "full": measurements[0]["full"],
+                "tags": ["test"],
                 "start_time": measurements[0]["start_time"],
                 "end_time": measurements[0]["end_time"],
             },
@@ -76,6 +80,7 @@ def test_get_measurements(client, monkeypatch):
                 "uuid": measurements[1]["uuid"],
                 "targets_file_key": measurements[1]["targets_file_key"],
                 "full": measurements[1]["full"],
+                "tags": [],
                 "start_time": measurements[1]["start_time"],
                 "end_time": measurements[1]["end_time"],
             },
@@ -83,6 +88,7 @@ def test_get_measurements(client, monkeypatch):
                 "uuid": measurements[2]["uuid"],
                 "targets_file_key": measurements[2]["targets_file_key"],
                 "full": measurements[2]["full"],
+                "tags": [],
                 "start_time": measurements[2]["start_time"],
                 "end_time": measurements[2]["end_time"],
             },
@@ -448,6 +454,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     min_ttl = 2
     max_ttl = 30
     max_round = 10
+    tags = ["test"]
     start_time = datetime.now().isoformat()
     end_time = datetime.now().isoformat()
 
@@ -465,6 +472,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "min_ttl": min_ttl,
             "max_ttl": max_ttl,
             "max_round": max_round,
+            "tags": tags,
             "start_time": start_time,
             "end_time": end_time,
         }
@@ -519,6 +527,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
+        "tags": tags,
         "start_time": start_time,
         "end_time": end_time,
     }
@@ -543,6 +552,7 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
     min_ttl = 2
     max_ttl = 30
     max_round = 10
+    tags = ["test"]
     start_time = datetime.now().isoformat()
     end_time = datetime.now().isoformat()
 
@@ -560,6 +570,7 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
             "min_ttl": min_ttl,
             "max_ttl": max_ttl,
             "max_round": max_round,
+            "tags": tags,
             "start_time": start_time,
             "end_time": end_time,
         }
@@ -614,6 +625,7 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
+        "tags": tags,
         "start_time": start_time,
         "end_time": end_time,
     }
@@ -638,6 +650,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     min_ttl = 2
     max_ttl = 30
     max_round = 10
+    tags = ["test"]
     start_time = datetime.now().isoformat()
     end_time = datetime.now().isoformat()
 
@@ -655,6 +668,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
             "min_ttl": min_ttl,
             "max_ttl": max_ttl,
             "max_round": max_round,
+            "tags": tags,
             "start_time": start_time,
             "end_time": end_time,
         }
@@ -715,6 +729,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
         "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
+        "tags": tags,
         "start_time": start_time,
         "end_time": end_time,
     }

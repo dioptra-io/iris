@@ -140,6 +140,7 @@ class MeasurementSummaryResponse(BaseModel):
     state: str
     targets_file_key: Optional[str]
     full: bool
+    tags: List[str]
     start_time: str
     end_time: Optional[str]
 
@@ -184,6 +185,7 @@ class MeasurementsPostBody(BaseModel):
     min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
     max_ttl: int = Field(30, title="Maximum TTL", gt=0, lt=256)
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
+    tags: List[str] = Field([], title="Tags")
 
 
 class MeasurementsPostResponse(BaseModel):
@@ -228,6 +230,7 @@ class MeasurementInfoResponse(BaseModel):
     full: bool
     protocol: str
     destination_port: int
+    tags: List[str]
     start_time: str
     end_time: Optional[str]
 

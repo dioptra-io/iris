@@ -73,6 +73,7 @@ async def test_database_measurements(monkeypatch):
         2,
         30,
         10,
+        ["test"],
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
         datetime.strptime("2020-01-02", "%Y-%m-%d"),
     )
@@ -88,6 +89,7 @@ async def test_database_measurements(monkeypatch):
         2,
         30,
         10,
+        [],
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
         None,
     )
@@ -102,6 +104,7 @@ async def test_database_measurements(monkeypatch):
         "min_ttl": 2,
         "max_ttl": 30,
         "max_round": 10,
+        "tags": ["test"],
         "start_time": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
         "end_time": datetime.strptime("2020-01-02", "%Y-%m-%d").isoformat(),
     }
@@ -116,6 +119,7 @@ async def test_database_measurements(monkeypatch):
         "min_ttl": 2,
         "max_ttl": 30,
         "max_round": 10,
+        "tags": [],
         "start_time": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
         "end_time": None,
     }
@@ -162,6 +166,7 @@ async def test_database_measurements(monkeypatch):
         "min_ttl": 2,
         "max_ttl": 30,
         "max_round": 10,
+        "tags": ["test"],
         "start_time": 1597829098,
     }
 
