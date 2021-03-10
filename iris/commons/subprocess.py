@@ -43,23 +43,23 @@ async def start_stream_subprocess(
     for task in done:
         if task.exception():
             if isinstance(task.exception(), (BrokenPipeError, ConnectionResetError)):
-                stdout(
+                print(
                     f"{log_prefix} exception: process exited before reading all input"
                 )
             elif isinstance(task.exception(), CancelProcessException):
-                stdout(f"{log_prefix} exception: process cancellation requested")
+                print(f"{log_prefix} exception: process cancellation requested")
                 was_cancelled = True
             else:
-                stdout(f"{log_prefix} exception: {task.exception()}")
+                print(f"{log_prefix} exception: {task.exception()}")
 
     try:
         os.kill(proc.pid, signal.SIGTERM)
         # The command below seems to also kill the agent...
         # os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
     except ProcessLookupError:
-        stdout(f"{log_prefix} cleanup: the process was already terminated")
+        print(f"{log_prefix} cleanup: the process was already terminated")
     except Exception as e:
-        stdout(f"{log_prefix} cleanup: unable to terminate the subprocess: {e}")
+        print(f"{log_prefix} cleanup: unable to terminate the subprocess: {e}")
 
     return not was_cancelled
 
