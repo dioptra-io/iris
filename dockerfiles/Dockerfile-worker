@@ -34,7 +34,7 @@ WORKDIR /app
 COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf
 
 RUN mkdir vendors
-COPY vendors/diamond-miner-core vendors/diamond-miner-core
+COPY vendors/diamond-miner vendors/diamond-miner
 
 RUN pip install --upgrade pip \
     && pip install poetry uvicorn \

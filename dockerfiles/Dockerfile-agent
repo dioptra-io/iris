@@ -10,7 +10,7 @@ RUN apt-get update \
 WORKDIR /app
 
 RUN mkdir vendors
-COPY vendors/diamond-miner-core vendors/diamond-miner-core
+COPY vendors/diamond-miner vendors/diamond-miner
 
 RUN pip3 install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false
