@@ -3,8 +3,8 @@
 import aiofiles
 import aiofiles.os
 
-from diamond_miner_core import flow
-from diamond_miner_core.rounds import exhaustive_round, probe_to_csv, targets_round
+from diamond_miner import mappers
+from diamond_miner.generator import probe_generator, probe_to_csv
 
 from iris.agent.prober import probe, stopper
 from iris.commons.storage import Storage
@@ -45,7 +45,7 @@ async def measuremement(settings, redis, request, logger):
     targets_filepath = None
     probes_filepath = None
 
-    flow_mapper_cls = getattr(flow, parameters["flow_mapper"])
+    flow_mapper_cls = getattr(mappers, parameters["flow_mapper"])
     flow_mapper_kwargs = parameters["flow_mapper_kwargs"] or {}
     flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
 
@@ -55,14 +55,15 @@ async def measuremement(settings, redis, request, logger):
             # Exhaustive snapshot
             logger.info(f"{logger_prefix} Full snapshot required")
             prefix_incl_filepath = settings.AGENT_D_MINER_BGP_PREFIXES
-            stdin = (
-                probe_to_csv(*x)
-                async for x in exhaustive_round(
-                    flow_mapper,
-                    dst_port=parameters["destination_port"],
-                    n_flows=settings.AGENT_IPS_PER_SUBNET,
-                )
+            gen = probe_generator(
+                ["0.0.0.0/0"],
+                prefix_len=24,
+                min_flow=0,
+                max_flow=settings.AGENT_IPS_PER_SUBNET - 1,
+                dst_port=parameters["destination_port"],
+                mapper=flow_mapper,
             )
+            stdin = (probe_to_csv(*x) async for x in gen)
         else:
             # Targets-list or prefixes-list
             logger.info(f"{logger_prefix} Download targets/prefixes file locally")
@@ -78,27 +79,33 @@ async def measuremement(settings, redis, request, logger):
                 targets_filename,
                 targets_filepath,
             )
+            async with aiofiles.open(targets_filepath) as fd:
+                prefix_list = await fd.readlines()
             if targets_type == "targets-list":
-                # Targets-list file
-                async with aiofiles.open(targets_filepath) as fd:
-                    targets_list = await fd.readlines()
-                stdin = (
-                    probe_to_csv(*x)
-                    async for x in targets_round(
-                        targets_list, dst_port=parameters["destination_port"]
-                    )
+                gen = probe_generator(
+                    prefix_list,
+                    prefix_len=32,
+                    min_flow=0,
+                    max_flow=0,
+                    dst_port=parameters["destination_port"],
+                    # NOTE: A custom flow mapper makes sense for a targets list,
+                    # even if we have only one IP, since we can vary the port to
+                    # get multiple flows.
+                    # In this case, we need to ask the user for a n_flows value
+                    # (currently n_flows=1).
+                    # mapper=flow_mapper
                 )
+                stdin = (probe_to_csv(*x) async for x in gen)
             elif targets_type == "prefixes-list":
-                # Prefixes-list file
-                stdin = (
-                    probe_to_csv(*x)
-                    async for x in exhaustive_round(
-                        flow_mapper,
-                        dst_port=parameters["destination_port"],
-                        n_flows=settings.AGENT_IPS_PER_SUBNET,
-                    )
+                gen = probe_generator(
+                    prefix_list,
+                    prefix_len=24,
+                    min_flow=0,
+                    max_flow=settings.AGENT_IPS_PER_SUBNET,
+                    dst_port=parameters["destination_port"],
+                    mapper=flow_mapper,
                 )
-                prefix_incl_filepath = targets_filepath
+                stdin = (probe_to_csv(*x) async for x in gen)
             else:
                 logger.error("Unknown target file type")
                 return

@@ -166,7 +166,3 @@ docker-compose.test.yml
 
 # Internal Documentation
 PRODUCTION.md
-
-# Internal third-parties
-diamond-miner
-pfring
