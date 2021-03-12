@@ -34,7 +34,7 @@ services:
 
   redis:
     image: "redis:latest"
-    command: "redis-server --appendonly yes --requirepass redispass"
+    command: "redis-server --requirepass redispass"
     expose:
       - "6379"
     labels:

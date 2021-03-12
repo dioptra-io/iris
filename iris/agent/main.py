@@ -81,10 +81,6 @@ async def main():
                 "hostname": socket.gethostname(),
                 "ip_address": get_own_ip_address(),
                 "probing_rate": settings.AGENT_PROBING_RATE,
-                "buffer_sniffer_size": settings.AGENT_BUFFER_SNIFFER_SIZE,
-                "inf_born": settings.AGENT_INF_BORN,
-                "sup_born": settings.AGENT_SUP_BORN,
-                "ips_per_subnet": settings.AGENT_IPS_PER_SUBNET,
             }
         )
 

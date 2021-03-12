@@ -39,7 +39,7 @@ class ProfileGetResponse(BaseModel):
     email: str
     is_active: bool
     is_admin: bool
-    is_full_capable: bool
+    quota: int
     register_date: str
     ripe: ProfileRIPEPutResponse
 
@@ -71,10 +71,6 @@ class AgentParametersResponse(BaseModel):
     hostname: str
     ip_address: str
     probing_rate: int
-    buffer_sniffer_size: int
-    inf_born: int
-    sup_born: int
-    ips_per_subnet: int
 
 
 class AgentsGetResponse(BaseModel):
@@ -101,7 +97,6 @@ class TargetResponse(BaseModel):
     """Information about a target (Response)."""
 
     key: str
-    type: str
     size: int
     last_modified: str
 
@@ -119,7 +114,6 @@ class TargetsPostResponse(BaseModel):
     """POST /targets (Response)."""
 
     key: str
-    type: str
     action: str
 
 
@@ -139,7 +133,6 @@ class MeasurementSummaryResponse(BaseModel):
     uuid: UUID
     state: str
     targets_file_key: Optional[str]
-    full: bool
     tags: List[str]
     start_time: str
     end_time: Optional[str]
@@ -172,8 +165,7 @@ class MeasurementsAgentsPostBody(BaseModel):
 class MeasurementsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
-    targets_file_key: Optional[str]
-    full: Optional[bool]
+    targets_file_key: str = Field(..., title="Target file key")
     agents: List[MeasurementsAgentsPostBody] = Field(
         None,
         title="Optional agent specific parameters",
@@ -235,7 +227,6 @@ class MeasurementInfoResponse(BaseModel):
     uuid: UUID
     state: str
     agents: List[MeasurementAgentInfoResponse]
-    full: bool
     protocol: str
     destination_port: int
     tags: List[str]
@@ -250,7 +241,7 @@ class MeasurementsDeleteResponse(BaseModel):
 
 
 class PacketResponse(BaseModel):
-    """Full information about a measurement (Response)."""
+    """Probe response information (Response)."""
 
     source_ip: str
     destination_prefix: str

@@ -1,6 +1,6 @@
 import logging
-import pytest
 
+import pytest
 from fastapi.testclient import TestClient
 
 from iris.api.main import app
@@ -34,10 +34,6 @@ class FakeRedis(Redis):
                     "hostname": "test",
                     "ip_address": "1.2.3.4",
                     "probing_rate": 1000,
-                    "buffer_sniffer_size": 500000,
-                    "inf_born": 0,
-                    "sup_born": 4294967295,
-                    "ips_per_subnet": 6,
                 },
             }
         ]

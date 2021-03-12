@@ -55,7 +55,7 @@ async def startup_event():
                 "hashed_password": app.settings.API_ADMIN_HASHED_PASSWORD,
                 "is_active": True,
                 "is_admin": True,
-                "is_full_capable": True,
+                "quota": None,
                 "register_date": datetime.now(),
             }
         )

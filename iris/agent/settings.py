@@ -19,12 +19,6 @@ class AgentSettings(CommonSettings):
     AGENT_UUID: str = str(uuid4())
 
     AGENT_PROBING_RATE: int = 1000  # pps
-    AGENT_BUFFER_SNIFFER_SIZE: int = 100000  # kB
-
-    AGENT_INF_BORN: int = 0
-    AGENT_SUP_BORN: int = (2 ** 32) - 1
-
-    AGENT_IPS_PER_SUBNET: int = 6
 
     AGENT_TARGETS_DIR_PATH: Path = Path("/app/targets")
     AGENT_RESULTS_DIR_PATH: Path = Path("/app/results")

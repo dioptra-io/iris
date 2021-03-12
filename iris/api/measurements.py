@@ -26,7 +26,6 @@ from iris.commons.database import (
 )
 from iris.worker.hook import hook
 
-
 router = APIRouter()
 
 
@@ -53,7 +52,6 @@ async def get_measurements(
                 "uuid": measurement["uuid"],
                 "state": "finished" if state is None else state,
                 "targets_file_key": measurement["targets_file_key"],
-                "full": measurement["full"],
                 "tags": measurement["tags"],
                 "start_time": measurement["start_time"],
                 "end_time": measurement["end_time"],
@@ -77,7 +75,7 @@ async def post_measurement(
     measurement: MeasurementsPostBody = Body(
         ...,
         example={
-            "targets_file_key": "test.txt",
+            "targets_file_key": "prefixes.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -99,31 +97,15 @@ async def post_measurement(
             detail="Account inactive",
         )
 
-    if measurement.full:
-        # Full snapshot requested
-        parameters["targets_file_key"] = None
-        if not user_info["is_full_capable"]:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Full capabilities not allowed",
-            )
-    elif measurement.targets_file_key:
-        # Targets based snapshot requested
-        # Verify that the targets file exists on AWS S3
-        try:
-            await request.app.storage.get_file_no_retry(
-                request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
-                measurement.targets_file_key,
-            )
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
-            )
-        parameters["full"] = False
-    else:
+    # Verify that the targets file exists on AWS S3
+    try:
+        await request.app.storage.get_file_no_retry(
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
+            measurement.targets_file_key,
+        )
+    except Exception:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Either `targets_file_key` or `full` key is necessary",
+            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
         )
 
     # Get all connected agents

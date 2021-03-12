@@ -5,11 +5,7 @@ import ipaddress
 from concurrent.futures import ProcessPoolExecutor
 
 from aiofiles import os as aios
-from diamond_miner import (
-    compute_next_round,
-    MeasurementParameters,
-    mappers,
-)
+from diamond_miner import MeasurementParameters, compute_next_round, mappers
 
 from iris.commons.database import DatabaseMeasurementResults, get_session
 from iris.commons.storage import Storage
@@ -60,24 +56,6 @@ async def diamond_miner_pipeline(settings, parameters, result_filename, logger):
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local CSV file")
         await aios.remove(results_filepath)
-
-    # HACK: Temporary remove this feature to avoid the following botocore issue.
-    #         An error occurred (NoSuchKey) when calling the GetObject operation:
-    #         The specified key does not exist.
-    # If the targets_file_key is `targets-list`, then the max round is 1
-    if parameters.targets_file_key is not None:
-        targets_info = await storage.get_file(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + parameters.user,
-            parameters.targets_file_key,
-        )
-        if not targets_info:
-            pass
-        targets_type = targets_info.get("metadata", {}).get("type", "targets-list")
-        if targets_type == "targets-list":
-            logger.info(
-                f"{logger_prefix} Maximum round reached for `targets-list`. Stopping."
-            )
-            return None
 
     next_round_number = round_number + 1
     next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"

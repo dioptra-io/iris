@@ -94,7 +94,7 @@ class DatabaseUsers(Database):
         await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, username String, email String, hashed_password String, "
-            "is_active UInt8, is_admin UInt8, is_full_capable UInt8, "
+            "is_active UInt8, is_admin UInt8, quota Nullable(UInt32), "
             "register_date DateTime, "
             "ripe_account Nullable(String), ripe_key Nullable(String)) "
             "ENGINE=MergeTree() "
@@ -110,7 +110,7 @@ class DatabaseUsers(Database):
             "hashed_password": str(row[3]),
             "is_active": bool(row[4]),
             "is_admin": bool(row[5]),
-            "is_full_capable": bool(row[6]),
+            "quota": row[6],
             "register_date": row[7].isoformat(),
             "ripe_account": str(row[8]) if row[8] is not None else None,
             "ripe_key": str(row[9]) if row[9] is not None else None,
@@ -141,7 +141,7 @@ class DatabaseUsers(Database):
                     "hashed_password": parameters["hashed_password"],
                     "is_active": int(parameters["is_active"]),
                     "is_admin": int(parameters["is_admin"]),
-                    "is_full_capable": int(parameters["is_full_capable"]),
+                    "quota": parameters["quota"],
                     "register_date": parameters["register_date"],
                     "ripe_account": None,
                     "ripe_key": None,
@@ -185,7 +185,7 @@ class DatabaseMeasurements(Database):
 
         await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, targets_file_key Nullable(String), full UInt8, "
+            "(uuid UUID, user String, targets_file_key Nullable(String), "
             "protocol String, destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
             "max_round UInt8, tags Array(String), "
             "start_time DateTime, end_time Nullable(DateTime)) "
@@ -199,9 +199,8 @@ class DatabaseMeasurements(Database):
             "uuid": str(row[0]),
             "user": row[1],
             "targets_file_key": row[2],
-            "full": bool(row[3]),
             "protocol": row[4],
-            "destination_port": row[5],
+            "destination_port": row[5],  # + base source port ?
             "min_ttl": row[6],
             "max_ttl": row[7],
             "max_round": row[8],
@@ -251,7 +250,6 @@ class DatabaseMeasurements(Database):
                     "uuid": measurement_parameters["measurement_uuid"],
                     "user": measurement_parameters["user"],
                     "targets_file_key": measurement_parameters["targets_file_key"],
-                    "full": int(measurement_parameters["full"]),
                     "protocol": measurement_parameters["protocol"],
                     "destination_port": measurement_parameters["destination_port"],
                     "min_ttl": measurement_parameters["min_ttl"],
@@ -290,10 +288,8 @@ class DatabaseAgents(Database):
 
         await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, version String, hostname String, "
-            "ip_address IPv4, probing_rate UInt32, buffer_sniffer_size UInt32, "
-            "inf_born UInt32, sup_born UInt32, ips_per_subnet UInt32, "
-            "last_used DateTime) "
+            "(uuid UUID, user String, version String, hostname String, ip_address IPv4,"
+            "probing_rate UInt32, last_used DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
         )
@@ -307,10 +303,6 @@ class DatabaseAgents(Database):
             "hostname": row[3],
             "ip_address": str(row[4]),
             "probing_rate": row[5],
-            "buffer_sniffer_size": row[6],
-            "inf_born": row[7],
-            "sup_born": row[8],
-            "ips_per_subnet": row[9],
             "last_used": row[10].isoformat(),
         }
 
@@ -345,10 +337,6 @@ class DatabaseAgents(Database):
                     "hostname": parameters["hostname"],
                     "ip_address": parameters["ip_address"],
                     "probing_rate": parameters["probing_rate"],
-                    "buffer_sniffer_size": parameters["buffer_sniffer_size"],
-                    "inf_born": parameters["inf_born"],
-                    "sup_born": parameters["sup_born"],
-                    "ips_per_subnet": parameters["ips_per_subnet"],
                     "last_used": datetime.now(),
                 }
             ],
@@ -394,7 +382,7 @@ class DatabaseAgentsSpecific(Database):
             "probing_rate": row[4],
             "max_round": int(row[5]),
             "targets_file_key": row[6],
-            "seed": int(row[7]),
+            "seed": int(row[7]),  # be more generic (string json)
             "state": "finished" if bool(row[8]) else "ongoing",
         }
 
@@ -509,22 +497,22 @@ class DatabaseMeasurementResults(Database):
     def formatter(self, row):
         """Database row -> response formater."""
         return {
-            "source_ip": str(ipaddress.ip_address(row[0])),
-            "destination_prefix": str(ipaddress.ip_address(row[1])),
-            "destination_ip": str(ipaddress.ip_address(row[2])),
-            "reply_ip": str(ipaddress.ip_address(row[3])),
-            "protocol": row[4],
-            "source_port": row[5],
-            "destination_port": row[6],
-            "ttl": row[7],
-            "ttl_check": row[8],  # implemented only in UDP
-            "type": row[9],
-            "code": row[10],
-            "rtt": row[11],
-            "reply_ttl": row[12],
-            "reply_size": row[13],
-            "round": row[14],
-            "snapshot": row[15],  # Not curently used
+            "source_ip": str(ipaddress.ip_address(row[0])),  # probe_src_addr
+            "destination_prefix": str(ipaddress.ip_address(row[1])),  # calculated
+            "destination_ip": str(ipaddress.ip_address(row[2])),  # probe_dst_addr
+            "reply_ip": str(ipaddress.ip_address(row[3])),  # reply_src_addr
+            "protocol": row[4],  # reply_protocol
+            "source_port": row[5],  # probe_src_port
+            "destination_port": row[6],  # probe_dst_port
+            "ttl": row[7],  # probe_ttl_l3
+            "ttl_check": row[8],  # probe_ttl_l4 /
+            "type": row[9],  # reply_icmp_code
+            "code": row[10],  # reply_icmp_type
+            "rtt": row[11],  # rtt
+            "reply_ttl": row[12],  # reply_ttl
+            "reply_size": row[13],  # reply_size
+            "round": row[14],  # round
+            "snapshot": row[15],  # N/A
         }
 
     def csv_formatter(self, row):

@@ -19,7 +19,6 @@ def test_parameters_dataclass():
         agent_uuid,
         {
             "targets_file_key": "test.txt",
-            "full": False,
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 5,
@@ -35,10 +34,6 @@ def test_parameters_dataclass():
             "hostname": "hostname",
             "ip_address": "1.2.3.4",
             "probing_rate": 1000,
-            "buffer_sniffer_size": 10000000,
-            "inf_born": 0,
-            "sup_born": 32,
-            "ips_per_subnet": 6,
         },
         {
             "targets_file_key": None,
@@ -64,7 +59,6 @@ def test_parameters_dataclass():
     assert agent.to_dict() == {
         "agent_uuid": agent_uuid,
         "targets_file_key": "test.txt",
-        "full": False,
         "protocol": "udp",
         "destination_port": 33434,
         "min_ttl": 5,
@@ -78,8 +72,4 @@ def test_parameters_dataclass():
         "hostname": "hostname",
         "ip_address": "1.2.3.4",
         "probing_rate": 1000,
-        "buffer_sniffer_size": 10000000,
-        "inf_born": 0,
-        "sup_born": 32,
-        "ips_per_subnet": 6,
     }

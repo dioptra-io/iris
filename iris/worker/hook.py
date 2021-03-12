@@ -19,7 +19,6 @@ from iris.commons.storage import Storage
 from iris.worker.pipeline import diamond_miner_pipeline, extract_round_number
 from iris.worker.settings import WorkerSettings
 
-
 settings = WorkerSettings()
 logger = create_logger(settings)
 

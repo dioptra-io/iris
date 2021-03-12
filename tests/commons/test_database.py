@@ -98,7 +98,6 @@ async def test_database_measurements(monkeypatch):
         "uuid": str(measurement_uuid_1),
         "user": "admin",
         "targets_file_key": "key",
-        "full": False,
         "protocol": "udp",
         "destination_port": 33434,
         "min_ttl": 2,
@@ -113,7 +112,6 @@ async def test_database_measurements(monkeypatch):
         "uuid": str(measurement_uuid_2),
         "user": "admin",
         "targets_file_key": "key",
-        "full": False,
         "protocol": "udp",
         "destination_port": 33434,
         "min_ttl": 2,
@@ -160,7 +158,6 @@ async def test_database_measurements(monkeypatch):
         "measurement_uuid": measurement_uuid_1,
         "user": "admin",
         "targets_file_key": "key",
-        "full": False,
         "protocol": "udp",
         "destination_port": 33434,
         "min_ttl": 2,
@@ -217,10 +214,6 @@ async def test_database_agents(monkeypatch):
         "hostname": "hostname",
         "ip_address": "1.2.3.4",
         "probing_rate": 1000,
-        "buffer_sniffer_size": 10000000,
-        "inf_born": 0,
-        "sup_born": 32,
-        "ips_per_subnet": 6,
         "last_used": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
     }
 
@@ -245,10 +238,6 @@ async def test_database_agents(monkeypatch):
         "hostname": "hostname",
         "ip_address": "1.2.3.4",
         "probing_rate": 1000,
-        "buffer_sniffer_size": 10000000,
-        "inf_born": 0,
-        "sup_born": 32,
-        "ips_per_subnet": 6,
     }
 
     # Test of `.register() method`

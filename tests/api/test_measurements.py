@@ -39,7 +39,6 @@ def test_get_measurements(client, monkeypatch):
             "uuid": str(uuid.uuid4()),
             "state": "finished",
             "targets_file_key": "test.txt",
-            "full": False,
             "tags": [],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
@@ -48,7 +47,6 @@ def test_get_measurements(client, monkeypatch):
             "uuid": str(uuid.uuid4()),
             "state": "finished",
             "targets_file_key": "test.txt",
-            "full": False,
             "tags": [],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
@@ -57,7 +55,6 @@ def test_get_measurements(client, monkeypatch):
             "uuid": str(uuid.uuid4()),
             "state": "finished",
             "targets_file_key": "test.txt",
-            "full": False,
             "tags": ["test"],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
@@ -71,7 +68,6 @@ def test_get_measurements(client, monkeypatch):
             {
                 "uuid": measurements[0]["uuid"],
                 "targets_file_key": measurements[0]["targets_file_key"],
-                "full": measurements[0]["full"],
                 "tags": ["test"],
                 "start_time": measurements[0]["start_time"],
                 "end_time": measurements[0]["end_time"],
@@ -79,7 +75,6 @@ def test_get_measurements(client, monkeypatch):
             {
                 "uuid": measurements[1]["uuid"],
                 "targets_file_key": measurements[1]["targets_file_key"],
-                "full": measurements[1]["full"],
                 "tags": [],
                 "start_time": measurements[1]["start_time"],
                 "end_time": measurements[1]["end_time"],
@@ -87,7 +82,6 @@ def test_get_measurements(client, monkeypatch):
             {
                 "uuid": measurements[2]["uuid"],
                 "targets_file_key": measurements[2]["targets_file_key"],
-                "full": measurements[2]["full"],
                 "tags": [],
                 "start_time": measurements[2]["start_time"],
                 "end_time": measurements[2]["end_time"],
@@ -165,7 +159,7 @@ def test_post_measurement_with_targets_file_key(client, monkeypatch):
             pass
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True, "is_full_capable": True}
+        return {"is_active": True}
 
     client.app.storage = FakeStorage()
 
@@ -189,42 +183,6 @@ def test_post_measurement_with_targets_file_key(client, monkeypatch):
     assert response.status_code == 201
 
 
-def test_post_measurement_with_full(client, monkeypatch):
-    """Test post measurement with full snapshot option."""
-
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {"key": "test.txt", "size": 42, "last_modified": "test"}
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "is_full_capable": True}
-
-    client.app.storage = FakeStorage()
-
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
-
-    response = client.post(
-        "/v0/measurements/",
-        json={
-            "full": True,
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
-        },
-    )
-    assert response.status_code == 201
-
-
 def test_post_measurement_with_agents(client, monkeypatch):
     """Test post measurement with agent specific parameters."""
 
@@ -237,7 +195,7 @@ def test_post_measurement_with_agents(client, monkeypatch):
             pass
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True, "is_full_capable": True}
+        return {"is_active": True}
 
     client.app.storage = FakeStorage()
 
@@ -274,7 +232,7 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
             pass
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True, "is_full_capable": True}
+        return {"is_active": True}
 
     client.app.storage = FakeStorage()
 
@@ -308,7 +266,7 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
             raise Exception
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True, "is_full_capable": True}
+        return {"is_active": True}
 
     client.app.storage = FakeStorage()
 
@@ -333,54 +291,11 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
     assert response.json() == {"detail": "File object not found"}
 
 
-def test_post_measurement_invalid_input(client, monkeypatch):
-    """Test post measurement when no `targets_file_key` nor `full`."""
-
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "is_full_capable": True}
-
-    monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
-
-    response = client.post(
-        "/v0/measurements/",
-        json={
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
-        },
-    )
-    assert response.status_code == 422
-    assert response.json() == {
-        "detail": "Either `targets_file_key` or `full` key is necessary"
-    }
-
-    response = client.post(
-        "/v0/measurements/",
-        json={
-            "protocol": "udp",
-            "full": False,
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
-        },
-    )
-    assert response.status_code == 422
-    assert response.json() == {
-        "detail": "Either `targets_file_key` or `full` key is necessary"
-    }
-
-
 def test_post_measurement_inactive_user(client, monkeypatch):
     """Test post measurement when no inactive account."""
 
     async def get_users(*args, **kwargs):
-        return {"is_active": False, "is_full_capable": True}
+        return {"is_active": False}
 
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
     monkeypatch.setattr(
@@ -402,34 +317,6 @@ def test_post_measurement_inactive_user(client, monkeypatch):
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Account inactive"}
-
-
-def test_post_measurement_no_full_capabilities(client, monkeypatch):
-    """Test post measurement when no full capabilities"""
-
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "is_full_capable": False}
-
-    monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
-
-    response = client.post(
-        "/v0/measurements/",
-        json={
-            "full": True,
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
-        },
-    )
-
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Full capabilities not allowed"}
 
 
 # --- GET /v0/measurements/{measurement_uuid} ---
@@ -466,7 +353,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": user,
             "targets_file_key": "test.txt",
-            "full": False,
             "protocol": protocol,
             "destination_port": destination_port,
             "min_ttl": min_ttl,
@@ -485,10 +371,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "hostname": "test",
             "ip_address": "0.0.0.0",
             "probing_rate": 0,
-            "buffer_sniffer_size": 0,
-            "inf_born": 0,
-            "sup_born": 0,
-            "ips_per_subnet": 0,
             "last_used": datetime.now().isoformat(),
         }
 
@@ -524,7 +406,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                 },
             }
         ],
-        "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
         "tags": tags,
@@ -564,7 +445,6 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": user,
             "targets_file_key": "test.txt",
-            "full": False,
             "protocol": protocol,
             "destination_port": destination_port,
             "min_ttl": min_ttl,
@@ -583,10 +463,6 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
             "hostname": "test",
             "ip_address": "0.0.0.0",
             "probing_rate": 0,
-            "buffer_sniffer_size": 0,
-            "inf_born": 0,
-            "sup_born": 0,
-            "ips_per_subnet": 0,
             "last_used": datetime.now().isoformat(),
         }
 
@@ -622,7 +498,6 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
                 },
             }
         ],
-        "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
         "tags": tags,
@@ -662,7 +537,6 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": user,
             "targets_file_key": "test.txt",
-            "full": False,
             "protocol": protocol,
             "destination_port": destination_port,
             "min_ttl": min_ttl,
@@ -681,10 +555,6 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
             "hostname": "test",
             "ip_address": "0.0.0.0",
             "probing_rate": 0,
-            "buffer_sniffer_size": 0,
-            "inf_born": 0,
-            "sup_born": 0,
-            "ips_per_subnet": 0,
             "last_used": datetime.now().isoformat(),
         }
 
@@ -726,7 +596,6 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                 },
             }
         ],
-        "full": False,
         "protocol": protocol,
         "destination_port": destination_port,
         "tags": tags,
@@ -851,7 +720,6 @@ def test_get_measurement_results(client, monkeypatch):
             "user": "test",
             "agents": [str(uuid.uuid4())],
             "targets_file_key": "test.txt",
-            "full": False,
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -917,7 +785,6 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
             "user": "test",
             "agents": [str(uuid.uuid4())],
             "targets_file_key": "test.txt",
-            "full": False,
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -968,7 +835,6 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
             "user": "test",
             "agents": [str(uuid.uuid4())],
             "targets_file_key": "test.txt",
-            "full": False,
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,

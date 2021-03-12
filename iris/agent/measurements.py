@@ -2,7 +2,6 @@
 
 import aiofiles
 import aiofiles.os
-
 from diamond_miner import mappers
 from diamond_miner.generator import probe_generator, probe_to_csv
 
@@ -51,64 +50,26 @@ async def measuremement(settings, redis, request, logger):
 
     if parameters["round"] == 1:
         # Round = 1
-        if parameters["full"] and parameters["targets_file_key"] is None:
-            # Exhaustive snapshot
-            logger.info(f"{logger_prefix} Full snapshot required")
-            prefix_incl_filepath = settings.AGENT_D_MINER_BGP_PREFIXES
-            gen = probe_generator(
-                ["0.0.0.0/0"],
-                prefix_len=24,
-                min_flow=0,
-                max_flow=settings.AGENT_IPS_PER_SUBNET - 1,
-                dst_port=parameters["destination_port"],
-                mapper=flow_mapper,
-            )
-            stdin = (probe_to_csv(*x) async for x in gen)
-        else:
-            # Targets-list or prefixes-list
-            logger.info(f"{logger_prefix} Download targets/prefixes file locally")
-            targets_filename = parameters["targets_file_key"]
-            targets_filepath = str(settings.AGENT_TARGETS_DIR_PATH / targets_filename)
-            targets_info = await storage.get_file(
-                settings.AWS_S3_TARGETS_BUCKET_PREFIX + parameters["username"],
-                targets_filename,
-            )
-            targets_type = targets_info.get("metadata", {}).get("type", "targets-list")
-            await storage.download_file(
-                settings.AWS_S3_TARGETS_BUCKET_PREFIX + parameters["username"],
-                targets_filename,
-                targets_filepath,
-            )
-            async with aiofiles.open(targets_filepath) as fd:
-                prefix_list = await fd.readlines()
-            if targets_type == "targets-list":
-                gen = probe_generator(
-                    prefix_list,
-                    prefix_len=32,
-                    min_flow=0,
-                    max_flow=0,
-                    dst_port=parameters["destination_port"],
-                    # NOTE: A custom flow mapper makes sense for a targets list,
-                    # even if we have only one IP, since we can vary the port to
-                    # get multiple flows.
-                    # In this case, we need to ask the user for a n_flows value
-                    # (currently n_flows=1).
-                    # mapper=flow_mapper
-                )
-                stdin = (probe_to_csv(*x) async for x in gen)
-            elif targets_type == "prefixes-list":
-                gen = probe_generator(
-                    prefix_list,
-                    prefix_len=24,
-                    min_flow=0,
-                    max_flow=settings.AGENT_IPS_PER_SUBNET,
-                    dst_port=parameters["destination_port"],
-                    mapper=flow_mapper,
-                )
-                stdin = (probe_to_csv(*x) async for x in gen)
-            else:
-                logger.error("Unknown target file type")
-                return
+        logger.info(f"{logger_prefix} Download targets/prefixes file locally")
+        targets_filename = parameters["targets_file_key"]
+        targets_filepath = str(settings.AGENT_TARGETS_DIR_PATH / targets_filename)
+        await storage.download_file(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + parameters["username"],
+            targets_filename,
+            targets_filepath,
+        )
+        async with aiofiles.open(targets_filepath) as fd:
+            prefix_list = await fd.readlines()
+
+        gen = probe_generator(
+            prefix_list,
+            prefix_len=24,
+            min_flow=0,
+            max_flow=5,
+            dst_port=parameters["destination_port"],
+            mapper=flow_mapper,
+        )
+        stdin = (probe_to_csv(*x) async for x in gen)
     else:
         # Round > 1
         logger.info(f"{logger_prefix} Download CSV probe file locally")

@@ -37,7 +37,7 @@ async def probe(
         + " --protocol "
         + str(parameters["protocol"])
         + " --sniffer-buffer-size="
-        + str(settings.AGENT_BUFFER_SNIFFER_SIZE)
+        + str(100_000)  # TODO: removed in the next prober version
         + " --filter-min-ttl="
         + str(parameters["min_ttl"])
         + " --filter-max-ttl="
