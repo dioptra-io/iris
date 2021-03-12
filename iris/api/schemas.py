@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 
+from pydantic import BaseModel, Field
+
 # --- Commons ----
 
 
@@ -139,6 +141,7 @@ class MeasurementSummaryResponse(BaseModel):
     state: str
     targets_file_key: Optional[str]
     full: bool
+    tags: List[str]
     start_time: str
     end_time: Optional[str]
 
@@ -180,8 +183,8 @@ class MeasurementsPostBody(BaseModel):
     protocol: str = Field(
         ...,
         title="Probing transport protocol",
-        description="Must be either icmp, tcp or udp.",
-        regex="(?i)^icmp$|^udp$|^tcp$",
+        description="Must be either udp or icmp.",
+        regex="(?i)^udp$|^icmp$",
     )
     destination_port: int = Field(..., title="Destination port", gt=0, lt=65_536)
     min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
@@ -191,6 +194,7 @@ class MeasurementsPostBody(BaseModel):
     flow_mapper_kwargs: Dict[str, Any] = Field(
         None, title="Optional keyword arguments for the flow mapper"
     )
+    tags: List[str] = Field([], title="Tags")
 
 
 class MeasurementsPostResponse(BaseModel):
@@ -202,6 +206,7 @@ class MeasurementsPostResponse(BaseModel):
 class MeasurementAgentSpecific(BaseModel):
     """Information about agent specific information (Response)."""
 
+    targets_file_key: Optional[str]
     min_ttl: int
     max_ttl: int
     probing_rate: int
@@ -231,10 +236,10 @@ class MeasurementInfoResponse(BaseModel):
     uuid: UUID
     state: str
     agents: List[MeasurementAgentInfoResponse]
-    targets_file_key: Optional[str]
     full: bool
     protocol: str
     destination_port: int
+    tags: List[str]
     start_time: str
     end_time: Optional[str]
 

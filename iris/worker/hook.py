@@ -1,31 +1,30 @@
 """Tool independant worker hook."""
 
 import asyncio
-import dramatiq
-import ssl
 import traceback
 
+import dramatiq
 from aiofiles import os as aios
+
 from iris.commons.database import (
-    get_session,
-    DatabaseMeasurements,
     DatabaseAgents,
     DatabaseAgentsSpecific,
+    DatabaseMeasurements,
+    get_session,
 )
 from iris.commons.dataclasses import ParametersDataclass
+from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
-from iris.worker import logger
-from iris.worker.pipeline import extract_round_number, diamond_miner_pipeline
+from iris.worker.pipeline import diamond_miner_pipeline, extract_round_number
 from iris.worker.settings import WorkerSettings
 
 
 settings = WorkerSettings()
-settings_redis_ssl = ssl.SSLContext() if settings.REDIS_SSL else None
-storage = Storage()
+logger = create_logger(settings)
 
 
-async def sanity_clean(measurement_uuid, agent_uuid):
+async def sanity_clean(storage, measurement_uuid, agent_uuid):
     """Clean AWS S3 if the sanity check don't pass."""
     remote_files = await storage.get_all_files(measurement_uuid)
     for remote_file in remote_files:
@@ -39,7 +38,7 @@ async def sanity_clean(measurement_uuid, agent_uuid):
                 logger.error(f"Impossible to remove `{remote_filename}`")
 
 
-async def sanity_check(redis, measurement_uuid, agent_uuid):
+async def sanity_check(redis, storage, measurement_uuid, agent_uuid):
     """
     Sanity check to close the loop if the agent is disconnected.
     Returns: True if the agent is alive, else False.
@@ -49,23 +48,23 @@ async def sanity_check(redis, measurement_uuid, agent_uuid):
         checks.append(await redis.check_agent(agent_uuid))
         await asyncio.sleep(settings.WORKER_SANITY_CHECK_REFRESH)
     if False in checks:
-        await sanity_clean(measurement_uuid, agent_uuid)
+        await sanity_clean(storage, measurement_uuid, agent_uuid)
         return False
     return True
 
 
-async def watch(redis, parameters):
+async def watch(redis, storage, parameters):
     """Watch for results from an agent."""
     logger_prefix = f"{parameters.measurement_uuid} :: {parameters.agent_uuid} ::"
 
-    session = get_session()
-    database_agents_specific = DatabaseAgentsSpecific(session)
+    session = get_session(settings)
+    database_agents_specific = DatabaseAgentsSpecific(session, settings, logger=logger)
 
     while True:
         if settings.WORKER_SANITY_CHECK_ENABLE:
             # Check if the agent is down
             is_agent_alive = await sanity_check(
-                redis, parameters.measurement_uuid, parameters.agent_uuid
+                redis, storage, parameters.measurement_uuid, parameters.agent_uuid
             )
             if not is_agent_alive:
                 logger.warning(f"{logger_prefix} Stop watching agent")
@@ -100,7 +99,7 @@ async def watch(redis, parameters):
         # If found, then execute process pipeline
         # TODO Select pipeline depending on the `measurement_tool`
         shuffled_next_round_csv_filename = await diamond_miner_pipeline(
-            parameters, results_filename
+            settings, parameters, results_filename, logger
         )
 
         if shuffled_next_round_csv_filename is None:
@@ -130,18 +129,18 @@ async def callback(agents_information, measurement_parameters):
     measurement_uuid = measurement_parameters["measurement_uuid"]
     username = measurement_parameters["user"]
 
+    storage = Storage(settings, logger)
+
     logger_prefix = f"{measurement_uuid} ::"
 
     logger.info(f"{logger_prefix} New measurement received")
-    session = get_session()
-    database_measurements = DatabaseMeasurements(session)
-    database_agents = DatabaseAgents(session)
-    database_agents_specific = DatabaseAgentsSpecific(session)
+    session = get_session(settings)
+    database_measurements = DatabaseMeasurements(session, settings, logger=logger)
+    database_agents = DatabaseAgents(session, settings, logger=logger)
+    database_agents_specific = DatabaseAgentsSpecific(session, settings, logger=logger)
 
-    redis = Redis()
-    await redis.connect(
-        settings.REDIS_URL, settings.REDIS_PASSWORD, ssl=settings_redis_ssl
-    )
+    redis = Redis(settings=settings, logger=logger)
+    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
     logger.info(f"{logger_prefix} Getting agents information")
     agents = []
@@ -235,7 +234,7 @@ async def callback(agents_information, measurement_parameters):
         agents = filtered_agents
 
     logger.info(f"{logger_prefix} Watching ...")
-    await asyncio.gather(*[watch(redis, agent) for agent in agents])
+    await asyncio.gather(*[watch(redis, storage, agent) for agent in agents])
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Removing local measurement directory")
@@ -248,6 +247,7 @@ async def callback(agents_information, measurement_parameters):
 
     logger.info(f"{logger_prefix} Delete bucket")
     try:
+        await storage.delete_all_files_from_bucket(bucket=measurement_uuid)
         await storage.delete_bucket(bucket=measurement_uuid)
     except Exception:
         logger.error(f"{logger_prefix} Impossible to remove bucket")

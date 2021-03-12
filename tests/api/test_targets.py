@@ -1,6 +1,7 @@
 """Test of `targets` operations."""
 
 import tempfile
+
 import pytest
 
 from iris.api.targets import verify_targets_file
@@ -22,7 +23,8 @@ def test_get_targets(client, monkeypatch):
                 }
             ]
 
-    monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     response = client.get("/v0/targets")
     assert response.json() == {
         "count": 1,
@@ -41,7 +43,8 @@ def test_get_targets_empty(client, monkeypatch):
         async def get_all_files_no_retry(*args, **kwargs):
             return []
 
-    monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     response = client.get("/v0/targets")
     assert response.json() == {
         "count": 0,
@@ -66,7 +69,8 @@ def test_get_targets_by_key(client, monkeypatch):
                 "metadata": {"type": "target-list"},
             }
 
-    monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     response = client.get("/v0/targets/test")
     assert response.json() == {
         "key": "test",
@@ -83,7 +87,8 @@ def test_get_targets_by_key_not_found(client, monkeypatch):
         async def get_file_no_retry(*args, **kwargs):
             raise Exception
 
-    monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     response = client.get("/v0/targets/test")
     assert response.status_code == 404
 
@@ -181,7 +186,8 @@ def test_delete_targets_by_key(client, monkeypatch):
         async def delete_file_check_no_retry(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 204}}
 
-    monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     response = client.delete("/v0/targets/test")
     assert response.json() == {"key": "test", "action": "delete"}
 
@@ -193,7 +199,8 @@ def test_delete_targets_by_key_not_found(client, monkeypatch):
         async def delete_file_check_no_retry(*args, **kwargs):
             raise Exception
 
-    monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     response = client.delete("/v0/targets/test")
     assert response.status_code == 404
 
@@ -205,6 +212,7 @@ def test_delete_targets_internal_error(client, monkeypatch):
         async def delete_file_check_no_retry(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 500}}
 
-    monkeypatch.setattr("iris.api.targets.storage", FakeStorage())
+    client.app.storage = FakeStorage()
+
     response = client.delete("/v0/targets/test")
     assert response.status_code == 500

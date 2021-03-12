@@ -13,21 +13,19 @@ from fastapi import (
     UploadFile,
     status,
 )
+
 from iris.api.pagination import ListPagination
-from iris.api.security import authenticate
 from iris.api.schemas import (
     ExceptionResponse,
     TargetResponse,
+    TargetsDeleteResponse,
     TargetsGetResponse,
     TargetsPostResponse,
-    TargetsDeleteResponse,
 )
-from iris.api.settings import APISettings
-from iris.commons.storage import Storage
+from iris.api.security import authenticate
+
 
 router = APIRouter()
-settings = APISettings()
-storage = Storage()
 
 
 @router.get(
@@ -41,8 +39,8 @@ async def get_targets(
 ):
     """Get all targets lists information."""
     try:
-        targets = await storage.get_all_files_no_retry(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+        targets = await request.app.storage.get_all_files_no_retry(
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
         )
     except Exception:
         raise HTTPException(
@@ -62,11 +60,13 @@ async def get_targets(
     responses={404: {"model": ExceptionResponse}},
     summary="Get targets list information by key",
 )
-async def get_target_by_key(key: str, username: str = Depends(authenticate)):
+async def get_target_by_key(
+    request: Request, key: str, username: str = Depends(authenticate)
+):
     """"Get a targets list information by key."""
     try:
-        target = await storage.get_file_no_retry(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
+        target = await request.app.storage.get_file_no_retry(
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
         )
         target["type"] = target.get("metadata", {}).get("type", "targets-list")
     except Exception:
@@ -99,7 +99,7 @@ async def verify_targets_file(targets_file, target_type):
     return True
 
 
-async def upload_targets_file(target_bucket, targets_file, metadata):
+async def upload_targets_file(storage, target_bucket, targets_file, metadata):
     """Upload targets file asynchronously."""
     await storage.upload_file_no_retry(
         target_bucket, targets_file.filename, targets_file.file, {"type": metadata}
@@ -113,6 +113,7 @@ async def upload_targets_file(target_bucket, targets_file, metadata):
     summary="Upload a targets list",
 )
 async def post_target(
+    request: Request,
     background_tasks: BackgroundTasks,
     targets_file: UploadFile = File(...),
     metadata: str = Query("targets-list", regex="targets-list|prefixes-list"),
@@ -125,9 +126,9 @@ async def post_target(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail="Bad targets file structure",
         )
-    target_bucket = settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+    target_bucket = request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
     background_tasks.add_task(
-        upload_targets_file, target_bucket, targets_file, metadata
+        upload_targets_file, request.app.storage, target_bucket, targets_file, metadata
     )
     return {"key": targets_file.filename, "type": metadata, "action": "upload"}
 
@@ -138,11 +139,13 @@ async def post_target(
     responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
     summary="Delete a targets list from object storage.",
 )
-async def delete_target_by_key(key: str, username: str = Depends(authenticate)):
+async def delete_target_by_key(
+    request: Request, key: str, username: str = Depends(authenticate)
+):
     """Delete a targets list from object storage."""
     try:
-        response = await storage.delete_file_check_no_retry(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
+        response = await request.app.storage.delete_file_check_no_retry(
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
         )
     except Exception:
         raise HTTPException(

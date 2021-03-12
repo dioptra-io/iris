@@ -1,20 +1,17 @@
-import aioredis
-import aioredis.pubsub
 import json
 import logging
+import ssl
 
+import aioredis
+import aioredis.pubsub
 from aioredis.errors import ConnectionClosedError
-from iris.commons import logger
-from iris.commons.settings import CommonSettings
 from tenacity import (
+    before_sleep_log,
     retry,
     stop_after_delay,
     wait_exponential,
     wait_random,
-    before_sleep_log,
 )
-
-common_settings = CommonSettings()
 
 
 class Redis(object):
@@ -26,41 +23,44 @@ class Redis(object):
     KEY_AGENT_STATE: str = "agent_state"
     KEY_AGENT_PARAMETERS: str = "agent_parameters"
 
-    def __init__(self, uuid=None):
+    def __init__(self, settings, logger=None):
         self._redis = None
+        self.settings = settings
+        self.logger = logger
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
-    async def connect(self, host, password=None, ssl=None):
+    def fault_tolerant(func):
+        """Exponential back-off strategy."""
+
+        async def wrapper(*args, **kwargs):
+            cls = args[0]
+            settings, logger = cls.settings, cls.logger
+            return await retry(
+                stop=stop_after_delay(settings.REDIS_TIMEOUT),
+                wait=wait_exponential(
+                    multiplier=settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                    min=settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
+                    max=settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
+                )
+                + wait_random(
+                    settings.REDIS_TIMEOUT_RANDOM_MIN,
+                    settings.REDIS_TIMEOUT_RANDOM_MAX,
+                ),
+                before_sleep=(
+                    before_sleep_log(logger, logging.ERROR) if logger else None
+                ),
+            )(func)(*args, **kwargs)
+
+        return wrapper
+
+    @fault_tolerant
+    async def connect(self, host, password=None):
         """Connect to Redis instance."""
-        self._redis = await aioredis.create_redis(host, ssl=ssl)
+        ssl_context = ssl.SSLContext() if self.settings.REDIS_SSL else None
+        self._redis = await aioredis.create_redis(host, ssl=ssl_context)
         if password:
             await self._redis.auth(password)
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def get_agent_state(self, uuid):
         """Get agent state."""
         state = await self._redis.get(f"{self.KEY_AGENT_STATE}:{uuid}")
@@ -68,19 +68,7 @@ class Redis(object):
             return "unknown"
         return state.decode("utf8")
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def get_agent_parameters(self, uuid):
         """Get agent parameters."""
         parameters = await self._redis.get(f"{self.KEY_AGENT_PARAMETERS}:{uuid}")
@@ -88,19 +76,7 @@ class Redis(object):
             return {}
         return json.loads(parameters)
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def get_agents(self, state=True, parameters=True):
         """Get agents UUID along with their state."""
         agents_list = await self._redis.client_list()
@@ -119,19 +95,7 @@ class Redis(object):
             agents.append(agent)
         return agents
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def check_agent(self, uuid):
         """Check the conformity of an agent."""
         agents = await self.get_agents(state=False, parameters=False)
@@ -146,89 +110,29 @@ class Redis(object):
             return False
         return True
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def get_measurement_state(self, uuid):
         """Get measurement state."""
         state = await self._redis.get(f"{self.KEY_MEASUREMENT_STATE}:{uuid}")
         if state is not None:
             return state.decode("utf8")
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def set_measurement_state(self, uuid, state):
         """Set measurement_parameters."""
         await self._redis.set(f"{self.KEY_MEASUREMENT_STATE}:{uuid}", state)
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def delete_measurement_state(self, uuid):
         """Delete agent state."""
         await self._redis.delete(f"{self.KEY_MEASUREMENT_STATE}:{uuid}")
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def publish(self, channel, data):
         """Publish a message via into a channel."""
         await self._redis.publish_json(f"{self.KEY_AGENT_LISTEN}:{channel}", data)
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def disconnect(self):
         """Close the connection."""
         self._redis.close()
@@ -238,26 +142,39 @@ class Redis(object):
 class AgentRedis(Redis):
     """Redis interface for agents."""
 
-    def __init__(self, uuid):
-        super().__init__()
+    def __init__(self, uuid, settings, logger=None):
         self.uuid = uuid
+        self.settings = settings
+        self.logger = logger
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
-    async def connect(self, host, password=None, ssl=None, register=True):
+    def fault_tolerant(func):
+        """Exponential back-off strategy."""
+
+        async def wrapper(*args, **kwargs):
+            cls = args[0]
+            settings, logger = cls.settings, cls.logger
+            return await retry(
+                stop=stop_after_delay(settings.REDIS_TIMEOUT),
+                wait=wait_exponential(
+                    multiplier=settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                    min=settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
+                    max=settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
+                )
+                + wait_random(
+                    settings.REDIS_TIMEOUT_RANDOM_MIN,
+                    settings.REDIS_TIMEOUT_RANDOM_MAX,
+                ),
+                before_sleep=(
+                    before_sleep_log(logger, logging.ERROR) if logger else None
+                ),
+            )(func)(*args, **kwargs)
+
+        return wrapper
+
+    @fault_tolerant
+    async def connect(self, host, password=None, register=True):
         """Connect to Redis instance."""
-        await super().connect(host, password=password, ssl=ssl)
+        await super().connect(host, password=password)
         if register:
             await self._redis.client_setname(self.uuid)
 
@@ -269,88 +186,28 @@ class AgentRedis(Redis):
             return False
         return True
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def set_agent_state(self, state):
         """Set agent state."""
         await self._redis.set(f"{self.KEY_AGENT_STATE}:{self.uuid}", state)
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def delete_agent_state(self):
         """Delete agent state."""
         await self._redis.delete(f"{self.KEY_AGENT_STATE}:{self.uuid}")
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def set_agent_parameters(self, parameters):
         """Set agent parameters."""
         parameters = json.dumps(parameters)
         await self._redis.set(f"{self.KEY_AGENT_PARAMETERS}:{self.uuid}", parameters)
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def delete_agent_parameters(self):
         """Delete agent state."""
         await self._redis.delete(f"{self.KEY_AGENT_PARAMETERS}:{self.uuid}")
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def subscribe(self):
         """Subscribe to agent channels (all, specific) and wait for a response"""
         mpsc = aioredis.pubsub.Receiver()
@@ -368,19 +225,7 @@ class AgentRedis(Redis):
 
         return response
 
-    @retry(
-        stop=stop_after_delay(common_settings.REDIS_TIMEOUT),
-        wait=wait_exponential(
-            multiplier=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-            min=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-            max=common_settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-        )
-        + wait_random(
-            common_settings.REDIS_TIMEOUT_RANDOM_MIN,
-            common_settings.REDIS_TIMEOUT_RANDOM_MAX,
-        ),
-        before_sleep=before_sleep_log(logger, logging.ERROR),
-    )
+    @fault_tolerant
     async def unsubscribe(self):
         """Unsubscribe to channels."""
         await self._redis.unsubscribe(

@@ -3,16 +3,11 @@
 import aiofiles
 import aiofiles.os
 
-from iris.agent import logger
-from iris.agent.prober import probe, stopper
-from iris.agent.settings import AgentSettings
-from iris.commons.storage import Storage
-
 from diamond_miner_core import flow
-from diamond_miner_core.rounds import exhaustive_round, targets_round, probe_to_csv
+from diamond_miner_core.rounds import exhaustive_round, probe_to_csv, targets_round
 
-settings = AgentSettings()
-storage = Storage()
+from iris.agent.prober import probe, stopper
+from iris.commons.storage import Storage
 
 
 async def build_prober_parameters(request):
@@ -22,12 +17,14 @@ async def build_prober_parameters(request):
     return {**request, **request_parameters}
 
 
-async def measuremement(redis, request):
+async def measuremement(settings, redis, request, logger):
     """Conduct a measurement."""
     measurement_uuid = request["measurement_uuid"]
     agent_uuid = redis.uuid
 
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
+
+    storage = Storage(settings, logger)
 
     parameters = await build_prober_parameters(request)
     if agent_uuid != parameters["agent_uuid"]:
@@ -40,7 +37,7 @@ async def measuremement(redis, request):
     except FileExistsError:
         logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
-    result_filename = f"{agent_uuid}_results_{parameters['round']}.pcap"
+    result_filename = f"{agent_uuid}_results_{parameters['round']}.csv"
     results_filepath = str(measurement_results_path / result_filename)
 
     stdin = None
@@ -112,8 +109,9 @@ async def measuremement(redis, request):
         probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
         await storage.download_file(measurement_uuid, probes_filename, probes_filepath)
 
-    logger.info(f"{logger_prefix} Tool : {parameters['measurement_tool']}")
     logger.info(f"{logger_prefix} Username : {parameters['username']}")
+    logger.info(f"{logger_prefix} Tool : {parameters['measurement_tool']}")
+    logger.info(f"{logger_prefix} Protocol : {parameters['protocol']}")
     logger.info(f"{logger_prefix} Round : {parameters['round']}")
     logger.info(f"{logger_prefix} Minimum TTL : {parameters['min_ttl']}")
     logger.info(f"{logger_prefix} Maximum TTL : {parameters['max_ttl']}")
@@ -122,13 +120,15 @@ async def measuremement(redis, request):
         f"{logger_prefix} Flow Mapper: {flow_mapper_cls.__name__}({flow_mapper_kwargs})"
     )
     is_not_canceled = await probe(
+        settings,
         parameters,
         results_filepath,
+        logger,
         stdin=stdin,
         prefix_incl_filepath=prefix_incl_filepath,
         probes_filepath=probes_filepath,
         stopper=stopper(
-            logger, redis, measurement_uuid, logger_prefix=logger_prefix + " "
+            settings, redis, measurement_uuid, logger, logger_prefix=logger_prefix + " "
         ),
         logger_prefix=logger_prefix + " ",
     )
