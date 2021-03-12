@@ -1,9 +1,9 @@
 """API Body and Response schemas."""
 
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from pydantic import BaseModel, Field
 
 # --- Commons ----
 
@@ -189,7 +189,7 @@ class MeasurementsPostBody(BaseModel):
     min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
     max_ttl: int = Field(30, title="Maximum TTL", gt=0, lt=256)
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
-    flow_mapper: str = Field("CIDRFlowMapper", title="Flow mapper")
+    flow_mapper: str = Field("IntervalFlowMapper", title="Flow mapper")
     flow_mapper_kwargs: Dict[str, Any] = Field(
         None, title="Optional keyword arguments for the flow mapper"
     )
