@@ -3,7 +3,7 @@
 import aiofiles
 import aiofiles.os
 
-from diamond_miner_core import HeidemannFlowMapper
+from diamond_miner_core import flow
 from diamond_miner_core.rounds import exhaustive_round, probe_to_csv, targets_round
 
 from iris.agent.prober import probe, stopper
@@ -45,6 +45,10 @@ async def measuremement(settings, redis, request, logger):
     targets_filepath = None
     probes_filepath = None
 
+    flow_mapper_cls = getattr(flow, parameters["flow_mapper"])
+    flow_mapper_kwargs = parameters["flow_mapper_kwargs"] or {}
+    flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
+
     if parameters["round"] == 1:
         # Round = 1
         if parameters["full"] and parameters["targets_file_key"] is None:
@@ -54,7 +58,7 @@ async def measuremement(settings, redis, request, logger):
             stdin = (
                 probe_to_csv(*x)
                 async for x in exhaustive_round(
-                    HeidemannFlowMapper(),
+                    flow_mapper,
                     dst_port=parameters["destination_port"],
                     n_flows=settings.AGENT_IPS_PER_SUBNET,
                 )
@@ -89,7 +93,7 @@ async def measuremement(settings, redis, request, logger):
                 stdin = (
                     probe_to_csv(*x)
                     async for x in exhaustive_round(
-                        HeidemannFlowMapper(),
+                        flow_mapper,
                         dst_port=parameters["destination_port"],
                         n_flows=settings.AGENT_IPS_PER_SUBNET,
                     )
@@ -112,6 +116,9 @@ async def measuremement(settings, redis, request, logger):
     logger.info(f"{logger_prefix} Minimum TTL : {parameters['min_ttl']}")
     logger.info(f"{logger_prefix} Maximum TTL : {parameters['max_ttl']}")
     logger.info(f"{logger_prefix} Probing Rate : {parameters['probing_rate']}")
+    logger.info(
+        f"{logger_prefix} Flow Mapper: {flow_mapper_cls.__name__}({flow_mapper_kwargs})"
+    )
     is_not_canceled = await probe(
         settings,
         parameters,

@@ -139,6 +139,7 @@ dmypy.json
 cython_debug/
 
 # Local
+.idea
 .vscode
 .DS_Store
 .clickhouse-client-history
