@@ -3,7 +3,8 @@
 import aiofiles
 import aiofiles.os
 from diamond_miner import mappers
-from diamond_miner.generator import probe_generator, probe_to_csv
+from diamond_miner.generator import probe_generator
+from diamond_miner.utilities import probe_to_csv
 
 from iris.agent.prober import probe, stopper
 from iris.commons.storage import Storage
@@ -64,8 +65,7 @@ async def measuremement(settings, redis, request, logger):
         gen = probe_generator(
             prefix_list,
             prefix_len=24,
-            min_flow=0,
-            max_flow=5,
+            flow_ids=range(6),
             dst_port=parameters["tool_parameters"]["destination_port"],
             mapper=flow_mapper,
         )
