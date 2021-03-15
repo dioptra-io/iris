@@ -64,7 +64,8 @@ async def measuremement(settings, redis, request, logger):
 
         gen = probe_generator(
             prefix_list,
-            prefix_len=24,
+            prefix_len_v4=24,
+            prefix_len_v6=64,
             flow_ids=range(6),
             dst_port=parameters["tool_parameters"]["destination_port"],
             mapper=flow_mapper,
