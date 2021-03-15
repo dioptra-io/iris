@@ -1,4 +1,4 @@
-FROM matthieugouel/diamond-miner-prober:0.2.5
+FROM python:3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -28,7 +28,8 @@ RUN mkdir results
 COPY statics/excluded_prefixes statics/excluded_prefixes
 COPY statics/index.html statics/index.html
 
+COPY --from=matthieugouel/diamond-miner-prober:0.2.6 /usr/bin/diamond-miner-prober /usr/bin/diamond-miner-prober
+
 EXPOSE 80
 
-ENTRYPOINT []
 CMD ["sh", "-c", "python3 -m http.server -d statics/ 80 & python3 -u main.py"]
