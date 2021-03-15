@@ -1,6 +1,7 @@
 """Interfaces with database."""
 
 import ipaddress
+import json
 import logging
 import uuid
 from datetime import datetime
@@ -185,9 +186,7 @@ class DatabaseMeasurements(Database):
 
         await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, targets_file_key Nullable(String), "
-            "protocol String, destination_port UInt16, min_ttl UInt8, max_ttl UInt8, "
-            "max_round UInt8, tags Array(String), "
+            "(uuid UUID, user String, tool String, tags Array(String), "
             "start_time DateTime, end_time Nullable(DateTime)) "
             "ENGINE=MergeTree() "
             "ORDER BY (uuid)",
@@ -198,15 +197,10 @@ class DatabaseMeasurements(Database):
         return {
             "uuid": str(row[0]),
             "user": row[1],
-            "targets_file_key": row[2],
-            "protocol": row[4],
-            "destination_port": row[5],  # + base source port ?
-            "min_ttl": row[6],
-            "max_ttl": row[7],
-            "max_round": row[8],
-            "tags": row[9],
-            "start_time": row[10].isoformat(),
-            "end_time": row[11].isoformat() if row[11] is not None else None,
+            "tool": row[2],
+            "tags": row[3],
+            "start_time": row[4].isoformat(),
+            "end_time": row[5].isoformat() if row[5] is not None else None,
         }
 
     async def all_count(self, user):
@@ -249,12 +243,7 @@ class DatabaseMeasurements(Database):
                 {
                     "uuid": measurement_parameters["measurement_uuid"],
                     "user": measurement_parameters["user"],
-                    "targets_file_key": measurement_parameters["targets_file_key"],
-                    "protocol": measurement_parameters["protocol"],
-                    "destination_port": measurement_parameters["destination_port"],
-                    "min_ttl": measurement_parameters["min_ttl"],
-                    "max_ttl": measurement_parameters["max_ttl"],
-                    "max_round": measurement_parameters["max_round"],
+                    "tool": measurement_parameters["tool"],
                     "tags": measurement_parameters["tags"],
                     "start_time": datetime.fromtimestamp(
                         measurement_parameters["start_time"]
@@ -303,7 +292,7 @@ class DatabaseAgents(Database):
             "hostname": row[3],
             "ip_address": str(row[4]),
             "probing_rate": row[5],
-            "last_used": row[10].isoformat(),
+            "last_used": row[6].isoformat(),
         }
 
     async def all(self, user="all"):
@@ -332,7 +321,7 @@ class DatabaseAgents(Database):
             [
                 {
                     "uuid": uuid,
-                    "user": "all",  # agents share for all user at the moment
+                    "user": "all",  # agents shared for all user at the moment
                     "version": parameters["version"],
                     "hostname": parameters["hostname"],
                     "ip_address": parameters["ip_address"],
@@ -366,9 +355,9 @@ class DatabaseAgentsSpecific(Database):
 
         await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(measurement_uuid UUID, agent_uuid UUID, min_ttl UInt8, max_ttl UInt8, "
-            "probing_rate UInt32, max_round UInt8, targets_file_key Nullable(String), "
-            "seed UInt32, finished UInt8, timestamp DateTime) "
+            "(measurement_uuid UUID, agent_uuid UUID, targets_file String, "
+            "probing_rate UInt32, tool_parameters String, "
+            "finished UInt8, timestamp DateTime) "
             "ENGINE=MergeTree() "
             "ORDER BY (measurement_uuid, agent_uuid)",
         )
@@ -377,13 +366,10 @@ class DatabaseAgentsSpecific(Database):
         """Database row -> response formater."""
         return {
             "uuid": str(row[1]),
-            "min_ttl": row[2],
-            "max_ttl": row[3],
-            "probing_rate": row[4],
-            "max_round": int(row[5]),
-            "targets_file_key": row[6],
-            "seed": int(row[7]),  # be more generic (string json)
-            "state": "finished" if bool(row[8]) else "ongoing",
+            "targets_file": row[2],
+            "probing_rate": row[3],
+            "tool_parameters": json.loads(row[4]),
+            "state": "finished" if bool(row[5]) else "ongoing",
         }
 
     async def all(self, measurement_uuid):
@@ -418,12 +404,9 @@ class DatabaseAgentsSpecific(Database):
                 {
                     "measurement_uuid": parameters.measurement_uuid,
                     "agent_uuid": parameters.agent_uuid,
-                    "min_ttl": parameters.min_ttl,
-                    "max_ttl": parameters.max_ttl,
+                    "targets_file": parameters.targets_file,
                     "probing_rate": parameters.probing_rate,
-                    "max_round": parameters.max_round,
-                    "targets_file_key": parameters.targets_file_key,
-                    "seed": parameters.seed,
+                    "tool_parameters": json.dumps(parameters.tool_parameters),
                     "finished": int(False),
                     "timestamp": datetime.now(),
                 }

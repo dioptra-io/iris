@@ -61,14 +61,14 @@ async def diamond_miner_pipeline(settings, parameters, result_filename, logger):
     next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"
     next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
 
-    if next_round_number > parameters.max_round:
+    if next_round_number > parameters.tool_parameters["max_round"]:
         logger.info(f"{logger_prefix} Maximum round reached. Stopping.")
         return None
 
     logger.info(f"{logger_prefix} Compute the next round CSV probe file")
 
-    flow_mapper_cls = getattr(mappers, parameters.flow_mapper)
-    flow_mapper_kwargs = parameters.flow_mapper_kwargs or {}
+    flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
+    flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
     flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
 
     # TODO Rewrite the lib in an asynchronous way
@@ -80,10 +80,10 @@ async def diamond_miner_pipeline(settings, parameters, result_filename, logger):
         table_name,
         MeasurementParameters(
             source_ip=int(ipaddress.IPv4Address(parameters.ip_address)),
-            source_port=24000,  # TODO Put in measurement parameters ?
-            destination_port=parameters.destination_port,
-            min_ttl=parameters.min_ttl,
-            max_ttl=parameters.max_ttl,
+            source_port=parameters.tool_parameters["initial_source_port"],
+            destination_port=parameters.tool_parameters["destination_port"],
+            min_ttl=parameters.tool_parameters["min_ttl"],
+            max_ttl=parameters.tool_parameters["max_ttl"],
             round_number=round_number,
         ),
         next_round_csv_filepath,

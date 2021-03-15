@@ -1,5 +1,6 @@
 """Test of commons database classes."""
 
+import json
 import uuid
 from datetime import datetime
 
@@ -66,13 +67,7 @@ async def test_database_measurements(monkeypatch):
     fake_database_response_1 = (
         measurement_uuid_1,
         "admin",
-        "key",
-        0,
-        "udp",
-        33434,
-        2,
-        30,
-        10,
+        "diamond-miner",
         ["test"],
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
         datetime.strptime("2020-01-02", "%Y-%m-%d"),
@@ -82,13 +77,7 @@ async def test_database_measurements(monkeypatch):
     fake_database_response_2 = (
         measurement_uuid_2,
         "admin",
-        "key",
-        0,
-        "udp",
-        33434,
-        2,
-        30,
-        10,
+        "diamond-miner",
         [],
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
         None,
@@ -97,12 +86,7 @@ async def test_database_measurements(monkeypatch):
     fake_formated_response_1 = {
         "uuid": str(measurement_uuid_1),
         "user": "admin",
-        "targets_file_key": "key",
-        "protocol": "udp",
-        "destination_port": 33434,
-        "min_ttl": 2,
-        "max_ttl": 30,
-        "max_round": 10,
+        "tool": "diamond-miner",
         "tags": ["test"],
         "start_time": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
         "end_time": datetime.strptime("2020-01-02", "%Y-%m-%d").isoformat(),
@@ -111,12 +95,7 @@ async def test_database_measurements(monkeypatch):
     fake_formated_response_2 = {
         "uuid": str(measurement_uuid_2),
         "user": "admin",
-        "targets_file_key": "key",
-        "protocol": "udp",
-        "destination_port": 33434,
-        "min_ttl": 2,
-        "max_ttl": 30,
-        "max_round": 10,
+        "tool": "diamond-miner",
         "tags": [],
         "start_time": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
         "end_time": None,
@@ -157,12 +136,7 @@ async def test_database_measurements(monkeypatch):
     parameters = {
         "measurement_uuid": measurement_uuid_1,
         "user": "admin",
-        "targets_file_key": "key",
-        "protocol": "udp",
-        "destination_port": 33434,
-        "min_ttl": 2,
-        "max_ttl": 30,
-        "max_round": 10,
+        "tool": "diamond-miner",
         "tags": ["test"],
         "start_time": 1597829098,
     }
@@ -200,10 +174,6 @@ async def test_database_agents(monkeypatch):
         "hostname",
         "1.2.3.4",
         1000,
-        10000000,
-        0,
-        32,
-        6,
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
     )
 
@@ -271,13 +241,11 @@ async def test_database_agents_specific(monkeypatch):
     fake_database_response_1 = (
         measurement_uuid_1,
         agent_uuid_1,
-        2,
-        30,
-        1000,
-        10,
         "test.txt",
-        10,
+        1000,
+        json.dumps({"parameters": 0}),
         0,
+        datetime.strptime("2020-01-01", "%Y-%m-%d"),
     )
 
     measurement_uuid_2 = uuid.uuid4()
@@ -285,34 +253,26 @@ async def test_database_agents_specific(monkeypatch):
     fake_database_response_2 = (
         measurement_uuid_2,
         agent_uuid_2,
-        2,
-        30,
+        "test.txt",
         1000,
-        10,
-        None,
-        20,
+        json.dumps({"parameters": 0}),
         1,
+        datetime.strptime("2020-01-01", "%Y-%m-%d"),
     )
 
     fake_formated_response_1 = {
         "uuid": str(agent_uuid_1),
-        "min_ttl": 2,
-        "max_ttl": 30,
+        "targets_file": "test.txt",
         "probing_rate": 1000,
-        "max_round": 10,
-        "targets_file_key": "test.txt",
-        "seed": 10,
+        "tool_parameters": {"parameters": 0},
         "state": "ongoing",
     }
 
     fake_formated_response_2 = {
         "uuid": str(agent_uuid_2),
-        "min_ttl": 2,
-        "max_ttl": 30,
+        "targets_file": "test.txt",
         "probing_rate": 1000,
-        "max_round": 10,
-        "targets_file_key": None,
-        "seed": 20,
+        "tool_parameters": {"parameters": 0},
         "state": "finished",
     }
 
@@ -352,12 +312,14 @@ async def test_database_agents_specific(monkeypatch):
         "agent_uuid",
         {
             "measurement_uuid": "test",
-            "targets_file_key": None,
-            "min_ttl": 2,
-            "max_ttl": 30,
-            "max_round": 10,
+            "targets_file": "test.txt",
+            "tool_parameters": {
+                "min_ttl": 2,
+                "max_ttl": 30,
+                "max_round": 10,
+            },
         },
-        {"probing_rate": 2000},
+        {"probing_rate": 100},
         {},
     )
 

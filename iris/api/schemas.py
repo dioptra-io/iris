@@ -132,7 +132,6 @@ class MeasurementSummaryResponse(BaseModel):
 
     uuid: UUID
     state: str
-    targets_file_key: Optional[str]
     tags: List[str]
     start_time: str
     end_time: Optional[str]
@@ -147,43 +146,55 @@ class MeasurementsGetResponse(BaseModel):
     results: List[MeasurementSummaryResponse]
 
 
+class ToolParameters(BaseModel):
+    protocol: str = Field(
+        "udp",
+        title="Probing transport protocol",
+        description="Must be either udp or icmp.",
+        regex="(?i)^udp$|^icmp$",
+    )
+    initial_source_port: int = Field(
+        24000, title="Initial source port", gt=0, lt=65_536
+    )
+    destination_port: int = Field(34334, title="Destination port", gt=0, lt=65_536)
+    min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
+    max_ttl: int = Field(30, title="Maximum TTL", gt=0, lt=256)
+    max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
+    flow_mapper: str = Field(
+        "IntervalFlowMapper",
+        title="Flow mapper",
+        regex=(
+            "(?i)^SequentialFlowMapper$"
+            "|^IntervalFlowMapper$"
+            "|^ReverseByteFlowMapper$"
+            "|^RandomFlowMapper$"
+        ),
+    )
+    flow_mapper_kwargs: Dict[str, Any] = Field(
+        None,
+        title="Optional keyword arguments for the flow mapper",
+    )
+
+
 class MeasurementsAgentsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
     uuid: UUID
-    targets_file_key: str = Field(None, title="Target file key")
-    min_ttl: int = Field(None, title="Minimum TTL", gt=0)
-    max_ttl: int = Field(None, title="Maximum TTL", gt=0)
-    probing_rate: int = Field(None, title="Probing Rate", gt=0)
-    max_round: int = Field(None, title="Maximum round", gt=0, lt=256)
-    flow_mapper: str = Field(None, title="Flow mapper")
-    flow_mapper_kwargs: Dict[str, Any] = Field(
-        None, title="Optional keyword arguments for the flow mapper"
-    )
+    targets_file: str = Field(None, title="Target file key")
+    probing_rate: int = Field(None, title="Probing rate")
+    tool_parameters: ToolParameters = Field(ToolParameters(), title="Tool parameters")
 
 
 class MeasurementsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
-    targets_file_key: str = Field(..., title="Target file key")
+    targets_file: str = Field(..., title="Target file key")
+    tool: str = Field("diamond-miner", title="Probing tool")
+    tool_parameters: ToolParameters = Field(ToolParameters(), title="Tool parameters")
     agents: List[MeasurementsAgentsPostBody] = Field(
         None,
         title="Optional agent specific parameters",
         description="If not set, publish the measurement to all agents.",
-    )
-    protocol: str = Field(
-        ...,
-        title="Probing transport protocol",
-        description="Must be either udp or icmp.",
-        regex="(?i)^udp$|^icmp$",
-    )
-    destination_port: int = Field(..., title="Destination port", gt=0, lt=65_536)
-    min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
-    max_ttl: int = Field(30, title="Maximum TTL", gt=0, lt=256)
-    max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
-    flow_mapper: str = Field("IntervalFlowMapper", title="Flow mapper")
-    flow_mapper_kwargs: Dict[str, Any] = Field(
-        None, title="Optional keyword arguments for the flow mapper"
     )
     tags: List[str] = Field([], title="Tags")
 
@@ -197,11 +208,9 @@ class MeasurementsPostResponse(BaseModel):
 class MeasurementAgentSpecific(BaseModel):
     """Information about agent specific information (Response)."""
 
-    targets_file_key: Optional[str]
-    min_ttl: int
-    max_ttl: int
+    targets_file: str
     probing_rate: int
-    max_round: int
+    tool_parameters: ToolParameters
 
 
 class MeasurementAgentParameters(BaseModel):
@@ -226,9 +235,8 @@ class MeasurementInfoResponse(BaseModel):
 
     uuid: UUID
     state: str
+    tool: str
     agents: List[MeasurementAgentInfoResponse]
-    protocol: str
-    destination_port: int
     tags: List[str]
     start_time: str
     end_time: Optional[str]

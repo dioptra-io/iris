@@ -1,6 +1,3 @@
-import random
-
-
 class ParametersDataclass(object):
     def __init__(
         self,
@@ -15,9 +12,12 @@ class ParametersDataclass(object):
         self._dataclass = {
             **physical_parameters,
             **measurement_parameters,
-            **{k: v for k, v in specific_parameters.items() if v is not None},
+            **{k: v for k, v in specific_parameters.items() if v},
             **{"agent_uuid": agent_uuid},
-            **{"seed": random.randint(0, (2 ** 32) - 1)},
+        }
+        self._dataclass["tool_parameters"] = {
+            **measurement_parameters["tool_parameters"],
+            **specific_parameters.get("tool_parameters", {}),
         }
 
     def __getattr__(self, parameter):
@@ -26,5 +26,5 @@ class ParametersDataclass(object):
         except KeyError:
             raise AttributeError(f"`{parameter}` not found in dataclass")
 
-    def to_dict(self):
+    def dict(self):
         return self._dataclass

@@ -114,11 +114,10 @@ async def watch(redis, storage, parameters):
                 parameters.agent_uuid,
                 {
                     "measurement_uuid": parameters.measurement_uuid,
-                    "measurement_tool": "diamond_miner",
                     "username": parameters.user,
+                    "parameters": parameters.dict(),
                     "round": round_number,
                     "probes": shuffled_next_round_csv_filename,
-                    "parameters": parameters.to_dict(),
                 },
             )
 
@@ -217,7 +216,7 @@ async def callback(agents_information, measurement_parameters):
         else:
             # Else, append specific parameter by agent
             for agent in agents:
-                request["parameters"] = agent.to_dict()
+                request["parameters"] = agent.dict()
                 await redis.publish(agent.agent_uuid, request)
     else:
         # We are in this state when the worker has failed and replays the measurement

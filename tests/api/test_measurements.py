@@ -38,7 +38,6 @@ def test_get_measurements(client, monkeypatch):
         {
             "uuid": str(uuid.uuid4()),
             "state": "finished",
-            "targets_file_key": "test.txt",
             "tags": [],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
@@ -46,7 +45,6 @@ def test_get_measurements(client, monkeypatch):
         {
             "uuid": str(uuid.uuid4()),
             "state": "finished",
-            "targets_file_key": "test.txt",
             "tags": [],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
@@ -54,7 +52,6 @@ def test_get_measurements(client, monkeypatch):
         {
             "uuid": str(uuid.uuid4()),
             "state": "finished",
-            "targets_file_key": "test.txt",
             "tags": ["test"],
             "start_time": datetime.now().isoformat(),
             "end_time": datetime.now().isoformat(),
@@ -67,21 +64,18 @@ def test_get_measurements(client, monkeypatch):
         return [
             {
                 "uuid": measurements[0]["uuid"],
-                "targets_file_key": measurements[0]["targets_file_key"],
                 "tags": ["test"],
                 "start_time": measurements[0]["start_time"],
                 "end_time": measurements[0]["end_time"],
             },
             {
                 "uuid": measurements[1]["uuid"],
-                "targets_file_key": measurements[1]["targets_file_key"],
                 "tags": [],
                 "start_time": measurements[1]["start_time"],
                 "end_time": measurements[1]["end_time"],
             },
             {
                 "uuid": measurements[2]["uuid"],
-                "targets_file_key": measurements[2]["targets_file_key"],
                 "tags": [],
                 "start_time": measurements[2]["start_time"],
                 "end_time": measurements[2]["end_time"],
@@ -147,7 +141,7 @@ def test_get_measurements(client, monkeypatch):
 # --- POST /v0/measurements/ ---
 
 
-def test_post_measurement_with_targets_file_key(client, monkeypatch):
+def test_post_measurement_with_targets_file(client, monkeypatch):
     """Test post measurement with targets file key."""
 
     class FakeStorage(object):
@@ -173,11 +167,8 @@ def test_post_measurement_with_targets_file_key(client, monkeypatch):
     response = client.post(
         "/v0/measurements/",
         json={
-            "targets_file_key": "test.txt",
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
+            "targets_file": "test.txt",
+            "tool": "diamond-miner",
         },
     )
     assert response.status_code == 201
@@ -209,12 +200,9 @@ def test_post_measurement_with_agents(client, monkeypatch):
     response = client.post(
         "/v0/measurements/",
         json={
-            "targets_file_key": "test.txt",
+            "targets_file": "test.txt",
             "agents": [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"}],
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
+            "tool": "diamond-miner",
         },
     )
     assert response.status_code == 201
@@ -246,7 +234,7 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
     response = client.post(
         "/v0/measurements/",
         json={
-            "targets_file_key": "test.txt",
+            "targets_file": "test.txt",
             "agents": [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776551"}],
             "protocol": "udp",
             "destination_port": 33434,
@@ -280,7 +268,7 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
     response = client.post(
         "/v0/measurements/",
         json={
-            "targets_file_key": "test.txt",
+            "targets_file": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -307,7 +295,7 @@ def test_post_measurement_inactive_user(client, monkeypatch):
     response = client.post(
         "/v0/measurements/",
         json={
-            "targets_file_key": "test.txt",
+            "targets_file": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -329,111 +317,21 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
-        "targets_file_key": "test.txt",
-        "min_ttl": 2,
-        "max_ttl": 30,
-        "probing_rate": None,
-        "max_round": 10,
-        "state": "finished",
-    }
-    protocol = "udp"
-    destination_port = 33434
-    min_ttl = 2
-    max_ttl = 30
-    max_round = 10
-    tags = ["test"]
-    start_time = datetime.now().isoformat()
-    end_time = datetime.now().isoformat()
-
-    async def all_agents_specific(self, measurement_uuid):
-        return [agent]
-
-    async def get_measurements(self, username, measurement_uuid):
-        return {
-            "uuid": measurement_uuid,
-            "user": user,
-            "targets_file_key": "test.txt",
-            "protocol": protocol,
-            "destination_port": destination_port,
-            "min_ttl": min_ttl,
-            "max_ttl": max_ttl,
-            "max_round": max_round,
-            "tags": tags,
-            "start_time": start_time,
-            "end_time": end_time,
-        }
-
-    async def get_agents(self, uuid, user="all"):
-        return {
-            "uuid": agent["uuid"],
-            "user": "all",
-            "version": "0.0.0",
-            "hostname": "test",
-            "ip_address": "0.0.0.0",
-            "probing_rate": 0,
-            "last_used": datetime.now().isoformat(),
-        }
-
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseAgentsSpecific,
-        "all",
-        all_agents_specific,
-    )
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "get", get_measurements
-    )
-    monkeypatch.setattr(iris.commons.database.DatabaseAgents, "get", get_agents)
-
-    response = client.get(f"/v0/measurements/{measurement_uuid}")
-    assert response.json() == {
-        "uuid": measurement_uuid,
-        "state": "finished",
-        "agents": [
-            {
-                "uuid": agent["uuid"],
-                "state": "finished",
-                "specific": {
-                    "targets_file_key": "test.txt",
-                    "min_ttl": 2,
-                    "max_ttl": 30,
-                    "probing_rate": 0,
-                    "max_round": 10,
-                },
-                "parameters": {
-                    "version": "0.0.0",
-                    "hostname": "test",
-                    "ip_address": "0.0.0.0",
-                },
-            }
-        ],
-        "protocol": protocol,
-        "destination_port": destination_port,
-        "tags": tags,
-        "start_time": start_time,
-        "end_time": end_time,
-    }
-
-
-def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
-    """Test get measurement by UUID."""
-
-    measurement_uuid = str(uuid.uuid4())
-    user = "test"
-    agent = {
-        "uuid": str(uuid.uuid4()),
-        "targets_file_key": "test.txt",
-        "min_ttl": 2,
-        "max_ttl": 30,
+        "targets_file": "test.txt",
         "probing_rate": 100,
-        "max_round": 10,
+        "tool_parameters": {
+            "protocol": "udp",
+            "initial_source_port": 24000,
+            "destination_port": 34334,
+            "min_ttl": 2,
+            "max_ttl": 30,
+            "max_round": 5,
+            "flow_mapper": "IntervalFlowMapper",
+            "flow_mapper_kwargs": None,
+        },
         "state": "finished",
     }
-    protocol = "udp"
-    destination_port = 33434
-    min_ttl = 2
-    max_ttl = 30
-    max_round = 10
-    tags = ["test"]
+
     start_time = datetime.now().isoformat()
     end_time = datetime.now().isoformat()
 
@@ -444,13 +342,8 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
         return {
             "uuid": measurement_uuid,
             "user": user,
-            "targets_file_key": "test.txt",
-            "protocol": protocol,
-            "destination_port": destination_port,
-            "min_ttl": min_ttl,
-            "max_ttl": max_ttl,
-            "max_round": max_round,
-            "tags": tags,
+            "tool": "diamond-miner",
+            "tags": ["test"],
             "start_time": start_time,
             "end_time": end_time,
         }
@@ -480,16 +373,24 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
     assert response.json() == {
         "uuid": measurement_uuid,
         "state": "finished",
+        "tool": "diamond-miner",
         "agents": [
             {
                 "uuid": agent["uuid"],
                 "state": "finished",
                 "specific": {
-                    "targets_file_key": "test.txt",
-                    "min_ttl": 2,
-                    "max_ttl": 30,
+                    "targets_file": "test.txt",
                     "probing_rate": 100,
-                    "max_round": 10,
+                    "tool_parameters": {
+                        "protocol": "udp",
+                        "initial_source_port": 24000,
+                        "destination_port": 34334,
+                        "min_ttl": 2,
+                        "max_ttl": 30,
+                        "max_round": 5,
+                        "flow_mapper": "IntervalFlowMapper",
+                        "flow_mapper_kwargs": None,
+                    },
                 },
                 "parameters": {
                     "version": "0.0.0",
@@ -498,34 +399,34 @@ def test_get_measurement_by_uuid_custom_probing_rate(client, monkeypatch):
                 },
             }
         ],
-        "protocol": protocol,
-        "destination_port": destination_port,
-        "tags": tags,
+        "tags": ["test"],
         "start_time": start_time,
         "end_time": end_time,
     }
 
 
 def test_get_measurement_by_uuid_waiting(client, monkeypatch):
-    """Test get measurement by UUID."""
+    """Test get measurement by UUID with `waiting` state."""
 
     measurement_uuid = str(uuid.uuid4())
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
-        "targets_file_key": "test.txt",
-        "min_ttl": 2,
-        "max_ttl": 30,
+        "targets_file": "test.txt",
         "probing_rate": 100,
-        "max_round": 10,
+        "tool_parameters": {
+            "protocol": "udp",
+            "initial_source_port": 24000,
+            "destination_port": 34334,
+            "min_ttl": 2,
+            "max_ttl": 30,
+            "max_round": 5,
+            "flow_mapper": "IntervalFlowMapper",
+            "flow_mapper_kwargs": None,
+        },
         "state": "finished",
     }
-    protocol = "udp"
-    destination_port = 33434
-    min_ttl = 2
-    max_ttl = 30
-    max_round = 10
-    tags = ["test"]
+
     start_time = datetime.now().isoformat()
     end_time = datetime.now().isoformat()
 
@@ -536,13 +437,8 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
         return {
             "uuid": measurement_uuid,
             "user": user,
-            "targets_file_key": "test.txt",
-            "protocol": protocol,
-            "destination_port": destination_port,
-            "min_ttl": min_ttl,
-            "max_ttl": max_ttl,
-            "max_round": max_round,
-            "tags": tags,
+            "tool": "diamond-miner",
+            "tags": ["test"],
             "start_time": start_time,
             "end_time": end_time,
         }
@@ -578,16 +474,24 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     assert response.json() == {
         "uuid": measurement_uuid,
         "state": "waiting",
+        "tool": "diamond-miner",
         "agents": [
             {
                 "uuid": agent["uuid"],
                 "state": "waiting",
                 "specific": {
-                    "targets_file_key": "test.txt",
-                    "min_ttl": 2,
-                    "max_ttl": 30,
+                    "targets_file": "test.txt",
                     "probing_rate": 100,
-                    "max_round": 10,
+                    "tool_parameters": {
+                        "protocol": "udp",
+                        "initial_source_port": 24000,
+                        "destination_port": 34334,
+                        "min_ttl": 2,
+                        "max_ttl": 30,
+                        "max_round": 5,
+                        "flow_mapper": "IntervalFlowMapper",
+                        "flow_mapper_kwargs": None,
+                    },
                 },
                 "parameters": {
                     "version": "0.0.0",
@@ -596,9 +500,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                 },
             }
         ],
-        "protocol": protocol,
-        "destination_port": destination_port,
-        "tags": tags,
+        "tags": ["test"],
         "start_time": start_time,
         "end_time": end_time,
     }
@@ -719,7 +621,7 @@ def test_get_measurement_results(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": "test",
             "agents": [str(uuid.uuid4())],
-            "targets_file_key": "test.txt",
+            "targets_file": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -784,7 +686,7 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": "test",
             "agents": [str(uuid.uuid4())],
-            "targets_file_key": "test.txt",
+            "targets_file": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -834,7 +736,7 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": "test",
             "agents": [str(uuid.uuid4())],
-            "targets_file_key": "test.txt",
+            "targets_file": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,
@@ -871,7 +773,7 @@ def test_get_measurement_results_no_agent(client, monkeypatch):
             "uuid": measurement_uuid,
             "user": "test",
             "agents": [str(uuid.uuid4())],
-            "targets_file_key": "test.txt",
+            "targets_file": "test.txt",
             "protocol": "udp",
             "destination_port": 33434,
             "min_ttl": 2,

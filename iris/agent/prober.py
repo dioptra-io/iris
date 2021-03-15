@@ -35,13 +35,11 @@ async def probe(
         + " --probing-rate "
         + str(parameters["probing_rate"])
         + " --protocol "
-        + str(parameters["protocol"])
-        + " --sniffer-buffer-size="
-        + str(100_000)  # TODO: removed in the next prober version
+        + str(parameters["tool_parameters"]["protocol"])
         + " --filter-min-ttl="
-        + str(parameters["min_ttl"])
+        + str(parameters["tool_parameters"]["min_ttl"])
         + " --filter-max-ttl="
-        + str(parameters["max_ttl"])
+        + str(parameters["tool_parameters"]["max_ttl"])
         + " --meta-round="
         + str(parameters["round"])
     )

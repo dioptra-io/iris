@@ -44,14 +44,14 @@ async def measuremement(settings, redis, request, logger):
     targets_filepath = None
     probes_filepath = None
 
-    flow_mapper_cls = getattr(mappers, parameters["flow_mapper"])
-    flow_mapper_kwargs = parameters["flow_mapper_kwargs"] or {}
+    flow_mapper_cls = getattr(mappers, parameters["tool_parameters"]["flow_mapper"])
+    flow_mapper_kwargs = parameters["tool_parameters"]["flow_mapper_kwargs"] or {}
     flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
 
     if parameters["round"] == 1:
         # Round = 1
         logger.info(f"{logger_prefix} Download targets/prefixes file locally")
-        targets_filename = parameters["targets_file_key"]
+        targets_filename = parameters["targets_file"]
         targets_filepath = str(settings.AGENT_TARGETS_DIR_PATH / targets_filename)
         await storage.download_file(
             settings.AWS_S3_TARGETS_BUCKET_PREFIX + parameters["username"],
@@ -66,7 +66,7 @@ async def measuremement(settings, redis, request, logger):
             prefix_len=24,
             min_flow=0,
             max_flow=5,
-            dst_port=parameters["destination_port"],
+            dst_port=parameters["tool_parameters"]["destination_port"],
             mapper=flow_mapper,
         )
         stdin = (probe_to_csv(*x) async for x in gen)
@@ -78,15 +78,11 @@ async def measuremement(settings, redis, request, logger):
         await storage.download_file(measurement_uuid, probes_filename, probes_filepath)
 
     logger.info(f"{logger_prefix} Username : {parameters['username']}")
-    logger.info(f"{logger_prefix} Tool : {parameters['measurement_tool']}")
-    logger.info(f"{logger_prefix} Protocol : {parameters['protocol']}")
-    logger.info(f"{logger_prefix} Round : {parameters['round']}")
-    logger.info(f"{logger_prefix} Minimum TTL : {parameters['min_ttl']}")
-    logger.info(f"{logger_prefix} Maximum TTL : {parameters['max_ttl']}")
+    logger.info(f"{logger_prefix} Target File: {parameters['targets_file']}")
+    logger.info(f"{logger_prefix} Tool : {parameters['tool']}")
+    logger.info(f"{logger_prefix} Tool Parameters : {parameters['tool_parameters']}")
     logger.info(f"{logger_prefix} Probing Rate : {parameters['probing_rate']}")
-    logger.info(
-        f"{logger_prefix} Flow Mapper: {flow_mapper_cls.__name__}({flow_mapper_kwargs})"
-    )
+
     is_not_canceled = await probe(
         settings,
         parameters,

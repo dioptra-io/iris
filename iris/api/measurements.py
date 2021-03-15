@@ -51,7 +51,6 @@ async def get_measurements(
             {
                 "uuid": measurement["uuid"],
                 "state": "finished" if state is None else state,
-                "targets_file_key": measurement["targets_file_key"],
                 "tags": measurement["tags"],
                 "start_time": measurement["start_time"],
                 "end_time": measurement["end_time"],
@@ -75,21 +74,18 @@ async def post_measurement(
     measurement: MeasurementsPostBody = Body(
         ...,
         example={
-            "targets_file_key": "prefixes.txt",
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
+            "targets_file": "prefixes.txt",
+            "tool": "diamond-miner",
+            "tool_parameters": {"protocol": "udp", "min_ttl": 2, "max_ttl": 30},
         },
     ),
     username: str = Depends(authenticate),
 ):
     """Request a measurement."""
-    parameters = dict(measurement)
-
     session = get_session(request.app.settings)
     users_database = DatabaseUsers(session, request.app.settings, request.app.logger)
 
+    # Check if a user is active
     user_info = await users_database.get(username)
     if not user_info["is_active"]:
         raise HTTPException(
@@ -101,7 +97,7 @@ async def post_measurement(
     try:
         await request.app.storage.get_file_no_retry(
             request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
-            measurement.targets_file_key,
+            measurement.targets_file,
         )
     except Exception:
         raise HTTPException(
@@ -113,36 +109,33 @@ async def post_measurement(
     active_agents = [agent["uuid"] for agent in active_agents]
 
     # Filter out by `agents` key input if provided
+    agents = {}
     if measurement.agents:
-        measurement.agents = list(measurement.agents)
-
-        agents = {}
         for agent in measurement.agents:
             agent_uuid = str(agent.uuid)
             if agent_uuid not in active_agents:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
                 )
-            agents[agent_uuid] = {
-                "targets_file_key": agent.targets_file_key,
-                "min_ttl": agent.min_ttl,
-                "max_ttl": agent.max_ttl,
-                "probing_rate": agent.probing_rate,
-                "max_round": agent.max_round,
-            }
+            agent.tool_parameters = agent.tool_parameters.dict(exclude_unset=True)
+            agents[agent_uuid] = agent.dict()
+            del agents[agent_uuid]["uuid"]
     else:
         agents = {uuid: {} for uuid in active_agents}
-    del parameters["agents"]
+
+    measurement = measurement.dict()
+    measurement["tool_parameters"] = dict(measurement["tool_parameters"])
+    del measurement["agents"]
 
     # Add mesurement metadata
-    parameters["measurement_uuid"] = str(uuid4())
-    parameters["user"] = username
-    parameters["start_time"] = datetime.timestamp(datetime.now())
+    measurement["measurement_uuid"] = str(uuid4())
+    measurement["user"] = username
+    measurement["start_time"] = datetime.timestamp(datetime.now())
 
     # launch a measurement procedure on the worker.
-    hook.send(agents, parameters)
+    hook.send(agents, measurement)
 
-    return {"uuid": parameters["measurement_uuid"]}
+    return {"uuid": measurement["measurement_uuid"]}
 
 
 @router.get(
@@ -184,21 +177,14 @@ async def get_measurement_by_uuid(
         elif measurement["state"] == "finished":
             agent_specific["state"] = "finished"
 
-        if agent_specific["probing_rate"] is not None:
-            specific_probing_rate = agent_specific["probing_rate"]
-        else:
-            specific_probing_rate = agent_info["probing_rate"]
-
         agents.append(
             {
                 "uuid": agent_specific["uuid"],
                 "state": agent_specific["state"],
                 "specific": {
-                    "targets_file_key": agent_specific["targets_file_key"],
-                    "min_ttl": agent_specific["min_ttl"],
-                    "max_ttl": agent_specific["max_ttl"],
-                    "probing_rate": specific_probing_rate,
-                    "max_round": agent_specific["max_round"],
+                    "targets_file": agent_specific["targets_file"],
+                    "probing_rate": agent_specific["probing_rate"],
+                    "tool_parameters": agent_specific["tool_parameters"],
                 },
                 "parameters": {
                     "version": agent_info["version"],
