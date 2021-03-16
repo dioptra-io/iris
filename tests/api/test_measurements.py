@@ -141,8 +141,8 @@ def test_get_measurements(client, monkeypatch):
 # --- POST /v0/measurements/ ---
 
 
-def test_post_measurement_with_targets_file(client, monkeypatch):
-    """Test post measurement with targets file key."""
+def test_post_measurement_diamond_miner(client, monkeypatch):
+    """Test post measurement with `diamond-miner` tool."""
 
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
@@ -172,6 +172,74 @@ def test_post_measurement_with_targets_file(client, monkeypatch):
         },
     )
     assert response.status_code == 201
+
+
+def test_post_measurement_diamond_miner_ping(client, monkeypatch):
+    """Test post measurement with `diamond-miner-ping` tool."""
+
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    async def get_users(*args, **kwargs):
+        return {"is_active": True}
+
+    client.app.storage = FakeStorage()
+
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
+    )
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file": "test.txt",
+            "tool": "diamond-miner-ping",
+            "tool_parameters": {"protocol": "icmp"},
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
+    """Test post measurement with `diamond-miner-ping` tool."""
+
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    async def get_users(*args, **kwargs):
+        return {"is_active": True}
+
+    client.app.storage = FakeStorage()
+
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
+    )
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file": "test.txt",
+            "tool": "diamond-miner-ping",
+            "tool_parameters": {"protocol": "udp"},
+        },
+    )
+    assert response.status_code == 401
 
 
 def test_post_measurement_with_agents(client, monkeypatch):

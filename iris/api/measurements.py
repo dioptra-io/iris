@@ -62,6 +62,20 @@ async def get_measurements(
     return output
 
 
+def tool_parameters_validator(tool, parameters):
+    """Validate tool parameters."""
+    # Specific checks for `diamond-miner-ping`
+    if tool == "diamond-miner-ping":
+        parameters.max_round = 1
+        # Disabling UDP port scanning abilities
+        if parameters.protocol == "udp":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Tool `diamond-miner-ping` only accessible with ICMP protocol",
+            )
+    return parameters
+
+
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
@@ -104,6 +118,10 @@ async def post_measurement(
             status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
         )
 
+    measurement.tool_parameters = tool_parameters_validator(
+        measurement.tool, measurement.tool_parameters
+    )
+
     # Get all connected agents
     active_agents = await request.app.redis.get_agents(state=False, parameters=False)
     active_agents = [agent["uuid"] for agent in active_agents]
@@ -117,6 +135,9 @@ async def post_measurement(
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
                 )
+            agent.tool_parameters = tool_parameters_validator(
+                measurement.tool, agent.tool_parameters
+            )
             agent.tool_parameters = agent.tool_parameters.dict(exclude_unset=True)
             agents[agent_uuid] = agent.dict()
             del agents[agent_uuid]["uuid"]

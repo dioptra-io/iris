@@ -16,7 +16,7 @@ from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
-from iris.worker.pipeline import diamond_miner_pipeline, extract_round_number
+from iris.worker.pipeline import default_pipeline, extract_round_number
 from iris.worker.settings import WorkerSettings
 
 settings = WorkerSettings()
@@ -95,9 +95,7 @@ async def watch(redis, storage, parameters):
             await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
             continue
 
-        # If found, then execute process pipeline
-        # TODO Select pipeline depending on the `measurement_tool`
-        shuffled_next_round_csv_filename = await diamond_miner_pipeline(
+        shuffled_next_round_csv_filename = await default_pipeline(
             settings, parameters, results_filename, logger
         )
 

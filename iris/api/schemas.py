@@ -164,10 +164,10 @@ class ToolParameters(BaseModel):
         "IntervalFlowMapper",
         title="Flow mapper",
         regex=(
-            "(?i)^SequentialFlowMapper$"
-            "|^IntervalFlowMapper$"
-            "|^ReverseByteFlowMapper$"
-            "|^RandomFlowMapper$"
+            r"(?i)^SequentialFlowMapper$"
+            r"|^IntervalFlowMapper$"
+            r"|^ReverseByteFlowMapper$"
+            r"|^RandomFlowMapper$"
         ),
     )
     flow_mapper_kwargs: Dict[str, Any] = Field(
@@ -189,7 +189,11 @@ class MeasurementsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
     targets_file: str = Field(..., title="Target file key")
-    tool: str = Field("diamond-miner", title="Probing tool")
+    tool: str = Field(
+        "diamond-miner",
+        title="Probing tool",
+        regex=r"(?i)^diamond-miner$|^diamond-miner-ping$",
+    )
     tool_parameters: ToolParameters = Field(ToolParameters(), title="Tool parameters")
     agents: List[MeasurementsAgentsPostBody] = Field(
         None,

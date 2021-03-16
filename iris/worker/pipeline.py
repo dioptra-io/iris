@@ -1,4 +1,4 @@
-"""Diamond-Miner pipeline."""
+"""Measurement pipeline."""
 
 import asyncio
 import ipaddress
@@ -16,7 +16,7 @@ def extract_round_number(filename):
     return int(filename.split("_")[-1].split(".")[0])
 
 
-async def diamond_miner_pipeline(settings, parameters, result_filename, logger):
+async def default_pipeline(settings, parameters, result_filename, logger):
     """Process results and eventually request a new round."""
     measurement_uuid = parameters.measurement_uuid
     agent_uuid = parameters.agent_uuid
@@ -58,14 +58,13 @@ async def diamond_miner_pipeline(settings, parameters, result_filename, logger):
         await aios.remove(results_filepath)
 
     next_round_number = round_number + 1
-    next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"
-    next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
-
     if next_round_number > parameters.tool_parameters["max_round"]:
         logger.info(f"{logger_prefix} Maximum round reached. Stopping.")
         return None
 
     logger.info(f"{logger_prefix} Compute the next round CSV probe file")
+    next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"
+    next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
 
     flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
