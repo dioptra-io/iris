@@ -4,7 +4,7 @@ import tempfile
 
 import pytest
 
-from iris.api.targets import verify_targets_file
+from iris.api.targets import verify_quota, verify_targets_file
 
 # --- GET /v0/targets ---
 
@@ -131,6 +131,28 @@ async def test_verify_prefixes_list_file():
     # Test with adhequate file with multiple trailing lines
     file_container.register(b"1.1.1.0/24\n2.2.2.0/24\n\n")
     assert await verify_targets_file(file_container) is False
+
+
+@pytest.mark.asyncio
+async def test_verify_quota():
+    """Test quota verification."""
+
+    class FileContainer(object):
+        def __init__(self):
+            self.file = tempfile.SpooledTemporaryFile()
+
+        def register(self, content):
+            self.file = tempfile.SpooledTemporaryFile()
+            self.file.write(content)
+            self.file.seek(0)
+
+    file_container = FileContainer()
+
+    file_container.register(b"1.1.1.0/24\n2.2.2.0/24")
+
+    assert await verify_quota(file_container, 1) is False
+    assert await verify_quota(file_container, 2) is True
+    assert await verify_quota(file_container, 3) is True
 
 
 # --- DELETE /v0/targets/{key} ---

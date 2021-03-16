@@ -2,6 +2,7 @@
 
 import ipaddress
 
+from diamond_miner.generator import count_prefixes
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -23,6 +24,7 @@ from iris.api.schemas import (
     TargetsPostResponse,
 )
 from iris.api.security import authenticate
+from iris.commons.database import DatabaseUsers, get_session
 
 router = APIRouter()
 
@@ -90,6 +92,16 @@ async def verify_targets_file(targets_file):
     return True
 
 
+async def verify_quota(targets_file, user_quota):
+    """Verify that the quota is not exceeded."""
+    targets_file.file.seek(0)
+    n_prefixes = count_prefixes(
+        [line.decode("utf-8").strip() for line in targets_file.file.readlines()]
+    )
+    targets_file.file.seek(0)
+    return not (n_prefixes > user_quota)
+
+
 async def upload_targets_file(storage, target_bucket, targets_file):
     """Upload targets file asynchronously."""
     await storage.upload_file_no_retry(
@@ -118,6 +130,26 @@ async def post_target(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail="Bad targets file structure",
         )
+
+    session = get_session(request.app.settings)
+    users_database = DatabaseUsers(session, request.app.settings, request.app.logger)
+
+    # Check if a user is active
+    user_info = await users_database.get(username)
+    if not user_info["is_active"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account inactive",
+        )
+
+    # Check if the user respects his quota
+    is_quota_respected = await verify_quota(targets_file, user_info["quota"])
+    if not is_quota_respected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Quota exceeded",
+        )
+
     target_bucket = request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
     background_tasks.add_task(
         upload_targets_file, request.app.storage, target_bucket, targets_file

@@ -95,7 +95,7 @@ class DatabaseUsers(Database):
         await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
             "(uuid UUID, username String, email String, hashed_password String, "
-            "is_active UInt8, is_admin UInt8, quota Nullable(UInt32), "
+            "is_active UInt8, is_admin UInt8, quota UInt32, "
             "register_date DateTime, "
             "ripe_account Nullable(String), ripe_key Nullable(String)) "
             "ENGINE=MergeTree() "
