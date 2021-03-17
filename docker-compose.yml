@@ -147,7 +147,7 @@ services:
     privileged: true
 
   prometheus:
-    image: "prom/prometheus:main"
+    image: "prom/prometheus:latest"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -161,7 +161,7 @@ services:
       - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
 
   loki:
-    image: "grafana/loki:master"
+    image: "grafana/loki:latest"
     command: "-config.file=/etc/loki/loki.yaml"
     labels:
       - "traefik.enable=true"
@@ -172,7 +172,7 @@ services:
       - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
 
   grafana:
-    image: "grafana/grafana:master"
+    image: "grafana/grafana:latest"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.entrypoints=web"
@@ -182,6 +182,6 @@ services:
       - "./volumes/grafana:/var/lib/grafana"
 
   node-exporter:
-    image: "prom/node-exporter"
+    image: "prom/node-exporter:latest"
     labels:
       - "traefik.enable=false"
