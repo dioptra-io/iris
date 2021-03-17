@@ -147,7 +147,7 @@ services:
     privileged: true
 
   prometheus:
-    image: "prom/prometheus:v2.11.1"
+    image: "prom/prometheus:main"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -161,7 +161,7 @@ services:
       - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
 
   loki:
-    image: "grafana/loki:1.5.0"
+    image: "grafana/loki:master"
     command: "-config.file=/etc/loki/loki.yaml"
     labels:
       - "traefik.enable=true"
