@@ -32,6 +32,7 @@ router = APIRouter()
 @router.get("/", response_model=MeasurementsGetResponse, summary="Get all measurements")
 async def get_measurements(
     request: Request,
+    tag: str = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
     username: str = Depends(authenticate),
@@ -41,7 +42,7 @@ async def get_measurements(
     database = DatabaseMeasurements(session, request.app.settings, request.app.logger)
 
     querier = DatabasePagination(database, request, offset, limit)
-    output = await querier.query(user=username)
+    output = await querier.query(user=username, tag=tag)
 
     # Refine measurements output
     measurements = []
@@ -51,6 +52,7 @@ async def get_measurements(
             {
                 "uuid": measurement["uuid"],
                 "state": "finished" if state is None else state,
+                "tool": measurement["tool"],
                 "tags": measurement["tags"],
                 "start_time": measurement["start_time"],
                 "end_time": measurement["end_time"],

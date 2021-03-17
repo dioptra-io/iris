@@ -202,19 +202,25 @@ class DatabaseMeasurements(Database):
             "end_time": row[5].isoformat() if row[5] is not None else None,
         }
 
-    async def all_count(self, user):
+    async def all_count(self, user, tag=None):
         """Get the count of all results."""
+        where_clause = "WHERE user=%(user)s "
+        if tag:
+            where_clause += f"AND has(tags, '{tag}') "
         response = await self.call(
-            f"SELECT Count() FROM {self.table_name} WHERE user=%(user)s",
+            f"SELECT Count() FROM {self.table_name} {where_clause}",
             {"user": user},
         )
         return response[0][0]
 
-    async def all(self, user, offset, limit):
+    async def all(self, user, offset, limit, tag=None):
         """Get all measurements uuid for a given user."""
+        where_clause = "WHERE user=%(user)s "
+        if tag:
+            where_clause += f"AND has(tags, '{tag}') "
         responses = await self.call(
             f"SELECT * FROM {self.table_name} "
-            "WHERE user=%(user)s "
+            f"{where_clause}"
             "ORDER BY start_time DESC "
             "LIMIT %(offset)s,%(limit)s",
             {"user": user, "offset": offset, "limit": limit},

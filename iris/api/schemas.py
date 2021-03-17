@@ -132,6 +132,7 @@ class MeasurementSummaryResponse(BaseModel):
 
     uuid: UUID
     state: str
+    tool: str
     tags: List[str]
     start_time: str
     end_time: Optional[str]
