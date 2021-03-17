@@ -1,11 +1,9 @@
 """Measurement pipeline."""
 
-import asyncio
-import ipaddress
-from concurrent.futures import ProcessPoolExecutor
-
+import aiofiles
 from aiofiles import os as aios
-from diamond_miner import MeasurementParameters, compute_next_round, mappers
+from diamond_miner import mappers
+from diamond_miner.next_round import compute_next_round
 
 from iris.commons.database import DatabaseMeasurementResults, get_session
 from iris.commons.storage import Storage
@@ -70,26 +68,26 @@ async def default_pipeline(settings, parameters, result_filename, logger):
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
     flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
 
-    # TODO Rewrite the lib in an asynchronous way
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(
-        ProcessPoolExecutor(),
-        compute_next_round,
-        settings.DATABASE_HOST,
-        table_name,
-        MeasurementParameters(
-            source_ip=int(ipaddress.IPv4Address(parameters.ip_address)),
-            source_port=parameters.tool_parameters["initial_source_port"],
-            destination_port=parameters.tool_parameters["destination_port"],
-            min_ttl=parameters.tool_parameters["min_ttl"],
-            max_ttl=parameters.tool_parameters["max_ttl"],
-            round_number=round_number,
-        ),
-        next_round_csv_filepath,
-        flow_mapper,
-        False,  # No max-ttl exploration feature
-        True,  # Skip unpopulated TTLs
+    probes_gen = compute_next_round(
+        host=settings.DATABASE_HOST,
+        table=table_name,
+        round_=round_number,
+        src_addr=parameters.ip_address,
+        src_port=parameters.tool_parameters["initial_source_port"],
+        dst_port=parameters.tool_parameters["destination_port"],
+        mapper=flow_mapper,
+        adaptive_eps=True,
+        probe_far_ttls=False,
+        skip_unpopulated_ttls=True,
+        subset_prefix_len=6,
+        ttl_limit=40,
     )
+
+    async with aiofiles.open(next_round_csv_filepath, "w") as fout:
+        async for probes_specs in probes_gen:
+            await fout.write(
+                "".join(("\n".join(",".join(spec) for spec in probes_specs), "\n"))
+            )
 
     shuffled_next_round_csv_filename = (
         f"{agent_uuid}_shuffled_next_round_csv_{next_round_number}.csv"

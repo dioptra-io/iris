@@ -1,5 +1,6 @@
 """Test of commons database classes."""
 
+import ipaddress
 import json
 import uuid
 from datetime import datetime
@@ -382,41 +383,37 @@ async def test_database_measurement_results(monkeypatch):
     )
 
     fake_database_response = [
-        16909060,
-        169090560,
-        169090600,
-        134744072,
-        "udp",
-        17000,
-        33434,
-        5,
-        5,
+        ipaddress.ip_address("::ffff:ac12:b"),
+        ipaddress.ip_address("::ffff:84e3:7b81"),
+        24000,
+        34334,
+        78,
+        9,
+        ipaddress.ip_address("::ffff:869d:fe0a"),
+        17,
         11,
         0,
-        32.4,
+        37,
         56,
-        46,
-        1,
+        1280.2,
         1,
     ]
 
     fake_formated_response_1 = {
-        "source_ip": "1.2.3.4",
-        "destination_prefix": "10.20.30.0",
-        "destination_ip": "10.20.30.40",
-        "reply_ip": "8.8.8.8",
-        "protocol": "udp",
-        "source_port": 17000,
-        "destination_port": 33434,
-        "ttl": 5,
-        "ttl_check": 5,
-        "type": 11,
-        "code": 0,
-        "rtt": 32.4,
-        "reply_ttl": 56,
-        "reply_size": 46,
+        "probe_src_addr": "::ffff:ac12:b",
+        "probe_dst_addr": "::ffff:84e3:7b81",
+        "probe_src_port": 24000,
+        "probe_dst_port": 34334,
+        "probe_ttl_l3": 78,
+        "probe_ttl_l4": 9,
+        "reply_src_addr": "::ffff:869d:fe0a",
+        "reply_protocol": 17,
+        "reply_icmp_type": 11,
+        "reply_icmp_code": 0,
+        "reply_ttl": 37,
+        "reply_size": 56,
+        "rtt": 1280.2,
         "round": 1,
-        "snapshot": 1,
     }
 
     # Test of `.all() method`

@@ -255,22 +255,20 @@ class MeasurementsDeleteResponse(BaseModel):
 class PacketResponse(BaseModel):
     """Probe response information (Response)."""
 
-    source_ip: str
-    destination_prefix: str
-    destination_ip: str
-    reply_ip: str
-    protocol: str
-    source_port: int
-    destination_port: int
-    ttl: int
-    ttl_check: int  # implemented only in UDP
-    type: int
-    code: int
-    rtt: float
+    probe_src_addr: str
+    probe_dst_addr: str
+    probe_src_port: int
+    probe_dst_port: int
+    probe_ttl_l3: int
+    probe_ttl_l4: int
+    reply_src_addr: str
+    reply_protocol: int
+    reply_icmp_type: int
+    reply_icmp_code: int
     reply_ttl: int
     reply_size: int
+    rtt: float
     round: int
-    # snapshot: int # NOTE Not curently used
 
 
 class MeasurementsResultsResponse(BaseModel):

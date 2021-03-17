@@ -71,7 +71,7 @@ async def probe(
     return await start_stream_subprocess(
         cmd,
         stdout=logger.info,
-        stdin=stdin,  # In case of exhaustive round or targets-list input
+        stdin=stdin,
         stderr=logger.warning,
         stopper=stopper,
         prefix=logger_prefix,

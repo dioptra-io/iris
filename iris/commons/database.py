@@ -1,6 +1,5 @@
 """Interfaces with database."""
 
-import ipaddress
 import json
 import logging
 import uuid
@@ -469,54 +468,36 @@ class DatabaseMeasurementResults(Database):
 
         await self.call(
             f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(src_ip UInt32, dst_prefix UInt32, dst_ip UInt32, reply_ip UInt32, "
-            "proto UInt8, src_port UInt16, dst_port UInt16, ttl UInt8, "
-            "ttl_from_udp_length UInt8, type UInt8, "
-            "code UInt8, rtt Float64, reply_ttl UInt8, "
-            "reply_size UInt16, round UInt32, snapshot UInt16) ENGINE=MergeTree() "
-            "ORDER BY (src_ip, dst_prefix, dst_ip, ttl, src_port, dst_port, snapshot)",
+            "(probe_src_addr IPv6, probe_dst_addr IPv6, "
+            "probe_src_port UInt16, probe_dst_port UInt16, "
+            "probe_ttl_l3 UInt8, probe_ttl_l4 UInt8, "
+            "reply_src_addr IPv6, reply_protocol UInt8, "
+            "reply_icmp_type UInt8, reply_icmp_code UInt8, "
+            "reply_ttl UInt8, reply_size UInt16, rtt Float64, round UInt8"
+            ") ENGINE=MergeTree() "
+            "ORDER BY ("
+            "probe_src_addr, reply_src_addr, probe_ttl_l4, "
+            "probe_src_port, probe_dst_port"
+            ")",
         )
 
     def formatter(self, row):
         """Database row -> response formater."""
         return {
-            "source_ip": str(ipaddress.ip_address(row[0])),  # probe_src_addr
-            "destination_prefix": str(ipaddress.ip_address(row[1])),  # calculated
-            "destination_ip": str(ipaddress.ip_address(row[2])),  # probe_dst_addr
-            "reply_ip": str(ipaddress.ip_address(row[3])),  # reply_src_addr
-            "protocol": row[4],  # reply_protocol
-            "source_port": row[5],  # probe_src_port
-            "destination_port": row[6],  # probe_dst_port
-            "ttl": row[7],  # probe_ttl_l3
-            "ttl_check": row[8],  # probe_ttl_l4 /
-            "type": row[9],  # reply_icmp_code
-            "code": row[10],  # reply_icmp_type
-            "rtt": row[11],  # rtt
-            "reply_ttl": row[12],  # reply_ttl
-            "reply_size": row[13],  # reply_size
-            "round": row[14],  # round
-            "snapshot": row[15],  # N/A
-        }
-
-    def csv_formatter(self, row):
-        """Database csv -> row formater."""
-        return {
-            "src_ip": int(row[0]),
-            "dst_prefix": int(row[1]),
-            "dst_ip": int(row[2]),
-            "reply_ip": int(row[3]),
-            "proto": int(row[4]),
-            "src_port": int(row[5]),
-            "dst_port": int(row[6]),
-            "ttl": int(row[7]),
-            "ttl_from_udp_length": int(row[8]),  # implemented only in UDP
-            "type": int(row[9]),
-            "code": int(row[10]),
-            "rtt": float(row[11]),
-            "reply_ttl": int(row[12]),
-            "reply_size": int(row[13]),
-            "round": int(row[14]),
-            "snapshot": int(row[15]),  # Not curently used
+            "probe_src_addr": str(row[0]),
+            "probe_dst_addr": str(row[1]),
+            "probe_src_port": row[2],
+            "probe_dst_port": row[3],
+            "probe_ttl_l3": row[4],
+            "probe_ttl_l4": row[5],
+            "reply_src_addr": str(row[6]),
+            "reply_protocol": row[7],
+            "reply_icmp_type": row[8],
+            "reply_icmp_code": row[9],
+            "reply_ttl": row[10],
+            "reply_size": row[11],
+            "rtt": row[12],
+            "round": row[13],
         }
 
     async def all_count(self):
