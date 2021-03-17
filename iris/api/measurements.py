@@ -91,6 +91,7 @@ async def post_measurement(
             "targets_file": "prefixes.txt",
             "tool": "diamond-miner",
             "tool_parameters": {"protocol": "udp", "min_ttl": 2, "max_ttl": 30},
+            "tags": ["test"],
         },
     ),
     username: str = Depends(authenticate),

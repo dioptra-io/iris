@@ -22,6 +22,7 @@ def create_logger(settings, tags: Optional[dict] = None):
         Queue(settings.LOKI_QUEUE_SIZE),
         url=settings.LOKI_URL,
         version=settings.LOKI_VERSION,
+        auth=(settings.LOKI_USER, settings.LOKI_PASSWORD),
         tags=tags,
     )
     loki_handler.setLevel(logging.INFO)

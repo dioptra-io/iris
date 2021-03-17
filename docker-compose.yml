@@ -96,6 +96,8 @@ services:
       AWS_ACCESS_KEY_ID: "minioadmin"
       AWS_SECRET_ACCESS_KEY: "minioadmin"
       LOKI_URL: "http://loki.docker.localhost/loki/api/v1/push"
+      LOKI_USER: "admin"
+      LOKI_PASSWORD: admin
       WORKER_DEBUG_MODE: "true"
     labels:
       - "traefik.enable=false"
@@ -119,6 +121,8 @@ services:
       AWS_ACCESS_KEY_ID: "minioadmin"
       AWS_SECRET_ACCESS_KEY: "minioadmin"
       LOKI_URL: "http://loki.docker.localhost/loki/api/v1/push"
+      LOKI_USER: "admin"
+      LOKI_PASSWORD: admin
       AGENT_PROBING_RATE: "100"
       AGENT_DEBUG_MODE: "true"
     cap_add:
@@ -167,6 +171,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.loki.entrypoints=web"
       - "traefik.http.routers.loki.rule=Host(`loki.docker.localhost`)"
+      - "traefik.http.routers.loki.middlewares=loki@docker"
+      - "traefik.http.middlewares.loki.basicauth.users=admin:$$2y$$05$$oi6zVY1Gm57OPyPn3QdzdODPbaTeAEc12bWaa.GD.Biuno49bAg26"
     volumes:
       - "./volumes/loki:/loki"
       - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
