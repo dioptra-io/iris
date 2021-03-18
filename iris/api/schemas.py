@@ -93,11 +93,19 @@ class AgentsGetByUUIDResponse(BaseModel):
 # --- Targets ---
 
 
+class TargetSumaryResponse(BaseModel):
+    """Information about a target (Response)."""
+
+    key: str
+    last_modified: str
+
+
 class TargetResponse(BaseModel):
     """Information about a target (Response)."""
 
     key: str
     size: int
+    content: List[str]
     last_modified: str
 
 
@@ -107,7 +115,7 @@ class TargetsGetResponse(BaseModel):
     count: int
     next: Optional[str] = None
     previous: Optional[str] = None
-    results: List[TargetResponse]
+    results: List[TargetSumaryResponse]
 
 
 class TargetsPostResponse(BaseModel):

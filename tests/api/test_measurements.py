@@ -3,7 +3,10 @@
 import uuid
 from datetime import datetime
 
+import pytest
+
 import iris.commons.database
+from iris.api.measurements import verify_quota
 
 # --- GET /v0/measurements ---
 
@@ -147,19 +150,34 @@ def test_get_measurements(client, monkeypatch):
 # --- POST /v0/measurements/ ---
 
 
+@pytest.mark.asyncio
+async def test_verify_quota():
+    """Test quota verification."""
+
+    assert await verify_quota("diamond-miner", "8.8.8.0/23", 2) is True
+    assert await verify_quota("diamond-miner", "8.8.8.0/23", 1) is False
+    assert await verify_quota("diamond-miner-ping", "8.8.8.0/24", 256) is True
+    assert await verify_quota("diamond-miner-ping", "8.8.8.0/24", 255) is False
+
+
 def test_post_measurement_diamond_miner(client, monkeypatch):
     """Test post measurement with `diamond-miner` tool."""
 
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
-            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.0/23",
+                "last_modified": "test",
+            }
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True}
+        return {"is_active": True, "quota": 2}
 
     client.app.storage = FakeStorage()
 
@@ -180,19 +198,100 @@ def test_post_measurement_diamond_miner(client, monkeypatch):
     assert response.status_code == 201
 
 
-def test_post_measurement_diamond_miner_ping(client, monkeypatch):
-    """Test post measurement with `diamond-miner-ping` tool."""
+def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
+    """Test post measurement with `diamond-miner` tool."""
 
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
-            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.0/23",
+                "last_modified": "test",
+            }
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True}
+        return {"is_active": True, "quota": 1}
+
+    client.app.storage = FakeStorage()
+
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
+    )
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file": "test.txt",
+            "tool": "diamond-miner",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatch):
+    """Test post measurement with `diamond-miner` tool."""
+
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.0/25",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "quota": 1}
+
+    client.app.storage = FakeStorage()
+
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
+    )
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file": "test.txt",
+            "tool": "diamond-miner",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_post_measurement_diamond_miner_ping(client, monkeypatch):
+    """Test post measurement with `diamond-miner-ping` tool."""
+
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.8",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "quota": 2}
 
     client.app.storage = FakeStorage()
 
@@ -219,14 +318,19 @@ def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
 
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
-            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.8",
+                "last_modified": "test",
+            }
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True}
+        return {"is_active": True, "quota": 2}
 
     client.app.storage = FakeStorage()
 
@@ -248,19 +352,62 @@ def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
     assert response.status_code == 401
 
 
-def test_post_measurement_with_agents(client, monkeypatch):
-    """Test post measurement with agent specific parameters."""
+def test_post_measurement_diamond_miner_ping_quota_exceeded(client, monkeypatch):
+    """Test post measurement with `diamond-miner` tool."""
 
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
-            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.0/24",
+                "last_modified": "test",
+            }
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True}
+        return {"is_active": True, "quota": 1}
+
+    client.app.storage = FakeStorage()
+
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+    monkeypatch.setattr(
+        iris.commons.database.DatabaseUsers,
+        "get",
+        get_users,
+    )
+
+    response = client.post(
+        "/v0/measurements/",
+        json={
+            "targets_file": "test.txt",
+            "tool": "diamond-miner-ping",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_post_measurement_with_agents(client, monkeypatch):
+    """Test post measurement with agent specific parameters."""
+
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.0/23",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    async def get_users(*args, **kwargs):
+        return {"is_active": True, "quota": 2}
 
     client.app.storage = FakeStorage()
 
@@ -287,14 +434,19 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
 
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
-            return {"key": "test.txt", "size": 42, "last_modified": "test"}
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.0/23",
+                "last_modified": "test",
+            }
 
     class FakeSend(object):
         def send(*args, **kwargs):
             pass
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True}
+        return {"is_active": True, "quota": 2}
 
     client.app.storage = FakeStorage()
 
@@ -328,7 +480,7 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
             raise Exception
 
     async def get_users(*args, **kwargs):
-        return {"is_active": True}
+        return {"is_active": True, "quota": 2}
 
     client.app.storage = FakeStorage()
 
@@ -357,7 +509,7 @@ def test_post_measurement_inactive_user(client, monkeypatch):
     """Test post measurement when no inactive account."""
 
     async def get_users(*args, **kwargs):
-        return {"is_active": False}
+        return {"is_active": False, "quota": 2}
 
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
     monkeypatch.setattr(

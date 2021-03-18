@@ -3,6 +3,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from diamond_miner.generator import count_prefixes
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
 from iris.api.pagination import DatabasePagination
@@ -78,6 +79,16 @@ def tool_parameters_validator(tool, parameters):
     return parameters
 
 
+async def verify_quota(tool, content, user_quota):
+    """Verify that the quota is not exceeded."""
+    targets = [p.strip() for p in content.split()]
+    if tool == "diamond-miner":
+        n_prefixes = count_prefixes(targets)
+    elif tool == "diamond-miner-ping":
+        n_prefixes = count_prefixes(targets, prefix_len_v4=32, prefix_len_v6=128)
+    return not (n_prefixes > user_quota)
+
+
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
@@ -112,13 +123,28 @@ async def post_measurement(
 
     # Verify that the targets file exists on AWS S3
     try:
-        await request.app.storage.get_file_no_retry(
+        targets_file = await request.app.storage.get_file_no_retry(
             request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
             measurement.targets_file,
         )
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
+        )
+
+    # Check if the user respects his quota
+    try:
+        is_quota_respected = await verify_quota(
+            measurement.tool, targets_file["content"], user_info["quota"]
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid prefixes length"
+        )
+    if not is_quota_respected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Quota exceeded",
         )
 
     measurement.tool_parameters = tool_parameters_validator(

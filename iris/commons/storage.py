@@ -123,12 +123,13 @@ class Storage(object):
             except s3.exceptions.NoSuchKey:
                 return None
             async with file_object["Body"] as stream:
-                await stream.read()
+                content = await stream.read()
         return {
             "key": filename,
             "size": int(
                 file_object["ResponseMetadata"]["HTTPHeaders"]["content-length"]
             ),
+            "content": content.decode("utf-8"),
             "metadata": file_object["Metadata"],
             "last_modified": file_object["ResponseMetadata"]["HTTPHeaders"][
                 "last-modified"
@@ -140,13 +141,14 @@ class Storage(object):
         async with aioboto3.client("s3", **self.aws_settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
-                await stream.read()
+                content = await stream.read()
 
         return {
             "key": filename,
             "size": int(
                 file_object["ResponseMetadata"]["HTTPHeaders"]["content-length"]
             ),
+            "content": content.decode("utf-8"),
             "metadata": file_object["Metadata"],
             "last_modified": file_object["ResponseMetadata"]["HTTPHeaders"][
                 "last-modified"

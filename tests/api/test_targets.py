@@ -4,7 +4,7 @@ import tempfile
 
 import pytest
 
-from iris.api.targets import verify_quota, verify_targets_file
+from iris.api.targets import verify_targets_file
 
 # --- GET /v0/targets ---
 
@@ -18,6 +18,7 @@ def test_get_targets(client, monkeypatch):
                 {
                     "key": "test",
                     "size": 42,
+                    "content": "8.8.8.8\n8.8.4.4",
                     "last_modified": "test",
                     "metadata": None,
                 }
@@ -30,7 +31,7 @@ def test_get_targets(client, monkeypatch):
         "count": 1,
         "next": None,
         "previous": None,
-        "results": [{"key": "test", "size": 42, "last_modified": "test"}],
+        "results": [{"key": "test", "last_modified": "test"}],
     }
 
 
@@ -63,6 +64,7 @@ def test_get_targets_by_key(client, monkeypatch):
             return {
                 "key": "test",
                 "size": 42,
+                "content": "8.8.8.8\n8.8.4.4",
                 "last_modified": "test",
                 "metadata": None,
             }
@@ -73,6 +75,7 @@ def test_get_targets_by_key(client, monkeypatch):
     assert response.json() == {
         "key": "test",
         "size": 42,
+        "content": ["8.8.8.8", "8.8.4.4"],
         "last_modified": "test",
     }
 
@@ -120,10 +123,6 @@ async def test_verify_prefixes_list_file():
     file_container.register(b"1.1.1.1\ntest\n2.2.2.0/24")
     assert await verify_targets_file(file_container) is False
 
-    # Test with invalid prefix length
-    file_container.register(b"1.1.1.0/25\n2.2.2.0/24")
-    assert await verify_targets_file(file_container) is False
-
     # Test with adhequate file with one trailing lines
     file_container.register(b"1.1.1.0/24\n2.2.2.0/24\n")
     assert await verify_targets_file(file_container) is True
@@ -131,28 +130,6 @@ async def test_verify_prefixes_list_file():
     # Test with adhequate file with multiple trailing lines
     file_container.register(b"1.1.1.0/24\n2.2.2.0/24\n\n")
     assert await verify_targets_file(file_container) is False
-
-
-@pytest.mark.asyncio
-async def test_verify_quota():
-    """Test quota verification."""
-
-    class FileContainer(object):
-        def __init__(self):
-            self.file = tempfile.SpooledTemporaryFile()
-
-        def register(self, content):
-            self.file = tempfile.SpooledTemporaryFile()
-            self.file.write(content)
-            self.file.seek(0)
-
-    file_container = FileContainer()
-
-    file_container.register(b"1.1.1.0/24\n2.2.2.0/24")
-
-    assert await verify_quota(file_container, 1) is False
-    assert await verify_quota(file_container, 2) is True
-    assert await verify_quota(file_container, 3) is True
 
 
 # --- DELETE /v0/targets/{key} ---
