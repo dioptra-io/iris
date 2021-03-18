@@ -79,7 +79,7 @@ async def default_pipeline(settings, parameters, result_filename, logger):
         adaptive_eps=True,
         probe_far_ttls=False,
         skip_unpopulated_ttls=True,
-        subset_prefix_len=6,
+        max_replies_per_subset=64_000_000,
         ttl_limit=40,
     )
 
