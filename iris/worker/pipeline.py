@@ -1,6 +1,7 @@
 """Measurement pipeline."""
 
 import aiofiles
+from aioch import Client
 from aiofiles import os as aios
 from diamond_miner import mappers
 from diamond_miner.next_round import compute_next_round
@@ -68,8 +69,10 @@ async def default_pipeline(settings, parameters, result_filename, logger):
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
     flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
 
+    client = Client(host=settings.DATABASE_HOST)
+
     probes_gen = compute_next_round(
-        host=settings.DATABASE_HOST,
+        client=client,
         table=table_name,
         round_=round_number,
         src_addr=parameters.ip_address,

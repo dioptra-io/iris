@@ -4,7 +4,7 @@ import aiofiles
 import aiofiles.os
 from diamond_miner import mappers
 from diamond_miner.generator import probe_generator
-from diamond_miner.utilities import probe_to_csv
+from diamond_miner.utilities import format_probe
 
 from iris.agent.prober import probe, stopper
 from iris.commons.storage import Storage
@@ -85,7 +85,7 @@ async def measuremement(settings, redis, request, logger):
         gen = probe_generator(
             prefix_list, **build_probe_generator_parameters(parameters)
         )
-        stdin = (probe_to_csv(*x) async for x in gen)
+        stdin = (format_probe(*x) async for x in gen)
     else:
         # Round > 1
         logger.info(f"{logger_prefix} Download CSV probe file locally")

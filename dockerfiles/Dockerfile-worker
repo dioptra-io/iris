@@ -17,9 +17,11 @@ LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# TODO: Remove build-essential and python3-dev once
+# we can push binary wheels on PyPI for diamond-miner.
 RUN apt-get update \
     && apt-get install -y -q --no-install-recommends \
-        apt-transport-https ca-certificates dirmngr \
+        apt-transport-https build-essential ca-certificates dirmngr python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
@@ -36,7 +38,7 @@ COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf
 RUN mkdir vendors
 COPY vendors/diamond-miner vendors/diamond-miner
 
-RUN pip install --upgrade pip \
+RUN pip install --no-cache-dir --upgrade pip \
     && pip install poetry uvicorn \
     && rm -rf /root/.cache/*
 

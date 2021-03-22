@@ -1,16 +1,22 @@
 FROM tiangolo/uvicorn-gunicorn:python3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
-RUN apt-get update
-RUN apt -y install --reinstall ca-certificates
+# TODO: Remove build-essential and python3-dev once
+# we can push binary wheels on PyPI for diamond-miner.
+RUN apt-get update \
+    && apt-get install -y -q --no-install-recommends --reinstall \
+        build-essential \
+        python3-dev \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 RUN mkdir vendors
 COPY vendors/diamond-miner vendors/diamond-miner
 
-RUN pip install --upgrade pip
-RUN pip install poetry
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
