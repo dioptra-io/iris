@@ -74,11 +74,18 @@ async def log_stream(stream, handler, prefix):
 
 
 async def write_stream(stream, handler):
+    buffer = []
     async for data in handler:
         if isinstance(data, str):
             data = data.encode("utf-8") + b"\n"
-        stream.write(data)
-        await stream.drain()
+        buffer.append(data)
+        if len(buffer) >= 64:
+            stream.writelines(buffer)
+            await stream.drain()
+            buffer.clear()
+    # Flush the remaining entries in the buffer
+    stream.writelines(buffer)
+    await stream.drain()
     # NOTE: We should not close the stream here, since the consuming process
     # may not have read all of the data yet. Instead we expect the consuming
     # process to exit gracefully when it reaches EOF.
