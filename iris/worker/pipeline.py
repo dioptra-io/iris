@@ -4,7 +4,9 @@ import aiofiles
 from aioch import Client
 from aiofiles import os as aios
 from diamond_miner import mappers
+from diamond_miner.config import Config
 from diamond_miner.next_round import compute_next_round
+from diamond_miner.utilities import format_probe
 
 from iris.commons.database import DatabaseMeasurementResults, get_session
 from iris.commons.storage import Storage
@@ -75,21 +77,24 @@ async def default_pipeline(settings, parameters, result_filename, logger):
         client=client,
         table=table_name,
         round_=round_number,
-        src_addr=parameters.ip_address,
-        src_port=parameters.tool_parameters["initial_source_port"],
-        dst_port=parameters.tool_parameters["destination_port"],
-        mapper=flow_mapper,
-        adaptive_eps=True,
-        probe_far_ttls=False,
-        skip_unpopulated_ttls=True,
-        max_replies_per_subset=64_000_000,
-        ttl_limit=40,
+        config=Config(
+            adaptive_eps=True,
+            far_ttl_min=20,
+            far_ttl_max=40,
+            mapper=flow_mapper,
+            max_replies_per_subset=64_000_000,
+            probe_src_addr=parameters.ip_address,
+            probe_src_port=parameters.tool_parameters["initial_source_port"],
+            probe_dst_port=parameters.tool_parameters["destination_port"],
+            probe_far_ttls=False,
+            skip_unpopulated_ttls=True,
+        ),
     )
 
     async with aiofiles.open(next_round_csv_filepath, "w") as fout:
         async for probes_specs in probes_gen:
             await fout.write(
-                "".join(("\n".join(",".join(spec) for spec in probes_specs), "\n"))
+                "".join(("\n".join(format_probe(*spec) for spec in probes_specs), "\n"))
             )
 
     shuffled_next_round_csv_filename = (

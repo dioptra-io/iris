@@ -26,7 +26,7 @@ def build_probe_generator_parameters(parameters):
             "prefix_len_v4": 24,
             "prefix_len_v6": 64,
             "flow_ids": range(6),
-            "dst_port": parameters["tool_parameters"]["destination_port"],
+            "probe_dst_port": parameters["tool_parameters"]["destination_port"],
             "mapper": flow_mapper,
         }
     elif parameters["tool"] == "diamond-miner-ping":
@@ -35,7 +35,7 @@ def build_probe_generator_parameters(parameters):
             "prefix_len_v6": 128,
             "flow_ids": [0],
             "ttls": [parameters["tool_parameters"]["max_ttl"]],
-            "dst_port": parameters["tool_parameters"]["destination_port"],
+            "probe_dst_port": parameters["tool_parameters"]["destination_port"],
         }
     else:
         raise ValueError("Invalid tool name")
