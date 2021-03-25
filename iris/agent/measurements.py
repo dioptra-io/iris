@@ -26,6 +26,10 @@ def build_probe_generator_parameters(parameters):
             "prefix_len_v4": 24,
             "prefix_len_v6": 64,
             "flow_ids": range(6),
+            "ttls": range(
+                parameters["tool_parameters"]["min_ttl"],
+                parameters["tool_parameters"]["max_ttl"] + 1,
+            ),
             "probe_dst_port": parameters["tool_parameters"]["destination_port"],
             "mapper": flow_mapper,
         }
