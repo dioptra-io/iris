@@ -1,16 +1,32 @@
 import logging
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
 from iris.api.main import app
-from iris.api.security import authenticate
+from iris.api.security import get_current_active_user
 from iris.api.settings import APISettings
 from iris.commons.redis import Redis
 
+uuid_user = str(uuid4())
 
-def override_authenticate():
-    return "test"
+
+def override_get_current_active_user():
+    return {
+        "uuid": uuid_user,
+        "username": "test",
+        "email": "test@test",
+        "hashed_password": (
+            "$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve"
+        ),
+        "is_active": True,
+        "is_admin": True,
+        "quota": 1000,
+        "register_date": "date",
+        "ripe_account": None,
+        "ripe_key": None,
+    }
 
 
 class TestSettings(APISettings):
@@ -66,7 +82,7 @@ class FakeRedis(Redis):
 @pytest.fixture
 def client():
     client = TestClient(app)
-    app.dependency_overrides[authenticate] = override_authenticate
+    app.dependency_overrides[get_current_active_user] = override_get_current_active_user
 
     app.redis = FakeRedis()
     app.logger = logging.getLogger("test")

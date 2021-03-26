@@ -7,6 +7,9 @@ import pytest
 
 import iris.commons.database
 from iris.api.measurements import verify_quota
+from iris.api.security import get_current_active_user
+
+from ..conftest import override_get_current_active_user
 
 # --- GET /v0/measurements ---
 
@@ -214,17 +217,20 @@ def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
         def send(*args, **kwargs):
             pass
 
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 1}
+    client.app.dependency_overrides[get_current_active_user] = lambda: {
+        "uuid": "test",
+        "username": "test",
+        "email": "test@test",
+        "is_active": True,
+        "is_admin": False,
+        "quota": 0,
+        "register_date": "date",
+        "ripe_account": None,
+        "ripe_key": None,
+    }
 
     client.app.storage = FakeStorage()
-
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
 
     response = client.post(
         "/v0/measurements/",
@@ -234,6 +240,11 @@ def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
         },
     )
     assert response.status_code == 401
+
+    # Reset back the override
+    client.app.dependency_overrides[
+        get_current_active_user
+    ] = override_get_current_active_user
 
 
 def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatch):
@@ -503,34 +514,6 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
     )
     assert response.status_code == 404
     assert response.json() == {"detail": "File object not found"}
-
-
-def test_post_measurement_inactive_user(client, monkeypatch):
-    """Test post measurement when no inactive account."""
-
-    async def get_users(*args, **kwargs):
-        return {"is_active": False, "quota": 2}
-
-    monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
-
-    response = client.post(
-        "/v0/measurements/",
-        json={
-            "targets_file": "test.txt",
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
-        },
-    )
-
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Account inactive"}
 
 
 # --- GET /v0/measurements/{measurement_uuid} ---
