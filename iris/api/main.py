@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
@@ -17,6 +18,20 @@ app = FastAPI(
     title="Iris",
     description="Iris API",
     version=__version__,
+)
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "http://localhost:8081",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.add_middleware(PrometheusMiddleware)

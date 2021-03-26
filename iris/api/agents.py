@@ -10,7 +10,7 @@ from iris.api.schemas import (
     AgentsGetResponse,
     ExceptionResponse,
 )
-from iris.api.security import authenticate
+from iris.api.security import get_current_active_user
 
 router = APIRouter()
 
@@ -20,7 +20,7 @@ async def get_agents(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    username: str = Depends(authenticate),
+    user: str = Depends(get_current_active_user),
 ):
     """Get all agents information."""
     agents_info = await request.app.redis.get_agents()
@@ -51,7 +51,7 @@ async def get_agents(
     summary="Get agent information from UUID",
 )
 async def get_agent_by_uuid(
-    request: Request, uuid: UUID, username: str = Depends(authenticate)
+    request: Request, uuid: UUID, user: str = Depends(get_current_active_user)
 ):
     """Get agent information from UUID."""
     agents = await request.app.redis.get_agents(state=False, parameters=False)

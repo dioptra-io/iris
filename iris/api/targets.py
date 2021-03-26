@@ -22,8 +22,7 @@ from iris.api.schemas import (
     TargetsGetResponse,
     TargetsPostResponse,
 )
-from iris.api.security import authenticate
-from iris.commons.database import DatabaseUsers, get_session
+from iris.api.security import get_current_active_user
 
 router = APIRouter()
 
@@ -35,12 +34,12 @@ async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    username: str = Depends(authenticate),
+    user: str = Depends(get_current_active_user),
 ):
     """Get all targets lists information."""
     try:
         targets = await request.app.storage.get_all_files_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"]
         )
     except Exception:
         raise HTTPException(
@@ -57,12 +56,12 @@ async def get_targets(
     summary="Get targets list information by key",
 )
 async def get_target_by_key(
-    request: Request, key: str, username: str = Depends(authenticate)
+    request: Request, key: str, user: str = Depends(get_current_active_user)
 ):
     """"Get a targets list information by key."""
     try:
         targets_file = await request.app.storage.get_file_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"], key
         )
     except Exception:
         raise HTTPException(
@@ -111,7 +110,7 @@ async def post_target(
     request: Request,
     background_tasks: BackgroundTasks,
     targets_file: UploadFile = File(...),
-    username: str = Depends(authenticate),
+    user: str = Depends(get_current_active_user),
 ):
     """Upload a targets list to object storage."""
     is_correct = await verify_targets_file(targets_file)
@@ -121,18 +120,7 @@ async def post_target(
             detail="Bad targets file structure",
         )
 
-    session = get_session(request.app.settings)
-    users_database = DatabaseUsers(session, request.app.settings, request.app.logger)
-
-    # Check if a user is active
-    user_info = await users_database.get(username)
-    if not user_info["is_active"]:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Account inactive",
-        )
-
-    target_bucket = request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+    target_bucket = request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"]
     background_tasks.add_task(
         upload_targets_file, request.app.storage, target_bucket, targets_file
     )
@@ -146,12 +134,12 @@ async def post_target(
     summary="Delete a targets list from object storage.",
 )
 async def delete_target_by_key(
-    request: Request, key: str, username: str = Depends(authenticate)
+    request: Request, key: str, user: str = Depends(get_current_active_user)
 ):
     """Delete a targets list from object storage."""
     try:
         response = await request.app.storage.delete_file_check_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username, key
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"], key
         )
     except Exception:
         raise HTTPException(

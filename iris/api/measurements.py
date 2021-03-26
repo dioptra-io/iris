@@ -16,13 +16,12 @@ from iris.api.schemas import (
     MeasurementsPostResponse,
     MeasurementsResultsResponse,
 )
-from iris.api.security import authenticate
+from iris.api.security import get_current_active_user
 from iris.commons.database import (
     DatabaseAgents,
     DatabaseAgentsSpecific,
     DatabaseMeasurementResults,
     DatabaseMeasurements,
-    DatabaseUsers,
     get_session,
 )
 from iris.worker.hook import hook
@@ -36,14 +35,14 @@ async def get_measurements(
     tag: str = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    username: str = Depends(authenticate),
+    user: str = Depends(get_current_active_user),
 ):
     """Get all measurements."""
     session = get_session(request.app.settings)
     database = DatabaseMeasurements(session, request.app.settings, request.app.logger)
 
     querier = DatabasePagination(database, request, offset, limit)
-    output = await querier.query(user=username, tag=tag)
+    output = await querier.query(user=user["username"], tag=tag)
 
     # Refine measurements output
     measurements = []
@@ -107,24 +106,13 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    username: str = Depends(authenticate),
+    user: str = Depends(get_current_active_user),
 ):
     """Request a measurement."""
-    session = get_session(request.app.settings)
-    users_database = DatabaseUsers(session, request.app.settings, request.app.logger)
-
-    # Check if a user is active
-    user_info = await users_database.get(username)
-    if not user_info["is_active"]:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Account inactive",
-        )
-
     # Verify that the targets file exists on AWS S3
     try:
         targets_file = await request.app.storage.get_file_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username,
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"],
             measurement.targets_file,
         )
     except Exception:
@@ -135,7 +123,7 @@ async def post_measurement(
     # Check if the user respects his quota
     try:
         is_quota_respected = await verify_quota(
-            measurement.tool, targets_file["content"], user_info["quota"]
+            measurement.tool, targets_file["content"], user["quota"]
         )
     except ValueError:
         raise HTTPException(
@@ -179,7 +167,7 @@ async def post_measurement(
 
     # Add mesurement metadata
     measurement["measurement_uuid"] = str(uuid4())
-    measurement["user"] = username
+    measurement["user"] = user["username"]
     measurement["start_time"] = datetime.timestamp(datetime.now())
 
     # launch a measurement procedure on the worker.
@@ -197,13 +185,13 @@ async def post_measurement(
 async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: UUID,
-    username: str = Depends(authenticate),
+    user: str = Depends(get_current_active_user),
 ):
     """Get measurement information by uuid."""
     session = get_session(request.app.settings)
     measurement = await DatabaseMeasurements(
         session, request.app.settings, request.app.logger
-    ).get(username, measurement_uuid)
+    ).get(user["username"], measurement_uuid)
     if measurement is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -257,14 +245,14 @@ async def get_measurement_by_uuid(
 async def delete_measurement(
     request: Request,
     measurement_uuid: UUID,
-    username: str = Depends(authenticate),
+    user: str = Depends(get_current_active_user),
 ):
     """Cancel a measurement."""
     session = get_session(request.app.settings)
 
     measurement_info = await DatabaseMeasurements(
         session, request.app.settings, request.app.logger
-    ).get(username, measurement_uuid)
+    ).get(user["username"], measurement_uuid)
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -292,7 +280,7 @@ async def get_measurement_results(
     agent_uuid: UUID,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    username: str = Depends(authenticate),
+    user: str = Depends(get_current_active_user),
 ):
     """Get measurement results."""
 
@@ -300,7 +288,7 @@ async def get_measurement_results(
 
     measurement_info = await DatabaseMeasurements(
         session, request.app.settings, request.app.logger
-    ).get(username, measurement_uuid)
+    ).get(user["username"], measurement_uuid)
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
