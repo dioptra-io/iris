@@ -33,7 +33,7 @@ RUN mkdir results
 COPY statics/excluded_prefixes statics/excluded_prefixes
 COPY statics/index.html statics/index.html
 
-COPY --from=matthieugouel/diamond-miner-prober:0.3.2 /usr/bin/diamond-miner-prober /usr/bin/diamond-miner-prober
+COPY --from=matthieugouel/diamond-miner-prober:0.3.3 /usr/bin/diamond-miner-prober /usr/bin/diamond-miner-prober
 
 EXPOSE 80
 

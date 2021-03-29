@@ -7,7 +7,7 @@ from iris.api.security import get_current_active_user
 
 from ..conftest import override_get_current_active_user
 
-# --- POST /v0/profile/token
+# --- POST /api/profile/token
 
 
 def test_post_profile_token(client, monkeypatch):
@@ -23,7 +23,7 @@ def test_post_profile_token(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/profile/token", {"username": "test", "password": "test"}
+        "/api/profile/token", {"username": "test", "password": "test"}
     )
     assert response.status_code == 200
 
@@ -41,7 +41,7 @@ def test_post_profile_token_bad_credentials(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/profile/token", {"username": "test", "password": "toto"}
+        "/api/profile/token", {"username": "test", "password": "toto"}
     )
     assert response.status_code == 401
 
@@ -72,7 +72,7 @@ def test_post_profile_token_inactive(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/profile/token", {"username": "test", "password": "test"}
+        "/api/profile/token", {"username": "test", "password": "test"}
     )
     assert response.status_code == 401
 
@@ -104,7 +104,7 @@ def test_get_profile_inactive(client, monkeypatch):
         fake_get_user,
     )
 
-    response = client.get("/v0/profile")
+    response = client.get("/api/profile")
     assert response.status_code == 401
 
     # Reset back the override
@@ -113,7 +113,7 @@ def test_get_profile_inactive(client, monkeypatch):
     ] = override_get_current_active_user
 
 
-# --- GET /v0/profile ---
+# --- GET /api/profile ---
 
 
 def test_get_profile_no_ripe(client):
@@ -132,7 +132,7 @@ def test_get_profile_no_ripe(client):
         "ripe_key": None,
     }
 
-    response = client.get("/v0/profile")
+    response = client.get("/api/profile")
     assert response.json() == {
         "uuid": user_uuid,
         "username": "test",
@@ -167,7 +167,7 @@ def test_get_profile_ripe(client):
         "ripe_key": "key",
     }
 
-    response = client.get("/v0/profile")
+    response = client.get("/api/profile")
     assert response.json() == {
         "uuid": user_uuid,
         "username": "test",
@@ -185,7 +185,7 @@ def test_get_profile_ripe(client):
     ] = override_get_current_active_user
 
 
-# --- PUT /v0/profile/ripe ---
+# --- PUT /api/profile/ripe ---
 
 
 def test_put_profile_ripe(client, monkeypatch):
@@ -197,7 +197,7 @@ def test_put_profile_ripe(client, monkeypatch):
     monkeypatch.setattr(
         iris.commons.database.DatabaseUsers, "register_ripe", fake_register_ripe
     )
-    response = client.put("/v0/profile/ripe", json={"account": "test", "key": "test"})
+    response = client.put("/api/profile/ripe", json={"account": "test", "key": "test"})
     assert response.json() == {"account": "test", "key": "test"}
 
 
@@ -210,7 +210,7 @@ def test_put_profile_ripe_clear(client, monkeypatch):
     monkeypatch.setattr(
         iris.commons.database.DatabaseUsers, "register_ripe", fake_register_ripe
     )
-    response = client.put("/v0/profile/ripe", json={"account": None, "key": None})
+    response = client.put("/api/profile/ripe", json={"account": None, "key": None})
     assert response.json() == {"account": None, "key": None}
 
 
@@ -224,8 +224,8 @@ def test_put_profile_ripe_invalid_input(client, monkeypatch):
         iris.commons.database.DatabaseUsers, "register_ripe", fake_register_ripe
     )
 
-    response = client.put("/v0/profile/ripe", json={"account": "test", "key": None})
+    response = client.put("/api/profile/ripe", json={"account": "test", "key": None})
     assert response.status_code == 422
 
-    response = client.put("/v0/profile/ripe", json={"account": None, "key": "test"})
+    response = client.put("/api/profile/ripe", json={"account": None, "key": "test"})
     assert response.status_code == 422

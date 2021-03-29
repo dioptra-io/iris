@@ -275,6 +275,7 @@ class PacketResponse(BaseModel):
     reply_icmp_type: int
     reply_icmp_code: int
     reply_ttl: int
+    reply_mpls_labels: List[int]
     reply_size: int
     rtt: float
     round: int

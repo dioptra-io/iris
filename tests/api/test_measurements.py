@@ -11,7 +11,7 @@ from iris.api.security import get_current_active_user
 
 from ..conftest import override_get_current_active_user
 
-# --- GET /v0/measurements ---
+# --- GET /api/measurements ---
 
 
 def test_get_measurements_empty(client, monkeypatch):
@@ -28,7 +28,7 @@ def test_get_measurements_empty(client, monkeypatch):
         iris.commons.database.DatabaseMeasurements, "all_count", all_count
     )
 
-    response = client.get("/v0/measurements")
+    response = client.get("/api/measurements")
     assert response.json() == {
         "count": 0,
         "next": None,
@@ -105,7 +105,7 @@ def test_get_measurements(client, monkeypatch):
     )
 
     # No (offset, limit)
-    response = client.get("/v0/measurements")
+    response = client.get("/api/measurements")
     assert response.json() == {
         "count": 3,
         "next": None,
@@ -114,7 +114,7 @@ def test_get_measurements(client, monkeypatch):
     }
 
     # All inclusive (0, 100)
-    response = client.get("/v0/measurements?offset=0&limit=100")
+    response = client.get("/api/measurements?offset=0&limit=100")
     assert response.json() == {
         "count": 3,
         "next": None,
@@ -123,34 +123,34 @@ def test_get_measurements(client, monkeypatch):
     }
 
     # First result (0, 1)
-    response = client.get("/v0/measurements?offset=0&limit=1")
+    response = client.get("/api/measurements?offset=0&limit=1")
     assert response.json() == {
         "count": 3,
-        "next": "http://testserver/v0/measurements/?limit=1&offset=1",
+        "next": "http://testserver/api/measurements/?limit=1&offset=1",
         "previous": None,
         "results": measurements[0:1],
     }
 
     # Middle result (1, 1)
-    response = client.get("/v0/measurements?offset=1&limit=1")
+    response = client.get("/api/measurements?offset=1&limit=1")
     assert response.json() == {
         "count": 3,
-        "next": "http://testserver/v0/measurements/?limit=1&offset=2",
-        "previous": "http://testserver/v0/measurements/?limit=1",
+        "next": "http://testserver/api/measurements/?limit=1&offset=2",
+        "previous": "http://testserver/api/measurements/?limit=1",
         "results": measurements[1:2],
     }
 
     # Last result (2, 1)
-    response = client.get("/v0/measurements?offset=2&limit=1")
+    response = client.get("/api/measurements?offset=2&limit=1")
     assert response.json() == {
         "count": 3,
         "next": None,
-        "previous": "http://testserver/v0/measurements/?limit=1&offset=1",
+        "previous": "http://testserver/api/measurements/?limit=1&offset=1",
         "results": measurements[2:3],
     }
 
 
-# --- POST /v0/measurements/ ---
+# --- POST /api/measurements/ ---
 
 
 @pytest.mark.asyncio
@@ -192,7 +192,7 @@ def test_post_measurement_diamond_miner(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "tool": "diamond-miner",
@@ -233,7 +233,7 @@ def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "tool": "diamond-miner",
@@ -276,7 +276,7 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatc
     )
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "tool": "diamond-miner",
@@ -314,7 +314,7 @@ def test_post_measurement_diamond_miner_ping(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "tool": "diamond-miner-ping",
@@ -353,7 +353,7 @@ def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "tool": "diamond-miner-ping",
@@ -392,7 +392,7 @@ def test_post_measurement_diamond_miner_ping_quota_exceeded(client, monkeypatch)
     )
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "tool": "diamond-miner-ping",
@@ -430,7 +430,7 @@ def test_post_measurement_with_agents(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "agents": [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"}],
@@ -469,7 +469,7 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "agents": [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776551"}],
@@ -503,7 +503,7 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
     )
 
     response = client.post(
-        "/v0/measurements/",
+        "/api/measurements/",
         json={
             "targets_file": "test.txt",
             "protocol": "udp",
@@ -516,7 +516,7 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
     assert response.json() == {"detail": "File object not found"}
 
 
-# --- GET /v0/measurements/{measurement_uuid} ---
+# --- GET /api/measurements/{measurement_uuid} ---
 
 
 def test_get_measurement_by_uuid(client, monkeypatch):
@@ -578,7 +578,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     )
     monkeypatch.setattr(iris.commons.database.DatabaseAgents, "get", get_agents)
 
-    response = client.get(f"/v0/measurements/{measurement_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {
         "uuid": measurement_uuid,
         "state": "finished",
@@ -679,7 +679,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     )
     monkeypatch.setattr(iris.commons.database.DatabaseAgents, "get", get_agents)
 
-    response = client.get(f"/v0/measurements/{measurement_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {
         "uuid": measurement_uuid,
         "state": "waiting",
@@ -725,18 +725,18 @@ def test_get_measurement_by_uuid_not_found(client, monkeypatch):
 
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
 
-    response = client.get(f"/v0/measurements/{measurement_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
 
 
 def test_get_measurement_by_uuid_invalid_input(client):
     """Test get measurement by UUID with invalid input."""
-    response = client.get("/v0/measurements/test")
+    response = client.get("/api/measurements/test")
     assert response.status_code == 422
 
 
-# -- DELETE /v0/measurements/{measurement_uuid}/{agent_uuid} ---
+# -- DELETE /api/measurements/{measurement_uuid}/{agent_uuid} ---
 
 
 def test_delete_measurement_by_uuid(client, monkeypatch):
@@ -757,7 +757,7 @@ def test_delete_measurement_by_uuid(client, monkeypatch):
     client.app.redis = FakeRedis()
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
 
-    response = client.delete(f"/v0/measurements/{measurement_uuid}")
+    response = client.delete(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {"uuid": measurement_uuid, "action": "canceled"}
 
 
@@ -771,7 +771,7 @@ def test_delete_measurement_by_uuid_not_found(client, monkeypatch):
 
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
 
-    response = client.delete(f"/v0/measurements/{measurement_uuid}")
+    response = client.delete(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
 
@@ -791,12 +791,12 @@ def test_delete_measurement_by_uuid_already_finished(client, monkeypatch):
     client.app.redis = FakeRedis()
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
 
-    response = client.delete(f"/v0/measurements/{measurement_uuid}")
+    response = client.delete(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement already finished"}
 
 
-# --- GET /v0/measurements/{measurement_uuid}/{agent_uuid} ---
+# --- GET /api/measurements/{measurement_uuid}/{agent_uuid} ---
 
 
 def test_get_measurement_results(client, monkeypatch):
@@ -819,6 +819,7 @@ def test_get_measurement_results(client, monkeypatch):
             "reply_icmp_code": 0,
             "reply_ttl": 37,
             "reply_size": 56,
+            "reply_mpls_labels": [1],
             "rtt": 1280.2,
             "round": 1,
         }
@@ -870,7 +871,7 @@ def test_get_measurement_results(client, monkeypatch):
         all_measurement_results_count,
     )
 
-    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.json() == {
         "count": 1,
         "previous": None,
@@ -916,7 +917,7 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
         measurement_results_is_exists,
     )
 
-    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.json() == {
         "count": 0,
         "previous": None,
@@ -953,7 +954,7 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
         get_agents_specific_results,
     )
 
-    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 412
 
 
@@ -985,7 +986,7 @@ def test_get_measurement_results_no_agent(client, monkeypatch):
         get_agents_specific_results,
     )
 
-    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 404
     assert response.json() == {
         "detail": (
@@ -1006,7 +1007,7 @@ def test_get_measurement_result_not_found(client, monkeypatch):
 
     monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
 
-    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
 
@@ -1015,7 +1016,7 @@ def test_get_measurement_results_invalid_measurement_uuid(client):
     """Test get measurement results with invalid input."""
     measurement_uuid = "test"
     agent_uuid = str(uuid.uuid4())
-    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 422
 
 
@@ -1023,5 +1024,5 @@ def test_get_measurement_results_invalid_agent_uuid(client):
     """Test get measurement results with invalid input."""
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = "test"
-    response = client.get(f"/v0/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 422

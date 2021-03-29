@@ -11,7 +11,7 @@ from passlib.context import CryptContext
 from iris.commons.database import DatabaseUsers, get_session
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v0/profile/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="profile/token")
 
 
 def verify_password(plain_password, hashed_password):

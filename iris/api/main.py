@@ -18,32 +18,33 @@ app = FastAPI(
     title="Iris",
     description="Iris API",
     version=__version__,
+    openapi_url="/api/openapi.json",
+    docs_url="/api/docs",
+    redoc_url=None,
 )
 
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:8081",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 app.add_middleware(PrometheusMiddleware)
 app.add_route("/metrics", handle_metrics)
 
-app.include_router(router, prefix="/v0")
+app.include_router(router, prefix="/api")
 
 
 @app.on_event("startup")
 async def startup_event():
     # Get API settings & logger
     app.settings = APISettings()
+
+    # Add CORS whitelist
+    if app.settings.API_CORS_ALLOW_ORIGIN:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=[app.settings.API_CORS_ALLOW_ORIGIN],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
     app.logger = create_logger(app.settings)
     app.storage = Storage(app.settings, app.logger)
 

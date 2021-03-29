@@ -2,7 +2,7 @@ version: "3"
 
 services:
   traefik:
-    image: "traefik:v2.2"
+    image: "traefik:latest"
     command:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.redis.address=:6379"
@@ -18,7 +18,7 @@ services:
     networks:
       default:
         aliases:
-          - "api.docker.localhost"
+          - "iris.docker.localhost"
           - "cadvisor.docker.localhost"
           - "grafana.docker.localhost"
           - "loki.docker.localhost"
@@ -63,6 +63,7 @@ services:
       dockerfile: "./dockerfiles/Dockerfile-api"
     environment:
       MODULE_NAME: "iris.api.main"
+      API_CORS_ALLOW_ORIGIN: "http://localhost:8081"
       API_ADMIN_USERNAME: "admin"
       API_ADMIN_EMAIL: "admin@iris.docker.localhost"
       API_ADMIN_HASHED_PASSWORD: "$$2b$$12$$DOA6t1HC4zlT/AqFgQcrzuxwcTVAV2HuyZrzxORdBDxhctmMfIbUi"
@@ -75,7 +76,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.routers.api.rule=Host(`api.docker.localhost`)"
+      - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`) && PathPrefix(`/api`)"
     volumes:
       - "./iris:/app/iris"
     depends_on:

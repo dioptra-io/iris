@@ -6,7 +6,7 @@ import pytest
 
 from iris.api.targets import verify_targets_file
 
-# --- GET /v0/targets ---
+# --- GET /api/targets ---
 
 
 def test_get_targets(client, monkeypatch):
@@ -26,7 +26,7 @@ def test_get_targets(client, monkeypatch):
 
     client.app.storage = FakeStorage()
 
-    response = client.get("/v0/targets")
+    response = client.get("/api/targets")
     assert response.json() == {
         "count": 1,
         "next": None,
@@ -44,7 +44,7 @@ def test_get_targets_empty(client, monkeypatch):
 
     client.app.storage = FakeStorage()
 
-    response = client.get("/v0/targets")
+    response = client.get("/api/targets")
     assert response.json() == {
         "count": 0,
         "next": None,
@@ -53,7 +53,7 @@ def test_get_targets_empty(client, monkeypatch):
     }
 
 
-# --- GET /v0/targets/{key} ---
+# --- GET /api/targets/{key} ---
 
 
 def test_get_targets_by_key(client, monkeypatch):
@@ -71,7 +71,7 @@ def test_get_targets_by_key(client, monkeypatch):
 
     client.app.storage = FakeStorage()
 
-    response = client.get("/v0/targets/test")
+    response = client.get("/api/targets/test")
     assert response.json() == {
         "key": "test",
         "size": 42,
@@ -89,11 +89,11 @@ def test_get_targets_by_key_not_found(client, monkeypatch):
 
     client.app.storage = FakeStorage()
 
-    response = client.get("/v0/targets/test")
+    response = client.get("/api/targets/test")
     assert response.status_code == 404
 
 
-# --- POST /v0/targets ---
+# --- POST /api/targets ---
 
 
 @pytest.mark.asyncio
@@ -132,7 +132,7 @@ async def test_verify_prefixes_list_file():
     assert await verify_targets_file(file_container) is False
 
 
-# --- DELETE /v0/targets/{key} ---
+# --- DELETE /api/targets/{key} ---
 
 
 def test_delete_targets_by_key(client, monkeypatch):
@@ -144,7 +144,7 @@ def test_delete_targets_by_key(client, monkeypatch):
 
     client.app.storage = FakeStorage()
 
-    response = client.delete("/v0/targets/test")
+    response = client.delete("/api/targets/test")
     assert response.json() == {"key": "test", "action": "delete"}
 
 
@@ -157,7 +157,7 @@ def test_delete_targets_by_key_not_found(client, monkeypatch):
 
     client.app.storage = FakeStorage()
 
-    response = client.delete("/v0/targets/test")
+    response = client.delete("/api/targets/test")
     assert response.status_code == 404
 
 
@@ -170,5 +170,5 @@ def test_delete_targets_internal_error(client, monkeypatch):
 
     client.app.storage = FakeStorage()
 
-    response = client.delete("/v0/targets/test")
+    response = client.delete("/api/targets/test")
     assert response.status_code == 500

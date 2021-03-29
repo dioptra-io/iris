@@ -21,7 +21,7 @@ def test_get_agents(client):
 
     client.app.redis = FakeRedis()
 
-    response = client.get("/v0/agents")
+    response = client.get("/api/agents")
     assert response.json() == {
         "count": 1,
         "next": None,
@@ -61,7 +61,7 @@ def test_get_agent_by_uuid(client):
 
     client.app.redis = FakeRedis()
 
-    response = client.get("/v0/agents/6f4ed428-8de6-460e-9e19-6e6173776552")
+    response = client.get("/api/agents/6f4ed428-8de6-460e-9e19-6e6173776552")
     assert response.json() == {
         "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
         "state": "idle",
@@ -83,7 +83,7 @@ def test_get_agent_by_uuid_not_found(client):
 
     client.app.redis = FakeRedis()
 
-    response = client.get("/v0/agents/6f4ed428-8de6-460e-9e19-6e6173776551")
+    response = client.get("/api/agents/6f4ed428-8de6-460e-9e19-6e6173776551")
     assert response.status_code == 404
 
 
@@ -99,5 +99,5 @@ def test_get_agent_by_uuid_duplicate(client):
 
     client.app.redis = FakeRedis()
 
-    response = client.get("/v0/agents/6f4ed428-8de6-460e-9e19-6e6173776552")
+    response = client.get("/api/agents/6f4ed428-8de6-460e-9e19-6e6173776552")
     assert response.status_code == 500

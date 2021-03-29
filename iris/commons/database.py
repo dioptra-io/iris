@@ -92,13 +92,23 @@ class DatabaseUsers(Database):
             await self.drop_table(self.table_name)
 
         await self.call(
-            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, username String, email String, hashed_password String, "
-            "is_active UInt8, is_admin UInt8, quota UInt32, "
-            "register_date DateTime, "
-            "ripe_account Nullable(String), ripe_key Nullable(String)) "
-            "ENGINE=MergeTree() "
-            "ORDER BY (uuid)",
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.table_name}
+            (
+                uuid            UUID,
+                username        String,
+                email           String,
+                hashed_password String,
+                is_active       UInt8,
+                is_admin        UInt8,
+                quota           UInt32,
+                register_date   DateTime,
+                ripe_account    Nullable(String),
+                ripe_key        Nullable(String)
+            )
+            ENGINE=MergeTree()
+            ORDER BY (uuid)
+            """,
         )
 
     def formatter(self, row):
@@ -160,9 +170,11 @@ class DatabaseUsers(Database):
             )
         else:
             await self.call(
-                f"ALTER TABLE {self.table_name} UPDATE "
-                "ripe_account = %(ripe_account)s, ripe_key = %(ripe_key)s "
-                "WHERE username=%(username)s",
+                f""""
+                ALTER TABLE {self.table_name}
+                UPDATE ripe_account=%(ripe_account)s, ripe_key=%(ripe_key)s
+                WHERE username=%(username)s
+                """,
                 {
                     "ripe_account": ripe_account,
                     "ripe_key": ripe_key,
@@ -184,11 +196,19 @@ class DatabaseMeasurements(Database):
             await self.drop_table(self.table_name)
 
         await self.call(
-            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, tool String, tags Array(String), "
-            "start_time DateTime, end_time Nullable(DateTime)) "
-            "ENGINE=MergeTree() "
-            "ORDER BY (uuid)",
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.table_name}
+            (
+                uuid       UUID,
+                user       String,
+                tool       String,
+                tags       Array(String),
+                start_time DateTime,
+                end_time   Nullable(DateTime)
+            )
+            ENGINE=MergeTree()
+            ORDER BY (uuid)
+            """
         )
 
     def formatter(self, row):
@@ -261,9 +281,11 @@ class DatabaseMeasurements(Database):
     async def stamp_end_time(self, user, uuid):
         """Stamp the end time for a measurement."""
         await self.call(
-            f"ALTER TABLE {self.table_name} "
-            "UPDATE end_time=toDateTime(%(end_time)s) "
-            "WHERE user=%(user)s AND uuid=%(uuid)s",
+            f"""
+            ALTER TABLE {self.table_name}
+            UPDATE end_time=toDateTime(%(end_time)s)
+            WHERE user=%(user)s AND uuid=%(uuid)s
+            """,
             {"end_time": datetime.now(), "user": user, "uuid": uuid},
         )
 
@@ -281,11 +303,20 @@ class DatabaseAgents(Database):
             await self.drop_table(self.table_name)
 
         await self.call(
-            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(uuid UUID, user String, version String, hostname String, ip_address IPv4,"
-            "probing_rate UInt32, last_used DateTime) "
-            "ENGINE=MergeTree() "
-            "ORDER BY (uuid)",
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.table_name}
+            (
+                uuid         UUID,
+                user         String,
+                version      String,
+                hostname     String,
+                ip_address   IPv4,
+                probing_rate UInt32,
+                last_used    DateTime
+            )
+            ENGINE=MergeTree()
+            ORDER BY (uuid)
+            """,
         )
 
     def formatter(self, row):
@@ -339,9 +370,11 @@ class DatabaseAgents(Database):
     async def stamp_last_used(self, uuid, user="all"):
         """Stamp the last used for an agent."""
         await self.call(
-            f"ALTER TABLE {self.table_name} "
-            "UPDATE last_used=toDateTime(%(last_used)s) "
-            "WHERE user=%(user)s AND uuid=%(uuid)s",
+            f"""
+            ALTER TABLE {self.table_name}
+            UPDATE last_used=toDateTime(%(last_used)s)
+            WHERE user=%(user)s AND uuid=%(uuid)s
+            """,
             {"last_used": datetime.now(), "user": user, "uuid": uuid},
         )
 
@@ -359,12 +392,20 @@ class DatabaseAgentsSpecific(Database):
             await self.drop_table(self.table_name)
 
         await self.call(
-            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(measurement_uuid UUID, agent_uuid UUID, targets_file String, "
-            "probing_rate UInt32, tool_parameters String, "
-            "finished UInt8, timestamp DateTime) "
-            "ENGINE=MergeTree() "
-            "ORDER BY (measurement_uuid, agent_uuid)",
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.table_name}
+            (
+                measurement_uuid UUID,
+                agent_uuid       UUID,
+                targets_file     String,
+                probing_rate     UInt32,
+                tool_parameters  String,
+                finished         UInt8,
+                timestamp        DateTime
+            )
+            ENGINE=MergeTree()
+            ORDER BY (measurement_uuid, agent_uuid)
+            """,
         )
 
     def formatter(self, row):
@@ -420,10 +461,12 @@ class DatabaseAgentsSpecific(Database):
 
     async def stamp_finished(self, measurement_uuid, agent_uuid):
         await self.call(
-            f"ALTER TABLE {self.table_name} "
-            "UPDATE finished=%(finished)s "
-            "WHERE measurement_uuid=%(measurement_uuid)s "
-            "AND agent_uuid=%(agent_uuid)s",
+            f"""
+            ALTER TABLE {self.table_name}
+            UPDATE finished=%(finished)s
+            WHERE measurement_uuid=%(measurement_uuid)s
+            AND agent_uuid=%(agent_uuid)s
+            """,
             {
                 "finished": int(True),
                 "measurement_uuid": measurement_uuid,
@@ -473,18 +516,56 @@ class DatabaseMeasurementResults(Database):
             await self.drop_table(self.table_name)
 
         await self.call(
-            f"CREATE TABLE IF NOT EXISTS {self.table_name}"
-            "(probe_src_addr IPv6, probe_dst_addr IPv6, "
-            "probe_src_port UInt16, probe_dst_port UInt16, "
-            "probe_ttl_l3 UInt8, probe_ttl_l4 UInt8, "
-            "reply_src_addr IPv6, reply_protocol UInt8, "
-            "reply_icmp_type UInt8, reply_icmp_code UInt8, "
-            "reply_ttl UInt8, reply_size UInt16, rtt Float64, round UInt8"
-            ") ENGINE=MergeTree() "
-            "ORDER BY ("
-            "probe_src_addr, reply_src_addr, probe_ttl_l4, "
-            "probe_src_port, probe_dst_port"
-            ")",
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.table_name}
+            (
+                probe_src_addr    IPv6,
+                probe_dst_addr    IPv6,
+                probe_src_port    UInt16,
+                probe_dst_port    UInt16,
+                probe_ttl_l3      UInt8,
+                probe_ttl_l4      UInt8,
+                reply_src_addr    IPv6,
+                reply_protocol    UInt8,
+                reply_icmp_type   UInt8,
+                reply_icmp_code   UInt8,
+                reply_ttl         UInt8,
+                reply_size        UInt16,
+                reply_mpls_labels Array(UInt32),
+                rtt               Float64,
+                round             UInt8,
+                -- Materialized columns
+                probe_dst_prefix IPv6 MATERIALIZED
+                toIPv6(cutIPv6(probe_dst_addr, 8, 1)),
+                private_reply_src_addr UInt8 MATERIALIZED
+                (
+                    reply_src_addr >= toIPv6('10.0.0.0') AND
+                    reply_src_addr <= toIPv6('10.255.255.255')
+                ) OR
+                (
+                    reply_src_addr >= toIPv6('172.16.0.0') AND
+                    reply_src_addr <= toIPv6('172.31.255.255')
+                ) OR
+                (
+                    reply_src_addr >= toIPv6('192.168.0.0') AND
+                    reply_src_addr <= toIPv6('192.168.255.255')
+                ) OR
+                (
+                    reply_src_addr >= toIPv6('fd00::') AND
+                    reply_src_addr <= toIPv6('fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff')
+                )
+            )
+            ENGINE=MergeTree()
+            ORDER BY
+            (
+                probe_src_addr,
+                probe_dst_prefix,
+                probe_dst_addr,
+                probe_src_port,
+                probe_dst_port,
+                probe_ttl_l3
+            )
+            """,
         )
 
     def formatter(self, row):
@@ -502,8 +583,9 @@ class DatabaseMeasurementResults(Database):
             "reply_icmp_code": row[9],
             "reply_ttl": row[10],
             "reply_size": row[11],
-            "rtt": row[12],
-            "round": row[13],
+            "reply_mpls_labels": row[12],
+            "rtt": row[13],
+            "round": row[14],
         }
 
     async def all_count(self):

@@ -395,6 +395,7 @@ async def test_database_measurement_results(monkeypatch):
         0,
         37,
         56,
+        [1, 2],
         1280.2,
         1,
     ]
@@ -412,6 +413,7 @@ async def test_database_measurement_results(monkeypatch):
         "reply_icmp_code": 0,
         "reply_ttl": 37,
         "reply_size": 56,
+        "reply_mpls_labels": [1, 2],
         "rtt": 1280.2,
         "round": 1,
     }
