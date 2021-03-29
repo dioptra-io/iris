@@ -165,7 +165,7 @@ class ToolParameters(BaseModel):
     initial_source_port: int = Field(
         24000, title="Initial source port", gt=0, lt=65_536
     )
-    destination_port: int = Field(34334, title="Destination port", gt=0, lt=65_536)
+    destination_port: int = Field(33434, title="Destination port", gt=0, lt=65_536)
     min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
     max_ttl: int = Field(30, title="Maximum TTL", gt=0, lt=256)
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
