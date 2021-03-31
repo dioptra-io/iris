@@ -556,6 +556,13 @@ class DatabaseMeasurementResults(Database):
                 (
                     reply_src_addr >= toIPv6('fd00::') AND
                     reply_src_addr <= toIPv6('fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff')
+                ),
+                time_exceeded_reply UInt8 MATERIALIZED
+                (
+                    reply_protocol = 1 AND reply_icmp_type = 11
+                ) OR
+                (
+                    reply_protocol = 58 AND reply_icmp_type = 3
                 )
             )
             ENGINE=MergeTree()
@@ -566,7 +573,7 @@ class DatabaseMeasurementResults(Database):
                 probe_dst_addr,
                 probe_src_port,
                 probe_dst_port,
-                probe_ttl_l3
+                probe_ttl_l4
             )
             """,
         )
@@ -580,14 +587,14 @@ class DatabaseMeasurementResults(Database):
                 ORDER BY (reply_src_addr)
                 AS
                 SELECT reply_src_addr,
-                    groupUniqArrayState(probe_ttl_l3) AS ttls,
+                    groupUniqArrayState(probe_ttl_l4) AS ttls,
                     avgState(rtt)                     AS avg_rtt,
                     minState(rtt)                     AS min_rtt,
                     maxState(rtt)                     AS max_rtt
                 FROM {self.table_name}
-                WHERE reply_icmp_type in [3,11]
-                AND reply_src_addr != probe_dst_addr
+                WHERE reply_src_addr != probe_dst_addr
                 AND private_reply_src_addr = 0
+                AND time_exceeded_reply = 1
                 GROUP BY reply_src_addr
                 SETTINGS optimize_aggregation_in_order = 1
             """
@@ -611,14 +618,12 @@ class DatabaseMeasurementResults(Database):
                    probe_dst_addr,
                    probe_src_port,
                    probe_dst_port,
-                   groupArrayInsertAtState(NULL, 32)(reply_src_addr, probe_ttl_l3)
+                   groupArrayInsertAtState(NULL, 32)(reply_src_addr, probe_ttl_l4)
                    AS replies
             FROM {self.table_name}
-            WHERE (
-                reply_icmp_type IN [3, 11])
-                AND(reply_src_addr != probe_dst_addr
-                AND private_reply_src_addr = 0
-            )
+            WHERE reply_src_addr != probe_dst_addr
+            AND private_reply_src_addr = 0
+            AND time_exceeded_reply = 1
             GROUP BY (
                 probe_src_addr,
                 probe_dst_prefix,
