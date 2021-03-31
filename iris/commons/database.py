@@ -493,9 +493,7 @@ class DatabaseMeasurementResults(Database):
         """Forge the table name from measurement UUID and agent UUID."""
         sanitized_measurement_uuid = str(measurement_uuid).replace("-", "_")
         sanitized_agent_uuid = str(agent_uuid).replace("-", "_")
-        return (
-            "results" + f"__{sanitized_measurement_uuid}" + f"__{sanitized_agent_uuid}"
-        )
+        return f"results__{sanitized_measurement_uuid}" + f"__{sanitized_agent_uuid}"
 
     @staticmethod
     def parse_table_name(table_name):
@@ -509,6 +507,11 @@ class DatabaseMeasurementResults(Database):
             "measurement_uuid": measurement_uuid.replace("_", "-"),
             "agent_uuid": agent_uuid.replace("_", "-"),
         }
+
+    def swap_table_name_prefix(self, prefix):
+        database_name, table_name = self.table_name.split(".")
+        measurement_uuid, agent_uuid = table_name.split("__")[1:3]
+        return f"{database_name}.{prefix}__{measurement_uuid}__{agent_uuid}"
 
     async def create_table(self, drop=False):
         """Create a table."""
@@ -566,6 +569,64 @@ class DatabaseMeasurementResults(Database):
                 probe_ttl_l3
             )
             """,
+        )
+
+    async def create_materialized_vue_nodes(self):
+        await self.call(
+            f"""
+                CREATE MATERIALIZED VIEW IF NOT EXISTS
+                {self.swap_table_name_prefix("nodes")}
+                ENGINE = AggregatingMergeTree
+                ORDER BY (reply_src_addr)
+                AS
+                SELECT reply_src_addr,
+                    groupUniqArrayState(probe_ttl_l3) AS ttls,
+                    avgState(rtt)                     AS avg_rtt,
+                    minState(rtt)                     AS min_rtt,
+                    maxState(rtt)                     AS max_rtt
+                FROM {self.table_name}
+                WHERE reply_icmp_type in [3,11]
+                AND reply_src_addr != probe_dst_addr
+                AND private_reply_src_addr = 0
+                GROUP BY reply_src_addr
+                SETTINGS optimize_aggregation_in_order = 1
+            """
+        )
+
+    async def create_materialized_vue_traceroute(self):
+        await self.call(
+            f"""
+            CREATE MATERIALIZED VIEW IF NOT EXISTS
+            {self.swap_table_name_prefix("traceroutes")}
+            ENGINE = AggregatingMergeTree
+            ORDER BY (
+                probe_src_addr,
+                probe_dst_prefix,
+                probe_dst_addr,
+                probe_src_port,
+                probe_dst_port)
+            AS
+            SELECT probe_src_addr,
+                   probe_dst_prefix,
+                   probe_dst_addr,
+                   probe_src_port,
+                   probe_dst_port,
+                   groupArrayInsertAtState(NULL, 32)(reply_src_addr, probe_ttl_l3)
+                   AS replies
+            FROM {self.table_name}
+            WHERE (
+                reply_icmp_type IN [3, 11])
+                AND(reply_src_addr != probe_dst_addr
+                AND private_reply_src_addr = 0
+            )
+            GROUP BY (
+                probe_src_addr,
+                probe_dst_prefix,
+                probe_dst_addr,
+                probe_src_port,
+                probe_dst_port)
+            SETTINGS optimize_aggregation_in_order = 1
+            """
         )
 
     def formatter(self, row):

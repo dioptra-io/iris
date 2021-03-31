@@ -362,6 +362,15 @@ async def test_database_measurement_results(monkeypatch):
     ) == {"measurement_uuid": str(measurement_uuid), "agent_uuid": str(agent_uuid)}
 
     session = FakeSession(response=None)
+
+    # Test of `.swap_table_name_prefix()` method
+    assert (
+        DatabaseMeasurementResults(
+            session, CommonSettings(), "iris.results__measurement__agent"
+        ).swap_table_name_prefix("nodes")
+        == "iris.nodes__measurement__agent"
+    )
+
     assert (
         await DatabaseMeasurementResults(
             session, CommonSettings(), "test"
@@ -372,6 +381,21 @@ async def test_database_measurement_results(monkeypatch):
         await DatabaseMeasurementResults(
             session, CommonSettings(), "test"
         ).create_table(drop=True)
+        is None
+    )
+
+    # Test of materialized vues creation
+    assert (
+        await DatabaseMeasurementResults(
+            session, CommonSettings(), "iris.results__measurement__agent"
+        ).create_materialized_vue_nodes()
+        is None
+    )
+
+    assert (
+        await DatabaseMeasurementResults(
+            session, CommonSettings(), "iris.results__measurement__agent"
+        ).create_materialized_vue_traceroute()
         is None
     )
 

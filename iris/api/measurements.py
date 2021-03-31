@@ -102,7 +102,7 @@ async def post_measurement(
         example={
             "targets_file": "prefixes.txt",
             "tool": "diamond-miner",
-            "tool_parameters": {"protocol": "udp", "min_ttl": 2, "max_ttl": 30},
+            "tool_parameters": {"protocol": "udp", "min_ttl": 2, "max_ttl": 32},
             "tags": ["test"],
         },
     ),

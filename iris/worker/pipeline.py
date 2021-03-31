@@ -50,6 +50,11 @@ async def default_pipeline(settings, parameters, result_filename, logger):
 
     logger.info(f"{logger_prefix} Create table `{table_name}`")
     await database.create_table()
+    await database.create_materialized_vue_nodes()
+
+    logger.info(f"{logger_prefix} Create materialized vues for `{table_name}`")
+    await database.create_materialized_vue_nodes()
+    await database.create_materialized_vue_traceroute()
 
     logger.info(f"{logger_prefix} Insert CSV file into database")
     await database.insert_csv(results_filepath)
