@@ -2,7 +2,6 @@ from iris.worker.pipeline import extract_round_number
 
 
 def test_extract_round_number():
-    """Test of `extract_round_number` function."""
     file_name = "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47_starttime_10.log"
     assert extract_round_number(file_name) == 10
 

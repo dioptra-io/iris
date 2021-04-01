@@ -1,5 +1,3 @@
-"""Test of common utils functions."""
-
 import socket
 
 from iris.commons.utils import get_own_ip_address

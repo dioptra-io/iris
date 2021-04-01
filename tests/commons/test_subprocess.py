@@ -1,10 +1,13 @@
-"""Test of common subprocess functions."""
-
 import asyncio
+from contextlib import redirect_stdout
+from io import StringIO
 
 import pytest
 
 from iris.commons.subprocess import CancelProcessException, start_stream_subprocess
+
+# NOTE: The redirect stdout is the best way I found so far to avoid
+# getting print() warnings from the `start_stream_subprocess` function.
 
 
 @pytest.mark.asyncio
@@ -40,22 +43,26 @@ async def test_subprocess():
     # Base case: we call a standalone program and check if we get the full output.
     stdout = count_handler()
     stderr = count_handler()
-    res = await start_stream_subprocess(
-        "yes | head -n 100", stdout=stdout, stderr=stderr
-    )
-    assert stdout.calls == 100
-    assert stderr.calls == 0
-    assert res is True
+    with redirect_stdout(StringIO()):
+        res = await start_stream_subprocess(
+            "yes | head -n 100", stdout=stdout, stderr=stderr
+        )
+
+        assert stdout.calls == 100
+        assert stderr.calls == 0
+        assert res is True
 
     # EOF: check that the consuming process stops when the input iterator is finished.
     stdout = count_handler()
     stderr = count_handler()
-    res = await start_stream_subprocess(
-        "head -n 5", stdout=stdout, stderr=stderr, stdin=arange(2)
-    )
-    assert stdout.calls == 2
-    assert stderr.calls == 0
-    assert res is True
+    with redirect_stdout(StringIO()):
+        res = await start_stream_subprocess(
+            "head -n 5", stdout=stdout, stderr=stderr, stdin=arange(2)
+        )
+
+        assert stdout.calls == 2
+        assert stderr.calls == 0
+        assert res is True
 
     # Early exit: check that start_stream_subprocess does not crash if the subprocess
     # terminates without having consumed the full input.
@@ -63,37 +70,54 @@ async def test_subprocess():
     for _ in range(10):
         stdout = count_handler()
         stderr = count_handler()
-        res = await start_stream_subprocess(
-            "head -n 5", stdout=stdout, stderr=stderr, stdin=arange(10)
-        )
-        assert stdout.calls == 5
-        assert stderr.calls == 0
+        with redirect_stdout(StringIO()):
+            res = await start_stream_subprocess(
+                "head -n 5", stdout=stdout, stderr=stderr, stdin=arange(10)
+            )
+
+            assert stdout.calls == 5
+            assert stderr.calls == 0
 
     # Output handler exception: check that start_stream_subprocess does not crash
     # if there is an exception in the handlers.
-    res = await start_stream_subprocess(
-        "yes | head -n 100", stdout=crash_handler(), stderr=crash_handler()
-    )
-    assert res is True
+    with redirect_stdout(StringIO()):
+        res = await start_stream_subprocess(
+            "yes | head -n 100", stdout=crash_handler(), stderr=crash_handler()
+        )
+
+        assert res is True
+
+    # NOTE: Recreate event loop to avoid `RuntimeError: Event loop is closed`
+    asyncio.new_event_loop()
 
     # Input handler exception
-    res = await start_stream_subprocess(
-        "head -n 100",
-        stdout=count_handler(),
-        stderr=count_handler(),
-        stdin=arange_crash(100),
-    )
-    assert res is True
+    with redirect_stdout(StringIO()):
+        res = await start_stream_subprocess(
+            "head -n 100",
+            stdout=count_handler(),
+            stderr=count_handler(),
+            stdin=arange_crash(100),
+        )
+
+        assert res is True
+
+    # NOTE: Recreate event loop to avoid `RuntimeError: Event loop is closed`
+    asyncio.new_event_loop()
 
     # Cancel exception: check that the subprocess is cancelled when requested.
     stdout = count_handler()
     stderr = count_handler()
-    res = await start_stream_subprocess(
-        "echo toto && sleep 1 && echo toto",
-        stdout=stdout,
-        stderr=stderr,
-        stopper=stopper(0.5),
-    )
-    assert stdout.calls == 1
-    assert stderr.calls == 0
-    assert res is False
+    with redirect_stdout(StringIO()):
+        res = await start_stream_subprocess(
+            "echo toto && sleep 1 && echo toto",
+            stdout=stdout,
+            stderr=stderr,
+            stopper=stopper(0.5),
+        )
+
+        assert stdout.calls == 1
+        assert stderr.calls == 0
+        assert res is False
+
+    # NOTE: Recreate event loop to avoid `RuntimeError: Event loop is closed`
+    asyncio.set_event_loop(asyncio.new_event_loop())

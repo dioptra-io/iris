@@ -1,5 +1,3 @@
-"""Test of `Redis` commons classes."""
-
 import aioredis
 import pytest
 from aioredis.errors import ConnectionClosedError
@@ -27,7 +25,6 @@ def fake(value):
 
 
 def test_redis_attributes():
-    """Test Redis global attributes."""
     redis = Redis(settings=CommonSettings(), logger=None)
 
     assert redis.KEY_MEASUREMENT_STATE == "measurement_state"
@@ -39,7 +36,6 @@ def test_redis_attributes():
 
 @pytest.mark.asyncio
 async def test_redis_connect(monkeypatch):
-    """Test of `Redis.connect()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
 
     async def fake_create_redis(*args, **kwargs):
@@ -58,7 +54,6 @@ async def test_redis_connect(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_redis_get_agent_state():
-    """Test of `Redis.get_agent_state()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -71,7 +66,6 @@ async def test_redis_get_agent_state():
 
 @pytest.mark.asyncio
 async def test_redis_get_agent_parameters():
-    """Test of `Redis.et_agent_parameters()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -84,7 +78,6 @@ async def test_redis_get_agent_parameters():
 
 @pytest.mark.asyncio
 async def test_redis_get_agents():
-    """Test of `Redis.get_agents()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
 
     class Agent(object):
@@ -112,7 +105,6 @@ async def test_redis_get_agents():
 
 @pytest.mark.asyncio
 async def test_redis_check_agent():
-    """Test of `Redis.check_agent()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
 
     redis.get_agents = fake([])
@@ -135,7 +127,6 @@ async def test_redis_check_agent():
 
 @pytest.mark.asyncio
 async def test_redis_get_measurement_state():
-    """Test of `Redis.get_measurement_state()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -148,7 +139,6 @@ async def test_redis_get_measurement_state():
 
 @pytest.mark.asyncio
 async def test_redis_set_measurement_state():
-    """Test of `Redis.set_measurement_state()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -158,7 +148,6 @@ async def test_redis_set_measurement_state():
 
 @pytest.mark.asyncio
 async def test_redis_delete_measurement_state():
-    """Test of `Redis.delete_measurement_state()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -168,7 +157,6 @@ async def test_redis_delete_measurement_state():
 
 @pytest.mark.asyncio
 async def test_redis_publish():
-    """Test of `Redis.publish()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -178,7 +166,6 @@ async def test_redis_publish():
 
 @pytest.mark.asyncio
 async def test_redis_disconnect():
-    """Test of `Redis.disconnect()` method."""
     redis = Redis(settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -189,7 +176,6 @@ async def test_redis_disconnect():
 
 @pytest.mark.asyncio
 async def test_agent_redis_connect(monkeypatch):
-    """Test of `AgentRedis.connect()` method."""
     redis = AgentRedis("test", settings=CommonSettings(), logger=None)
 
     async def fake_create_redis(*args, **kwargs):
@@ -210,7 +196,6 @@ async def test_agent_redis_connect(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_redis_agent_test_success():
-    """Test of `AgentRedis.test()` method."""
     redis = AgentRedis("test", settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -220,7 +205,6 @@ async def test_redis_agent_test_success():
 
 @pytest.mark.asyncio
 async def test_redis_agent_test_failed(monkeypatch):
-    """Test of `AgentRedis.test()` method."""
     redis = AgentRedis("test", settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -244,7 +228,6 @@ async def test_redis_agent_test_failed(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_redis_agent_set_agent_state():
-    """Test of `AgentRedis.set_agent_state()` method."""
     redis = AgentRedis("test", settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -254,7 +237,6 @@ async def test_redis_agent_set_agent_state():
 
 @pytest.mark.asyncio
 async def test_redis_agent_delete_agent_state():
-    """Test of `AgentRedis.delete_agent_state()` method."""
     redis = AgentRedis("test", settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -264,7 +246,6 @@ async def test_redis_agent_delete_agent_state():
 
 @pytest.mark.asyncio
 async def test_redis_agent_set_agent_parameters():
-    """Test of `AgentRedis.set_agent_parameters()` method."""
     redis = AgentRedis("test", settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -274,7 +255,6 @@ async def test_redis_agent_set_agent_parameters():
 
 @pytest.mark.asyncio
 async def test_redis_agent_delete_agent_parameters():
-    """Test of `AgentRedis.delete_agent_parameters()` method."""
     redis = AgentRedis("test", settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 
@@ -284,7 +264,6 @@ async def test_redis_agent_delete_agent_parameters():
 
 @pytest.mark.asyncio
 async def test_redis_agent_subscribe(monkeypatch):
-    """Test of `AgentRedis.subscribe()` method."""
     redis = AgentRedis("test", settings=CommonSettings(), logger=None)
     redis._redis = FakeRedisConnection()
 

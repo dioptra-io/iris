@@ -79,24 +79,6 @@ class Storage(object):
         async with aioboto3.client("s3", **self.aws_settings) as s3:
             await s3.delete_bucket(Bucket=bucket)
 
-    @fault_tolerant
-    async def get_all_files(self, bucket):
-        """Get all files inside a bucket."""
-        targets = []
-        async with aioboto3.resource("s3", **self.aws_settings) as s3:
-            bucket = await s3.Bucket(bucket)
-            async for obj_summary in bucket.objects.all():
-                obj = await obj_summary.Object()
-                targets.append(
-                    {
-                        "key": obj_summary.key,
-                        "size": await obj_summary.size,
-                        "metadata": await obj.metadata,
-                        "last_modified": str(await obj_summary.last_modified),
-                    }
-                )
-        return targets
-
     async def get_all_files_no_retry(self, bucket):
         """Get all files inside a bucket."""
         targets = []
@@ -115,26 +97,9 @@ class Storage(object):
         return targets
 
     @fault_tolerant
-    async def get_file(self, bucket, filename):
-        """Get file information from a bucket."""
-        async with aioboto3.client("s3", **self.aws_settings) as s3:
-            try:
-                file_object = await s3.get_object(Bucket=bucket, Key=filename)
-            except s3.exceptions.NoSuchKey:
-                return None
-            async with file_object["Body"] as stream:
-                content = await stream.read()
-        return {
-            "key": filename,
-            "size": int(
-                file_object["ResponseMetadata"]["HTTPHeaders"]["content-length"]
-            ),
-            "content": content.decode("utf-8"),
-            "metadata": file_object["Metadata"],
-            "last_modified": file_object["ResponseMetadata"]["HTTPHeaders"][
-                "last-modified"
-            ],
-        }
+    async def get_all_files(self, bucket):
+        """Get all files inside a bucket."""
+        return await self.get_all_files_no_retry(bucket)
 
     async def get_file_no_retry(self, bucket, filename):
         """Get file information from a bucket."""
@@ -154,6 +119,11 @@ class Storage(object):
                 "last-modified"
             ],
         }
+
+    @fault_tolerant
+    async def get_file(self, bucket, filename):
+        """Get file information from a bucket."""
+        return await self.get_file_no_retry(bucket, filename)
 
     def _upload_sync_file(self, bucket, filename, fin, metadata=None):
         """Underlying synchronous upload function."""

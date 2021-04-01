@@ -1,5 +1,3 @@
-"""Test of commons dataclasses."""
-
 import uuid
 
 import pytest
@@ -8,8 +6,6 @@ from iris.commons.dataclasses import ParametersDataclass
 
 
 def test_parameters_dataclass():
-    """Test of `ParametersDataclass` class."""
-
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 

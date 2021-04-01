@@ -1,5 +1,3 @@
-"""Test of `profile` operation."""
-
 import uuid
 
 import iris.commons.database
@@ -11,8 +9,6 @@ from ..conftest import override_get_current_active_user
 
 
 def test_post_profile_token(client, monkeypatch):
-    """Test getting a token with the correct credentials."""
-
     async def fake_get_user(*args, **kwargs):
         return override_get_current_active_user()
 
@@ -29,8 +25,6 @@ def test_post_profile_token(client, monkeypatch):
 
 
 def test_post_profile_token_bad_credentials(client, monkeypatch):
-    """Test getting a token with the wrong credentials."""
-
     async def fake_get_user(*args, **kwargs):
         return override_get_current_active_user()
 
@@ -47,8 +41,6 @@ def test_post_profile_token_bad_credentials(client, monkeypatch):
 
 
 def test_post_profile_token_inactive(client, monkeypatch):
-    """Test getting a token when inactive."""
-
     async def fake_get_user(*args, **kwargs):
         return {
             "uuid": "test",
@@ -78,8 +70,6 @@ def test_post_profile_token_inactive(client, monkeypatch):
 
 
 def test_get_profile_inactive(client, monkeypatch):
-    """Test get profile with inactive user."""
-
     del client.app.dependency_overrides[get_current_active_user]
 
     async def fake_get_user(*args, **kwargs):
@@ -117,8 +107,6 @@ def test_get_profile_inactive(client, monkeypatch):
 
 
 def test_get_profile_no_ripe(client):
-    """Test get profile with no RIPE profile."""
-
     user_uuid = str(uuid.uuid4())
     client.app.dependency_overrides[get_current_active_user] = lambda: {
         "uuid": user_uuid,
@@ -151,7 +139,6 @@ def test_get_profile_no_ripe(client):
 
 
 def test_get_profile_ripe(client):
-    """Test get profile with RIPE information."""
     user_uuid = str(uuid.uuid4())
 
     user_uuid = str(uuid.uuid4())
@@ -189,8 +176,6 @@ def test_get_profile_ripe(client):
 
 
 def test_put_profile_ripe(client, monkeypatch):
-    """Test of put RIPE profile."""
-
     async def fake_register_ripe(*args, **kwargs):
         return
 
@@ -202,8 +187,6 @@ def test_put_profile_ripe(client, monkeypatch):
 
 
 def test_put_profile_ripe_clear(client, monkeypatch):
-    """Test of clear RIPE profile."""
-
     async def fake_register_ripe(*args, **kwargs):
         return
 
@@ -215,8 +198,6 @@ def test_put_profile_ripe_clear(client, monkeypatch):
 
 
 def test_put_profile_ripe_invalid_input(client, monkeypatch):
-    """Test of put RIPE profile with invalid input."""
-
     async def fake_register_ripe(*args, **kwargs):
         return
 

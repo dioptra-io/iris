@@ -1,5 +1,3 @@
-"""Test of `measurements` operations."""
-
 import uuid
 from datetime import datetime
 
@@ -15,8 +13,6 @@ from ..conftest import override_get_current_active_user
 
 
 def test_get_measurements_empty(client, monkeypatch):
-    """Test get all measurements when no measurement in database."""
-
     async def all(self, user, offset, limit, tag=None):
         return []
 
@@ -38,8 +34,6 @@ def test_get_measurements_empty(client, monkeypatch):
 
 
 def test_get_measurements(client, monkeypatch):
-    """Test get all measurements."""
-
     measurements = [
         {
             "uuid": str(uuid.uuid4()),
@@ -155,8 +149,6 @@ def test_get_measurements(client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_verify_quota():
-    """Test quota verification."""
-
     assert await verify_quota("diamond-miner", "8.8.8.0/23", 2) is True
     assert await verify_quota("diamond-miner", "8.8.8.0/23", 1) is False
     assert await verify_quota("diamond-miner-ping", "8.8.8.0/24", 256) is True
@@ -164,8 +156,6 @@ async def test_verify_quota():
 
 
 def test_post_measurement_diamond_miner(client, monkeypatch):
-    """Test post measurement with `diamond-miner` tool."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -202,8 +192,6 @@ def test_post_measurement_diamond_miner(client, monkeypatch):
 
 
 def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
-    """Test post measurement with `diamond-miner` tool."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -248,8 +236,6 @@ def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
 
 
 def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatch):
-    """Test post measurement with `diamond-miner` tool."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -286,8 +272,6 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatc
 
 
 def test_post_measurement_diamond_miner_ping(client, monkeypatch):
-    """Test post measurement with `diamond-miner-ping` tool."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -325,8 +309,6 @@ def test_post_measurement_diamond_miner_ping(client, monkeypatch):
 
 
 def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
-    """Test post measurement with `diamond-miner-ping` tool."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -364,8 +346,6 @@ def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
 
 
 def test_post_measurement_diamond_miner_ping_quota_exceeded(client, monkeypatch):
-    """Test post measurement with `diamond-miner` tool."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -402,8 +382,6 @@ def test_post_measurement_diamond_miner_ping_quota_exceeded(client, monkeypatch)
 
 
 def test_post_measurement_with_agents(client, monkeypatch):
-    """Test post measurement with agent specific parameters."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -441,8 +419,6 @@ def test_post_measurement_with_agents(client, monkeypatch):
 
 
 def test_post_measurement_with_agents_not_found(client, monkeypatch):
-    """Test post measurement with agents that don't exist."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -484,8 +460,6 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
 
 
 def test_post_measurement_targets_file_not_found(client, monkeypatch):
-    """Test post measurement when targets file is not found."""
-
     class FakeStorage(object):
         async def get_file(*args, **kwargs):
             raise Exception
@@ -520,8 +494,6 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
 
 
 def test_get_measurement_by_uuid(client, monkeypatch):
-    """Test get measurement by UUID."""
-
     measurement_uuid = str(uuid.uuid4())
     user = "test"
     agent = {
@@ -615,8 +587,6 @@ def test_get_measurement_by_uuid(client, monkeypatch):
 
 
 def test_get_measurement_by_uuid_waiting(client, monkeypatch):
-    """Test get measurement by UUID with `waiting` state."""
-
     measurement_uuid = str(uuid.uuid4())
     user = "test"
     agent = {
@@ -716,8 +686,6 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
 
 
 def test_get_measurement_by_uuid_not_found(client, monkeypatch):
-    """Test get measurement by UUID that don't exist."""
-
     measurement_uuid = str(uuid.uuid4())
 
     async def get(self, username, measurement_uuid):
@@ -731,7 +699,6 @@ def test_get_measurement_by_uuid_not_found(client, monkeypatch):
 
 
 def test_get_measurement_by_uuid_invalid_input(client):
-    """Test get measurement by UUID with invalid input."""
     response = client.get("/api/measurements/test")
     assert response.status_code == 422
 
@@ -740,8 +707,6 @@ def test_get_measurement_by_uuid_invalid_input(client):
 
 
 def test_delete_measurement_by_uuid(client, monkeypatch):
-    """Test delete measurement by UUID."""
-
     measurement_uuid = str(uuid.uuid4())
 
     class FakeRedis(object):
@@ -762,8 +727,6 @@ def test_delete_measurement_by_uuid(client, monkeypatch):
 
 
 def test_delete_measurement_by_uuid_not_found(client, monkeypatch):
-    """Test delete measurement by UUID that don't exist."""
-
     measurement_uuid = str(uuid.uuid4())
 
     async def get(self, username, measurement_uuid):
@@ -777,8 +740,6 @@ def test_delete_measurement_by_uuid_not_found(client, monkeypatch):
 
 
 def test_delete_measurement_by_uuid_already_finished(client, monkeypatch):
-    """Test delete measurement by UUID that is already finished."""
-
     measurement_uuid = str(uuid.uuid4())
 
     class FakeRedis(object):
@@ -800,8 +761,6 @@ def test_delete_measurement_by_uuid_already_finished(client, monkeypatch):
 
 
 def test_get_measurement_results(client, monkeypatch):
-    """Test get measurement results."""
-
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 
@@ -881,8 +840,6 @@ def test_get_measurement_results(client, monkeypatch):
 
 
 def test_get_measurement_results_table_not_exists(client, monkeypatch):
-    """Test get measurement results if the table not exists."""
-
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 
@@ -927,8 +884,6 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
 
 
 def test_get_measurement_results_not_finished(client, monkeypatch):
-    """Test get measurement results but the agent has not finished."""
-
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 
@@ -959,8 +914,6 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
 
 
 def test_get_measurement_results_no_agent(client, monkeypatch):
-    """Test get measurement results that don't exist."""
-
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 
@@ -997,8 +950,6 @@ def test_get_measurement_results_no_agent(client, monkeypatch):
 
 
 def test_get_measurement_result_not_found(client, monkeypatch):
-    """Test get measurement results that don't exist."""
-
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 
@@ -1013,7 +964,6 @@ def test_get_measurement_result_not_found(client, monkeypatch):
 
 
 def test_get_measurement_results_invalid_measurement_uuid(client):
-    """Test get measurement results with invalid input."""
     measurement_uuid = "test"
     agent_uuid = str(uuid.uuid4())
     response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
@@ -1021,7 +971,6 @@ def test_get_measurement_results_invalid_measurement_uuid(client):
 
 
 def test_get_measurement_results_invalid_agent_uuid(client):
-    """Test get measurement results with invalid input."""
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = "test"
     response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")

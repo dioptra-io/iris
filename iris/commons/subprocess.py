@@ -30,7 +30,7 @@ async def start_stream_subprocess(
     aws = [asyncio.gather(*stream_aws)]
 
     if stopper:
-        aws.append(stopper)
+        aws.append(asyncio.create_task(stopper))
 
     # This will return when either stopper raises an exception, or all the stream
     # handlers have terminated.
@@ -53,6 +53,7 @@ async def start_stream_subprocess(
                 print(f"{log_prefix} exception: {task.exception()}")
 
     try:
+        # NOTE: This triggers a runtime exception in del if the loop is already closed
         os.kill(proc.pid, signal.SIGTERM)
         # The command below seems to also kill the agent...
         # os.killpg(os.getpgid(proc.pid), signal.SIGTERM)

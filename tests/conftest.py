@@ -1,10 +1,16 @@
 import logging
-from uuid import uuid4
+import warnings
 
 import pytest
 from fastapi.testclient import TestClient
 
-from iris.api.main import app
+# NOTE: https://github.com/mpdavis/python-jose/issues/208
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", message="int_from_bytes is deprecated")
+    from iris.api.main import app
+
+from uuid import uuid4
+
 from iris.api.security import get_current_active_user
 from iris.api.settings import APISettings
 from iris.commons.redis import Redis

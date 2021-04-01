@@ -1,5 +1,3 @@
-"""Test of commons database classes."""
-
 import ipaddress
 import json
 import uuid
@@ -49,7 +47,7 @@ async def test_database(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_database_measurements(monkeypatch):
+async def test_database_measurements():
     session = FakeSession(response=None)
     assert await DatabaseMeasurements(session, CommonSettings()).create_table() is None
     assert (
@@ -160,7 +158,7 @@ async def test_database_measurements(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_database_agents(monkeypatch):
+async def test_database_agents():
     session = FakeSession(response=None)
     assert await DatabaseAgents(session, CommonSettings()).create_table() is None
     assert (
@@ -227,7 +225,7 @@ async def test_database_agents(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_database_agents_specific(monkeypatch):
+async def test_database_agents_specific():
     session = FakeSession(response=None)
     assert (
         await DatabaseAgentsSpecific(session, CommonSettings()).create_table() is None
@@ -341,7 +339,7 @@ async def test_database_agents_specific(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_database_measurement_results(monkeypatch):
+async def test_database_measurement_results():
     measurement_uuid = uuid.UUID("1b830be7-2b42-401b-bbe6-6b1baf02c9be")
     agent_uuid = uuid.UUID("b17fe299-17bf-4dbe-9ae3-f600b540ec1f")
 

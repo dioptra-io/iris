@@ -1,9 +1,4 @@
-"""Test of `agents` operation."""
-
-
 def test_get_agents(client):
-    """Test get agents."""
-
     class FakeRedis(object):
         async def get_agents(*args, **kwargs):
             return [
@@ -42,8 +37,6 @@ def test_get_agents(client):
 
 
 def test_get_agent_by_uuid(client):
-    """Test get agent by uuid."""
-
     class FakeRedis(object):
         async def get_agents(*args, **kwargs):
             return [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"}]
@@ -75,8 +68,6 @@ def test_get_agent_by_uuid(client):
 
 
 def test_get_agent_by_uuid_not_found(client):
-    """Get agent by uuid but not found."""
-
     class FakeRedis(object):
         async def get_agents(*args, **kwargs):
             return [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"}]
@@ -88,8 +79,6 @@ def test_get_agent_by_uuid_not_found(client):
 
 
 def test_get_agent_by_uuid_duplicate(client):
-    """Get agent by uuid but duplicate."""
-
     class FakeRedis(object):
         async def get_agents(*args, **kwargs):
             return [

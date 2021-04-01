@@ -1,5 +1,3 @@
-"""Test of `targets` operations."""
-
 import tempfile
 
 import pytest
@@ -10,8 +8,6 @@ from iris.api.targets import verify_targets_file
 
 
 def test_get_targets(client, monkeypatch):
-    """Get all targets key."""
-
     class FakeStorage(object):
         async def get_all_files_no_retry(*args, **kwargs):
             return [
@@ -36,8 +32,6 @@ def test_get_targets(client, monkeypatch):
 
 
 def test_get_targets_empty(client, monkeypatch):
-    """Get all targets key when empty."""
-
     class FakeStorage(object):
         async def get_all_files_no_retry(*args, **kwargs):
             return []
@@ -57,8 +51,6 @@ def test_get_targets_empty(client, monkeypatch):
 
 
 def test_get_targets_by_key(client, monkeypatch):
-    """Test get targets file by key."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -81,8 +73,6 @@ def test_get_targets_by_key(client, monkeypatch):
 
 
 def test_get_targets_by_key_not_found(client, monkeypatch):
-    """Test get targets file by key."""
-
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             raise Exception
@@ -98,8 +88,6 @@ def test_get_targets_by_key_not_found(client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_verify_prefixes_list_file():
-    """Test file verification."""
-
     class FileContainer(object):
         def __init__(self):
             self.file = tempfile.SpooledTemporaryFile()
@@ -136,8 +124,6 @@ async def test_verify_prefixes_list_file():
 
 
 def test_delete_targets_by_key(client, monkeypatch):
-    """Test deelte targets file by key."""
-
     class FakeStorage(object):
         async def delete_file_check_no_retry(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 204}}
@@ -149,8 +135,6 @@ def test_delete_targets_by_key(client, monkeypatch):
 
 
 def test_delete_targets_by_key_not_found(client, monkeypatch):
-    """Test get targets file by key."""
-
     class FakeStorage(object):
         async def delete_file_check_no_retry(*args, **kwargs):
             raise Exception
@@ -162,8 +146,6 @@ def test_delete_targets_by_key_not_found(client, monkeypatch):
 
 
 def test_delete_targets_internal_error(client, monkeypatch):
-    """Test deelte targets file by key."""
-
     class FakeStorage(object):
         async def delete_file_check_no_retry(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 500}}

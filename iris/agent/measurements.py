@@ -10,7 +10,7 @@ from iris.agent.prober import probe, stopper
 from iris.commons.storage import Storage
 
 
-async def build_prober_parameters(request):
+def build_prober_parameters(request):
     """Build prober parameters depending on the request."""
     request_parameters = request["parameters"]
     del request["parameters"]
@@ -54,7 +54,7 @@ async def measuremement(settings, redis, request, logger):
 
     storage = Storage(settings, logger)
 
-    parameters = await build_prober_parameters(request)
+    parameters = build_prober_parameters(request)
     if agent_uuid != parameters["agent_uuid"]:
         logger.error(f"{logger_prefix} Invalid agent UUID in measurement parameters")
 
