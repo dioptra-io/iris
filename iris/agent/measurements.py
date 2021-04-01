@@ -33,7 +33,7 @@ def build_probe_generator_parameters(parameters):
             "probe_dst_port": parameters["tool_parameters"]["destination_port"],
             "mapper": flow_mapper,
         }
-    elif parameters["tool"] == "diamond-miner-ping":
+    elif parameters["tool"] == "ping":
         return {
             "prefix_len_v4": 32,
             "prefix_len_v6": 128,
@@ -144,6 +144,8 @@ async def measuremement(settings, redis, request, logger):
             await aiofiles.os.remove(probes_filepath)
 
         logger.info(f"{logger_prefix} Remove CSV probe file from AWS S3")
-        response = await storage.delete_file_no_check(measurement_uuid, probes_filename)
-        if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
+        is_deleted = await storage.delete_file_no_check(
+            measurement_uuid, probes_filename
+        )
+        if not is_deleted:
             logger.error(f"Impossible to remove result file `{probes_filename}`")

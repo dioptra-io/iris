@@ -170,7 +170,7 @@ class ToolParameters(BaseModel):
     max_ttl: int = Field(32, title="Maximum TTL", gt=0, le=32)
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
     flow_mapper: str = Field(
-        "IntervalFlowMapper",
+        "RandomFlowMapper",
         title="Flow mapper",
         regex=(
             r"(?i)^SequentialFlowMapper$"
@@ -179,8 +179,8 @@ class ToolParameters(BaseModel):
             r"|^RandomFlowMapper$"
         ),
     )
-    flow_mapper_kwargs: Dict[str, Any] = Field(
-        None,
+    flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(
+        {"seed": 42},
         title="Optional keyword arguments for the flow mapper",
     )
 
@@ -201,7 +201,7 @@ class MeasurementsPostBody(BaseModel):
     tool: str = Field(
         "diamond-miner",
         title="Probing tool",
-        regex=r"(?i)^diamond-miner$|^diamond-miner-ping$",
+        regex=r"(?i)^diamond-miner$|^ping$",
     )
     tool_parameters: ToolParameters = Field(ToolParameters(), title="Tool parameters")
     agents: List[MeasurementsAgentsPostBody] = Field(

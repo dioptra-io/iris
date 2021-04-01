@@ -1,11 +1,17 @@
 """Authentication and security handlers."""
 
+import warnings
 from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+
+with warnings.catch_warnings():
+    # NOTE: https://github.com/mpdavis/python-jose/issues/208
+    warnings.filterwarnings("ignore", message="int_from_bytes is deprecated")
+    from jose import JWTError, jwt
+
 from passlib.context import CryptContext
 
 from iris.commons.database import DatabaseUsers, get_session

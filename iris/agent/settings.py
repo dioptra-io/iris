@@ -11,8 +11,8 @@ class AgentSettings(CommonSettings):
 
     SETTINGS_CLASS = "agent"
 
-    AGENT_D_MINER_PROBER_PATH: Path = Path("/usr/bin/diamond-miner-prober")
-    AGENT_D_MINER_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
+    AGENT_PROBER_PATH: Path = Path("/usr/bin/caracal")
+    AGENT_PROBER_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
 
     AGENT_UUID: str = str(uuid4())
     AGENT_PROBING_RATE: int = 1000  # pps

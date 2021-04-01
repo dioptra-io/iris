@@ -33,7 +33,7 @@ RUN mkdir results
 COPY statics/excluded_prefixes statics/excluded_prefixes
 COPY statics/index.html statics/index.html
 
-COPY --from=dioptraio/diamond-miner-prober:0.3.4 /usr/bin/diamond-miner-prober /usr/bin/diamond-miner-prober
+COPY --from=dioptraio/caracal:0.3.5 /usr/bin/caracal /usr/bin/caracal
 
 EXPOSE 80
 

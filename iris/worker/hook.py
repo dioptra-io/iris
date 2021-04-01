@@ -30,10 +30,10 @@ async def sanity_clean(storage, measurement_uuid, agent_uuid):
         remote_filename = remote_file["key"]
         if remote_filename.startswith(agent_uuid):
             logger.warning(f"Sanity remove `{remote_filename}` from AWS S3")
-            response = await storage.delete_file_no_check(
+            is_deleted = await storage.delete_file_no_check(
                 measurement_uuid, remote_filename
             )
-            if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
+            if not is_deleted:
                 logger.error(f"Impossible to remove `{remote_filename}`")
 
 
@@ -201,7 +201,6 @@ async def callback(agents_information, measurement_parameters):
         logger.info(f"{logger_prefix} Publish measurement to agents")
         request = {
             "measurement_uuid": measurement_uuid,
-            "measurement_tool": "diamond-miner",
             "username": username,
             "round": 1,
             "probes": None,  # NOTE Core could compute first round probes

@@ -7,7 +7,6 @@ from iris.agent.measurements import (
 
 request = {
     "measurement_uuid": "ab59dc2d-95d0-4af5-aef6-b75e1a96a13f",
-    "measurement_tool": "diamond-miner",
     "username": "admin",
     "round": 1,
     "probes": None,
@@ -57,7 +56,7 @@ def test_build_probe_generator_parameters():
     assert prober_parameters["ttls"] == range(2, 33)
     assert prober_parameters["probe_dst_port"] == 33434
 
-    parameters["tool"] = "diamond-miner-ping"
+    parameters["tool"] = "ping"
     prober_parameters = build_probe_generator_parameters(parameters)
 
     assert prober_parameters["prefix_len_v4"] == 32

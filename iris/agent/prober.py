@@ -27,9 +27,9 @@ async def probe(
     logger_prefix="",
     n_packets=None,
 ):
-    """Execute measurement with Diamond-Miner."""
+    """Execute measurement."""
     cmd = (
-        str(settings.AGENT_D_MINER_PROBER_PATH)
+        str(settings.AGENT_PROBER_PATH)
         + " --output-file-csv "
         + str(results_filepath)
         + " --probing-rate "
@@ -52,8 +52,8 @@ async def probe(
         cmd += f" --filter-from-prefix-file-incl={prefix_incl_filepath}"
 
     # Excluded prefixes
-    if settings.AGENT_D_MINER_EXCLUDE_PATH is not None:
-        cmd += f" --filter-from-prefix-file-excl={settings.AGENT_D_MINER_EXCLUDE_PATH}"
+    if settings.AGENT_PROBER_EXCLUDE_PATH is not None:
+        cmd += f" --filter-from-prefix-file-excl={settings.AGENT_PROBER_EXCLUDE_PATH}"
 
     # Probes file for round > 0
     if probes_filepath is not None:

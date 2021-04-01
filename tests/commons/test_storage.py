@@ -91,7 +91,7 @@ async def test_storage_delete_bucket(monkeypatch):
 async def test_storage_delete_file(monkeypatch):
     class FakeBotoClient(object):
         async def delete_object(*args, **kwargs):
-            return None
+            return {"ResponseMetadata": {"HTTPStatusCode": 204}}
 
     class FakeBotoDriver(BaseFakeBotoDriver):
         async def __aenter__(self, *args, **kwargs):
@@ -100,4 +100,17 @@ async def test_storage_delete_file(monkeypatch):
     monkeypatch.setattr(aioboto3, "client", FakeBotoDriver)
 
     storage = Storage(settings=CommonSettings())
-    assert await storage.delete_file_no_check("bucket", "file") is None
+    assert await storage.delete_file_no_check("bucket", "file") is True
+
+    class FailFakeBotoClient(object):
+        async def delete_object(*args, **kwargs):
+            return {"ResponseMetadata": {"HTTPStatusCode": 400}}
+
+    class FakeBotoDriver(BaseFakeBotoDriver):
+        async def __aenter__(self, *args, **kwargs):
+            return FailFakeBotoClient()
+
+    monkeypatch.setattr(aioboto3, "client", FakeBotoDriver)
+
+    storage = Storage(settings=CommonSettings())
+    assert await storage.delete_file_no_check("bucket", "file") is False

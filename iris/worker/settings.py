@@ -8,8 +8,6 @@ class WorkerSettings(CommonSettings):
 
     SETTINGS_CLASS = "worker"
 
-    # TODO: Obselete
-    WORKER_D_MINER_READER_PATH: Path = Path("/app/reader/build/Reader")
     WORKER_EXCLUSION_FILE_PATH: Path = Path("/app/reader/resources/excluded_prefixes")
 
     WORKER_RESULTS_DIR_PATH: Path = Path("/app/results")

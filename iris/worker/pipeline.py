@@ -36,8 +36,8 @@ async def default_pipeline(settings, parameters, result_filename, logger):
     await storage.download_file(measurement_uuid, result_filename, results_filepath)
 
     logger.info(f"{logger_prefix} Delete results file from AWS S3")
-    response = await storage.delete_file_no_check(measurement_uuid, result_filename)
-    if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
+    is_deleted = await storage.delete_file_no_check(measurement_uuid, result_filename)
+    if not is_deleted:
         logger.error(f"Impossible to remove result file `{result_filename}`")
 
     session = get_session(settings)

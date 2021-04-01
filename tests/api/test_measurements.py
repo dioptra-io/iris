@@ -151,8 +151,8 @@ def test_get_measurements(client, monkeypatch):
 async def test_verify_quota():
     assert await verify_quota("diamond-miner", "8.8.8.0/23", 2) is True
     assert await verify_quota("diamond-miner", "8.8.8.0/23", 1) is False
-    assert await verify_quota("diamond-miner-ping", "8.8.8.0/24", 256) is True
-    assert await verify_quota("diamond-miner-ping", "8.8.8.0/24", 255) is False
+    assert await verify_quota("ping", "8.8.8.0/24", 256) is True
+    assert await verify_quota("ping", "8.8.8.0/24", 255) is False
 
 
 def test_post_measurement_diamond_miner(client, monkeypatch):
@@ -301,7 +301,7 @@ def test_post_measurement_diamond_miner_ping(client, monkeypatch):
         "/api/measurements/",
         json={
             "targets_file": "test.txt",
-            "tool": "diamond-miner-ping",
+            "tool": "ping",
             "tool_parameters": {"protocol": "icmp"},
         },
     )
@@ -338,7 +338,7 @@ def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
         "/api/measurements/",
         json={
             "targets_file": "test.txt",
-            "tool": "diamond-miner-ping",
+            "tool": "ping",
             "tool_parameters": {"protocol": "udp"},
         },
     )
@@ -375,7 +375,7 @@ def test_post_measurement_diamond_miner_ping_quota_exceeded(client, monkeypatch)
         "/api/measurements/",
         json={
             "targets_file": "test.txt",
-            "tool": "diamond-miner-ping",
+            "tool": "ping",
         },
     )
     assert response.status_code == 401
@@ -508,7 +508,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "max_ttl": 30,
             "max_round": 5,
             "flow_mapper": "IntervalFlowMapper",
-            "flow_mapper_kwargs": None,
+            "flow_mapper_kwargs": {},
         },
         "state": "finished",
     }
@@ -570,7 +570,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                         "max_ttl": 30,
                         "max_round": 5,
                         "flow_mapper": "IntervalFlowMapper",
-                        "flow_mapper_kwargs": None,
+                        "flow_mapper_kwargs": {},
                     },
                 },
                 "parameters": {
@@ -601,7 +601,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
             "max_ttl": 30,
             "max_round": 5,
             "flow_mapper": "IntervalFlowMapper",
-            "flow_mapper_kwargs": None,
+            "flow_mapper_kwargs": {},
         },
         "state": "finished",
     }
@@ -669,7 +669,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                         "max_ttl": 30,
                         "max_round": 5,
                         "flow_mapper": "IntervalFlowMapper",
-                        "flow_mapper_kwargs": None,
+                        "flow_mapper_kwargs": {},
                     },
                 },
                 "parameters": {

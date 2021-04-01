@@ -174,7 +174,8 @@ class Storage(object):
     async def delete_file_no_check(self, bucket, filename):
         """Delete a file with no check that it exists."""
         async with aioboto3.client("s3", **self.aws_settings) as s3:
-            return await s3.delete_object(Bucket=bucket, Key=filename)
+            response = await s3.delete_object(Bucket=bucket, Key=filename)
+        return response["ResponseMetadata"]["HTTPStatusCode"] == 204
 
     @fault_tolerant
     async def delete_all_files_from_bucket(self, bucket):

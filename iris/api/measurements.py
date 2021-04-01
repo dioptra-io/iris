@@ -66,14 +66,14 @@ async def get_measurements(
 
 def tool_parameters_validator(tool, parameters):
     """Validate tool parameters."""
-    # Specific checks for `diamond-miner-ping`
-    if tool == "diamond-miner-ping":
+    # Specific checks for `ping`
+    if tool == "ping":
         parameters.max_round = 1
         # Disabling UDP port scanning abilities
         if parameters.protocol == "udp":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Tool `diamond-miner-ping` only accessible with ICMP protocol",
+                detail="Tool `ping` only accessible with ICMP protocol",
             )
     return parameters
 
@@ -83,7 +83,7 @@ async def verify_quota(tool, content, user_quota):
     targets = [p.strip() for p in content.split()]
     if tool == "diamond-miner":
         n_prefixes = count_prefixes(targets)
-    elif tool == "diamond-miner-ping":
+    elif tool == "ping":
         n_prefixes = count_prefixes(targets, prefix_len_v4=32, prefix_len_v6=128)
     return not (n_prefixes > user_quota)
 
