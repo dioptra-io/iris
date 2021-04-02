@@ -157,9 +157,6 @@ resources
 deployment
 maintenance
 
-# Internal Kubernetes configuration
-kubernetes
-
 # Internal Docker configuration
 docker-compose.prod.yml
 docker-compose.test.yml

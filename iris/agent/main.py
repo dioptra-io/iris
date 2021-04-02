@@ -3,10 +3,11 @@ import socket
 import traceback
 
 from iris import __version__
-from iris.agent.measurements import measuremement
+from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
 from iris.commons.logger import create_logger
 from iris.commons.redis import AgentRedis
+from iris.commons.storage import Storage
 from iris.commons.utils import get_own_ip_address
 
 
@@ -16,8 +17,8 @@ async def consumer(settings, agent_uuid, queue, logger):
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD, register=False)
 
     while True:
-        parameters = await queue.get()
-        measurement_uuid = parameters["measurement_uuid"]
+        request = await queue.get()
+        measurement_uuid = request["measurement_uuid"]
 
         logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
@@ -42,7 +43,8 @@ async def consumer(settings, agent_uuid, queue, logger):
         await redis.set_measurement_state(measurement_uuid, "ongoing")
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
-        await measuremement(settings, redis, parameters, logger)
+        storage = Storage(settings, logger)
+        await measurement(settings, request, storage, logger, redis=redis)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
         await redis.set_agent_state("idle")
@@ -52,12 +54,12 @@ async def producer(redis, queue, logger):
     """Wait a task and put in on the queue."""
     while True:
         logger.info(f"{redis.uuid} :: Wait for a new request...")
-        parameters = await redis.subscribe()
-        if parameters is None:
+        request = await redis.subscribe()
+        if request is None:
             continue
 
         logger.info(f"{redis.uuid} :: New request received! Putting in task queue")
-        await queue.put(parameters)
+        await queue.put(request)
 
 
 async def main():

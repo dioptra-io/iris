@@ -18,10 +18,10 @@ async def stopper(settings, redis, measurement_uuid, logger, logger_prefix=""):
 async def probe(
     settings,
     parameters,
+    round_number,
     results_filepath,
     logger,
     stdin=None,
-    prefix_incl_filepath=None,
     probes_filepath=None,
     stopper=None,
     logger_prefix="",
@@ -33,29 +33,25 @@ async def probe(
         + " --output-file-csv "
         + str(results_filepath)
         + " --probing-rate "
-        + str(parameters["probing_rate"])
+        + str(parameters.probing_rate)
         + " --protocol "
-        + str(parameters["tool_parameters"]["protocol"])
+        + str(parameters.tool_parameters["protocol"])
         + " --filter-min-ttl="
-        + str(parameters["tool_parameters"]["min_ttl"])
+        + str(parameters.tool_parameters["min_ttl"])
         + " --filter-max-ttl="
-        + str(parameters["tool_parameters"]["max_ttl"])
+        + str(parameters.tool_parameters["max_ttl"])
         + " --meta-round="
-        + str(parameters["round"])
+        + str(round_number)
     )
 
     if settings.AGENT_DEBUG_MODE:
         cmd += " --log-level=trace"
 
-    # In case of prefixes-list input
-    if prefix_incl_filepath is not None:
-        cmd += f" --filter-from-prefix-file-incl={prefix_incl_filepath}"
-
     # Excluded prefixes
     if settings.AGENT_PROBER_EXCLUDE_PATH is not None:
         cmd += f" --filter-from-prefix-file-excl={settings.AGENT_PROBER_EXCLUDE_PATH}"
 
-    # Probes file for round > 0
+    # Probes file for round > 1
     if probes_filepath is not None:
         cmd += f" --input-file={probes_filepath}"
 

@@ -58,7 +58,7 @@ async def start_stream_subprocess(
         # The command below seems to also kill the agent...
         # os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
     except ProcessLookupError:
-        print(f"{log_prefix} cleanup: the process was already terminated")
+        pass
     except Exception as e:
         print(f"{log_prefix} cleanup: unable to terminate the subprocess: {e}")
 

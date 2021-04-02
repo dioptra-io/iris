@@ -1,9 +1,7 @@
 import pytest
 
-from iris.agent.measurements import (
-    build_probe_generator_parameters,
-    build_prober_parameters,
-)
+from iris.agent.measurements import build_probe_generator_parameters
+from iris.commons.dataclasses import ParametersDataclass
 
 request = {
     "measurement_uuid": "ab59dc2d-95d0-4af5-aef6-b75e1a96a13f",
@@ -36,18 +34,8 @@ request = {
 }
 
 
-def test_build_prober_parameters():
-    local_request = request.copy()
-    parameters = build_prober_parameters(local_request)
-    assert parameters["user"] == "admin"
-    assert parameters["version"] == "0.6.1"
-    assert parameters["tool"] == "diamond-miner"
-    assert parameters["tool_parameters"]["protocol"] == "udp"
-
-
 def test_build_probe_generator_parameters():
-    local_request = request.copy()
-    parameters = build_prober_parameters(local_request)
+    parameters = ParametersDataclass.from_request(request)
     prober_parameters = build_probe_generator_parameters(parameters)
 
     assert prober_parameters["prefix_len_v4"] == 24
@@ -56,7 +44,8 @@ def test_build_probe_generator_parameters():
     assert prober_parameters["ttls"] == range(2, 33)
     assert prober_parameters["probe_dst_port"] == 33434
 
-    parameters["tool"] = "ping"
+    request["parameters"]["tool"] = "ping"
+    parameters = ParametersDataclass.from_request(request)
     prober_parameters = build_probe_generator_parameters(parameters)
 
     assert prober_parameters["prefix_len_v4"] == 32
@@ -65,6 +54,7 @@ def test_build_probe_generator_parameters():
     assert prober_parameters["ttls"] == [32]
     assert prober_parameters["probe_dst_port"] == 33434
 
-    parameters["tool"] = "tests"
+    request["parameters"]["tool"] = "test"
+    parameters = ParametersDataclass.from_request(request)
     with pytest.raises(ValueError):
         prober_parameters = build_probe_generator_parameters(parameters)

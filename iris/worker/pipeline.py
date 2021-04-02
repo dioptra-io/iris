@@ -9,7 +9,6 @@ from diamond_miner.next_round import compute_next_round
 from diamond_miner.utilities import format_probe
 
 from iris.commons.database import DatabaseMeasurementResults, get_session
-from iris.commons.storage import Storage
 from iris.worker.shuffle import shuffle_next_round_csv
 
 
@@ -17,7 +16,7 @@ def extract_round_number(filename):
     return int(filename.split("_")[-1].split(".")[0])
 
 
-async def default_pipeline(settings, parameters, result_filename, logger):
+async def default_pipeline(settings, parameters, results_filename, storage, logger):
     """Process results and eventually request a new round."""
     measurement_uuid = parameters.measurement_uuid
     agent_uuid = parameters.agent_uuid
@@ -25,20 +24,18 @@ async def default_pipeline(settings, parameters, result_filename, logger):
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
     logger.info(f"{logger_prefix} New files detected")
 
-    storage = Storage(settings, logger)
-
-    round_number = extract_round_number(result_filename)
+    round_number = extract_round_number(results_filename)
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
 
     logger.info(f"{logger_prefix} Round {round_number}")
     logger.info(f"{logger_prefix} Download results file")
-    results_filepath = str(measurement_results_path / result_filename)
-    await storage.download_file(measurement_uuid, result_filename, results_filepath)
+    results_filepath = str(measurement_results_path / results_filename)
+    await storage.download_file(measurement_uuid, results_filename, results_filepath)
 
     logger.info(f"{logger_prefix} Delete results file from AWS S3")
-    is_deleted = await storage.delete_file_no_check(measurement_uuid, result_filename)
+    is_deleted = await storage.delete_file_no_check(measurement_uuid, results_filename)
     if not is_deleted:
-        logger.error(f"Impossible to remove result file `{result_filename}`")
+        logger.error(f"Impossible to remove result file `{results_filename}`")
 
     session = get_session(settings)
     table_name = (
@@ -60,7 +57,7 @@ async def default_pipeline(settings, parameters, result_filename, logger):
     await database.insert_csv(results_filepath)
 
     if not settings.WORKER_DEBUG_MODE:
-        logger.info(f"{logger_prefix} Remove local CSV file")
+        logger.info(f"{logger_prefix} Remove local results file")
         await aios.remove(results_filepath)
 
     next_round_number = round_number + 1

@@ -26,5 +26,32 @@ class ParametersDataclass(object):
         except KeyError:
             raise AttributeError(f"`{parameter}` not found in dataclass")
 
+    @staticmethod
+    def from_request(request):
+        parameters = request["parameters"]
+        return ParametersDataclass(
+            parameters["agent_uuid"],
+            {
+                "targets_file": parameters["targets_file"],
+                "tool": parameters["tool"],
+                "tool_parameters": parameters["tool_parameters"],
+                "measurement_uuid": parameters["measurement_uuid"],
+                "user": parameters["user"],
+                "start_time": parameters["start_time"],
+            },
+            {
+                "user": parameters["user"],
+                "version": parameters["version"],
+                "hostname": parameters["hostname"],
+                "ip_address": parameters["ip_address"],
+                "probing_rate": parameters["probing_rate"],
+            },
+            {
+                "targets_file": parameters["targets_file"],
+                "probing_rate": parameters["probing_rate"],
+                "tool_parameters": parameters["tool_parameters"],
+            },
+        )
+
     def dict(self):
         return self._dataclass

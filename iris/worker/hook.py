@@ -20,10 +20,9 @@ from iris.worker.pipeline import default_pipeline, extract_round_number
 from iris.worker.settings import WorkerSettings
 
 settings = WorkerSettings()
-logger = create_logger(settings)
 
 
-async def sanity_clean(storage, measurement_uuid, agent_uuid):
+async def sanity_clean(storage, measurement_uuid, agent_uuid, logger):
     """Clean AWS S3 if the sanity check don't pass."""
     remote_files = await storage.get_all_files(measurement_uuid)
     for remote_file in remote_files:
@@ -37,7 +36,7 @@ async def sanity_clean(storage, measurement_uuid, agent_uuid):
                 logger.error(f"Impossible to remove `{remote_filename}`")
 
 
-async def sanity_check(redis, storage, measurement_uuid, agent_uuid):
+async def sanity_check(redis, storage, measurement_uuid, agent_uuid, logger):
     """
     Sanity check to close the loop if the agent is disconnected.
     Returns: True if the agent is alive, else False.
@@ -47,12 +46,12 @@ async def sanity_check(redis, storage, measurement_uuid, agent_uuid):
         checks.append(await redis.check_agent(agent_uuid))
         await asyncio.sleep(settings.WORKER_SANITY_CHECK_REFRESH)
     if False in checks:
-        await sanity_clean(storage, measurement_uuid, agent_uuid)
+        await sanity_clean(storage, measurement_uuid, agent_uuid, logger)
         return False
     return True
 
 
-async def watch(redis, storage, parameters):
+async def watch(redis, storage, parameters, logger):
     """Watch for results from an agent."""
     logger_prefix = f"{parameters.measurement_uuid} :: {parameters.agent_uuid} ::"
 
@@ -63,7 +62,11 @@ async def watch(redis, storage, parameters):
         if settings.WORKER_SANITY_CHECK_ENABLE:
             # Check if the agent is down
             is_agent_alive = await sanity_check(
-                redis, storage, parameters.measurement_uuid, parameters.agent_uuid
+                redis,
+                storage,
+                parameters.measurement_uuid,
+                parameters.agent_uuid,
+                logger,
             )
             if not is_agent_alive:
                 logger.warning(f"{logger_prefix} Stop watching agent")
@@ -96,7 +99,7 @@ async def watch(redis, storage, parameters):
             continue
 
         shuffled_next_round_csv_filename = await default_pipeline(
-            settings, parameters, results_filename, logger
+            settings, parameters, results_filename, storage, logger
         )
 
         if shuffled_next_round_csv_filename is None:
@@ -120,7 +123,7 @@ async def watch(redis, storage, parameters):
             )
 
 
-async def callback(agents_information, measurement_parameters):
+async def callback(agents_information, measurement_parameters, logger):
     """Asynchronous callback."""
     measurement_uuid = measurement_parameters["measurement_uuid"]
     username = measurement_parameters["user"]
@@ -197,13 +200,12 @@ async def callback(agents_information, measurement_parameters):
             logger.error(f"{logger_prefix} Impossible to create bucket")
             return
 
-        # TODO Parametrize the tool selection
         logger.info(f"{logger_prefix} Publish measurement to agents")
         request = {
             "measurement_uuid": measurement_uuid,
             "username": username,
             "round": 1,
-            "probes": None,  # NOTE Core could compute first round probes
+            "probes": None,
             "parameters": measurement_parameters,
         }
 
@@ -229,12 +231,12 @@ async def callback(agents_information, measurement_parameters):
         agents = filtered_agents
 
     logger.info(f"{logger_prefix} Watching ...")
-    await asyncio.gather(*[watch(redis, storage, agent) for agent in agents])
+    await asyncio.gather(*[watch(redis, storage, agent, logger) for agent in agents])
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Removing local measurement directory")
         try:
-            await aios.rmdir(str(measurement_results_path))
+            await aios.rmdir(measurement_results_path)
         except OSError:
             logger.error(
                 f"{logger_prefix} Impossible to remove local measurement directory"
@@ -260,8 +262,9 @@ async def callback(agents_information, measurement_parameters):
 )
 def hook(agents_specific, measurement_parameters):
     """Hook a worker process to a measurement"""
+    logger = create_logger(settings)
     try:
-        asyncio.run(callback(agents_specific, measurement_parameters))
+        asyncio.run(callback(agents_specific, measurement_parameters, logger))
     except Exception as exception:
         measurement_uuid = measurement_parameters["measurement_uuid"]
         traceback_content = traceback.format_exc()

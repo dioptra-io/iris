@@ -12,7 +12,7 @@ RUN git clone https://github.com/alexandres/terashuf.git /tmp/terashuf \
     && cd /tmp/terashuf \
     && make -j8
 
-FROM python:3.8
+FROM ubuntu:20.04
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -21,7 +21,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 # we can push binary wheels on PyPI for diamond-miner.
 RUN apt-get update \
     && apt-get install -y -q --no-install-recommends \
-        apt-transport-https build-essential ca-certificates dirmngr python3-dev \
+        apt-transport-https \
+         ca-certificates \
+         dirmngr \
+         gnupg2 \
+         python3-pip \
+         build-essential \
+         python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
@@ -34,24 +40,29 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
 
 WORKDIR /app
 
+RUN mkdir targets
 RUN mkdir results
 ENV MEMORY 24
 
 COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf
+COPY --from=dioptraio/caracal:0.3.5 /usr/bin/caracal /usr/bin/caracal
 
 RUN mkdir vendors
 COPY vendors/diamond-miner vendors/diamond-miner
 
-RUN pip install --no-cache-dir --upgrade pip \
+RUN pip3 install --no-cache-dir --upgrade pip \
     && pip install poetry uvicorn \
     && rm -rf /root/.cache/*
 
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
-RUN poetry install --no-root --no-dev \
+RUN poetry install --no-dev \
     && rm -rf /root/.cache/*
 
 COPY iris iris
+COPY statics/excluded_prefixes statics/excluded_prefixes
+RUN mv iris/standalone/main.py main.py
 
-CMD ["dramatiq", "iris.worker.hook"]
+ENTRYPOINT ["python3", "main.py"]
+CMD ["--help"]
