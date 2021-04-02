@@ -50,7 +50,6 @@ async def default_pipeline(settings, parameters, result_filename, logger):
 
     logger.info(f"{logger_prefix} Create table `{table_name}`")
     await database.create_table()
-    await database.create_materialized_vue_nodes()
 
     # NOTE: Temporarily deactivate the materialized vue for performance
     # logger.info(f"{logger_prefix} Create materialized vues for `{table_name}`")
