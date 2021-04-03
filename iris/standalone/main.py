@@ -4,12 +4,16 @@ from functools import wraps
 from typing import Optional
 
 import typer
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
 
 from iris.api.schemas import ToolParameters
 from iris.standalone import Tool, default_parameters
 from iris.standalone.pipeline import pipeline
 
 app = typer.Typer()
+console = Console(force_terminal=True)
 
 
 def coroutine(f):
@@ -55,7 +59,14 @@ async def diamond_miner(
     measurement_uuid: str = await pipeline(
         tool, prefixes, probing_rate, tool_parameters, verbose
     )
-    typer.echo(measurement_uuid)
+
+    console.rule()
+    console.print(
+        Panel(
+            Text(measurement_uuid, style="bold green"),
+            title="Measurement UUID",
+        )
+    )
 
 
 @app.command()
@@ -93,7 +104,14 @@ async def ping(
     measurement_uuid: str = await pipeline(
         tool, prefixes, probing_rate, tool_parameters, verbose
     )
-    typer.echo(measurement_uuid)
+
+    console.rule()
+    console.print(
+        Panel(
+            Text(measurement_uuid, style="bold green"),
+            title="Measurement UUID",
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -4,17 +4,19 @@
 [![Coverage](https://img.shields.io/codecov/c/github/dioptra-io/iris?logo=codecov&logoColor=white&token=TC1WVMZORG)](https://app.codecov.io/gh/dioptra-io/iris)
 
 
-## ⚡ Iris Standalone (single vantage point)
+Iris is a resilient internet-scale measurement system.
 
 
-The simplest way to test Iris on a single machine is to use the standalone versiont.
+## ⚡ Iris Standalone
+
+The simplest way to test Iris on a single machine is to use the standalone version.
 It only needs a runniing Clickhouse database instance.
 
 ```
 docker run -d -v $PWD/volumes/clickhouse:/var/lib/clickhouse -p 9000:9000 yandex/clickhouse-server:latest
 ```
 
-Then simply use the Iris Standalone Docker image
+Then simply run the Iris Standalone Docker image with a targets/prefixes list as input.
 
 ```
 docker build -f dockerfiles/Dockerfile-standalone -t iris-standalone .
@@ -24,7 +26,9 @@ docker run -i \
 iris-standalone diamond-miner < resources/targets/prefixes.txt
 ```
 
-## ✨ Iris Constellation (multiple vantage points)
+## ✨ Iris Constellation
+
+You can set up a production-ready system to orchestrate multiple vantage points from a dedicated API and monitor the operation through a monitoring stack.
 
 ```
 docker-compose up -d --build
