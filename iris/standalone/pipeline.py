@@ -1,6 +1,7 @@
 import logging
 import uuid
 from pathlib import Path
+from typing import Optional
 
 import aiofiles
 
@@ -38,7 +39,7 @@ def create_request(
     measurement_uuid: str,
     agent_uuid: str,
     round_number: int,
-):
+) -> dict:
     return {
         "measurement_uuid": measurement_uuid,
         "username": "standalone",
@@ -62,11 +63,15 @@ def create_request(
 
 
 async def pipeline(
-    tool: Tool, prefixes: list, probing_rate: int, tool_parameters: ToolParameters
-):
+    tool: Tool,
+    prefixes: list,
+    probing_rate: int,
+    tool_parameters: ToolParameters,
+    verbose: bool,
+) -> str:
     """Measurement pipeline."""
     # Create the logger
-    logger = create_logger(logging.ERROR)
+    logger = create_logger(logging.DEBUG if verbose else logging.ERROR)
 
     # Get all settings
     agent_settings = AgentSettings()
@@ -79,7 +84,7 @@ async def pipeline(
     )
 
     # Create a targets file
-    targets_file = agent_settings.AGENT_TARGETS_DIR_PATH / "prefixes.txt"
+    targets_file: Path = agent_settings.AGENT_TARGETS_DIR_PATH / "prefixes.txt"
     async with aiofiles.open(targets_file, mode="w") as fd:
         for prefix in prefixes:
             await fd.write(prefix)
@@ -92,12 +97,12 @@ async def pipeline(
         targets_file,
     )
 
-    measurement_uuid = str(uuid.uuid4())
     round_number: int = 1
-    shuffled_next_round_csv_filepath: int = None
+    measurement_uuid: str = str(uuid.uuid4())
+    shuffled_next_round_csv_filepath: Optional[str] = None
 
     while True:
-        request = create_request(
+        request: dict = create_request(
             tool,
             targets_file,
             shuffled_next_round_csv_filepath,
@@ -107,7 +112,9 @@ async def pipeline(
             agent_settings.AGENT_UUID,
             round_number,
         )
-        results_filename = await measurement(agent_settings, request, storage, logger)
+        results_filename: str = await measurement(
+            agent_settings, request, storage, logger
+        )
         shuffled_next_round_csv_filepath = await default_pipeline(
             worker_settings,
             ParametersDataclass.from_request(request),

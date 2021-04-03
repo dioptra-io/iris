@@ -42,6 +42,7 @@ WORKDIR /app
 
 RUN mkdir targets
 RUN mkdir results
+
 ENV MEMORY 24
 
 COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf

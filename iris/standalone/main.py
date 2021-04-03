@@ -32,13 +32,15 @@ async def diamond_miner(
     min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
     max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
     max_round: Optional[int] = typer.Option(default_parameters.max_round),
+    verbose: bool = typer.Option(False, "--verbose"),
 ):
+    """Diamond-miner command."""
     prefixes: list = sys.stdin.readlines()
     if not prefixes:
         typer.echo("Please provide a prefixes list in stdin")
         raise typer.Exit()
 
-    tool = Tool("diamond-miner")
+    tool: Tool = Tool("diamond-miner")
     tool_parameters = ToolParameters(
         **{
             "protocol": protocol,
@@ -50,16 +52,15 @@ async def diamond_miner(
         }
     )
 
-    measurement_uuid = await pipeline(tool, prefixes, probing_rate, tool_parameters)
+    measurement_uuid: str = await pipeline(
+        tool, prefixes, probing_rate, tool_parameters, verbose
+    )
     typer.echo(measurement_uuid)
 
 
 @app.command()
 @coroutine
 async def ping(
-    # target_file: Path = typer.Argument(
-    #     ..., exists=True, dir_okay=False, file_okay=True, resolve_path=True
-    # ),
     probing_rate: int = typer.Argument(1000),
     protocol: Optional[str] = typer.Option(default_parameters.protocol),
     initial_source_port: Optional[int] = typer.Option(
@@ -69,8 +70,9 @@ async def ping(
     min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
     max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
     max_round: Optional[int] = typer.Option(default_parameters.max_round),
+    verbose: bool = typer.Option(False, "--verbose"),
 ):
-
+    """Ping command."""
     prefixes: list = sys.stdin.readlines()
     if not prefixes:
         typer.echo("Please provide a prefixes list in stdin")
@@ -88,7 +90,9 @@ async def ping(
         }
     )
 
-    measurement_uuid = await pipeline(tool, prefixes, probing_rate, tool_parameters)
+    measurement_uuid: str = await pipeline(
+        tool, prefixes, probing_rate, tool_parameters, verbose
+    )
     typer.echo(measurement_uuid)
 
 
