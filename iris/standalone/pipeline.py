@@ -1,5 +1,5 @@
-import logging
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -9,25 +9,13 @@ from iris import __version__
 from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
 from iris.api.schemas import ToolParameters
-from iris.commons.database import Database, get_session
+from iris.commons.database import Database, DatabaseMeasurementResults, get_session
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.utils import get_own_ip_address
 from iris.standalone import Tool
 from iris.standalone.storage import LocalStorage
 from iris.worker.pipeline import default_pipeline
 from iris.worker.settings import WorkerSettings
-
-
-def create_logger(level):
-    formatter = logging.Formatter("%(asctime)s :: %(levelname)s :: %(message)s")
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(level)
-    stream_handler.setFormatter(formatter)
-    logger = logging.getLogger("standalone")
-    logger.setLevel(level)
-    logger.addHandler(stream_handler)
-
-    return logger
 
 
 def create_request(
@@ -67,12 +55,9 @@ async def pipeline(
     prefixes: list,
     probing_rate: int,
     tool_parameters: ToolParameters,
-    verbose: bool,
+    logger,
 ) -> str:
     """Measurement pipeline."""
-    # Create the logger
-    logger = create_logger(logging.DEBUG if verbose else logging.ERROR)
-
     # Get all settings
     agent_settings = AgentSettings()
     worker_settings = WorkerSettings()
@@ -97,11 +82,11 @@ async def pipeline(
         targets_file,
     )
 
-    round_number: int = 1
     measurement_uuid: str = str(uuid.uuid4())
     shuffled_next_round_csv_filepath: Optional[str] = None
 
-    while True:
+    start_time = datetime.now()
+    for round_number in range(1, tool_parameters.max_round + 1):
         request: dict = create_request(
             tool,
             targets_file,
@@ -132,6 +117,16 @@ async def pipeline(
                     )
                 except OSError:
                     logger.error("Impossible to remove local measurement directory")
-            return measurement_uuid
+            break
 
-        round_number = round_number + 1
+    return {
+        "measurement_uuid": measurement_uuid,
+        "agent_uuid": agent_settings.AGENT_UUID,
+        "database_name": agent_settings.DATABASE_NAME,
+        "table_name": DatabaseMeasurementResults.forge_table_name(
+            measurement_uuid, agent_settings.AGENT_UUID
+        ),
+        "n_rounds": round_number,
+        "start_time": start_time,
+        "end_time": datetime.now(),
+    }

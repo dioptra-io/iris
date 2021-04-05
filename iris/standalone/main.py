@@ -1,19 +1,18 @@
 import asyncio
+import logging
 import sys
 from functools import wraps
 from typing import Optional
 
 import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
 
 from iris.api.schemas import ToolParameters
 from iris.standalone import Tool, default_parameters
+from iris.standalone.display import display_results
+from iris.standalone.logger import create_logger
 from iris.standalone.pipeline import pipeline
 
 app = typer.Typer()
-console = Console(force_terminal=True)
 
 
 def coroutine(f):
@@ -56,17 +55,14 @@ async def diamond_miner(
         }
     )
 
-    measurement_uuid: str = await pipeline(
-        tool, prefixes, probing_rate, tool_parameters, verbose
-    )
+    # Create logger
+    logger = create_logger(logging.DEBUG if verbose else logging.ERROR)
 
-    console.rule()
-    console.print(
-        Panel(
-            Text(measurement_uuid, style="bold green"),
-            title="Measurement UUID",
-        )
+    # Launch pipeline
+    pipeline_info = await pipeline(
+        tool, prefixes, probing_rate, tool_parameters, logger
     )
+    display_results(pipeline_info)
 
 
 @app.command()
@@ -101,17 +97,14 @@ async def ping(
         }
     )
 
-    measurement_uuid: str = await pipeline(
-        tool, prefixes, probing_rate, tool_parameters, verbose
-    )
+    # Create logger
+    logger = create_logger(logging.DEBUG if verbose else logging.ERROR)
 
-    console.rule()
-    console.print(
-        Panel(
-            Text(measurement_uuid, style="bold green"),
-            title="Measurement UUID",
-        )
+    # Launch pipeline
+    pipeline_info = await pipeline(
+        tool, prefixes, probing_rate, tool_parameters, logger
     )
+    display_results(pipeline_info)
 
 
 if __name__ == "__main__":
