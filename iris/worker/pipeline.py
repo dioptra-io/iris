@@ -1,8 +1,9 @@
 """Measurement pipeline."""
 
-import aiofiles
-from aioch import Client
+import asyncio
+
 from aiofiles import os as aios
+from clickhouse_driver import Client
 from diamond_miner import mappers
 from diamond_miner.config import Config
 from diamond_miner.next_round import compute_next_round
@@ -14,6 +15,35 @@ from iris.worker.shuffle import shuffle_next_round_csv
 
 def extract_round_number(filename):
     return int(filename.split("_")[-1].split(".")[0])
+
+
+def sync_compute_next_round(
+    settings, table_name, round_number, flow_mapper, parameters, next_round_csv_filepath
+):
+    client = Client(host=settings.DATABASE_HOST)
+    probes_gen = compute_next_round(
+        client=client,
+        table=table_name,
+        round_=round_number,
+        config=Config(
+            adaptive_eps=True,
+            far_ttl_min=20,
+            far_ttl_max=40,
+            mapper=flow_mapper,
+            max_replies_per_subset=64_000_000,
+            probe_src_addr=parameters.ip_address,
+            probe_src_port=parameters.tool_parameters["initial_source_port"],
+            probe_dst_port=parameters.tool_parameters["destination_port"],
+            probe_far_ttls=False,
+            skip_unpopulated_ttls=True,
+        ),
+    )
+
+    with open(next_round_csv_filepath, "w") as fout:
+        for probes_specs in probes_gen:
+            fout.write(
+                "".join(("\n".join(format_probe(*spec) for spec in probes_specs), "\n"))
+            )
 
 
 async def default_pipeline(settings, parameters, results_filename, storage, logger):
@@ -73,31 +103,17 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
     flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
 
-    client = Client(host=settings.DATABASE_HOST)
-
-    probes_gen = compute_next_round(
-        client=client,
-        table=table_name,
-        round_=round_number,
-        config=Config(
-            adaptive_eps=True,
-            far_ttl_min=20,
-            far_ttl_max=40,
-            mapper=flow_mapper,
-            max_replies_per_subset=64_000_000,
-            probe_src_addr=parameters.ip_address,
-            probe_src_port=parameters.tool_parameters["initial_source_port"],
-            probe_dst_port=parameters.tool_parameters["destination_port"],
-            probe_far_ttls=False,
-            skip_unpopulated_ttls=True,
-        ),
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        None,
+        sync_compute_next_round,
+        settings,
+        table_name,
+        round_number,
+        flow_mapper,
+        parameters,
+        next_round_csv_filepath,
     )
-
-    async with aiofiles.open(next_round_csv_filepath, "w") as fout:
-        async for probes_specs in probes_gen:
-            await fout.write(
-                "".join(("\n".join(format_probe(*spec) for spec in probes_specs), "\n"))
-            )
 
     shuffled_next_round_csv_filename = (
         f"{agent_uuid}_shuffled_next_round_csv_{next_round_number}.csv"

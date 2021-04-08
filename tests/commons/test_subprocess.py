@@ -27,7 +27,7 @@ async def test_subprocess():
 
         return handler
 
-    async def arange(count):
+    def arange(count):
         for i in range(count):
             yield (str(i))
 

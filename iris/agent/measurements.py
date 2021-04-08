@@ -79,7 +79,7 @@ async def measurement(settings, request, storage, logger, redis=None):
         gen = probe_generator(
             prefix_list, **build_probe_generator_parameters(parameters)
         )
-        stdin = (format_probe(*x) async for x in gen)
+        stdin = (format_probe(*x) for x in gen)
     else:
         # Round > 1
         logger.info(f"{logger_prefix} Download CSV probe file locally")

@@ -76,7 +76,7 @@ async def log_stream(stream, handler, prefix):
 
 async def write_stream(stream, handler):
     buffer = []
-    async for data in handler:
+    for data in handler:
         if isinstance(data, str):
             data = data.encode("utf-8") + b"\n"
         buffer.append(data)
