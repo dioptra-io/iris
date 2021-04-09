@@ -149,6 +149,8 @@ cython_debug/
 .local
 .ssh
 .bash*
+.gitconfig
+.viminfo
 
 # Internal Resources
 resources
