@@ -62,6 +62,9 @@ async def probe(
     if n_packets:
         cmd += f" --n-packets={n_packets}"
 
+    if settings.AGENT_PROBER_NO_SLEEP:
+        cmd += " --no-sleep"
+
     logger.info(logger_prefix + cmd)
 
     return await start_stream_subprocess(
