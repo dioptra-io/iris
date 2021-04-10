@@ -68,9 +68,9 @@ def tool_parameters_validator(tool, parameters):
     """Validate tool parameters."""
     # Specific checks for `ping`
     if tool == "ping":
-        parameters.max_round = 1
+        parameters["max_round"] = 1
         # Disabling UDP port scanning abilities
-        if parameters.protocol == "udp":
+        if parameters["protocol"] == "udp":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Tool `ping` only accessible with ICMP protocol",
@@ -136,7 +136,7 @@ async def post_measurement(
         )
 
     measurement.tool_parameters = tool_parameters_validator(
-        measurement.tool, measurement.tool_parameters
+        measurement.tool, measurement.tool_parameters.dict()
     )
 
     # Get all connected agents
@@ -152,17 +152,21 @@ async def post_measurement(
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
                 )
-            agent.tool_parameters = tool_parameters_validator(
-                measurement.tool, agent.tool_parameters
-            )
+
             agent.tool_parameters = agent.tool_parameters.dict(exclude_unset=True)
+            print(measurement.tool_parameters)
+            print(agent.tool_parameters)
+            print({**measurement.tool_parameters, **agent.tool_parameters})
+            agent.tool_parameters = tool_parameters_validator(
+                measurement.tool,
+                {**measurement.tool_parameters, **agent.tool_parameters},
+            )
             agents[agent_uuid] = agent.dict()
             del agents[agent_uuid]["uuid"]
     else:
         agents = {uuid: {} for uuid in active_agents}
 
     measurement = measurement.dict()
-    measurement["tool_parameters"] = dict(measurement["tool_parameters"])
     del measurement["agents"]
 
     # Add mesurement metadata
