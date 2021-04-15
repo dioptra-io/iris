@@ -209,14 +209,10 @@ async def callback(agents_information, measurement_parameters, logger):
             "parameters": measurement_parameters,
         }
 
-        if not agents:
-            # If no agent specific parameters
-            await redis.publish("all", request)
-        else:
-            # Else, append specific parameter by agent
-            for agent in agents:
-                request["parameters"] = agent.dict()
-                await redis.publish(agent.agent_uuid, request)
+        for agent in agents:
+            request["parameters"] = agent.dict()
+            await redis.publish(agent.agent_uuid, request)
+
     else:
         # We are in this state when the worker has failed and replays the measurement
         # So we stip off the agents those which are finished

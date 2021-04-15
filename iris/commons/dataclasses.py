@@ -31,6 +31,7 @@ class ParametersDataclass(object):
                 "tool": parameters["tool"],
                 "measurement_uuid": parameters["measurement_uuid"],
                 "user": parameters["user"],
+                "tags": parameters["tags"],
                 "start_time": parameters["start_time"],
             },
             {

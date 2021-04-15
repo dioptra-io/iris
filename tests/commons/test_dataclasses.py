@@ -47,6 +47,7 @@ def test_parameters_dataclass():
             "tool": "diamond-miner",
             "measurement_uuid": measurement_uuid,
             "user": "admin",
+            "tags": ["test"],
             "start_time": 1605630993.092607,
         },
         {
@@ -99,6 +100,7 @@ def test_parameters_dataclass():
         "min_ttl": 1,
         "max_probing_rate": 1000,
         "probing_rate": 200,
+        "tags": ["test"],
     }
 
     parameters = ParametersDataclass.from_request(request)
@@ -125,4 +127,5 @@ def test_parameters_dataclass():
         "measurement_uuid": "ab59dc2d-95d0-4af5-aef6-b75e1a96a13f",
         "start_time": 1617270732.905208,
         "agent_uuid": "6a3af939-e23e-4470-aa40-a04a1fb1b21c",
+        "tags": ["test"],
     }

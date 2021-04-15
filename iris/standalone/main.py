@@ -2,7 +2,7 @@ import asyncio
 import logging
 import sys
 from functools import wraps
-from typing import Optional
+from typing import List, Optional
 
 import typer
 
@@ -35,6 +35,7 @@ async def diamond_miner(
     min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
     max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
     max_round: Optional[int] = typer.Option(default_parameters.max_round),
+    tag: Optional[List[str]] = typer.Option(["standalone"]),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """Diamond-miner command."""
@@ -60,7 +61,7 @@ async def diamond_miner(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, probing_rate, tool_parameters, logger
+        tool, prefixes, probing_rate, tool_parameters, tag, logger
     )
     display_results(pipeline_info)
 
@@ -77,6 +78,7 @@ async def ping(
     min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
     max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
     max_round: Optional[int] = typer.Option(default_parameters.max_round),
+    tag: Optional[List[str]] = typer.Option(["standalone"]),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """Ping command."""
@@ -102,7 +104,7 @@ async def ping(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, probing_rate, tool_parameters, logger
+        tool, prefixes, probing_rate, tool_parameters, tag, logger
     )
     display_results(pipeline_info)
 
