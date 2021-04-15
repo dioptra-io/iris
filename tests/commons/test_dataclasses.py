@@ -13,9 +13,11 @@ request = {
         "version": "0.6.1",
         "hostname": "b581c1224f87",
         "ip_address": "172.22.0.12",
-        "probing_rate": 100,
+        "min_ttl": 1,
+        "max_probing_rate": 100,
         "targets_file": "prefixes.txt",
         "tool": "diamond-miner",
+        "probing_rate": None,
         "tool_parameters": {
             "protocol": "udp",
             "initial_source_port": 24000,
@@ -42,8 +44,22 @@ def test_parameters_dataclass():
     agent = ParametersDataclass(
         agent_uuid,
         {
-            "targets_file": "prefixes.txt",
             "tool": "diamond-miner",
+            "measurement_uuid": measurement_uuid,
+            "user": "admin",
+            "start_time": 1605630993.092607,
+        },
+        {
+            "user": "all",
+            "version": "0.1.0",
+            "hostname": "hostname",
+            "ip_address": "1.2.3.4",
+            "min_ttl": 1,
+            "max_probing_rate": 1000,
+        },
+        {
+            "targets_file": "custom.txt",
+            "probing_rate": 200,
             "tool_parameters": {
                 "protocol": "udp",
                 "initial_source_port": 24000,
@@ -54,21 +70,6 @@ def test_parameters_dataclass():
                 "flow_mapper": "IntervalFlowMapper",
                 "flow_mapper_kwargs": None,
             },
-            "measurement_uuid": measurement_uuid,
-            "user": "admin",
-            "start_time": 1605630993.092607,
-        },
-        {
-            "user": "all",
-            "version": "0.1.0",
-            "hostname": "hostname",
-            "ip_address": "1.2.3.4",
-            "probing_rate": 1000,
-        },
-        {
-            "targets_file": "custom.txt",
-            "probing_rate": 200,
-            "tool_parameters": {"min_ttl": 10},
         },
     )
 
@@ -83,7 +84,7 @@ def test_parameters_dataclass():
             "protocol": "udp",
             "initial_source_port": 24000,
             "destination_port": 33434,
-            "min_ttl": 10,
+            "min_ttl": 5,
             "max_ttl": 20,
             "max_round": 10,
             "flow_mapper": "IntervalFlowMapper",
@@ -95,6 +96,8 @@ def test_parameters_dataclass():
         "version": "0.1.0",
         "hostname": "hostname",
         "ip_address": "1.2.3.4",
+        "min_ttl": 1,
+        "max_probing_rate": 1000,
         "probing_rate": 200,
     }
 
@@ -104,9 +107,11 @@ def test_parameters_dataclass():
         "version": "0.6.1",
         "hostname": "b581c1224f87",
         "ip_address": "172.22.0.12",
-        "probing_rate": 100,
+        "min_ttl": 1,
+        "max_probing_rate": 100,
         "targets_file": "prefixes.txt",
         "tool": "diamond-miner",
+        "probing_rate": None,
         "tool_parameters": {
             "protocol": "udp",
             "initial_source_port": 24000,

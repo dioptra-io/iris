@@ -35,7 +35,8 @@ async def get_agents(
                     "version": agent["parameters"]["version"],
                     "hostname": agent["parameters"]["hostname"],
                     "ip_address": agent["parameters"]["ip_address"],
-                    "probing_rate": agent["parameters"]["probing_rate"],
+                    "max_probing_rate": agent["parameters"]["max_probing_rate"],
+                    "min_ttl": agent["parameters"]["min_ttl"],
                 },
             }
         )

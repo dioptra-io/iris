@@ -169,23 +169,19 @@ def test_post_measurement_diamond_miner(client, monkeypatch):
         def send(*args, **kwargs):
             pass
 
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 2}
-
     client.app.storage = FakeStorage()
-
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
 
     response = client.post(
         "/api/measurements/",
         json={
-            "targets_file": "test.txt",
             "tool": "diamond-miner",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                }
+            ],
         },
     )
     assert response.status_code == 201
@@ -223,11 +219,16 @@ def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
     response = client.post(
         "/api/measurements/",
         json={
-            "targets_file": "test.txt",
             "tool": "diamond-miner",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                }
+            ],
         },
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
 
     # Reset back the override
     client.app.dependency_overrides[
@@ -249,26 +250,22 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatc
         def send(*args, **kwargs):
             pass
 
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 1}
-
     client.app.storage = FakeStorage()
-
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
 
     response = client.post(
         "/api/measurements/",
         json={
-            "targets_file": "test.txt",
             "tool": "diamond-miner",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                }
+            ],
         },
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_post_measurement_diamond_miner_ping(client, monkeypatch):
@@ -285,24 +282,22 @@ def test_post_measurement_diamond_miner_ping(client, monkeypatch):
         def send(*args, **kwargs):
             pass
 
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 2}
-
     client.app.storage = FakeStorage()
-
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
 
     response = client.post(
         "/api/measurements/",
         json={
-            "targets_file": "test.txt",
             "tool": "ping",
-            "tool_parameters": {"protocol": "icmp"},
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                    "tool_parameters": {
+                        "protocol": "icmp",
+                    },
+                }
+            ],
         },
     )
     assert response.status_code == 201
@@ -322,27 +317,25 @@ def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
         def send(*args, **kwargs):
             pass
 
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 2}
-
     client.app.storage = FakeStorage()
-
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
 
     response = client.post(
         "/api/measurements/",
         json={
-            "targets_file": "test.txt",
             "tool": "ping",
-            "tool_parameters": {"protocol": "udp"},
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                    "tool_parameters": {
+                        "protocol": "udp",
+                    },
+                }
+            ],
         },
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_post_measurement_diamond_miner_ping_quota_exceeded(client, monkeypatch):
@@ -359,63 +352,39 @@ def test_post_measurement_diamond_miner_ping_quota_exceeded(client, monkeypatch)
         def send(*args, **kwargs):
             pass
 
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 1}
+    client.app.dependency_overrides[get_current_active_user] = lambda: {
+        "uuid": "test",
+        "username": "test",
+        "email": "test@test",
+        "is_active": True,
+        "is_admin": False,
+        "quota": 0,
+        "register_date": "date",
+        "ripe_account": None,
+        "ripe_key": None,
+    }
 
     client.app.storage = FakeStorage()
-
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
 
     response = client.post(
         "/api/measurements/",
         json={
-            "targets_file": "test.txt",
-            "tool": "ping",
-        },
-    )
-    assert response.status_code == 401
-
-
-def test_post_measurement_with_agents(client, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.txt",
-                "size": 42,
-                "content": "8.8.8.0/23",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 2}
-
-    client.app.storage = FakeStorage()
-
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
-
-    response = client.post(
-        "/api/measurements/",
-        json={
-            "targets_file": "test.txt",
-            "agents": [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"}],
             "tool": "diamond-miner",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                }
+            ],
         },
     )
-    assert response.status_code == 201
+    assert response.status_code == 403
+
+    # Reset back the override
+    client.app.dependency_overrides[
+        get_current_active_user
+    ] = override_get_current_active_user
 
 
 def test_post_measurement_with_agents_not_found(client, monkeypatch):
@@ -432,27 +401,19 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
         def send(*args, **kwargs):
             pass
 
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 2}
-
     client.app.storage = FakeStorage()
-
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
 
     response = client.post(
         "/api/measurements/",
         json={
-            "targets_file": "test.txt",
-            "agents": [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776551"}],
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
+            "tool": "diamond-miner",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776550",
+                    "targets_file": "test.txt",
+                }
+            ],
         },
     )
     assert response.status_code == 404
@@ -464,26 +425,19 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
         async def get_file(*args, **kwargs):
             raise Exception
 
-    async def get_users(*args, **kwargs):
-        return {"is_active": True, "quota": 2}
-
     client.app.storage = FakeStorage()
-
     monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
-    monkeypatch.setattr(
-        iris.commons.database.DatabaseUsers,
-        "get",
-        get_users,
-    )
 
     response = client.post(
         "/api/measurements/",
         json={
-            "targets_file": "test.txt",
-            "protocol": "udp",
-            "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 30,
+            "tool": "diamond-miner",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                }
+            ],
         },
     )
     assert response.status_code == 404

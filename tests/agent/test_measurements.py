@@ -12,6 +12,8 @@ request = {
         "version": "0.6.1",
         "hostname": "b581c1224f87",
         "ip_address": "172.22.0.12",
+        "min_ttl": 1,
+        "max_probing_rate": 100,
         "probing_rate": 100,
         "targets_file": "prefixes.txt",
         "tool": "diamond-miner",

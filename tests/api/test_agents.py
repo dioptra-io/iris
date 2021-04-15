@@ -9,7 +9,8 @@ def test_get_agents(client):
                         "version": "0.1.0",
                         "hostname": "test",
                         "ip_address": "1.2.3.4",
-                        "probing_rate": 1000,
+                        "min_ttl": 1,
+                        "max_probing_rate": 1000,
                     },
                 }
             ]
@@ -29,7 +30,8 @@ def test_get_agents(client):
                     "version": "0.1.0",
                     "hostname": "test",
                     "ip_address": "1.2.3.4",
-                    "probing_rate": 1000,
+                    "min_ttl": 1,
+                    "max_probing_rate": 1000,
                 },
             }
         ],
@@ -49,7 +51,8 @@ def test_get_agent_by_uuid(client):
                 "version": "0.1.0",
                 "hostname": "test",
                 "ip_address": "1.2.3.4",
-                "probing_rate": 1000,
+                "min_ttl": 1,
+                "max_probing_rate": 1000,
             }
 
     client.app.redis = FakeRedis()
@@ -62,7 +65,8 @@ def test_get_agent_by_uuid(client):
             "version": "0.1.0",
             "hostname": "test",
             "ip_address": "1.2.3.4",
-            "probing_rate": 1000,
+            "min_ttl": 1,
+            "max_probing_rate": 1000,
         },
     }
 

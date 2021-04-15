@@ -172,6 +172,7 @@ async def test_database_agents():
         "0.1.0",
         "hostname",
         "1.2.3.4",
+        1,
         1000,
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
     )
@@ -182,7 +183,8 @@ async def test_database_agents():
         "version": "0.1.0",
         "hostname": "hostname",
         "ip_address": "1.2.3.4",
-        "probing_rate": 1000,
+        "min_ttl": 1,
+        "max_probing_rate": 1000,
         "last_used": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
     }
 
@@ -206,7 +208,8 @@ async def test_database_agents():
         "version": "0.1.0",
         "hostname": "hostname",
         "ip_address": "1.2.3.4",
-        "probing_rate": 1000,
+        "min_ttl": 1,
+        "max_probing_rate": 1000,
     }
 
     # Test of `.register() method`

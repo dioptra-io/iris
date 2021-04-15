@@ -64,20 +64,6 @@ async def get_measurements(
     return output
 
 
-def tool_parameters_validator(tool, parameters):
-    """Validate tool parameters."""
-    # Specific checks for `ping`
-    if tool == "ping":
-        parameters["max_round"] = 1
-        # Disabling UDP port scanning abilities
-        if parameters["protocol"] == "udp":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Tool `ping` only accessible with ICMP protocol",
-            )
-    return parameters
-
-
 async def verify_quota(tool, content, user_quota):
     """Verify that the quota is not exceeded."""
     targets = [p.strip() for p in content.split()]
@@ -85,7 +71,60 @@ async def verify_quota(tool, content, user_quota):
         n_prefixes = count_prefixes(targets)
     elif tool == "ping":
         n_prefixes = count_prefixes(targets, prefix_len_v4=32, prefix_len_v6=128)
-    return not (n_prefixes > user_quota)
+    return n_prefixes <= user_quota
+
+
+async def targets_file_validator(request, tool, user, targets_file):
+    """Validate the targets file input."""
+    # Verify that the targets file exists on AWS S3
+    try:
+        targets_file = await request.app.storage.get_file_no_retry(
+            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"],
+            targets_file,
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
+        )
+
+    # Check if the user respects his quota
+    try:
+        is_quota_respected = await verify_quota(
+            tool, targets_file["content"], user["quota"]
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid prefixes length"
+        )
+    if not is_quota_respected:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Quota exceeded",
+        )
+
+
+def tool_parameters_validator(tool, tool_parameters, agent_parameters):
+    """Validate tool parameters."""
+    # Specific checks for `ping`
+    if tool == "ping":
+        tool_parameters["max_round"] = 1
+        # Disabling UDP port scanning abilities
+        if tool_parameters["protocol"] == "udp":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Tool `ping` only accessible with ICMP protocol",
+            )
+
+    if tool_parameters["min_ttl"] < agent_parameters["parameters"]["min_ttl"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"Invalid `min_ttl` for agent {agent_parameters['uuid']}"
+                f" (>= {agent_parameters['parameters']['min_ttl']})"
+            ),
+        )
+
+    return tool_parameters
 
 
 @router.post(
@@ -100,71 +139,49 @@ async def post_measurement(
     measurement: MeasurementsPostBody = Body(
         ...,
         example={
-            "targets_file": "prefixes.txt",
             "tool": "diamond-miner",
-            "tool_parameters": {"protocol": "udp", "min_ttl": 2, "max_ttl": 32},
+            "agents": [
+                {
+                    "uuid": "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47",
+                    "targets_file": "prefixes.txt",
+                    "tool_parameters": {"protocol": "udp", "min_ttl": 2, "max_ttl": 32},
+                }
+            ],
             "tags": ["test"],
         },
     ),
     user: str = Depends(get_current_active_user),
 ):
     """Request a measurement."""
-    # Verify that the targets file exists on AWS S3
-    try:
-        targets_file = await request.app.storage.get_file_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"],
-            measurement.targets_file,
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
-        )
-
-    # Check if the user respects his quota
-    try:
-        is_quota_respected = await verify_quota(
-            measurement.tool, targets_file["content"], user["quota"]
-        )
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid prefixes length"
-        )
-    if not is_quota_respected:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Quota exceeded",
-        )
-
-    measurement.tool_parameters = tool_parameters_validator(
-        measurement.tool, measurement.tool_parameters.dict()
-    )
 
     # Get all connected agents
-    active_agents = await request.app.redis.get_agents(state=False, parameters=False)
-    active_agents = [agent["uuid"] for agent in active_agents]
+    active_agents = await request.app.redis.get_agents(state=False, parameters=True)
+    active_agent_uuids = [agent["uuid"] for agent in active_agents]
 
-    # Filter out by `agents` key input if provided
     agents = {}
-    if measurement.agents:
-        for agent in measurement.agents:
-            agent_uuid = str(agent.uuid)
-            if agent_uuid not in active_agents:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
-                )
-
-            agent.tool_parameters = agent.tool_parameters.dict(exclude_unset=True)
-            print(measurement.tool_parameters)
-            print(agent.tool_parameters)
-            print({**measurement.tool_parameters, **agent.tool_parameters})
-            agent.tool_parameters = tool_parameters_validator(
-                measurement.tool,
-                {**measurement.tool_parameters, **agent.tool_parameters},
+    for agent in measurement.agents:
+        # Check if the agent exists
+        agent_uuid = str(agent.uuid)
+        if agent_uuid not in active_agent_uuids:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
             )
-            agents[agent_uuid] = agent.dict()
-            del agents[agent_uuid]["uuid"]
-    else:
-        agents = {uuid: {} for uuid in active_agents}
+
+        # Check agent targets file
+        await targets_file_validator(
+            request, measurement.tool, user, agent.targets_file
+        )
+
+        # Check agent parameters
+        agent.tool_parameters = agent.tool_parameters.dict()
+        agent_parameters = [
+            agent for agent in active_agents if agent_uuid == agent["uuid"]
+        ][0]
+        agent.tool_parameters = tool_parameters_validator(
+            measurement.tool, agent.tool_parameters, agent_parameters
+        )
+        agents[agent_uuid] = agent.dict()
+        del agents[agent_uuid]["uuid"]
 
     measurement = measurement.dict()
     del measurement["agents"]

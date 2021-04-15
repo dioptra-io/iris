@@ -309,13 +309,14 @@ class DatabaseAgents(Database):
             f"""
             CREATE TABLE IF NOT EXISTS {self.table_name}
             (
-                uuid         UUID,
-                user         String,
-                version      String,
-                hostname     String,
-                ip_address   IPv4,
-                probing_rate UInt32,
-                last_used    DateTime
+                uuid             UUID,
+                user             String,
+                version          String,
+                hostname         String,
+                ip_address       IPv4,
+                min_ttl          UInt32,
+                max_probing_rate UInt32,
+                last_used        DateTime
             )
             ENGINE=MergeTree()
             ORDER BY (uuid)
@@ -330,8 +331,9 @@ class DatabaseAgents(Database):
             "version": row[2],
             "hostname": row[3],
             "ip_address": str(row[4]),
-            "probing_rate": row[5],
-            "last_used": row[6].isoformat(),
+            "min_ttl": row[5],
+            "max_probing_rate": row[6],
+            "last_used": row[7].isoformat(),
         }
 
     async def all(self, user="all"):
@@ -364,7 +366,8 @@ class DatabaseAgents(Database):
                     "version": parameters["version"],
                     "hostname": parameters["hostname"],
                     "ip_address": parameters["ip_address"],
-                    "probing_rate": parameters["probing_rate"],
+                    "min_ttl": parameters["min_ttl"],
+                    "max_probing_rate": parameters["max_probing_rate"],
                     "last_used": datetime.now(),
                 }
             ],
@@ -401,7 +404,7 @@ class DatabaseAgentsSpecific(Database):
                 measurement_uuid UUID,
                 agent_uuid       UUID,
                 targets_file     String,
-                probing_rate     UInt32,
+                probing_rate     Nullable(UInt32),
                 tool_parameters  String,
                 finished         UInt8,
                 timestamp        DateTime

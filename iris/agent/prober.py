@@ -28,18 +28,29 @@ async def probe(
     n_packets=None,
 ):
     """Execute measurement."""
+
+    # Cap the probing rate if superior to the maximum probing rate
+    probing_rate = (
+        parameters.probing_rate
+        if parameters.probing_rate
+        and parameters.probing_rate <= settings.AGENT_MAX_PROBING_RATE
+        else settings.AGENT_MAX_PROBING_RATE
+    )
+
     cmd = (
         str(settings.AGENT_PROBER_PATH)
         + " --output-file-csv "
         + str(results_filepath)
         + " --probing-rate "
-        + str(parameters.probing_rate)
+        + str(probing_rate)
         + " --protocol "
         + str(parameters.tool_parameters["protocol"])
         + " --filter-min-ttl="
         + str(parameters.tool_parameters["min_ttl"])
         + " --filter-max-ttl="
         + str(parameters.tool_parameters["max_ttl"])
+        + " --rate-limiting-method="
+        + str(settings.AGENT_PROBER_RATE_LIMITING_METHOD.value)
         + " --meta-round="
         + str(round_number)
     )
@@ -61,9 +72,6 @@ async def probe(
 
     if n_packets:
         cmd += f" --n-packets={n_packets}"
-
-    if settings.AGENT_PROBER_NO_SLEEP:
-        cmd += " --no-sleep"
 
     logger.info(logger_prefix + cmd)
 

@@ -82,7 +82,8 @@ async def main():
                 "version": __version__,
                 "hostname": socket.gethostname(),
                 "ip_address": get_own_ip_address(),
-                "probing_rate": settings.AGENT_PROBING_RATE,
+                "min_ttl": settings.AGENT_MIN_TTL,
+                "max_probing_rate": settings.AGENT_MAX_PROBING_RATE,
             }
         )
 

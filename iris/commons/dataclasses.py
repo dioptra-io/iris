@@ -12,12 +12,8 @@ class ParametersDataclass(object):
         self._dataclass = {
             **physical_parameters,
             **measurement_parameters,
-            **{k: v for k, v in specific_parameters.items() if v},
+            **specific_parameters,
             **{"agent_uuid": agent_uuid},
-        }
-        self._dataclass["tool_parameters"] = {
-            **measurement_parameters["tool_parameters"],
-            **specific_parameters.get("tool_parameters", {}),
         }
 
     def __getattr__(self, parameter):
@@ -32,9 +28,7 @@ class ParametersDataclass(object):
         return ParametersDataclass(
             parameters["agent_uuid"],
             {
-                "targets_file": parameters["targets_file"],
                 "tool": parameters["tool"],
-                "tool_parameters": parameters["tool_parameters"],
                 "measurement_uuid": parameters["measurement_uuid"],
                 "user": parameters["user"],
                 "start_time": parameters["start_time"],
@@ -44,7 +38,8 @@ class ParametersDataclass(object):
                 "version": parameters["version"],
                 "hostname": parameters["hostname"],
                 "ip_address": parameters["ip_address"],
-                "probing_rate": parameters["probing_rate"],
+                "min_ttl": parameters["min_ttl"],
+                "max_probing_rate": parameters["max_probing_rate"],
             },
             {
                 "targets_file": parameters["targets_file"],

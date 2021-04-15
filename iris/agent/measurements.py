@@ -91,7 +91,7 @@ async def measurement(settings, request, storage, logger, redis=None):
     logger.info(f"{logger_prefix} Target File: {parameters.targets_file}")
     logger.info(f"{logger_prefix} Tool : {parameters.tool}")
     logger.info(f"{logger_prefix} Tool Parameters : {parameters.tool_parameters}")
-    logger.info(f"{logger_prefix} Probing Rate : {parameters.probing_rate}")
+    logger.info(f"{logger_prefix} Max Probing Rate : {parameters.probing_rate}")
 
     if redis:
         stopper_func = stopper(

@@ -49,7 +49,8 @@ class FakeRedis(Redis):
                     "version": "0.1.0",
                     "hostname": "test",
                     "ip_address": "1.2.3.4",
-                    "probing_rate": 1000,
+                    "min_ttl": 1,
+                    "max_probing_rate": 1000,
                 },
             }
         ]

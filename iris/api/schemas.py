@@ -1,5 +1,6 @@
 """API Body and Response schemas."""
 
+from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -47,13 +48,14 @@ class ProfileGetResponse(BaseModel):
 # --- Agents ---
 
 
-class AgentParametersSummaryResponse(BaseModel):
-    """Summary parameters information about a agent (Response)."""
+class AgentParametersResponse(BaseModel):
+    """Parameters of an agent (Response)."""
 
     version: str
     hostname: str
     ip_address: str
-    probing_rate: int
+    min_ttl: int
+    max_probing_rate: int
 
 
 class AgentSummaryResponse(BaseModel):
@@ -61,16 +63,7 @@ class AgentSummaryResponse(BaseModel):
 
     uuid: UUID
     state: str
-    parameters: AgentParametersSummaryResponse
-
-
-class AgentParametersResponse(BaseModel):
-    """Parameters of an agent (Response)."""
-
-    version: str
-    hostname: str
-    ip_address: str
-    probing_rate: int
+    parameters: AgentParametersResponse
 
 
 class AgentsGetResponse(BaseModel):
@@ -155,12 +148,23 @@ class MeasurementsGetResponse(BaseModel):
     results: List[MeasurementSummaryResponse]
 
 
+class Protocol(str, Enum):
+    udp = "udp"
+    icmp = "icmp"
+
+
+class FlowMapper(str, Enum):
+    SequentialFlowMapper = "SequentialFlowMapper"
+    IntervalFlowMapper = "IntervalFlowMapper"
+    ReverseByteFlowMapper = "ReverseByteFlowMapper"
+    RandomFlowMapper = "RandomFlowMapper"
+
+
 class ToolParameters(BaseModel):
-    protocol: str = Field(
-        "udp",
+    protocol: Protocol = Field(
+        Protocol.udp,
         title="Probing transport protocol",
         description="Must be either udp or icmp.",
-        regex="(?i)^udp$|^icmp$",
     )
     initial_source_port: int = Field(
         24000, title="Initial source port", gt=0, lt=65_536
@@ -169,19 +173,9 @@ class ToolParameters(BaseModel):
     min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
     max_ttl: int = Field(32, title="Maximum TTL", gt=0, le=32)
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
-    flow_mapper: str = Field(
-        "RandomFlowMapper",
-        title="Flow mapper",
-        regex=(
-            r"(?i)^SequentialFlowMapper$"
-            r"|^IntervalFlowMapper$"
-            r"|^ReverseByteFlowMapper$"
-            r"|^RandomFlowMapper$"
-        ),
-    )
+    flow_mapper: str = Field(FlowMapper.RandomFlowMapper, title="Flow mapper")
     flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(
-        {"seed": 42},
-        title="Optional keyword arguments for the flow mapper",
+        {"seed": 42}, title="Optional keyword arguments for the flow mapper"
     )
 
 
@@ -189,25 +183,24 @@ class MeasurementsAgentsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
     uuid: UUID
-    targets_file: str = Field(None, title="Target file key")
+    targets_file: str = Field(..., title="Target file key")
     probing_rate: int = Field(None, title="Probing rate")
     tool_parameters: ToolParameters = Field(ToolParameters(), title="Tool parameters")
+
+
+class Tool(str, Enum):
+    diamond_miner = "diamond-miner"
+    ping = "ping"
 
 
 class MeasurementsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
-    targets_file: str = Field(..., title="Target file key")
-    tool: str = Field(
-        "diamond-miner",
-        title="Probing tool",
-        regex=r"(?i)^diamond-miner$|^ping$",
-    )
-    tool_parameters: ToolParameters = Field(ToolParameters(), title="Tool parameters")
+    tool: str = Field(Tool.diamond_miner, title="Probing tool")
     agents: List[MeasurementsAgentsPostBody] = Field(
-        None,
-        title="Optional agent specific parameters",
-        description="If not set, publish the measurement to all agents.",
+        ...,
+        title="Agents participating to the measurement",
+        description="Optional agent parameters can also be set",
     )
     tags: List[str] = Field([], title="Tags")
 

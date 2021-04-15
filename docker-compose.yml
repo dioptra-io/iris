@@ -124,8 +124,8 @@ services:
       LOKI_URL: "http://loki.docker.localhost/loki/api/v1/push"
       LOKI_USER: "admin"
       LOKI_PASSWORD: admin
-      AGENT_PROBING_RATE: "100"
-      AGENT_PROBER_NO_SLEEP: "false"
+      AGENT_MAX_PROBING_RATE: "100"
+      AGENT_UUID: "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47"
       AGENT_DEBUG_MODE: "true"
     cap_add:
       - SYS_PTRACE

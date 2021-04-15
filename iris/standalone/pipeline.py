@@ -8,17 +8,17 @@ import aiofiles
 from iris import __version__
 from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
-from iris.api.schemas import ToolParameters
+from iris.api.schemas import Tool, ToolParameters
 from iris.commons.database import Database, DatabaseMeasurementResults, get_session
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.utils import get_own_ip_address
-from iris.standalone import Tool
 from iris.standalone.storage import LocalStorage
 from iris.worker.pipeline import default_pipeline
 from iris.worker.settings import WorkerSettings
 
 
 def create_request(
+    settings: AgentSettings,
     tool: Tool,
     targets_file: Path,
     probes_filename,
@@ -28,6 +28,8 @@ def create_request(
     agent_uuid: str,
     round_number: int,
 ) -> dict:
+    tool_parameters = tool_parameters.dict()
+    tool_parameters["protocol"] = tool_parameters["protocol"].value
     return {
         "measurement_uuid": measurement_uuid,
         "username": "standalone",
@@ -37,11 +39,13 @@ def create_request(
             "version": __version__,
             "hostname": "",
             "ip_address": get_own_ip_address(),
-            "probing_rate": probing_rate,
+            "min_ttl": settings.AGENT_MIN_TTL,
+            "max_probing_rate": settings.AGENT_MAX_PROBING_RATE,
             "targets_file": targets_file.name,
             "tool": tool,
-            "tool_parameters": tool_parameters.dict(),
-            "tags": ["standalone"],
+            "probing_rate": probing_rate,
+            "tool_parameters": tool_parameters,
+            "tags": ["standalone"],  # TODO Be able to change the tags with the CLI
             "measurement_uuid": measurement_uuid,
             "user": "standalone",
             "start_time": "",
@@ -88,6 +92,7 @@ async def pipeline(
     start_time = datetime.now()
     for round_number in range(1, tool_parameters.max_round + 1):
         request: dict = create_request(
+            agent_settings,
             tool,
             targets_file,
             shuffled_next_round_csv_filepath,

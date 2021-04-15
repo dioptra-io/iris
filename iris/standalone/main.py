@@ -6,8 +6,8 @@ from typing import Optional
 
 import typer
 
-from iris.api.schemas import ToolParameters
-from iris.standalone import Tool, default_parameters
+from iris.api.schemas import Protocol, Tool, ToolParameters
+from iris.standalone import default_parameters
 from iris.standalone.display import display_results
 from iris.standalone.logger import create_logger
 from iris.standalone.pipeline import pipeline
@@ -27,7 +27,7 @@ def coroutine(f):
 @coroutine
 async def diamond_miner(
     probing_rate: int = typer.Argument(1000),
-    protocol: Optional[str] = typer.Option(default_parameters.protocol),
+    protocol: Optional[Protocol] = typer.Option(default_parameters.protocol),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
     ),
@@ -69,7 +69,7 @@ async def diamond_miner(
 @coroutine
 async def ping(
     probing_rate: int = typer.Argument(1000),
-    protocol: Optional[str] = typer.Option(default_parameters.protocol),
+    protocol: Optional[Protocol] = typer.Option(default_parameters.protocol),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
     ),
