@@ -1,6 +1,9 @@
 name: Publish Iris Agent
 
-on: [push]
+on:
+  push:
+    tags:
+      - "*"
 
 jobs:
   build:
