@@ -215,16 +215,8 @@ class MeasurementAgentSpecific(BaseModel):
     """Information about agent specific information (Response)."""
 
     targets_file: str
-    probing_rate: int
+    probing_rate: Optional[int]
     tool_parameters: ToolParameters
-
-
-class MeasurementAgentParameters(BaseModel):
-    """Summary parameters information about a agent (Response)."""
-
-    version: str
-    hostname: str
-    ip_address: str
 
 
 class MeasurementAgentInfoResponse(BaseModel):
@@ -233,7 +225,7 @@ class MeasurementAgentInfoResponse(BaseModel):
     uuid: UUID
     state: str
     specific: MeasurementAgentSpecific
-    parameters: MeasurementAgentParameters
+    parameters: AgentParametersResponse
 
 
 class MeasurementInfoResponse(BaseModel):
