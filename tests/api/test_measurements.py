@@ -490,7 +490,8 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "version": "0.0.0",
             "hostname": "test",
             "ip_address": "0.0.0.0",
-            "probing_rate": 0,
+            "min_ttl": 1,
+            "max_probing_rate": 200,
             "last_used": datetime.now().isoformat(),
         }
 
@@ -531,6 +532,8 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                     "version": "0.0.0",
                     "hostname": "test",
                     "ip_address": "0.0.0.0",
+                    "min_ttl": 1,
+                    "max_probing_rate": 200,
                 },
             }
         ],
@@ -546,7 +549,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     agent = {
         "uuid": str(uuid.uuid4()),
         "targets_file": "test.txt",
-        "probing_rate": 100,
+        "probing_rate": None,
         "tool_parameters": {
             "protocol": "udp",
             "initial_source_port": 24000,
@@ -583,7 +586,8 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
             "version": "0.0.0",
             "hostname": "test",
             "ip_address": "0.0.0.0",
-            "probing_rate": 0,
+            "min_ttl": 1,
+            "max_probing_rate": 200,
             "last_used": datetime.now().isoformat(),
         }
 
@@ -614,7 +618,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                 "state": "waiting",
                 "specific": {
                     "targets_file": "test.txt",
-                    "probing_rate": 100,
+                    "probing_rate": None,
                     "tool_parameters": {
                         "protocol": "udp",
                         "initial_source_port": 24000,
@@ -630,6 +634,8 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                     "version": "0.0.0",
                     "hostname": "test",
                     "ip_address": "0.0.0.0",
+                    "min_ttl": 1,
+                    "max_probing_rate": 200,
                 },
             }
         ],

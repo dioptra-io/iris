@@ -225,8 +225,6 @@ async def get_measurement_by_uuid(
         session, request.app.settings, request.app.logger
     ).all(measurement["uuid"])
 
-    print(agents_specific)
-
     agents = []
     for agent_specific in agents_specific:
         agent_info = await DatabaseAgents(
@@ -237,8 +235,6 @@ async def get_measurement_by_uuid(
             agent_specific["state"] = "waiting"
         elif measurement["state"] == "finished":
             agent_specific["state"] = "finished"
-
-        print(agent_info)
 
         agents.append(
             {
