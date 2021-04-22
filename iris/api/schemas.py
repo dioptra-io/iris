@@ -162,7 +162,7 @@ class FlowMapper(str, Enum):
 
 class ToolParameters(BaseModel):
     protocol: Protocol = Field(
-        Protocol.udp,
+        Protocol.icmp,
         title="Probing transport protocol",
         description="Must be either udp or icmp.",
     )

@@ -144,7 +144,11 @@ async def post_measurement(
                 {
                     "uuid": "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47",
                     "targets_file": "prefixes.txt",
-                    "tool_parameters": {"protocol": "udp", "min_ttl": 2, "max_ttl": 32},
+                    "tool_parameters": {
+                        "protocol": "icmp",
+                        "min_ttl": 2,
+                        "max_ttl": 32,
+                    },
                 }
             ],
             "tags": ["test"],
