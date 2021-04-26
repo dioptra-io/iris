@@ -40,7 +40,7 @@ async def get_token(
         )
 
     access_token_expires = timedelta(
-        minutes=request.app.settings.API_TOKEN_EXPIRATION_TIME
+        days=request.app.settings.API_TOKEN_EXPIRATION_TIME
     )
     access_token = create_access_token(
         request, data={"sub": user["username"]}, expires_delta=access_token_expires
