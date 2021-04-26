@@ -67,10 +67,12 @@ async def get_measurements(
 async def verify_quota(tool, content, user_quota):
     """Verify that the quota is not exceeded."""
     targets = [p.strip() for p in content.split()]
-    if tool == "diamond-miner":
+    if tool in ["diamond-miner", "yarrp"]:
         n_prefixes = count_prefixes(targets)
     elif tool == "ping":
         n_prefixes = count_prefixes(targets, prefix_len_v4=32, prefix_len_v6=128)
+    else:
+        raise ValueError("Unrecognized tool")
     return n_prefixes <= user_quota
 
 
@@ -105,9 +107,20 @@ async def targets_file_validator(request, tool, user, targets_file):
 
 def tool_parameters_validator(tool, tool_parameters, agent_parameters):
     """Validate tool parameters."""
+    # Specific checks for `yarrp`
+    if tool == "diamond-miner":
+        tool_parameters["n_flow_ids"] = 6
+
+    # Specific checks for `yarrp`
+    if tool == "yarrp":
+        tool_parameters["n_flow_ids"] = 1
+        tool_parameters["max_round"] = 1
+
     # Specific checks for `ping`
     if tool == "ping":
         tool_parameters["max_round"] = 1
+        tool_parameters["n_flow_ids"] = 1
+
         # Disabling UDP port scanning abilities
         if tool_parameters["protocol"] == "udp":
             raise HTTPException(

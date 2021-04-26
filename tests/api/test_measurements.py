@@ -268,7 +268,88 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatc
     assert response.status_code == 403
 
 
-def test_post_measurement_diamond_miner_ping(client, monkeypatch):
+def test_post_measurement_yarrp(client, monkeypatch):
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.0/23",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    client.app.storage = FakeStorage()
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/api/measurements/",
+        json={
+            "tool": "yarrp",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_post_measurement_yarrp_quota_exceeded(client, monkeypatch):
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.txt",
+                "size": 42,
+                "content": "8.8.8.0/23",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    client.app.dependency_overrides[get_current_active_user] = lambda: {
+        "uuid": "test",
+        "username": "test",
+        "email": "test@test",
+        "is_active": True,
+        "is_admin": False,
+        "quota": 0,
+        "register_date": "date",
+        "ripe_account": None,
+        "ripe_key": None,
+    }
+
+    client.app.storage = FakeStorage()
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/api/measurements/",
+        json={
+            "tool": "yarrp",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "targets_file": "test.txt",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 403
+
+    # Reset back the override
+    client.app.dependency_overrides[
+        get_current_active_user
+    ] = override_get_current_active_user
+
+
+def test_post_measurement_ping(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -303,7 +384,7 @@ def test_post_measurement_diamond_miner_ping(client, monkeypatch):
     assert response.status_code == 201
 
 
-def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
+def test_post_measurement_ping_udp(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -338,7 +419,7 @@ def test_post_measurement_diamond_miner_ping_udp(client, monkeypatch):
     assert response.status_code == 403
 
 
-def test_post_measurement_diamond_miner_ping_quota_exceeded(client, monkeypatch):
+def test_post_measurement_ping_quota_exceeded(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {

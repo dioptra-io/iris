@@ -11,14 +11,14 @@ from iris.commons.dataclasses import ParametersDataclass
 
 
 def build_probe_generator_parameters(parameters):
-    if parameters.tool == "diamond-miner":
+    if parameters.tool in ["diamond-miner", "yarrp"]:
         flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
         flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
         flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
         return {
             "prefix_len_v4": 24,
             "prefix_len_v6": 64,
-            "flow_ids": range(6),
+            "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
             "ttls": range(
                 parameters.tool_parameters["min_ttl"],
                 parameters.tool_parameters["max_ttl"] + 1,
@@ -30,7 +30,7 @@ def build_probe_generator_parameters(parameters):
         return {
             "prefix_len_v4": 32,
             "prefix_len_v6": 128,
-            "flow_ids": [0],
+            "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
             "ttls": [parameters.tool_parameters["max_ttl"]],
             "probe_dst_port": parameters.tool_parameters["destination_port"],
         }

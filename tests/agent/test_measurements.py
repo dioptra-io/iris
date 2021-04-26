@@ -24,6 +24,7 @@ request = {
             "min_ttl": 2,
             "max_ttl": 32,
             "max_round": 10,
+            "n_flow_ids": 6,
             "flow_mapper": "IntervalFlowMapper",
             "flow_mapper_kwargs": None,
         },
@@ -42,17 +43,29 @@ def test_build_probe_generator_parameters():
 
     assert prober_parameters["prefix_len_v4"] == 24
     assert prober_parameters["prefix_len_v6"] == 64
-    assert prober_parameters["flow_ids"] == range(0, 6)
+    assert prober_parameters["flow_ids"] == range(6)
+    assert prober_parameters["ttls"] == range(2, 33)
+    assert prober_parameters["probe_dst_port"] == 33434
+
+    request["parameters"]["tool"] = "yarrp"
+    request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
+    parameters = ParametersDataclass.from_request(request)
+    prober_parameters = build_probe_generator_parameters(parameters)
+
+    assert prober_parameters["prefix_len_v4"] == 24
+    assert prober_parameters["prefix_len_v6"] == 64
+    assert prober_parameters["flow_ids"] == range(1)
     assert prober_parameters["ttls"] == range(2, 33)
     assert prober_parameters["probe_dst_port"] == 33434
 
     request["parameters"]["tool"] = "ping"
+    request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
     prober_parameters = build_probe_generator_parameters(parameters)
 
     assert prober_parameters["prefix_len_v4"] == 32
     assert prober_parameters["prefix_len_v6"] == 128
-    assert prober_parameters["flow_ids"] == [0]
+    assert prober_parameters["flow_ids"] == range(1)
     assert prober_parameters["ttls"] == [32]
     assert prober_parameters["probe_dst_port"] == 33434
 

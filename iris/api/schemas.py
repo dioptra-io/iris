@@ -190,6 +190,7 @@ class MeasurementsAgentsPostBody(BaseModel):
 
 class Tool(str, Enum):
     diamond_miner = "diamond-miner"
+    yarrp = "yarrp"
     ping = "ping"
 
 

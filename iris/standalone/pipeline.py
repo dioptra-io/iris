@@ -37,6 +37,8 @@ def create_request(
     tags: List[str],
 ) -> dict:
     tool_parameters = tool_parameters.dict()
+    tool_parameters["n_flow_ids"] = 6 if tool == "diamond-miner" else 1
+    print(tool_parameters["n_flow_ids"])
     tool_parameters["protocol"] = tool_parameters["protocol"].value
     return {
         "measurement_uuid": measurement_uuid,

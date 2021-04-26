@@ -68,6 +68,48 @@ async def diamond_miner(
 
 @app.command()
 @coroutine
+async def yarrp(
+    probing_rate: int = typer.Argument(1000),
+    protocol: Optional[Protocol] = typer.Option(default_parameters.protocol),
+    initial_source_port: Optional[int] = typer.Option(
+        default_parameters.initial_source_port
+    ),
+    destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
+    min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
+    max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
+    tag: Optional[List[str]] = typer.Option(["standalone"]),
+    verbose: bool = typer.Option(False, "--verbose"),
+):
+    """YARRP command."""
+    prefixes: list = sys.stdin.readlines()
+    if not prefixes:
+        typer.echo("Please provide a prefixes list in stdin")
+        raise typer.Exit()
+
+    tool: Tool = Tool("yarrp")
+    tool_parameters = ToolParameters(
+        **{
+            "protocol": protocol,
+            "initial_source_port": initial_source_port,
+            "destination_port": destination_port,
+            "min_ttl": min_ttl,
+            "max_ttl": max_ttl,
+            "max_round": 1,
+        }
+    )
+
+    # Create logger
+    logger = create_logger(logging.DEBUG if verbose else logging.ERROR)
+
+    # Launch pipeline
+    pipeline_info = await pipeline(
+        tool, prefixes, probing_rate, tool_parameters, tag, logger
+    )
+    display_results(pipeline_info)
+
+
+@app.command()
+@coroutine
 async def ping(
     probing_rate: int = typer.Argument(1000),
     protocol: Optional[Protocol] = typer.Option(default_parameters.protocol),
@@ -77,7 +119,6 @@ async def ping(
     destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
     min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
     max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
-    max_round: Optional[int] = typer.Option(default_parameters.max_round),
     tag: Optional[List[str]] = typer.Option(["standalone"]),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
@@ -95,7 +136,7 @@ async def ping(
             "destination_port": destination_port,
             "min_ttl": min_ttl,
             "max_ttl": max_ttl,
-            "max_round": max_round,
+            "max_round": 1,
         }
     )
 
