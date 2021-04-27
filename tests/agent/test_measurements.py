@@ -15,7 +15,7 @@ request = {
         "min_ttl": 1,
         "max_probing_rate": 100,
         "probing_rate": 100,
-        "targets_file": "prefixes.csv",
+        "target_file": "prefixes.csv",
         "tool": "diamond-miner",
         "tool_parameters": {
             "initial_source_port": 24000,
@@ -36,9 +36,9 @@ request = {
 
 def test_build_probe_generator_parameters():
 
-    targets_file = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
+    target_file = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(targets_file, parameters)
+    prober_parameters = build_probe_generator_parameters(target_file, parameters)
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.0/24", "icmp", range(2, 33)),
@@ -52,7 +52,7 @@ def test_build_probe_generator_parameters():
     request["parameters"]["tool"] = "yarrp"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(targets_file, parameters)
+    prober_parameters = build_probe_generator_parameters(target_file, parameters)
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.0/24", "icmp", range(2, 33)),
@@ -63,11 +63,11 @@ def test_build_probe_generator_parameters():
     assert prober_parameters["flow_ids"] == range(1)
     assert prober_parameters["probe_dst_port"] == 33434
 
-    targets_file = ["8.8.8.8,icmp,2,32", "8.8.4.4,icmp,2,32"]
+    target_file = ["8.8.8.8,icmp,2,32", "8.8.4.4,icmp,2,32"]
     request["parameters"]["tool"] = "ping"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(targets_file, parameters)
+    prober_parameters = build_probe_generator_parameters(target_file, parameters)
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.8", "icmp", [32]),
@@ -81,4 +81,4 @@ def test_build_probe_generator_parameters():
     request["parameters"]["tool"] = "test"
     parameters = ParametersDataclass.from_request(request)
     with pytest.raises(ValueError):
-        prober_parameters = build_probe_generator_parameters(targets_file, parameters)
+        prober_parameters = build_probe_generator_parameters(target_file, parameters)

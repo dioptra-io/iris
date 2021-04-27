@@ -11,20 +11,20 @@ from iris.agent.prober import probe, stopper
 from iris.commons.dataclasses import ParametersDataclass
 
 
-def build_probe_generator_parameters(targets_list, parameters):
+def build_probe_generator_parameters(target_list, parameters):
     flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
 
     if parameters.tool in ["diamond-miner", "yarrp"]:
         flow_mapper_v4 = flow_mapper_cls(
-            **{**{"prefix_size": DEFAULT_PREFIX_SIZE_V4}, **flow_mapper_kwargs}
+            **{"prefix_size": DEFAULT_PREFIX_SIZE_V4, **flow_mapper_kwargs}
         )
         flow_mapper_v6 = flow_mapper_cls(
-            **{**{"prefix_size": DEFAULT_PREFIX_SIZE_V6}, **flow_mapper_kwargs}
+            **{"prefix_size": DEFAULT_PREFIX_SIZE_V6, **flow_mapper_kwargs}
         )
 
         prefixes = []
-        for target in targets_list:
+        for target in target_list:
             target_line = target.split(",")
             prefixes.append(
                 (
@@ -44,12 +44,12 @@ def build_probe_generator_parameters(targets_list, parameters):
             "mapper_v6": flow_mapper_v6,
         }
     elif parameters.tool == "ping":
-        flow_mapper_v4 = flow_mapper_cls(**{**{"prefix_size": 1}, **flow_mapper_kwargs})
-        flow_mapper_v6 = flow_mapper_cls(**{**{"prefix_size": 1}, **flow_mapper_kwargs})
+        flow_mapper_v4 = flow_mapper_cls(**{"prefix_size": 1, **flow_mapper_kwargs})
+        flow_mapper_v6 = flow_mapper_cls(**{"prefix_size": 1, **flow_mapper_kwargs})
 
         # Only take the max TTL in the TTL range
         prefixes = []
-        for target in targets_list:
+        for target in target_list:
             target_line = target.split(",")
             prefixes.append(
                 (
@@ -94,24 +94,24 @@ async def measurement(settings, request, storage, logger, redis=None):
     results_filepath = str(measurement_results_path / results_filename)
 
     stdin = None
-    targets_filepath = None
+    target_filepath = None
     probes_filepath = None
 
     if request["round"] == 1:
         # Round = 1
         logger.info(f"{logger_prefix} Download targets/prefixes file locally")
-        targets_filename = parameters.targets_file
-        targets_filepath = str(settings.AGENT_TARGETS_DIR_PATH / targets_filename)
+        target_filename = parameters.target_file
+        target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
         await storage.download_file(
             settings.AWS_S3_TARGETS_BUCKET_PREFIX + request["username"],
-            targets_filename,
-            targets_filepath,
+            target_filename,
+            target_filepath,
         )
-        async with aiofiles.open(targets_filepath) as fd:
-            targets_list = await fd.readlines()
+        async with aiofiles.open(target_filepath) as fd:
+            target_list = await fd.readlines()
 
         gen = probe_generator_by_flow(
-            **build_probe_generator_parameters(targets_list, parameters)
+            **build_probe_generator_parameters(target_list, parameters)
         )
         stdin = (format_probe(*x) for x in gen)
     else:
@@ -122,7 +122,7 @@ async def measurement(settings, request, storage, logger, redis=None):
         await storage.download_file(measurement_uuid, probes_filename, probes_filepath)
 
     logger.info(f"{logger_prefix} Username : {request['username']}")
-    logger.info(f"{logger_prefix} Target File: {parameters.targets_file}")
+    logger.info(f"{logger_prefix} Target File: {parameters.target_file}")
     logger.info(f"{logger_prefix} Tool : {parameters.tool}")
     logger.info(f"{logger_prefix} Tool Parameters : {parameters.tool_parameters}")
     logger.info(f"{logger_prefix} Max Probing Rate : {parameters.probing_rate}")
@@ -163,9 +163,9 @@ async def measurement(settings, request, storage, logger, redis=None):
                 f"{logger_prefix} Impossible to remove local measurement directory"
             )
 
-    if targets_filepath is not None:
+    if target_filepath is not None:
         logger.info(f"{logger_prefix} Remove local target file")
-        await aiofiles.os.remove(targets_filepath)
+        await aiofiles.os.remove(target_filepath)
 
     if probes_filepath is not None:
         if not settings.AGENT_DEBUG_MODE:

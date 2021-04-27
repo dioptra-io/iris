@@ -15,7 +15,9 @@ from iris.api.security import get_current_active_user
 router = APIRouter()
 
 
-@router.get("/", response_model=AgentsGetResponse, summary="Get all agents information")
+@router.get(
+    "/", response_model=AgentsGetResponse, summary="Get all agents information."
+)
 async def get_agents(
     request: Request,
     offset: int = Query(0, ge=0),
@@ -49,7 +51,7 @@ async def get_agents(
     "/{uuid}",
     response_model=AgentsGetByUUIDResponse,
     responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
-    summary="Get agent information from UUID",
+    summary="Get agent information from UUID.",
 )
 async def get_agent_by_uuid(
     request: Request, uuid: UUID, user: str = Depends(get_current_active_user)

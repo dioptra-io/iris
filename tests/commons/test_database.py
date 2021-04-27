@@ -264,7 +264,7 @@ async def test_database_agents_specific():
 
     fake_formated_response_1 = {
         "uuid": str(agent_uuid_1),
-        "targets_file": "test.csv",
+        "target_file": "test.csv",
         "probing_rate": 1000,
         "tool_parameters": {"parameters": 0},
         "state": "ongoing",
@@ -272,7 +272,7 @@ async def test_database_agents_specific():
 
     fake_formated_response_2 = {
         "uuid": str(agent_uuid_2),
-        "targets_file": "test.csv",
+        "target_file": "test.csv",
         "probing_rate": 1000,
         "tool_parameters": {"parameters": 0},
         "state": "finished",
@@ -314,7 +314,7 @@ async def test_database_agents_specific():
         "agent_uuid",
         {
             "measurement_uuid": "test",
-            "targets_file": "test.csv",
+            "target_file": "test.csv",
             "tool_parameters": {
                 "min_ttl": 2,
                 "max_ttl": 30,

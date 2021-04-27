@@ -403,7 +403,7 @@ class DatabaseAgentsSpecific(Database):
             (
                 measurement_uuid UUID,
                 agent_uuid       UUID,
-                targets_file     String,
+                target_file     String,
                 probing_rate     Nullable(UInt32),
                 tool_parameters  String,
                 finished         UInt8,
@@ -418,7 +418,7 @@ class DatabaseAgentsSpecific(Database):
         """Database row -> response formater."""
         return {
             "uuid": str(row[1]),
-            "targets_file": row[2],
+            "target_file": row[2],
             "probing_rate": row[3],
             "tool_parameters": json.loads(row[4]),
             "state": "finished" if bool(row[5]) else "ongoing",
@@ -456,7 +456,7 @@ class DatabaseAgentsSpecific(Database):
                 {
                     "measurement_uuid": parameters.measurement_uuid,
                     "agent_uuid": parameters.agent_uuid,
-                    "targets_file": parameters.targets_file,
+                    "target_file": parameters.target_file,
                     "probing_rate": parameters.probing_rate,
                     "tool_parameters": json.dumps(parameters.tool_parameters),
                     "finished": int(False),

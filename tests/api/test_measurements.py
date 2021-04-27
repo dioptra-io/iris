@@ -179,7 +179,7 @@ def test_post_measurement_diamond_miner(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -223,7 +223,7 @@ def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -260,7 +260,7 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatc
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -292,7 +292,7 @@ def test_post_measurement_yarrp(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -336,7 +336,7 @@ def test_post_measurement_yarrp_quota_exceeded(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -373,7 +373,7 @@ def test_post_measurement_ping(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -405,7 +405,7 @@ def test_post_measurement_ping_udp(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -449,7 +449,7 @@ def test_post_measurement_ping_quota_exceeded(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -486,7 +486,7 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776550",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -495,7 +495,7 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
     assert response.json() == {"detail": "Agent not found"}
 
 
-def test_post_measurement_targets_file_not_found(client, monkeypatch):
+def test_post_measurement_target_file_not_found(client, monkeypatch):
     class FakeStorage(object):
         async def get_file(*args, **kwargs):
             raise Exception
@@ -510,7 +510,7 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                 }
             ],
         },
@@ -527,7 +527,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
-        "targets_file": "test.csv",
+        "target_file": "test.csv",
         "probing_rate": 100,
         "tool_parameters": {
             "initial_source_port": 24000,
@@ -587,7 +587,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                 "uuid": agent["uuid"],
                 "state": "finished",
                 "specific": {
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                     "probing_rate": 100,
                     "tool_parameters": {
                         "initial_source_port": 24000,
@@ -617,7 +617,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
-        "targets_file": "test.csv",
+        "target_file": "test.csv",
         "probing_rate": None,
         "tool_parameters": {
             "initial_source_port": 24000,
@@ -683,7 +683,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                 "uuid": agent["uuid"],
                 "state": "waiting",
                 "specific": {
-                    "targets_file": "test.csv",
+                    "target_file": "test.csv",
                     "probing_rate": None,
                     "tool_parameters": {
                         "initial_source_port": 24000,

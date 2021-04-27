@@ -43,7 +43,7 @@ class ParametersDataclass(object):
                 "max_probing_rate": parameters["max_probing_rate"],
             },
             {
-                "targets_file": parameters["targets_file"],
+                "target_file": parameters["target_file"],
                 "probing_rate": parameters["probing_rate"],
                 "tool_parameters": parameters["tool_parameters"],
             },

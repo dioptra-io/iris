@@ -27,7 +27,7 @@ from iris.worker.settings import WorkerSettings
 def create_request(
     settings: AgentSettings,
     tool: Tool,
-    targets_file: Path,
+    target_file: Path,
     probes_filename,
     probing_rate: int,
     tool_parameters: ToolParameters,
@@ -49,7 +49,7 @@ def create_request(
             "ip_address": get_own_ip_address(),
             "min_ttl": settings.AGENT_MIN_TTL,
             "max_probing_rate": settings.AGENT_MAX_PROBING_RATE,
-            "targets_file": targets_file.name,
+            "target_file": target_file.name,
             "tool": tool,
             "probing_rate": probing_rate,
             "tool_parameters": tool_parameters,
@@ -122,9 +122,9 @@ async def pipeline(
         agent_settings.DATABASE_NAME
     )
 
-    # Create a targets file
-    targets_file: Path = agent_settings.AGENT_TARGETS_DIR_PATH / "prefixes.csv"
-    async with aiofiles.open(targets_file, mode="w") as fd:
+    # Create a target file
+    target_file: Path = agent_settings.AGENT_TARGETS_DIR_PATH / "prefixes.csv"
+    async with aiofiles.open(target_file, mode="w") as fd:
         for prefix in prefixes:
             await fd.write(prefix)
 
@@ -132,8 +132,8 @@ async def pipeline(
     storage = LocalStorage(agent_settings.AGENT_TARGETS_DIR_PATH / "local_storage")
     await storage.upload_file(
         agent_settings.AWS_S3_TARGETS_BUCKET_PREFIX + "standalone",
-        targets_file.name,
-        targets_file,
+        target_file.name,
+        target_file,
     )
 
     measurement_uuid: str = str(uuid.uuid4())
@@ -144,7 +144,7 @@ async def pipeline(
         request: dict = create_request(
             agent_settings,
             tool,
-            targets_file,
+            target_file,
             shuffled_next_round_csv_filepath,
             probing_rate,
             tool_parameters,

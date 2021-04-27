@@ -176,7 +176,7 @@ class MeasurementsAgentsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
     uuid: UUID
-    targets_file: str = Field(..., title="Target file key")
+    target_file: str = Field(..., title="Target file key")
     probing_rate: int = Field(None, title="Probing rate")
     tool_parameters: ToolParameters = Field(ToolParameters(), title="Tool parameters")
 
@@ -208,7 +208,7 @@ class MeasurementsPostResponse(BaseModel):
 class MeasurementAgentSpecific(BaseModel):
     """Information about agent specific information (Response)."""
 
-    targets_file: str
+    target_file: str
     probing_rate: Optional[int]
     tool_parameters: ToolParameters
 

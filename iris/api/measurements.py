@@ -29,7 +29,9 @@ from iris.worker.hook import hook
 router = APIRouter()
 
 
-@router.get("/", response_model=MeasurementsGetResponse, summary="Get all measurements")
+@router.get(
+    "/", response_model=MeasurementsGetResponse, summary="Get all measurements."
+)
 async def get_measurements(
     request: Request,
     tag: str = None,
@@ -80,13 +82,13 @@ async def verify_quota(tool, content, user_quota):
     return n_prefixes <= user_quota
 
 
-async def targets_file_validator(request, tool, user, targets_file, agent_parameters):
-    """Validate the targets file input."""
-    # Verify that the targets file exists on AWS S3
+async def target_file_validator(request, tool, user, target_file, agent_parameters):
+    """Validate the target file input."""
+    # Verify that the target file exists on AWS S3
     try:
-        targets_file = await request.app.storage.get_file_no_retry(
+        target_file = await request.app.storage.get_file_no_retry(
             request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"],
-            targets_file,
+            target_file,
         )
     except Exception:
         raise HTTPException(
@@ -96,7 +98,7 @@ async def targets_file_validator(request, tool, user, targets_file, agent_parame
     # Check if the user respects his quota
     try:
         is_quota_respected = await verify_quota(
-            tool, targets_file["content"], user["quota"]
+            tool, target_file["content"], user["quota"]
         )
     except ValueError:
         raise HTTPException(
@@ -109,7 +111,7 @@ async def targets_file_validator(request, tool, user, targets_file, agent_parame
         )
 
     # Check protocol and min/max TTL
-    for line in [p.strip() for p in targets_file["content"].split()]:
+    for line in [p.strip() for p in target_file["content"].split()]:
         line_split = line.split(",")
         if tool == "ping" and line_split[1] == "udp":
             # Disabling UDP port scanning abilities
@@ -152,7 +154,7 @@ def tool_parameters_validator(tool, tool_parameters):
     status_code=status.HTTP_201_CREATED,
     response_model=MeasurementsPostResponse,
     responses={404: {"model": ExceptionResponse}},
-    summary="Request a measurement",
+    summary="Request a measurement.",
 )
 async def post_measurement(
     request: Request,
@@ -163,7 +165,7 @@ async def post_measurement(
             "agents": [
                 {
                     "uuid": "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47",
-                    "targets_file": "prefixes.csv",
+                    "target_file": "prefixes.csv",
                 }
             ],
             "tags": ["test"],
@@ -192,9 +194,9 @@ async def post_measurement(
             agent for agent in active_agents if agent_uuid == agent["uuid"]
         ][0]
 
-        # Check agent targets file
-        await targets_file_validator(
-            request, measurement.tool, user, agent.targets_file, agent_parameters
+        # Check agent target file
+        await target_file_validator(
+            request, measurement.tool, user, agent.target_file, agent_parameters
         )
 
         # Check tool parameters
@@ -222,7 +224,7 @@ async def post_measurement(
     "/{measurement_uuid}",
     response_model=MeasurementInfoResponse,
     responses={404: {"model": ExceptionResponse}},
-    summary="Get measurement information by uuid",
+    summary="Get measurement information by uuid.",
 )
 async def get_measurement_by_uuid(
     request: Request,
@@ -262,7 +264,7 @@ async def get_measurement_by_uuid(
                 "uuid": agent_specific["uuid"],
                 "state": agent_specific["state"],
                 "specific": {
-                    "targets_file": agent_specific["targets_file"],
+                    "target_file": agent_specific["target_file"],
                     "probing_rate": agent_specific["probing_rate"],
                     "tool_parameters": agent_specific["tool_parameters"],
                 },
@@ -316,7 +318,7 @@ async def delete_measurement(
     "/{measurement_uuid}/{agent_uuid}",
     response_model=MeasurementsResultsResponse,
     responses={404: {"model": ExceptionResponse}},
-    summary="Get measurement results",
+    summary="Get measurement results.",
 )
 async def get_measurement_results(
     request: Request,

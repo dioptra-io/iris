@@ -15,7 +15,7 @@ request = {
         "ip_address": "172.22.0.12",
         "min_ttl": 1,
         "max_probing_rate": 100,
-        "targets_file": "prefixes.csv",
+        "target_file": "prefixes.csv",
         "tool": "diamond-miner",
         "probing_rate": None,
         "tool_parameters": {
@@ -59,7 +59,7 @@ def test_parameters_dataclass():
             "max_probing_rate": 1000,
         },
         {
-            "targets_file": "custom.csv",
+            "target_file": "custom.csv",
             "probing_rate": 200,
             "tool_parameters": {
                 "protocol": "udp",
@@ -79,7 +79,7 @@ def test_parameters_dataclass():
 
     assert agent.dict() == {
         "agent_uuid": agent_uuid,
-        "targets_file": "custom.csv",
+        "target_file": "custom.csv",
         "tool": "diamond-miner",
         "tool_parameters": {
             "protocol": "udp",
@@ -111,7 +111,7 @@ def test_parameters_dataclass():
         "ip_address": "172.22.0.12",
         "min_ttl": 1,
         "max_probing_rate": 100,
-        "targets_file": "prefixes.csv",
+        "target_file": "prefixes.csv",
         "tool": "diamond-miner",
         "probing_rate": None,
         "tool_parameters": {

@@ -26,7 +26,11 @@ class Token(BaseModel):
     token_type: str
 
 
-@router.post("/token", response_model=Token)
+@router.post(
+    "/token",
+    response_model=Token,
+    summary="Get JWT token.",
+)
 async def get_token(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -52,7 +56,7 @@ async def get_token(
 @router.get(
     "/",
     response_model=ProfileGetResponse,
-    summary="Get profile information",
+    summary="Get profile information.",
 )
 async def get_profile(
     request: Request,
@@ -70,7 +74,7 @@ async def get_profile(
     "/ripe",
     status_code=status.HTTP_201_CREATED,
     response_model=ProfileRIPEPutResponse,
-    summary="Put RIPE profile information",
+    summary="Put RIPE profile information.",
 )
 async def put_ripe_profile(
     request: Request,

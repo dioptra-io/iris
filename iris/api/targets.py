@@ -28,7 +28,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/", response_model=TargetsGetResponse, summary="Get all targets information"
+    "/", response_model=TargetsGetResponse, summary="Get all targets information."
 )
 async def get_targets(
     request: Request,
@@ -36,7 +36,7 @@ async def get_targets(
     limit: int = Query(20, ge=0, le=200),
     user: str = Depends(get_current_active_user),
 ):
-    """Get all targets lists information."""
+    """Get all target lists information."""
     try:
         targets = await request.app.storage.get_all_files_no_retry(
             request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"]
@@ -53,14 +53,14 @@ async def get_targets(
     "/{key}",
     response_model=TargetResponse,
     responses={404: {"model": ExceptionResponse}},
-    summary="Get targets list information by key",
+    summary="Get target list information by key.",
 )
 async def get_target_by_key(
     request: Request, key: str, user: str = Depends(get_current_active_user)
 ):
-    """"Get a targets list information by key."""
+    """"Get a target list information by key."""
     try:
-        targets_file = await request.app.storage.get_file_no_retry(
+        target_file = await request.app.storage.get_file_no_retry(
             request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"], key
         )
     except Exception:
@@ -68,21 +68,21 @@ async def get_target_by_key(
             status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
         )
 
-    targets_file["content"] = [c.strip() for c in targets_file["content"].split()]
+    target_file["content"] = [c.strip() for c in target_file["content"].split()]
 
-    return targets_file
+    return target_file
 
 
-async def verify_targets_file(targets_file):
+async def verify_target_file(target_file):
     """Verify that a target file have a good structure."""
     # Check if file is empty
-    targets_file.file.seek(0, 2)
-    if targets_file.file.tell() == 0:
+    target_file.file.seek(0, 2)
+    if target_file.file.tell() == 0:
         return False
-    targets_file.file.seek(0)
+    target_file.file.seek(0)
 
     # Check if all lines of the file is valid
-    for line in targets_file.file.readlines():
+    for line in target_file.file.readlines():
         try:
             line_split = line.decode("utf-8").strip().split(",")
             try:
@@ -100,16 +100,16 @@ async def verify_targets_file(targets_file):
                 return False
         except IndexError:
             return False
-    targets_file.file.seek(0)
+    target_file.file.seek(0)
     return True
 
 
-async def upload_targets_file(storage, target_bucket, targets_file):
-    """Upload targets file asynchronously."""
+async def upload_target_file(storage, target_bucket, target_file):
+    """Upload target file asynchronously."""
     await storage.upload_file_no_retry(
         target_bucket,
-        targets_file.filename,
-        targets_file.file,
+        target_file.filename,
+        target_file.file,
     )
 
 
@@ -117,45 +117,50 @@ async def upload_targets_file(storage, target_bucket, targets_file):
     "/",
     status_code=status.HTTP_201_CREATED,
     response_model=TargetsPostResponse,
-    summary="Upload a targets list",
+    summary="Upload a target list.",
+    description="""
+    Each line of the file must be like `target,protocol,min_ttl,max_ttl`
+    where the target is a IPv4/IPv6 prefix or IPv4/IPv6 address.
+    The prococol can be `icmp` or `udp`.
+    """,
 )
 async def post_target(
     request: Request,
     background_tasks: BackgroundTasks,
-    targets_file: UploadFile = File(...),
+    target_file: UploadFile = File(...),
     user: str = Depends(get_current_active_user),
 ):
-    """Upload a targets list to object storage."""
-    if not targets_file.filename.endswith(".csv"):
+    """Upload a target list to object storage."""
+    if not target_file.filename.endswith(".csv"):
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
-            detail="Bad targets file extension (.csv required)",
+            detail="Bad target file extension (.csv required)",
         )
 
-    is_correct = await verify_targets_file(targets_file)
+    is_correct = await verify_target_file(target_file)
     if not is_correct:
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
-            detail="Bad targets file structure",
+            detail="Bad target file structure",
         )
 
     target_bucket = request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"]
     background_tasks.add_task(
-        upload_targets_file, request.app.storage, target_bucket, targets_file
+        upload_target_file, request.app.storage, target_bucket, target_file
     )
-    return {"key": targets_file.filename, "action": "upload"}
+    return {"key": target_file.filename, "action": "upload"}
 
 
 @router.delete(
     "/{key}",
     response_model=TargetsDeleteResponse,
     responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
-    summary="Delete a targets list from object storage.",
+    summary="Delete a target list from object storage.",
 )
 async def delete_target_by_key(
     request: Request, key: str, user: str = Depends(get_current_active_user)
 ):
-    """Delete a targets list from object storage."""
+    """Delete a target list from object storage."""
     try:
         response = await request.app.storage.delete_file_check_no_retry(
             request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"], key
