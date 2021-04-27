@@ -43,8 +43,6 @@ async def probe(
         + str(results_filepath)
         + " --probing-rate "
         + str(probing_rate)
-        + " --protocol "
-        + str(parameters.tool_parameters["protocol"])
         + " --filter-min-ttl="
         + str(parameters.tool_parameters["min_ttl"])
         + " --filter-max-ttl="

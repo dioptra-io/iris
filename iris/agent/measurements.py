@@ -3,35 +3,52 @@
 import aiofiles
 import aiofiles.os
 from diamond_miner import mappers
-from diamond_miner.generator import probe_generator
+from diamond_miner.generator import probe_generator_by_flow
 from diamond_miner.utilities import format_probe
 
 from iris.agent.prober import probe, stopper
 from iris.commons.dataclasses import ParametersDataclass
 
 
-def build_probe_generator_parameters(parameters):
+def build_probe_generator_parameters(targets_list, parameters):
+
     if parameters.tool in ["diamond-miner", "yarrp"]:
         flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
         flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
         flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
+
         return {
+            "prefixes": [
+                (
+                    prefix,
+                    parameters.tool_parameters["protocol"],
+                    range(
+                        parameters.tool_parameters["min_ttl"],
+                        parameters.tool_parameters["max_ttl"] + 1,
+                    ),
+                )
+                for prefix in targets_list
+            ],
             "prefix_len_v4": 24,
             "prefix_len_v6": 64,
             "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
-            "ttls": range(
-                parameters.tool_parameters["min_ttl"],
-                parameters.tool_parameters["max_ttl"] + 1,
-            ),
             "probe_dst_port": parameters.tool_parameters["destination_port"],
-            "mapper": flow_mapper,
+            "mapper_v4": flow_mapper,
+            "mapper_v6": flow_mapper,
         }
     elif parameters.tool == "ping":
         return {
+            "prefixes": [
+                (
+                    prefix,
+                    parameters.tool_parameters["protocol"],
+                    [parameters.tool_parameters["max_ttl"]],
+                )
+                for prefix in targets_list
+            ],
             "prefix_len_v4": 32,
             "prefix_len_v6": 128,
             "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
-            "ttls": [parameters.tool_parameters["max_ttl"]],
             "probe_dst_port": parameters.tool_parameters["destination_port"],
         }
     else:
@@ -74,10 +91,10 @@ async def measurement(settings, request, storage, logger, redis=None):
             targets_filepath,
         )
         async with aiofiles.open(targets_filepath) as fd:
-            prefix_list = await fd.readlines()
+            targets_list = await fd.readlines()
 
-        gen = probe_generator(
-            prefix_list, **build_probe_generator_parameters(parameters)
+        gen = probe_generator_by_flow(
+            **build_probe_generator_parameters(targets_list, parameters)
         )
         stdin = (format_probe(*x) for x in gen)
     else:

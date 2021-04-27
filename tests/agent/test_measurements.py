@@ -18,7 +18,7 @@ request = {
         "targets_file": "prefixes.txt",
         "tool": "diamond-miner",
         "tool_parameters": {
-            "protocol": "udp",
+            "protocol": "icmp",
             "initial_source_port": 24000,
             "destination_port": 33434,
             "min_ttl": 2,
@@ -38,38 +38,50 @@ request = {
 
 
 def test_build_probe_generator_parameters():
-    parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(parameters)
 
+    targets_file = ["8.8.8.0/24", "8.8.4.0/24"]
+    parameters = ParametersDataclass.from_request(request)
+    prober_parameters = build_probe_generator_parameters(targets_file, parameters)
+
+    assert prober_parameters["prefixes"] == [
+        ("8.8.8.0/24", "icmp", range(2, 33)),
+        ("8.8.4.0/24", "icmp", range(2, 33)),
+    ]
     assert prober_parameters["prefix_len_v4"] == 24
     assert prober_parameters["prefix_len_v6"] == 64
     assert prober_parameters["flow_ids"] == range(6)
-    assert prober_parameters["ttls"] == range(2, 33)
     assert prober_parameters["probe_dst_port"] == 33434
 
     request["parameters"]["tool"] = "yarrp"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(parameters)
+    prober_parameters = build_probe_generator_parameters(targets_file, parameters)
 
+    assert prober_parameters["prefixes"] == [
+        ("8.8.8.0/24", "icmp", range(2, 33)),
+        ("8.8.4.0/24", "icmp", range(2, 33)),
+    ]
     assert prober_parameters["prefix_len_v4"] == 24
     assert prober_parameters["prefix_len_v6"] == 64
     assert prober_parameters["flow_ids"] == range(1)
-    assert prober_parameters["ttls"] == range(2, 33)
     assert prober_parameters["probe_dst_port"] == 33434
 
+    targets_file = ["8.8.8.8", "8.8.4.4"]
     request["parameters"]["tool"] = "ping"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(parameters)
+    prober_parameters = build_probe_generator_parameters(targets_file, parameters)
 
+    assert prober_parameters["prefixes"] == [
+        ("8.8.8.8", "icmp", [32]),
+        ("8.8.4.4", "icmp", [32]),
+    ]
     assert prober_parameters["prefix_len_v4"] == 32
     assert prober_parameters["prefix_len_v6"] == 128
     assert prober_parameters["flow_ids"] == range(1)
-    assert prober_parameters["ttls"] == [32]
     assert prober_parameters["probe_dst_port"] == 33434
 
     request["parameters"]["tool"] = "test"
     parameters = ParametersDataclass.from_request(request)
     with pytest.raises(ValueError):
-        prober_parameters = build_probe_generator_parameters(parameters)
+        prober_parameters = build_probe_generator_parameters(targets_file, parameters)
