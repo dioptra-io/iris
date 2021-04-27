@@ -14,7 +14,7 @@ def test_get_targets(client, monkeypatch):
                 {
                     "key": "test",
                     "size": 42,
-                    "content": "8.8.8.8\n8.8.4.4",
+                    "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
                     "last_modified": "test",
                     "metadata": None,
                 }
@@ -56,7 +56,7 @@ def test_get_targets_by_key(client, monkeypatch):
             return {
                 "key": "test",
                 "size": 42,
-                "content": "8.8.8.8\n8.8.4.4",
+                "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
                 "last_modified": "test",
                 "metadata": None,
             }
@@ -67,7 +67,7 @@ def test_get_targets_by_key(client, monkeypatch):
     assert response.json() == {
         "key": "test",
         "size": 42,
-        "content": ["8.8.8.8", "8.8.4.4"],
+        "content": ["1.1.1.0/24,icmp,2,32", "2.2.2.0/24,udp,5,20"],
         "last_modified": "test",
     }
 

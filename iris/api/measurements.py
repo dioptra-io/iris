@@ -259,12 +259,22 @@ async def get_measurement_by_uuid(
         elif measurement["state"] == "finished":
             agent_specific["state"] = "finished"
 
+        try:
+            target_file = await request.app.storage.get_file_no_retry(
+                request.app.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user["username"],
+                f"targets__{measurement['uuid']}__{agent_specific['uuid']}",
+            )
+            target_file_content = [c.strip() for c in target_file["content"].split()]
+        except Exception:
+            target_file_content = []
+
         agents.append(
             {
                 "uuid": agent_specific["uuid"],
                 "state": agent_specific["state"],
                 "specific": {
                     "target_file": agent_specific["target_file"],
+                    "target_file_content": target_file_content,
                     "probing_rate": agent_specific["probing_rate"],
                     "tool_parameters": agent_specific["tool_parameters"],
                 },

@@ -577,6 +577,18 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     )
     monkeypatch.setattr(iris.commons.database.DatabaseAgents, "get", get_agents)
 
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test",
+                "size": 42,
+                "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
+                "last_modified": "test",
+                "metadata": None,
+            }
+
+    client.app.storage = FakeStorage()
+
     response = client.get(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {
         "uuid": measurement_uuid,
@@ -588,6 +600,10 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                 "state": "finished",
                 "specific": {
                     "target_file": "test.csv",
+                    "target_file_content": [
+                        "1.1.1.0/24,icmp,2,32",
+                        "2.2.2.0/24,udp,5,20",
+                    ],
                     "probing_rate": 100,
                     "tool_parameters": {
                         "initial_source_port": 24000,
@@ -673,6 +689,18 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     )
     monkeypatch.setattr(iris.commons.database.DatabaseAgents, "get", get_agents)
 
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test",
+                "size": 42,
+                "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
+                "last_modified": "test",
+                "metadata": None,
+            }
+
+    client.app.storage = FakeStorage()
+
     response = client.get(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {
         "uuid": measurement_uuid,
@@ -684,6 +712,10 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                 "state": "waiting",
                 "specific": {
                     "target_file": "test.csv",
+                    "target_file_content": [
+                        "1.1.1.0/24,icmp,2,32",
+                        "2.2.2.0/24,udp,5,20",
+                    ],
                     "probing_rate": None,
                     "tool_parameters": {
                         "initial_source_port": 24000,

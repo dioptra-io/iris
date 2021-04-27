@@ -193,6 +193,19 @@ async def callback(agents_information, measurement_parameters, logger):
             # Register agent in this measurement and specific information
             await database_agents_specific.register(agent)
 
+        logger.info(f"{logger_prefix} Archive target files")
+        for agent in agents:
+            try:
+                await storage.copy_file_to_bucket(
+                    settings.AWS_S3_TARGETS_BUCKET_PREFIX + agent.user,
+                    settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + agent.user,
+                    agent.target_file,
+                    f"targets__{agent.measurement_uuid}__{agent.agent_uuid}",
+                )
+            except Exception:
+                logger.error(f"{logger_prefix} Impossible to archive target files")
+                return
+
         logger.info(f"{logger_prefix} Create bucket in AWS S3")
         try:
             await storage.create_bucket(bucket=measurement_uuid)

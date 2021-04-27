@@ -10,6 +10,7 @@ class CommonSettings(BaseSettings):
     AWS_ACCESS_KEY_ID: str = "minioadmin"
     AWS_SECRET_ACCESS_KEY: str = "minioadmin"
     AWS_REGION_NAME: str = "local"
+    AWS_S3_ARCHIVE_BUCKET_PREFIX = "archive-"
     AWS_S3_TARGETS_BUCKET_PREFIX = "targets-"
     AWS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds

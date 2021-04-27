@@ -209,6 +209,7 @@ class MeasurementAgentSpecific(BaseModel):
     """Information about agent specific information (Response)."""
 
     target_file: str
+    target_file_content: List[str]
     probing_rate: Optional[int]
     tool_parameters: ToolParameters
 

@@ -183,3 +183,14 @@ class Storage(object):
         async with aioboto3.resource("s3", **self.aws_settings) as s3:
             bucket = await s3.Bucket(bucket)
             await bucket.objects.all().delete()
+
+    @fault_tolerant
+    async def copy_file_to_bucket(
+        self, bucket_src, bucket_dest, filename_src, filename_dst
+    ):
+        """Copy a file from a bucket to another."""
+        async with aioboto3.resource("s3", **self.aws_settings) as s3:
+            bucket_destination = await s3.Bucket(bucket_dest)
+            await bucket_destination.copy(
+                {"Bucket": bucket_src, "Key": filename_src}, filename_dst
+            )

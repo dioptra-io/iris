@@ -80,6 +80,10 @@ async def startup_event():
     await app.storage.create_bucket(
         app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + app.settings.API_ADMIN_USERNAME
     )
+    # Create `archive` bucket in AWS S3 for admin user
+    await app.storage.create_bucket(
+        app.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + app.settings.API_ADMIN_USERNAME
+    )
 
 
 @app.on_event("shutdown")
