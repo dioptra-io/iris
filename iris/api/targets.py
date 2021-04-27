@@ -81,11 +81,24 @@ async def verify_targets_file(targets_file):
         return False
     targets_file.file.seek(0)
 
-    # Check if all lines of the file is a valid IPv4 address
+    # Check if all lines of the file is valid
     for line in targets_file.file.readlines():
         try:
-            ipaddress.ip_network(line.decode("utf-8").strip())
-        except ValueError:
+            line_split = line.decode("utf-8").strip().split(",")
+            try:
+                ipaddress.ip_network(line_split[0])
+            except ValueError:
+                return False
+            if line_split[1] not in ["icmp", "udp"]:
+                return False
+            try:
+                if not (0 < int(line_split[2]) <= 255):
+                    return False
+                if not (0 < int(line_split[3]) <= 255):
+                    return False
+            except ValueError:
+                return False
+        except IndexError:
             return False
     targets_file.file.seek(0)
     return True
@@ -113,6 +126,12 @@ async def post_target(
     user: str = Depends(get_current_active_user),
 ):
     """Upload a targets list to object storage."""
+    if not targets_file.filename.endswith(".csv"):
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail="Bad targets file extension (.csv required)",
+        )
+
     is_correct = await verify_targets_file(targets_file)
     if not is_correct:
         raise HTTPException(

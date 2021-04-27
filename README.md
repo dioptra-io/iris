@@ -23,7 +23,7 @@ docker run -d -v $(pwd)/volumes/clickhouse:/var/lib/clickhouse -p 9000:9000
 Then, simply run Iris standalone with a target/prefix list as an input:
 ```bash
 docker run -i --network host -e DATABASE_HOST=127.0.0.1 \
-  dioptraio/iris-standalone diamond-miner < resources/targets/prefixes.txt
+  dioptraio/iris-standalone diamond-miner < prefixes.csv
 ```
 
 **TODO (when public)**

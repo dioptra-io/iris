@@ -161,17 +161,10 @@ class FlowMapper(str, Enum):
 
 
 class ToolParameters(BaseModel):
-    protocol: Protocol = Field(
-        Protocol.icmp,
-        title="Probing transport protocol",
-        description="Must be either udp or icmp.",
-    )
     initial_source_port: int = Field(
         24000, title="Initial source port", gt=0, lt=65_536
     )
     destination_port: int = Field(33434, title="Destination port", gt=0, lt=65_536)
-    min_ttl: int = Field(1, title="Minimum TTL", gt=0, lt=256)
-    max_ttl: int = Field(32, title="Maximum TTL", gt=0, le=32)
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
     flow_mapper: str = Field(FlowMapper.RandomFlowMapper, title="Flow mapper")
     flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(

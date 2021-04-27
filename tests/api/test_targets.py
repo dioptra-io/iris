@@ -104,19 +104,43 @@ async def test_verify_prefixes_list_file():
     assert await verify_targets_file(file_container) is False
 
     # Test with adhequate file
-    file_container.register(b"1.1.1.0/24\n2.2.2.0/24")
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20")
     assert await verify_targets_file(file_container) is True
 
     # Test with inadhequate file
     file_container.register(b"1.1.1.1\ntest\n2.2.2.0/24")
     assert await verify_targets_file(file_container) is False
 
+    # Test with bad protocol
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,tcp,5,20")
+    assert await verify_targets_file(file_container) is False
+
+    # Test with bad ttl
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,test,20")
+    assert await verify_targets_file(file_container) is False
+
+    # Test with bad ttl
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,2,test")
+    assert await verify_targets_file(file_container) is False
+
+    # Test with invalid ttl
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,test,500")
+    assert await verify_targets_file(file_container) is False
+
+    # Test with invalid ttl
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,0,test")
+    assert await verify_targets_file(file_container) is False
+
+    # Test with invalid ttl
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,-5,test")
+    assert await verify_targets_file(file_container) is False
+
     # Test with adhequate file with one trailing lines
-    file_container.register(b"1.1.1.0/24\n2.2.2.0/24\n")
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20\n")
     assert await verify_targets_file(file_container) is True
 
     # Test with adhequate file with multiple trailing lines
-    file_container.register(b"1.1.1.0/24\n2.2.2.0/24\n\n")
+    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20\n\n")
     assert await verify_targets_file(file_container) is False
 
 

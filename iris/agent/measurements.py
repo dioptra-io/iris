@@ -3,6 +3,7 @@
 import aiofiles
 import aiofiles.os
 from diamond_miner import mappers
+from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
 from diamond_miner.generator import probe_generator_by_flow
 from diamond_miner.utilities import format_probe
 
@@ -11,45 +12,61 @@ from iris.commons.dataclasses import ParametersDataclass
 
 
 def build_probe_generator_parameters(targets_list, parameters):
+    flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
+    flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
 
     if parameters.tool in ["diamond-miner", "yarrp"]:
-        flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
-        flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
-        flow_mapper = flow_mapper_cls(**flow_mapper_kwargs)
+        flow_mapper_v4 = flow_mapper_cls(
+            **{**{"prefix_size": DEFAULT_PREFIX_SIZE_V4}, **flow_mapper_kwargs}
+        )
+        flow_mapper_v6 = flow_mapper_cls(
+            **{**{"prefix_size": DEFAULT_PREFIX_SIZE_V6}, **flow_mapper_kwargs}
+        )
+
+        prefixes = []
+        for target in targets_list:
+            target_line = target.split(",")
+            prefixes.append(
+                (
+                    target_line[0],
+                    target_line[1],
+                    range(int(target_line[2]), int(target_line[3]) + 1),
+                )
+            )
 
         return {
-            "prefixes": [
-                (
-                    prefix,
-                    parameters.tool_parameters["protocol"],
-                    range(
-                        parameters.tool_parameters["min_ttl"],
-                        parameters.tool_parameters["max_ttl"] + 1,
-                    ),
-                )
-                for prefix in targets_list
-            ],
+            "prefixes": prefixes,
             "prefix_len_v4": 24,
             "prefix_len_v6": 64,
             "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
             "probe_dst_port": parameters.tool_parameters["destination_port"],
-            "mapper_v4": flow_mapper,
-            "mapper_v6": flow_mapper,
+            "mapper_v4": flow_mapper_v4,
+            "mapper_v6": flow_mapper_v6,
         }
     elif parameters.tool == "ping":
-        return {
-            "prefixes": [
+        flow_mapper_v4 = flow_mapper_cls(**{**{"prefix_size": 1}, **flow_mapper_kwargs})
+        flow_mapper_v6 = flow_mapper_cls(**{**{"prefix_size": 1}, **flow_mapper_kwargs})
+
+        # Only take the max TTL in the TTL range
+        prefixes = []
+        for target in targets_list:
+            target_line = target.split(",")
+            prefixes.append(
                 (
-                    prefix,
-                    parameters.tool_parameters["protocol"],
-                    [parameters.tool_parameters["max_ttl"]],
+                    target_line[0],
+                    target_line[1],
+                    [int(target_line[3])],
                 )
-                for prefix in targets_list
-            ],
+            )
+
+        return {
+            "prefixes": prefixes,
             "prefix_len_v4": 32,
             "prefix_len_v6": 128,
             "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
             "probe_dst_port": parameters.tool_parameters["destination_port"],
+            "mapper_v4": flow_mapper_v4,
+            "mapper_v6": flow_mapper_v6,
         }
     else:
         raise ValueError("Invalid tool name")

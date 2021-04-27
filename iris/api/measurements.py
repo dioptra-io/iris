@@ -68,15 +68,19 @@ async def verify_quota(tool, content, user_quota):
     """Verify that the quota is not exceeded."""
     targets = [p.strip() for p in content.split()]
     if tool in ["diamond-miner", "yarrp"]:
-        n_prefixes = count_prefixes(targets)
+        n_prefixes = count_prefixes([target.split(",")[0] for target in targets])
     elif tool == "ping":
-        n_prefixes = count_prefixes(targets, prefix_len_v4=32, prefix_len_v6=128)
+        n_prefixes = count_prefixes(
+            [target.split(",")[0] for target in targets],
+            prefix_len_v4=32,
+            prefix_len_v6=128,
+        )
     else:
         raise ValueError("Unrecognized tool")
     return n_prefixes <= user_quota
 
 
-async def targets_file_validator(request, tool, user, targets_file):
+async def targets_file_validator(request, tool, user, targets_file, agent_parameters):
     """Validate the targets file input."""
     # Verify that the targets file exists on AWS S3
     try:
@@ -104,10 +108,29 @@ async def targets_file_validator(request, tool, user, targets_file):
             detail="Quota exceeded",
         )
 
+    # Check protocol and min/max TTL
+    for line in [p.strip() for p in targets_file["content"].split()]:
+        line_split = line.split(",")
+        if tool == "ping" and line_split[1] == "udp":
+            # Disabling UDP port scanning abilities
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Tool `ping` only accessible with ICMP protocol",
+            )
 
-def tool_parameters_validator(tool, tool_parameters, agent_parameters):
+        if int(line[2]) < agent_parameters["parameters"]["min_ttl"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Invalid `min_ttl` for agent {agent_parameters['uuid']}"
+                    f" (>= {agent_parameters['parameters']['min_ttl']})"
+                ),
+            )
+
+
+def tool_parameters_validator(tool, tool_parameters):
     """Validate tool parameters."""
-    # Specific checks for `yarrp`
+    # Specific checks for `diamond-miner`
     if tool == "diamond-miner":
         tool_parameters["n_flow_ids"] = 6
 
@@ -120,22 +143,6 @@ def tool_parameters_validator(tool, tool_parameters, agent_parameters):
     if tool == "ping":
         tool_parameters["max_round"] = 1
         tool_parameters["n_flow_ids"] = 1
-
-        # Disabling UDP port scanning abilities
-        if tool_parameters["protocol"] == "udp":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Tool `ping` only accessible with ICMP protocol",
-            )
-
-    if tool_parameters["min_ttl"] < agent_parameters["parameters"]["min_ttl"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                f"Invalid `min_ttl` for agent {agent_parameters['uuid']}"
-                f" (>= {agent_parameters['parameters']['min_ttl']})"
-            ),
-        )
 
     return tool_parameters
 
@@ -156,12 +163,7 @@ async def post_measurement(
             "agents": [
                 {
                     "uuid": "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47",
-                    "targets_file": "prefixes.txt",
-                    "tool_parameters": {
-                        "protocol": "icmp",
-                        "min_ttl": 2,
-                        "max_ttl": 32,
-                    },
+                    "targets_file": "prefixes.csv",
                 }
             ],
             "tags": ["test"],
@@ -184,18 +186,20 @@ async def post_measurement(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
             )
 
-        # Check agent targets file
-        await targets_file_validator(
-            request, measurement.tool, user, agent.targets_file
-        )
-
-        # Check agent parameters
+        # Get agent parameters
         agent.tool_parameters = agent.tool_parameters.dict()
         agent_parameters = [
             agent for agent in active_agents if agent_uuid == agent["uuid"]
         ][0]
+
+        # Check agent targets file
+        await targets_file_validator(
+            request, measurement.tool, user, agent.targets_file, agent_parameters
+        )
+
+        # Check tool parameters
         agent.tool_parameters = tool_parameters_validator(
-            measurement.tool, agent.tool_parameters, agent_parameters
+            measurement.tool, agent.tool_parameters
         )
         agents[agent_uuid] = agent.dict()
         del agents[agent_uuid]["uuid"]

@@ -149,8 +149,8 @@ def test_get_measurements(client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_verify_quota():
-    assert await verify_quota("diamond-miner", "8.8.8.0/23", 2) is True
-    assert await verify_quota("diamond-miner", "8.8.8.0/23", 1) is False
+    assert await verify_quota("diamond-miner", "8.8.8.0/23,icmp,2,32", 2) is True
+    assert await verify_quota("diamond-miner", "8.8.8.0/23,icmp,2,32", 1) is False
     assert await verify_quota("ping", "8.8.8.0/24", 256) is True
     assert await verify_quota("ping", "8.8.8.0/24", 255) is False
 
@@ -159,9 +159,9 @@ def test_post_measurement_diamond_miner(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
-                "content": "8.8.8.0/23",
+                "content": "8.8.8.0/23,icmp,2,32",
                 "last_modified": "test",
             }
 
@@ -179,7 +179,7 @@ def test_post_measurement_diamond_miner(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -191,9 +191,9 @@ def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
-                "content": "8.8.8.0/23",
+                "content": "8.8.8.0/23,icmp,2,32",
                 "last_modified": "test",
             }
 
@@ -223,7 +223,7 @@ def test_post_measurement_diamond_miner_quota_exceeded(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -240,9 +240,9 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatc
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
-                "content": "8.8.8.0/25",
+                "content": "8.8.8.0/25,icmp,2,32",
                 "last_modified": "test",
             }
 
@@ -260,7 +260,7 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(client, monkeypatc
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -272,7 +272,7 @@ def test_post_measurement_yarrp(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
                 "content": "8.8.8.0/23",
                 "last_modified": "test",
@@ -292,7 +292,7 @@ def test_post_measurement_yarrp(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -304,9 +304,9 @@ def test_post_measurement_yarrp_quota_exceeded(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
-                "content": "8.8.8.0/23",
+                "content": "8.8.8.0/23,icmp,2,32",
                 "last_modified": "test",
             }
 
@@ -336,7 +336,7 @@ def test_post_measurement_yarrp_quota_exceeded(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -353,9 +353,9 @@ def test_post_measurement_ping(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
-                "content": "8.8.8.8",
+                "content": "8.8.8.8,icmp,2,32",
                 "last_modified": "test",
             }
 
@@ -373,10 +373,7 @@ def test_post_measurement_ping(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
-                    "tool_parameters": {
-                        "protocol": "icmp",
-                    },
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -388,9 +385,9 @@ def test_post_measurement_ping_udp(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
-                "content": "8.8.8.8",
+                "content": "8.8.8.0/23,udp,2,32",
                 "last_modified": "test",
             }
 
@@ -408,10 +405,7 @@ def test_post_measurement_ping_udp(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
-                    "tool_parameters": {
-                        "protocol": "udp",
-                    },
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -423,9 +417,9 @@ def test_post_measurement_ping_quota_exceeded(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
-                "content": "8.8.8.0/24",
+                "content": "8.8.8.0/24,icmp,2,32",
                 "last_modified": "test",
             }
 
@@ -455,7 +449,7 @@ def test_post_measurement_ping_quota_exceeded(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -472,7 +466,7 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
-                "key": "test.txt",
+                "key": "test.csv",
                 "size": 42,
                 "content": "8.8.8.0/23",
                 "last_modified": "test",
@@ -492,7 +486,7 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776550",
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -516,7 +510,7 @@ def test_post_measurement_targets_file_not_found(client, monkeypatch):
             "agents": [
                 {
                     "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                 }
             ],
         },
@@ -533,14 +527,11 @@ def test_get_measurement_by_uuid(client, monkeypatch):
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
-        "targets_file": "test.txt",
+        "targets_file": "test.csv",
         "probing_rate": 100,
         "tool_parameters": {
-            "protocol": "udp",
             "initial_source_port": 24000,
             "destination_port": 34334,
-            "min_ttl": 2,
-            "max_ttl": 30,
             "max_round": 5,
             "flow_mapper": "IntervalFlowMapper",
             "flow_mapper_kwargs": {},
@@ -596,14 +587,11 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                 "uuid": agent["uuid"],
                 "state": "finished",
                 "specific": {
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                     "probing_rate": 100,
                     "tool_parameters": {
-                        "protocol": "udp",
                         "initial_source_port": 24000,
                         "destination_port": 34334,
-                        "min_ttl": 2,
-                        "max_ttl": 30,
                         "max_round": 5,
                         "flow_mapper": "IntervalFlowMapper",
                         "flow_mapper_kwargs": {},
@@ -629,14 +617,11 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
-        "targets_file": "test.txt",
+        "targets_file": "test.csv",
         "probing_rate": None,
         "tool_parameters": {
-            "protocol": "udp",
             "initial_source_port": 24000,
             "destination_port": 34334,
-            "min_ttl": 2,
-            "max_ttl": 30,
             "max_round": 5,
             "flow_mapper": "IntervalFlowMapper",
             "flow_mapper_kwargs": {},
@@ -698,14 +683,11 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                 "uuid": agent["uuid"],
                 "state": "waiting",
                 "specific": {
-                    "targets_file": "test.txt",
+                    "targets_file": "test.csv",
                     "probing_rate": None,
                     "tool_parameters": {
-                        "protocol": "udp",
                         "initial_source_port": 24000,
                         "destination_port": 34334,
-                        "min_ttl": 2,
-                        "max_ttl": 30,
                         "max_round": 5,
                         "flow_mapper": "IntervalFlowMapper",
                         "flow_mapper_kwargs": {},

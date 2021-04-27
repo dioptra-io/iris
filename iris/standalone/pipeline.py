@@ -38,8 +38,6 @@ def create_request(
 ) -> dict:
     tool_parameters = tool_parameters.dict()
     tool_parameters["n_flow_ids"] = 6 if tool == "diamond-miner" else 1
-    print(tool_parameters["n_flow_ids"])
-    tool_parameters["protocol"] = tool_parameters["protocol"].value
     return {
         "measurement_uuid": measurement_uuid,
         "username": "standalone",
@@ -125,7 +123,7 @@ async def pipeline(
     )
 
     # Create a targets file
-    targets_file: Path = agent_settings.AGENT_TARGETS_DIR_PATH / "prefixes.txt"
+    targets_file: Path = agent_settings.AGENT_TARGETS_DIR_PATH / "prefixes.csv"
     async with aiofiles.open(targets_file, mode="w") as fd:
         for prefix in prefixes:
             await fd.write(prefix)

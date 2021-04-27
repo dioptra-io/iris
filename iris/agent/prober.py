@@ -43,10 +43,6 @@ async def probe(
         + str(results_filepath)
         + " --probing-rate "
         + str(probing_rate)
-        + " --filter-min-ttl="
-        + str(parameters.tool_parameters["min_ttl"])
-        + " --filter-max-ttl="
-        + str(parameters.tool_parameters["max_ttl"])
         + " --rate-limiting-method="
         + str(settings.AGENT_PROBER_RATE_LIMITING_METHOD.value)
         + " --meta-round="

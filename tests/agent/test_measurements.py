@@ -15,17 +15,14 @@ request = {
         "min_ttl": 1,
         "max_probing_rate": 100,
         "probing_rate": 100,
-        "targets_file": "prefixes.txt",
+        "targets_file": "prefixes.csv",
         "tool": "diamond-miner",
         "tool_parameters": {
-            "protocol": "icmp",
             "initial_source_port": 24000,
             "destination_port": 33434,
-            "min_ttl": 2,
-            "max_ttl": 32,
             "max_round": 10,
             "n_flow_ids": 6,
-            "flow_mapper": "IntervalFlowMapper",
+            "flow_mapper": "SequentialFlowMapper",
             "flow_mapper_kwargs": None,
         },
         "tags": ["test"],
@@ -39,7 +36,7 @@ request = {
 
 def test_build_probe_generator_parameters():
 
-    targets_file = ["8.8.8.0/24", "8.8.4.0/24"]
+    targets_file = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
     parameters = ParametersDataclass.from_request(request)
     prober_parameters = build_probe_generator_parameters(targets_file, parameters)
 
@@ -66,7 +63,7 @@ def test_build_probe_generator_parameters():
     assert prober_parameters["flow_ids"] == range(1)
     assert prober_parameters["probe_dst_port"] == 33434
 
-    targets_file = ["8.8.8.8", "8.8.4.4"]
+    targets_file = ["8.8.8.8,icmp,2,32", "8.8.4.4,icmp,2,32"]
     request["parameters"]["tool"] = "ping"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)

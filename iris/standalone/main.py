@@ -6,7 +6,7 @@ from typing import List, Optional
 
 import typer
 
-from iris.api.schemas import Protocol, Tool, ToolParameters
+from iris.api.schemas import Tool, ToolParameters
 from iris.standalone import default_parameters
 from iris.standalone.display import display_results
 from iris.standalone.logger import create_logger
@@ -27,13 +27,10 @@ def coroutine(f):
 @coroutine
 async def diamond_miner(
     probing_rate: int = typer.Argument(1000),
-    protocol: Optional[Protocol] = typer.Option(default_parameters.protocol),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
     ),
     destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
-    min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
-    max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
     max_round: Optional[int] = typer.Option(default_parameters.max_round),
     tag: Optional[List[str]] = typer.Option(["standalone"]),
     verbose: bool = typer.Option(False, "--verbose"),
@@ -47,11 +44,8 @@ async def diamond_miner(
     tool: Tool = Tool("diamond-miner")
     tool_parameters = ToolParameters(
         **{
-            "protocol": protocol,
             "initial_source_port": initial_source_port,
             "destination_port": destination_port,
-            "min_ttl": min_ttl,
-            "max_ttl": max_ttl,
             "max_round": max_round,
         }
     )
@@ -70,13 +64,10 @@ async def diamond_miner(
 @coroutine
 async def yarrp(
     probing_rate: int = typer.Argument(1000),
-    protocol: Optional[Protocol] = typer.Option(default_parameters.protocol),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
     ),
     destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
-    min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
-    max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
     tag: Optional[List[str]] = typer.Option(["standalone"]),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
@@ -89,11 +80,8 @@ async def yarrp(
     tool: Tool = Tool("yarrp")
     tool_parameters = ToolParameters(
         **{
-            "protocol": protocol,
             "initial_source_port": initial_source_port,
             "destination_port": destination_port,
-            "min_ttl": min_ttl,
-            "max_ttl": max_ttl,
             "max_round": 1,
         }
     )
@@ -112,13 +100,10 @@ async def yarrp(
 @coroutine
 async def ping(
     probing_rate: int = typer.Argument(1000),
-    protocol: Optional[Protocol] = typer.Option(default_parameters.protocol),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
     ),
     destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
-    min_ttl: Optional[int] = typer.Option(default_parameters.min_ttl),
-    max_ttl: Optional[int] = typer.Option(default_parameters.max_ttl),
     tag: Optional[List[str]] = typer.Option(["standalone"]),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
@@ -131,11 +116,8 @@ async def ping(
     tool = Tool("ping")
     tool_parameters = ToolParameters(
         **{
-            "protocol": protocol,
             "initial_source_port": initial_source_port,
             "destination_port": destination_port,
-            "min_ttl": min_ttl,
-            "max_ttl": max_ttl,
             "max_round": 1,
         }
     )
