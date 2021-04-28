@@ -44,4 +44,10 @@ def create_logger(settings, tags: Optional[dict] = None):
     logger_dm.addHandler(stream_handler)
     logger_dm.addHandler(loki_handler)
 
+    # Caracal logger
+    logger_ca = logging.getLogger("caracal")
+    logger_ca.setLevel(logging.DEBUG)
+    logger_ca.addHandler(stream_handler)
+    logger_ca.addHandler(loki_handler)
+
     return logger

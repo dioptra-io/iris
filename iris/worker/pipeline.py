@@ -5,8 +5,8 @@ import asyncio
 from aiofiles import os as aios
 from clickhouse_driver import Client
 from diamond_miner import mappers
-from diamond_miner.config import Config
-from diamond_miner.next_round import compute_next_round
+from diamond_miner.rounds.mda import mda_probes
+from diamond_miner.subsets import subsets_for_table
 from diamond_miner.utilities import format_probe
 
 from iris.commons.database import DatabaseMeasurementResults, get_session
@@ -21,22 +21,18 @@ def sync_compute_next_round(
     settings, table_name, round_number, flow_mapper, parameters, next_round_csv_filepath
 ):
     client = Client(host=settings.DATABASE_HOST)
-    probes_gen = compute_next_round(
+    probes_gen = mda_probes(
         client=client,
         table=table_name,
         round_=round_number,
-        config=Config(
-            adaptive_eps=True,
-            far_ttl_min=20,
-            far_ttl_max=40,
-            mapper=flow_mapper,
-            max_replies_per_subset=64_000_000,
-            probe_src_addr=parameters.ip_address,
-            probe_src_port=parameters.tool_parameters["initial_source_port"],
-            probe_dst_port=parameters.tool_parameters["destination_port"],
-            probe_far_ttls=False,
-            skip_unpopulated_ttls=True,
-        ),
+        mapper_v4=flow_mapper,
+        mapper_v6=flow_mapper,  # TODO: mapper v6
+        probe_src_addr=parameters.ip_address,
+        probe_src_port=parameters.tool_parameters["initial_source_port"],
+        probe_dst_port=parameters.tool_parameters["destination_port"],
+        adaptive_eps=True,
+        skip_unpopulated_ttls=True,
+        subsets=subsets_for_table(client, table_name),
     )
 
     with open(next_round_csv_filepath, "w") as fout:

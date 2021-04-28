@@ -679,6 +679,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "pycaracal"
+version = "0.4.9"
+description = ""
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[[package]]
 name = "pycodestyle"
 version = "2.7.0"
 description = "Python style guide checker"
@@ -1185,7 +1193,7 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "687af73d288539bb7064b3883b07c1046576dfbf39b934f8924d0e0b80b41981"
+content-hash = "62b562eff91a552f4cb27275bc31075213b83199b5f11dd575d8a30fa0da354b"
 
 [metadata.files]
 aioboto3 = [
@@ -1781,6 +1789,12 @@ pyasn1 = [
     {file = "pyasn1-0.4.8-py3.6.egg", hash = "sha256:014c0e9976956a08139dc0712ae195324a75e142284d5f87f1a87ee1b068a359"},
     {file = "pyasn1-0.4.8-py3.7.egg", hash = "sha256:99fcc3c8d804d1bc6d9a099921e39d827026409a58f2a720dcdb89374ea0c776"},
     {file = "pyasn1-0.4.8.tar.gz", hash = "sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba"},
+]
+pycaracal = [
+    {file = "pycaracal-0.4.9-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:a1997d8204ab9c8173b03575ca5776b77f22ca6e132e1c31e2b0fe493ebf2038"},
+    {file = "pycaracal-0.4.9-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:dc3db887157dbfb6e357b74d8fca54ce62939c8b5f53c05b30bac0099c8e684c"},
+    {file = "pycaracal-0.4.9-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:7a12ee3b2523a619be1bbedb2e6dbe3f042465428f1d0e090adf1678a0d15c02"},
+    {file = "pycaracal-0.4.9.tar.gz", hash = "sha256:88ff55b3456c6a28dbc89818073c4cbeb8bc144145f96689e5f6a4d7f8f5269f"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.7.0-py2.py3-none-any.whl", hash = "sha256:514f76d918fcc0b55c6680472f0a37970994e07bbb80725808c17089be302068"},

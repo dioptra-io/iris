@@ -92,7 +92,7 @@ async def target_file_validator(request, tool, user, target_file, agent_paramete
         )
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Target file not found"
         )
 
     # Check if the user respects his quota

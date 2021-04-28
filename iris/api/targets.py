@@ -125,7 +125,7 @@ async def upload_target_file(storage, target_bucket, target_file):
     description="""
     Each line of the file must be like `target,protocol,min_ttl,max_ttl`
     where the target is a IPv4/IPv6 prefix or IPv4/IPv6 address.
-    The prococol can be `icmp` or `udp`.
+    The prococol can be `icmp`, `icmp6` or `udp`.
     """,
 )
 async def post_target(
