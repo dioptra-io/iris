@@ -274,7 +274,7 @@ def test_post_measurement_yarrp(client, monkeypatch):
             return {
                 "key": "test.csv",
                 "size": 42,
-                "content": "8.8.8.0/23",
+                "content": "8.8.8.0/23,icmp,2,32",
                 "last_modified": "test",
             }
 

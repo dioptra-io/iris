@@ -85,21 +85,25 @@ async def verify_target_file(target_file):
     for line in target_file.file.readlines():
         try:
             line_split = line.decode("utf-8").strip().split(",")
-            try:
-                ipaddress.ip_network(line_split[0])
-            except ValueError:
+
+            # Check if the prefix is valid
+            ipaddress.ip_network(line_split[0])
+
+            # Check if the protocol is supported
+            if line_split[1] not in ["icmp", "icmp6", "udp"]:
                 return False
-            if line_split[1] not in ["icmp", "udp"]:
+
+            # Check the min TTL
+            if not (0 < int(line_split[2]) <= 255):
                 return False
-            try:
-                if not (0 < int(line_split[2]) <= 255):
-                    return False
-                if not (0 < int(line_split[3]) <= 255):
-                    return False
-            except ValueError:
+
+            # Check the max TTL
+            if not (0 < int(line_split[3]) <= 255):
                 return False
-        except IndexError:
+
+        except Exception:
             return False
+
     target_file.file.seek(0)
     return True
 

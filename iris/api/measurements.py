@@ -120,7 +120,7 @@ async def target_file_validator(request, tool, user, target_file, agent_paramete
                 detail="Tool `ping` only accessible with ICMP protocol",
             )
 
-        if int(line[2]) < agent_parameters["parameters"]["min_ttl"]:
+        if int(line_split[2]) < agent_parameters["parameters"]["min_ttl"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
