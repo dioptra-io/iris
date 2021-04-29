@@ -28,16 +28,18 @@ rich = "^10.1.0"
 pycaracal = "^0.4.9"
 
 [tool.poetry.dev-dependencies]
-black = {version = "^20.8b1", allow-prereleases = true}
+black = {version = "^21.4b2", allow-prereleases = true}
+boto3-stubs = "^1.17.60"
 bumpversion = "^0.6.0"
 click = "^7.1.2"
 coverage = "^5.2.1"
 flake8 = "^3.8.3"
-mypy = "^0.782"
+mypy = "^0.812"
 pre-commit = "^2.11.1"
 pytest = "^6.0.0"
-pytest-asyncio = "^0.14.0"
+pytest-asyncio = "^0.15"
 pytest-cov = "^2.10.0"
+types-aiofiles = "^0.1.2"
 
 [tool.pytest.ini_options]
 addopts = "--ignore volumes --cov=iris --cov-report term-missing -vvs"
@@ -48,8 +50,8 @@ filterwarnings = [
 ]
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 iris-standalone = 'iris.standalone.main:app'

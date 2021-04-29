@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import aiofiles
 
@@ -110,7 +110,7 @@ async def pipeline(
     tool_parameters: ToolParameters,
     tags: List[str],
     logger,
-) -> str:
+) -> Dict:
     """Measurement pipeline."""
     # Get all settings
     agent_settings = AgentSettings()

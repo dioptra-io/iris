@@ -1,6 +1,7 @@
 """Targets operations."""
 
 import ipaddress
+from typing import Dict
 
 from fastapi import (
     APIRouter,
@@ -34,7 +35,7 @@ async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Get all target lists information."""
     try:
@@ -56,7 +57,7 @@ async def get_targets(
     summary="Get target list information by key.",
 )
 async def get_target_by_key(
-    request: Request, key: str, user: str = Depends(get_current_active_user)
+    request: Request, key: str, user: Dict = Depends(get_current_active_user)
 ):
     """"Get a target list information by key."""
     try:
@@ -132,7 +133,7 @@ async def post_target(
     request: Request,
     background_tasks: BackgroundTasks,
     target_file: UploadFile = File(...),
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Upload a target list to object storage."""
     if not target_file.filename.endswith(".csv"):
@@ -162,7 +163,7 @@ async def post_target(
     summary="Delete a target list from object storage.",
 )
 async def delete_target_by_key(
-    request: Request, key: str, user: str = Depends(get_current_active_user)
+    request: Request, key: str, user: Dict = Depends(get_current_active_user)
 ):
     """Delete a target list from object storage."""
     try:

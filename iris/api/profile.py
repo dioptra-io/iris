@@ -1,6 +1,7 @@
 """Profile operations."""
 
 from datetime import timedelta
+from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -60,7 +61,7 @@ async def get_token(
 )
 async def get_profile(
     request: Request,
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Get profile information."""
     user["ripe"] = {
@@ -79,7 +80,7 @@ async def get_profile(
 async def put_ripe_profile(
     request: Request,
     ripe_info: ProfileRIPEPutBody,
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     session = get_session(request.app.settings)
     users_database = DatabaseUsers(session, request.app.settings, request.app.logger)

@@ -32,7 +32,7 @@ async def diamond_miner(
     ),
     destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
     max_round: Optional[int] = typer.Option(default_parameters.max_round),
-    tag: Optional[List[str]] = typer.Option(["standalone"]),
+    tag: List[str] = typer.Option(["standalone"]),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """Diamond-miner command."""

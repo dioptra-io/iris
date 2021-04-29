@@ -1,6 +1,7 @@
 """Measurements operations."""
 
 from datetime import datetime
+from typing import Dict
 from uuid import UUID, uuid4
 
 from diamond_miner.generator import count_prefixes
@@ -37,7 +38,7 @@ async def get_measurements(
     tag: str = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Get all measurements."""
     session = get_session(request.app.settings)
@@ -171,7 +172,7 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Request a measurement."""
 
@@ -229,7 +230,7 @@ async def post_measurement(
 async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: UUID,
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Get measurement information by uuid."""
     session = get_session(request.app.settings)
@@ -301,7 +302,7 @@ async def get_measurement_by_uuid(
 async def delete_measurement(
     request: Request,
     measurement_uuid: UUID,
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Cancel a measurement."""
     session = get_session(request.app.settings)
@@ -336,7 +337,7 @@ async def get_measurement_results(
     agent_uuid: UUID,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Get measurement results."""
 
