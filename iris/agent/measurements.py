@@ -94,17 +94,17 @@ async def measurement(settings, request, storage, logger, redis=None):
     results_filepath = str(measurement_results_path / results_filename)
 
     gen_parameters = None
-
     target_filepath = None
+
     probes_filepath = None
 
     if request["round"] == 1:
         # Round = 1
-        logger.info(f"{logger_prefix} Download targets/prefixes file locally")
-        target_filename = parameters.target_file
+        logger.info(f"{logger_prefix} Download prefixes file locally")
+        target_filename = f"targets__{measurement_uuid}__{agent_uuid}.csv"
         target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
         await storage.download_file(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + request["username"],
+            settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + request["username"],
             target_filename,
             target_filepath,
         )

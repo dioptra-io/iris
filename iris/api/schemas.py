@@ -250,13 +250,14 @@ class PacketResponse(BaseModel):
     probe_dst_port: int
     probe_ttl_l3: int
     probe_ttl_l4: int
+    probe_protocol: int
     reply_src_addr: str
     reply_protocol: int
     reply_icmp_type: int
     reply_icmp_code: int
     reply_ttl: int
-    reply_mpls_labels: List[int]
     reply_size: int
+    reply_mpls_labels: List[int]
     rtt: float
     round: int
 

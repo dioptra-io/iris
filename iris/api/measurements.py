@@ -262,7 +262,7 @@ async def get_measurement_by_uuid(
         try:
             target_file = await request.app.storage.get_file_no_retry(
                 request.app.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user["username"],
-                f"targets__{measurement['uuid']}__{agent_specific['uuid']}",
+                f"targets__{measurement['uuid']}__{agent_specific['uuid']}.csv",
             )
             target_file_content = [c.strip() for c in target_file["content"].split()]
         except Exception:

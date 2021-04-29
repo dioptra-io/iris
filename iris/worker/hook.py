@@ -200,7 +200,7 @@ async def callback(agents_information, measurement_parameters, logger):
                     settings.AWS_S3_TARGETS_BUCKET_PREFIX + agent.user,
                     settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + agent.user,
                     agent.target_file,
-                    f"targets__{agent.measurement_uuid}__{agent.agent_uuid}",
+                    f"targets__{agent.measurement_uuid}__{agent.agent_uuid}.csv",
                 )
             except Exception:
                 logger.error(f"{logger_prefix} Impossible to archive target files")
