@@ -94,6 +94,8 @@ async def measurement(settings, request, storage, logger, redis=None):
     results_filepath = str(measurement_results_path / results_filename)
 
     gen_parameters = None
+
+    target_filepath = None
     probes_filepath = None
 
     if request["round"] == 1:
