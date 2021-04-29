@@ -516,7 +516,6 @@ def test_post_measurement_target_file_not_found(client, monkeypatch):
         },
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "File object not found"}
 
 
 # --- GET /api/measurements/{measurement_uuid} ---

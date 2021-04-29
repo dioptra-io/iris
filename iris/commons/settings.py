@@ -1,3 +1,5 @@
+import logging
+
 from pydantic import BaseSettings
 
 
@@ -54,3 +56,6 @@ class CommonSettings(BaseSettings):
     LOKI_PASSWORD: str = "admin"
     LOKI_VERSION: str = "1"
     LOKI_QUEUE_SIZE: int = 1000
+    LOKI_LOGGING_LEVEL: int = logging.INFO
+
+    STREAM_LOGGING_LEVEL: int = logging.DEBUG

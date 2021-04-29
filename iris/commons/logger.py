@@ -18,7 +18,7 @@ def create_logger(settings, tags: Optional[dict] = None):
         "%(message)s"
     )
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setLevel(settings.STREAM_LOGGING_LEVEL)
     stream_handler.setFormatter(formatter)
 
     # Loki handler
@@ -29,24 +29,24 @@ def create_logger(settings, tags: Optional[dict] = None):
         auth=(settings.LOKI_USER, settings.LOKI_PASSWORD),
         tags=tags,
     )
-    loki_handler.setLevel(logging.INFO)
+    loki_handler.setLevel(settings.LOKI_LOGGING_LEVEL)
 
     # Iris logger
     logger = logging.getLogger(settings.SETTINGS_CLASS)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(settings.STREAM_LOGGING_LEVEL)
     logger.addHandler(stream_handler)
     logger.addHandler(loki_handler)
     logger.propagate = False
 
     # Diamond-Miner logger
     logger_dm = logging.getLogger("diamond-miner")
-    logger_dm.setLevel(logging.DEBUG)
+    logger_dm.setLevel(settings.STREAM_LOGGING_LEVEL)
     logger_dm.addHandler(stream_handler)
     logger_dm.addHandler(loki_handler)
 
     # Caracal logger
     logger_ca = logging.getLogger("caracal")
-    logger_ca.setLevel(logging.DEBUG)
+    logger_ca.setLevel(settings.STREAM_LOGGING_LEVEL)
     logger_ca.addHandler(stream_handler)
     logger_ca.addHandler(loki_handler)
 
