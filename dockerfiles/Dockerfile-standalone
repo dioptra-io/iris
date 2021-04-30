@@ -57,6 +57,8 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
+COPY poetry.lock poetry.lock
+
 RUN poetry install --no-dev \
     && rm -rf /root/.cache/*
 

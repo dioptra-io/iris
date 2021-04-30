@@ -45,7 +45,7 @@ async def compute_next_round(
         probe_dst_port=parameters.tool_parameters["destination_port"],
         adaptive_eps=True,
         skip_unpopulated_ttls=True,
-        subsets=subsets_for_table(client, table_name),
+        subsets=await subsets_for_table(client, table_name),
     )
 
     async with aiofiles.open(next_round_csv_filepath, "w") as fout:
