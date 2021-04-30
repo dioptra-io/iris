@@ -33,8 +33,6 @@ RUN mkdir results
 COPY statics/excluded_prefixes statics/excluded_prefixes
 COPY statics/index.html statics/index.html
 
-COPY --from=dioptraio/caracal:0.4.10 /usr/bin/caracal /usr/bin/caracal
-
 EXPOSE 80
 
 CMD ["sh", "-c", "python3 -m http.server -d statics/ 80 & python3 -u main.py"]
