@@ -1,13 +1,13 @@
 """Measurement interface."""
 
+import multiprocessing
+
 import aiofiles
 import aiofiles.os
 from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
-from diamond_miner.generator import probe_generator_by_flow
-from diamond_miner.utilities import format_probe
 
-from iris.agent.prober import probe, stopper
+from iris.agent.prober import probe, watcher
 from iris.commons.dataclasses import ParametersDataclass
 
 
@@ -93,27 +93,26 @@ async def measurement(settings, request, storage, logger, redis=None):
     results_filename = f"{agent_uuid}_results_{request['round']}.csv"
     results_filepath = str(measurement_results_path / results_filename)
 
-    stdin = None
+    gen_parameters = None
     target_filepath = None
+
     probes_filepath = None
 
     if request["round"] == 1:
         # Round = 1
-        logger.info(f"{logger_prefix} Download targets/prefixes file locally")
-        target_filename = parameters.target_file
+        logger.info(f"{logger_prefix} Download prefixes file locally")
+        target_filename = f"targets__{measurement_uuid}__{agent_uuid}.csv"
         target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
         await storage.download_file(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + request["username"],
+            settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + request["username"],
             target_filename,
             target_filepath,
         )
         async with aiofiles.open(target_filepath) as fd:
             target_list = await fd.readlines()
 
-        gen = probe_generator_by_flow(
-            **build_probe_generator_parameters(target_list, parameters)
-        )
-        stdin = (format_probe(*x) for x in gen)
+        gen_parameters = build_probe_generator_parameters(target_list, parameters)
+
     else:
         # Round > 1
         logger.info(f"{logger_prefix} Download CSV probe file locally")
@@ -127,23 +126,26 @@ async def measurement(settings, request, storage, logger, redis=None):
     logger.info(f"{logger_prefix} Tool Parameters : {parameters.tool_parameters}")
     logger.info(f"{logger_prefix} Max Probing Rate : {parameters.probing_rate}")
 
-    if redis:
-        stopper_func = stopper(
-            settings, redis, measurement_uuid, logger, logger_prefix=logger_prefix + " "
-        )
-    else:
-        stopper_func = None
+    prober_process = multiprocessing.Process(
+        target=probe,
+        args=(
+            settings,
+            results_filepath,
+            request["round"],
+            parameters.probing_rate,
+            gen_parameters,
+            probes_filepath,
+        ),
+    )
 
-    is_not_canceled = await probe(
+    prober_process.start()
+    is_not_canceled = await watcher(
+        prober_process,
         settings,
-        parameters,
-        request["round"],
-        results_filepath,
+        measurement_uuid,
         logger,
-        stdin=stdin,
-        probes_filepath=probes_filepath,
-        stopper=stopper_func,
-        logger_prefix=logger_prefix + " ",
+        logger_prefix=logger_prefix,
+        redis=redis,
     )
 
     if is_not_canceled:

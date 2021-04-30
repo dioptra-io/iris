@@ -17,10 +17,13 @@ class ParametersDataclass(object):
         }
 
     def __getattr__(self, parameter):
+        exception = AttributeError(f"`{parameter}` not found in dataclass")
+        if parameter == "_dataclass":
+            raise exception
         try:
             return self._dataclass[parameter]
         except KeyError:
-            raise AttributeError(f"`{parameter}` not found in dataclass")
+            raise exception
 
     @staticmethod
     def from_request(request):

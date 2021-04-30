@@ -21,6 +21,8 @@ RUN pip3 install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
+COPY poetry.lock poetry.lock
+
 RUN poetry install --no-root --no-dev \
     && rm -rf /root/.cache/*
 
@@ -32,8 +34,6 @@ RUN mkdir results
 
 COPY statics/excluded_prefixes statics/excluded_prefixes
 COPY statics/index.html statics/index.html
-
-COPY --from=dioptraio/caracal:0.4.10 /usr/bin/caracal /usr/bin/caracal
 
 EXPOSE 80
 

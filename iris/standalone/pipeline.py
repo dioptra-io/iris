@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import aiofiles
 
@@ -110,11 +110,14 @@ async def pipeline(
     tool_parameters: ToolParameters,
     tags: List[str],
     logger,
-) -> str:
+) -> Dict:
     """Measurement pipeline."""
     # Get all settings
     agent_settings = AgentSettings()
     worker_settings = WorkerSettings()
+
+    measurement_uuid: str = str(uuid.uuid4())
+    start_time = datetime.now()
 
     # Create the database if not exists
     session = get_session(agent_settings)
@@ -123,7 +126,10 @@ async def pipeline(
     )
 
     # Create a target file
-    target_file: Path = agent_settings.AGENT_TARGETS_DIR_PATH / "prefixes.csv"
+    target_file: Path = (
+        agent_settings.AGENT_TARGETS_DIR_PATH
+        / f"targets__{measurement_uuid}__{agent_settings.AGENT_UUID}.csv"
+    )
     async with aiofiles.open(target_file, mode="w") as fd:
         for prefix in prefixes:
             await fd.write(prefix)
@@ -131,13 +137,10 @@ async def pipeline(
     # Copy the target file to the local storage
     storage = LocalStorage(agent_settings.AGENT_TARGETS_DIR_PATH / "local_storage")
     await storage.upload_file(
-        agent_settings.AWS_S3_TARGETS_BUCKET_PREFIX + "standalone",
+        agent_settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + "standalone",
         target_file.name,
         target_file,
     )
-
-    measurement_uuid: str = str(uuid.uuid4())
-    start_time = datetime.now()
 
     shuffled_next_round_csv_filepath: Optional[str] = None
     for round_number in range(1, tool_parameters.max_round + 1):

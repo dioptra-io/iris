@@ -1,5 +1,6 @@
 """Agents settings."""
 
+import logging
 from enum import Enum
 from pathlib import Path
 from uuid import uuid4
@@ -19,7 +20,7 @@ class AgentSettings(CommonSettings):
 
     SETTINGS_CLASS = "agent"
 
-    AGENT_PROBER_PATH: Path = Path("/usr/bin/caracal")
+    AGENT_PROBER_LOGGING_LEVEL: int = logging.INFO
     AGENT_PROBER_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
     AGENT_PROBER_RATE_LIMITING_METHOD: RateLimitingMethod = RateLimitingMethod.auto
 

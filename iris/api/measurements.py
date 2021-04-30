@@ -1,6 +1,7 @@
 """Measurements operations."""
 
 from datetime import datetime
+from typing import Dict
 from uuid import UUID, uuid4
 
 from diamond_miner.generator import count_prefixes
@@ -37,7 +38,7 @@ async def get_measurements(
     tag: str = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Get all measurements."""
     session = get_session(request.app.settings)
@@ -92,7 +93,7 @@ async def target_file_validator(request, tool, user, target_file, agent_paramete
         )
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Target file not found"
         )
 
     # Check if the user respects his quota
@@ -171,7 +172,7 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Request a measurement."""
 
@@ -229,7 +230,7 @@ async def post_measurement(
 async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: UUID,
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Get measurement information by uuid."""
     session = get_session(request.app.settings)
@@ -262,7 +263,7 @@ async def get_measurement_by_uuid(
         try:
             target_file = await request.app.storage.get_file_no_retry(
                 request.app.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user["username"],
-                f"targets__{measurement['uuid']}__{agent_specific['uuid']}",
+                f"targets__{measurement['uuid']}__{agent_specific['uuid']}.csv",
             )
             target_file_content = [c.strip() for c in target_file["content"].split()]
         except Exception:
@@ -301,7 +302,7 @@ async def get_measurement_by_uuid(
 async def delete_measurement(
     request: Request,
     measurement_uuid: UUID,
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Cancel a measurement."""
     session = get_session(request.app.settings)
@@ -336,7 +337,7 @@ async def get_measurement_results(
     agent_uuid: UUID,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: str = Depends(get_current_active_user),
+    user: Dict = Depends(get_current_active_user),
 ):
     """Get measurement results."""
 
