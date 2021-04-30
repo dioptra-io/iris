@@ -46,7 +46,6 @@ RUN mkdir results
 ENV MEMORY 24
 
 COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf
-COPY --from=dioptraio/caracal:0.4.10 /usr/bin/caracal /usr/bin/caracal
 
 RUN mkdir vendors
 COPY vendors/diamond-miner vendors/diamond-miner

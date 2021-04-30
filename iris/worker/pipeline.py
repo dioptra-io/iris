@@ -1,10 +1,8 @@
 """Measurement pipeline."""
 
-import asyncio
-from concurrent.futures import ProcessPoolExecutor
-
+import aiofiles
+from aioch import Client
 from aiofiles import os as aios
-from clickhouse_driver import Client
 from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
 from diamond_miner.format import format_probe
@@ -19,14 +17,14 @@ def extract_round_number(filename):
     return int(filename.split("_")[-1].split(".")[0])
 
 
-def sync_compute_next_round(
+async def compute_next_round(
     settings,
     table_name,
     round_number,
     parameters,
     next_round_csv_filepath,
 ):
-    """Compute the next round synchronously."""
+    """Compute the next round."""
     flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
     flow_mapper_v4 = flow_mapper_cls(
@@ -50,9 +48,9 @@ def sync_compute_next_round(
         subsets=subsets_for_table(client, table_name),
     )
 
-    with open(next_round_csv_filepath, "w") as fout:
-        for probes_specs in probes_gen:
-            fout.write(
+    async with aiofiles.open(next_round_csv_filepath, "w") as fout:
+        async for probes_specs in probes_gen:
+            await fout.write(
                 "".join(("\n".join(format_probe(*spec) for spec in probes_specs), "\n"))
             )
 
@@ -110,15 +108,8 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"
     next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
 
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(
-        ProcessPoolExecutor(),
-        sync_compute_next_round,
-        settings,
-        table_name,
-        round_number,
-        parameters,
-        next_round_csv_filepath,
+    await compute_next_round(
+        settings, table_name, round_number, parameters, next_round_csv_filepath
     )
 
     shuffled_next_round_csv_filename = (
