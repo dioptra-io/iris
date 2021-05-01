@@ -98,8 +98,11 @@ async def measurement(settings, request, storage, logger, redis=None):
 
     probes_filepath = None
 
-    if request["round"] == 1:
+    is_custom_probes_file = parameters.target_file.endswith(".probes")
+
+    if request["round"] == 1 and not is_custom_probes_file:
         # Round = 1
+        # No custom probe file uploaded in advance
         logger.info(f"{logger_prefix} Download prefixes file locally")
         target_filename = f"targets__{measurement_uuid}__{agent_uuid}.csv"
         target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
@@ -112,6 +115,18 @@ async def measurement(settings, request, storage, logger, redis=None):
             target_list = await fd.readlines()
 
         gen_parameters = build_probe_generator_parameters(target_list, parameters)
+
+    elif request["round"] == 1 and is_custom_probes_file:
+        # Round = 1
+        # Custom probe file uploaded in advance
+        logger.info(f"{logger_prefix} Download custom CSV probe file locally")
+        probes_filename = parameters.target_file
+        probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
+        await storage.download_file(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + request["username"],
+            probes_filename,
+            probes_filepath,
+        )
 
     else:
         # Round > 1
