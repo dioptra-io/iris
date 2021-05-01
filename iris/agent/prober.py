@@ -51,8 +51,8 @@ def probe(
     config.set_rate_limiting_method(settings.AGENT_PROBER_RATE_LIMITING_METHOD.value)
     config.set_meta_round(str(round_number))
 
-    if settings.AGENT_PROBER_EXCLUDE_PATH is None:
-        config.filter_from_prefix_file_excl(settings.AGENT_PROBER_EXCLUDE_PATH)
+    if settings.AGENT_PROBER_EXCLUDE_PATH is not None:
+        config.set_prefix_excl_file(str(settings.AGENT_PROBER_EXCLUDE_PATH))
 
     if round_number == 1:
         # Map generator tuples to pycaracal Probes
