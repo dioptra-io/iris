@@ -236,6 +236,7 @@ class MeasurementInfoResponse(BaseModel):
 
 
 class MeasurementsDeleteResponse(BaseModel):
+    """DELETE /measurements/{uuid} (Response)."""
 
     uuid: UUID
     action: str

@@ -85,6 +85,7 @@ async def verify_quota(tool, content, user_quota):
 
 async def target_file_validator(request, tool, user, target_file, agent_parameters):
     """Validate the target file input."""
+
     # Verify that the target file exists on AWS S3
     try:
         target_file = await request.app.storage.get_file_no_retry(
@@ -95,6 +96,15 @@ async def target_file_validator(request, tool, user, target_file, agent_paramete
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Target file not found"
         )
+
+    # Do not check if the target file is a custom probe file
+    if target_file["key"].endswith(".probes"):
+        if tool != "yarrp":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only `yarrp` tool can be used with custom probe file",
+            )
+        return
 
     # Check if the user respects his quota
     try:

@@ -31,6 +31,12 @@ def probe(
 ):
     """Probing interface."""
 
+    # Check the input parameters
+    if gen_parameters is None and probes_filepath is None:
+        raise ValueError(
+            "Must have either `gen_parameters` or `probes_filepath` parameter"
+        )
+
     # Cap the probing rate if superior to the maximum probing rate
     measurement_probing_rate = (
         probing_rate
@@ -54,7 +60,7 @@ def probe(
     if settings.AGENT_PROBER_EXCLUDE_PATH is not None:
         config.set_prefix_excl_file(str(settings.AGENT_PROBER_EXCLUDE_PATH))
 
-    if round_number == 1:
+    if gen_parameters:
         # Map generator tuples to pycaracal Probes
         # * protocol is "icmp", "icmp6", or "udp",
         #   this is different from before where we only had "icmp" or "udp"!
