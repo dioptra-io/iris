@@ -955,7 +955,7 @@ python-versions = "*"
 
 [[package]]
 name = "pycaracal"
-version = "0.4.12"
+version = "0.4.13"
 description = ""
 category = "main"
 optional = false
@@ -1667,7 +1667,6 @@ clickhouse-driver = [
     {file = "clickhouse_driver-0.2.0-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:6c48ebb3be0b0cb6cb7dcfce9f8ec078f3d9ce74f86606edfc58444ee9523096"},
     {file = "clickhouse_driver-0.2.0-cp35-cp35m-manylinux2010_i686.whl", hash = "sha256:ec863a80600a9c7d8cab60e1bc051b0fa525e712a141cb66c6e6a66cf83faa74"},
     {file = "clickhouse_driver-0.2.0-cp35-cp35m-manylinux2010_x86_64.whl", hash = "sha256:b1a13fc73faba77aec75101e190d22253b125e08c3abd5cb1b8727fa4e4b8e67"},
-    {file = "clickhouse_driver-0.2.0-cp35-cp35m-manylinux2014_aarch64.whl", hash = "sha256:300dba28a4f82bfbc92b33df7393d0d33162a1952910305bb0ba7abf6c1edc7f"},
     {file = "clickhouse_driver-0.2.0-cp35-cp35m-win32.whl", hash = "sha256:b55aa541eb2ebcbcbd25df5203942f19d778efbc7ec43c33f0620d0347d87e04"},
     {file = "clickhouse_driver-0.2.0-cp35-cp35m-win_amd64.whl", hash = "sha256:cedc6fb30303012fbb5dec6605ea7694784d806291958367984fe1a333aff687"},
     {file = "clickhouse_driver-0.2.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:c454a9053feb8b4fd21af24a79128d87662a49dbaaa2d5eb612d29d3f139d3ae"},
@@ -1675,7 +1674,6 @@ clickhouse-driver = [
     {file = "clickhouse_driver-0.2.0-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:195656ae622901e166cde6d338d4a13a54e3a38e255793777bdf56130858eef5"},
     {file = "clickhouse_driver-0.2.0-cp36-cp36m-manylinux2010_i686.whl", hash = "sha256:d3195c9f5343149dfffd729daac72e0ca7030c87a10ba2cbb41df7348e547eed"},
     {file = "clickhouse_driver-0.2.0-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:f789ed03d1c7aefc6e7a626c51fec9048efc076d0326751614b48a0857331b99"},
-    {file = "clickhouse_driver-0.2.0-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:4e423b9add7e4a07737f0e7e19eaa249f36afede8aeaec029e69b93d94eefdfb"},
     {file = "clickhouse_driver-0.2.0-cp36-cp36m-win32.whl", hash = "sha256:edbdcbb7c32e0efb1eda143b21383172e2d709837c2d09e036edcf41b770df8e"},
     {file = "clickhouse_driver-0.2.0-cp36-cp36m-win_amd64.whl", hash = "sha256:51e8d9d6199f2ade571b72827a8088b46931768d7c0d67c1a4b6ad8aabff75eb"},
     {file = "clickhouse_driver-0.2.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:8fd90935d914384f39aca714b60bfa1fa59fe135dd19c99ccf8f5b1271aed78d"},
@@ -1683,7 +1681,6 @@ clickhouse-driver = [
     {file = "clickhouse_driver-0.2.0-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:5719e9e10e64426e193042f0ba5bd4927aaeb83ed063511f8f586448b9725d89"},
     {file = "clickhouse_driver-0.2.0-cp37-cp37m-manylinux2010_i686.whl", hash = "sha256:6db2322f7ecdd2481d2a3d34ac11d71fbe6b4a407a44617acbd058c92ae3a08a"},
     {file = "clickhouse_driver-0.2.0-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:315103ab8c10f9b1a547b7ec7c1a7a668fce8c89dfc350439949edad3d986074"},
-    {file = "clickhouse_driver-0.2.0-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:c824f3d58558b9de687f2c413a2c59de019c18237f8e6342b71b8db0292efe8c"},
     {file = "clickhouse_driver-0.2.0-cp37-cp37m-win32.whl", hash = "sha256:a88fad262d2b833e073eaeca3d054cdbbf06ec78a1f1b0e978420f53ba42b90e"},
     {file = "clickhouse_driver-0.2.0-cp37-cp37m-win_amd64.whl", hash = "sha256:a904f4c04011a90419f4488f607f1fcf973814b0f9f6f93ca0015578922cc0e4"},
     {file = "clickhouse_driver-0.2.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:9055e329affa8c221479b2375a0e23cf9238cd79be66daea7bcec8b2ba60196a"},
@@ -1691,7 +1688,6 @@ clickhouse-driver = [
     {file = "clickhouse_driver-0.2.0-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:87a7fef364b510abb5344533a394ad3ec06047af28b9272087b28e6570617183"},
     {file = "clickhouse_driver-0.2.0-cp38-cp38-manylinux2010_i686.whl", hash = "sha256:17b30703e4390366181642f7fa866853d7134134ebeb681a1776a0abe61a93cf"},
     {file = "clickhouse_driver-0.2.0-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:d5c5aecc58a8b71492368ebd1adb3016e122692e8a31b2ea3aa219c6a4e224a3"},
-    {file = "clickhouse_driver-0.2.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:424bb92486f74199231bbbbbf8362c8914bf7c7aa4af9f6347d70162ebef5844"},
     {file = "clickhouse_driver-0.2.0-cp38-cp38-win32.whl", hash = "sha256:2ccf58a6e1eefc4d5833b68c40716ff1294b20bd7c40a09e5d65afafade43e9d"},
     {file = "clickhouse_driver-0.2.0-cp38-cp38-win_amd64.whl", hash = "sha256:f415be3571967ca42a4c2836826b203030c53e739b9e2b4a79ed213706ef6924"},
     {file = "clickhouse_driver-0.2.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:9fc14485e178186c27107a12805640000b7973d6756f1675a46478d6e9734920"},
@@ -1699,7 +1695,6 @@ clickhouse-driver = [
     {file = "clickhouse_driver-0.2.0-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:82161e12771ebcd2f9b4078f9653331aab3898b183302ae307183983d15335ff"},
     {file = "clickhouse_driver-0.2.0-cp39-cp39-manylinux2010_i686.whl", hash = "sha256:2dda28cb424f8d449271a0eeaa6dbbfe112cfb650a3936ee2ff06359cbc7d6ad"},
     {file = "clickhouse_driver-0.2.0-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:fe8575cc809a6703d065e29aebe88b265e4ed435c2fdfd18353f6ab2d08ca650"},
-    {file = "clickhouse_driver-0.2.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:d4eccbfe3ca23110b16263be68edcdaf22e8c823171e50544249161f36611547"},
     {file = "clickhouse_driver-0.2.0-cp39-cp39-win32.whl", hash = "sha256:9fef38a3d23a9c2d4f5fac2227bfb2fbe606138506aa10a4a2b563b879b995d5"},
     {file = "clickhouse_driver-0.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:27cd2cd032b52f2cbcbaf064aa71805c70fe91247821ac91bf2ae71e224e6fd8"},
     {file = "clickhouse_driver-0.2.0-pp27-pypy_73-macosx_10_9_x86_64.whl", hash = "sha256:6a20570eff4119f11c5b458d4860afdcb510f5c397d9e9bd12f2bf196ebbd846"},
@@ -2092,10 +2087,10 @@ pyasn1 = [
     {file = "pyasn1-0.4.8.tar.gz", hash = "sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba"},
 ]
 pycaracal = [
-    {file = "pycaracal-0.4.12-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:1d107195dc8c0bf891b7bd05e40e1d1a91e9ee8dbc5f291d67add2d60302157b"},
-    {file = "pycaracal-0.4.12-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:53e9099df7df5ea0c3124044b59f8a7ecfb73c22e0c0229c7f9c71a20602cc08"},
-    {file = "pycaracal-0.4.12-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:9c9b643f51b76d6d4e3f24840ba009469855cf7935cb809671fcffbc4fc428d1"},
-    {file = "pycaracal-0.4.12.tar.gz", hash = "sha256:6988a310b2ed95a600126a37b0b041be266a526f7b581835982bfff9beafd10b"},
+    {file = "pycaracal-0.4.13-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:8ddc3f6406f937fed707d2639cbfa6aa00704bcf41aece28275b8c6e67b85a2c"},
+    {file = "pycaracal-0.4.13-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:7e50c24d749c42fd427417387147267597efc4628f27a1afd9306449d4fcdf1a"},
+    {file = "pycaracal-0.4.13-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:f82e83cb71187938e31a2482651350adad274a2e5b818ba3329042babe9d1ce0"},
+    {file = "pycaracal-0.4.13.tar.gz", hash = "sha256:303b9927b6d40a4069f1bfedd00038ec26cc0d48fa75a1d7ca66a80061a8e142"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.7.0-py2.py3-none-any.whl", hash = "sha256:514f76d918fcc0b55c6680472f0a37970994e07bbb80725808c17089be302068"},
