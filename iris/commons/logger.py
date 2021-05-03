@@ -34,6 +34,8 @@ def create_logger(settings, tags: Optional[dict] = None):
     # Iris logger
     logger = logging.getLogger(settings.SETTINGS_CLASS)
     logger.setLevel(settings.STREAM_LOGGING_LEVEL)
+    if logger.hasHandlers():
+        logger.handlers.clear()
     logger.addHandler(stream_handler)
     logger.addHandler(loki_handler)
     logger.propagate = False
@@ -41,13 +43,19 @@ def create_logger(settings, tags: Optional[dict] = None):
     # Diamond-Miner logger
     logger_dm = logging.getLogger("diamond-miner")
     logger_dm.setLevel(settings.STREAM_LOGGING_LEVEL)
+    if logger_dm.hasHandlers():
+        logger_dm.handlers.clear()
     logger_dm.addHandler(stream_handler)
     logger_dm.addHandler(loki_handler)
+    logger_dm.propagate = False
 
     # Caracal logger
     logger_ca = logging.getLogger("caracal")
     logger_ca.setLevel(settings.STREAM_LOGGING_LEVEL)
+    if logger_ca.hasHandlers():
+        logger_ca.handlers.clear()
     logger_ca.addHandler(stream_handler)
     logger_ca.addHandler(loki_handler)
+    logger_ca.propagate = False
 
     return logger
