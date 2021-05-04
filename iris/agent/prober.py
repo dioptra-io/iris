@@ -47,18 +47,19 @@ def probe(
     # This set the log level of the C++ logger (spdlog).
     # This allow the logs to be filtered in C++ (fast)
     # before being forwarded to the (slower) Python logger.
-    set_log_level(settings.AGENT_PROBER_LOGGING_LEVEL)
+    set_log_level(settings.AGENT_CARACAL_LOGGING_LEVEL)
 
     # Prober configuration
     config = prober.Config()
     config.set_output_file_csv(results_filepath)
 
     config.set_probing_rate(measurement_probing_rate)
-    config.set_rate_limiting_method(settings.AGENT_PROBER_RATE_LIMITING_METHOD.value)
+    config.set_rate_limiting_method(settings.AGENT_CARACAL_RATE_LIMITING_METHOD.value)
+    config.set_integrity_check(settings.AGENT_CARACAL_INTEGRITY_CHECK)
     config.set_meta_round(str(round_number))
 
-    if settings.AGENT_PROBER_EXCLUDE_PATH is not None:
-        config.set_prefix_excl_file(str(settings.AGENT_PROBER_EXCLUDE_PATH))
+    if settings.AGENT_CARACAL_EXCLUDE_PATH is not None:
+        config.set_prefix_excl_file(str(settings.AGENT_CARACAL_EXCLUDE_PATH))
 
     if gen_parameters:
         # Map generator tuples to pycaracal Probes

@@ -20,9 +20,10 @@ class AgentSettings(CommonSettings):
 
     SETTINGS_CLASS = "agent"
 
-    AGENT_PROBER_LOGGING_LEVEL: int = logging.INFO
-    AGENT_PROBER_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
-    AGENT_PROBER_RATE_LIMITING_METHOD: RateLimitingMethod = RateLimitingMethod.auto
+    AGENT_CARACAL_LOGGING_LEVEL: int = logging.INFO
+    AGENT_CARACAL_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
+    AGENT_CARACAL_RATE_LIMITING_METHOD: RateLimitingMethod = RateLimitingMethod.auto
+    AGENT_CARACAL_INTEGRITY_CHECK: bool = True
 
     AGENT_UUID: str = str(uuid4())
     AGENT_MAX_PROBING_RATE: int = 1000  # pps
