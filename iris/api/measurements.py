@@ -276,6 +276,10 @@ async def get_measurement_by_uuid(
                 f"targets__{measurement['uuid']}__{agent_specific['uuid']}.csv",
             )
             target_file_content = [c.strip() for c in target_file["content"].split()]
+            if len(target_file_content) > 100:
+                # NOTE: Don't display the measurement if the file is too big
+                # to avoid to slow down the API
+                target_file_content = []
         except Exception:
             target_file_content = []
 
