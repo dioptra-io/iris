@@ -25,7 +25,7 @@ uvicorn = "^0.11.5"
 python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 typer = "^0.3.2"
 rich = "^10.1.0"
-pycaracal = "^0.4.16"
+pycaracal = "^0.4.17"
 
 [tool.poetry.dev-dependencies]
 black = {version = "^21.4b2", allow-prereleases = true}
