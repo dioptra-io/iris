@@ -137,17 +137,17 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "attrs"
-version = "20.3.0"
+version = "21.1.0"
 description = "Classes Without Boilerplate"
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [package.extras]
-dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "furo", "sphinx", "pre-commit"]
-docs = ["furo", "sphinx", "zope.interface"]
-tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface"]
-tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six"]
+dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "zope.interface", "furo", "sphinx", "sphinx-notfound-page", "pre-commit"]
+docs = ["furo", "sphinx", "zope.interface", "sphinx-notfound-page"]
+tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "zope.interface"]
+tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins"]
 
 [[package]]
 name = "bcrypt"
@@ -957,7 +957,7 @@ python-versions = "*"
 
 [[package]]
 name = "pycaracal"
-version = "0.4.17"
+version = "0.4.18"
 description = ""
 category = "main"
 optional = false
@@ -1478,7 +1478,7 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "e568606727b97a2c8aa09956fe714ce55bc318943d37b2148626c6c9908246f0"
+content-hash = "6b574f14077b2e98592564506010cc4c58ffb805d056fd770b236fbdade5ae7a"
 
 [metadata.files]
 aioboto3 = [
@@ -1562,8 +1562,8 @@ atomicwrites = [
     {file = "atomicwrites-1.4.0.tar.gz", hash = "sha256:ae70396ad1a434f9c7046fd2dd196fc04b12f9e91ffb859164193be8b6168a7a"},
 ]
 attrs = [
-    {file = "attrs-20.3.0-py2.py3-none-any.whl", hash = "sha256:31b2eced602aa8423c2aea9c76a724617ed67cf9513173fd3a4f03e3a929c7e6"},
-    {file = "attrs-20.3.0.tar.gz", hash = "sha256:832aa3cde19744e49938b91fea06d69ecb9e649c93ba974535d08ad92164f700"},
+    {file = "attrs-21.1.0-py2.py3-none-any.whl", hash = "sha256:8ee1e5f5a1afc5b19bdfae4fdf0c35ed324074bdce3500c939842c8f818645d9"},
+    {file = "attrs-21.1.0.tar.gz", hash = "sha256:3901be1cb7c2a780f14668691474d9252c070a756be0a9ead98cfeabfa11aeb8"},
 ]
 bcrypt = [
     {file = "bcrypt-3.2.0-cp36-abi3-macosx_10_9_x86_64.whl", hash = "sha256:c95d4cbebffafcdd28bd28bb4e25b31c50f6da605c81ffd9ad8a3d1b2ab7b1b6"},
@@ -2094,9 +2094,10 @@ pyasn1 = [
     {file = "pyasn1-0.4.8.tar.gz", hash = "sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba"},
 ]
 pycaracal = [
-    {file = "pycaracal-0.4.17-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:6eaf67cc13106bec9e312c47f5f1ff0e24e5e1a30b06921f8baeb41240613857"},
-    {file = "pycaracal-0.4.17-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:b8034bbf6df95ea33fb5f7df52676d192780b1a70d03ec4729979d048740ec2d"},
-    {file = "pycaracal-0.4.17.tar.gz", hash = "sha256:383c6102994526c6b4216a4ff9d02f9d3f344d904cb924316069072126c844e4"},
+    {file = "pycaracal-0.4.18-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:db7230801a05ad40518dd91b12235b0532368fdd6d3c95bcb4a26232848a3b7c"},
+    {file = "pycaracal-0.4.18-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:456b0b12cfad75e765eaae8f72286f2230d81f9a29dce6c0890cf28805fd30be"},
+    {file = "pycaracal-0.4.18-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:71e419df0a3a76a4d9b03af9e26dcb1e3ce1f545b4ba623023d0402e74ddcb4c"},
+    {file = "pycaracal-0.4.18.tar.gz", hash = "sha256:f3da73bfaf46ba35558db7d50eea7de6c21531b10cd8ba4243c7e4aa7350e860"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.7.0-py2.py3-none-any.whl", hash = "sha256:514f76d918fcc0b55c6680472f0a37970994e07bbb80725808c17089be302068"},
