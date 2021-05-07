@@ -6,9 +6,10 @@ import uuid
 from datetime import datetime
 
 from aioch import Client
-from diamond_miner.queries.create_nodes_view import CreateNodesView
+from diamond_miner.queries.create_flows_view import CreateFlowsView
+from diamond_miner.queries.create_links_table import CreateLinksTable
 from diamond_miner.queries.create_results_table import CreateResultsTable
-from diamond_miner.queries.create_traceroutes_view import CreateTraceroutesView
+from diamond_miner.queries.get_links_from_view import GetLinksFromView
 from tenacity import (
     before_sleep_log,
     retry,
@@ -520,18 +521,21 @@ class DatabaseMeasurementResults(Database):
         return f"{database_name}.{prefix}__{measurement_uuid}__{agent_uuid}"
 
     async def create_table(self, drop=False):
-        """Create a table."""
+        """Create the results table."""
         if drop:
             await self.drop_table(self.table_name)
         await self.call(CreateResultsTable().query(self.table_name))
 
-    async def create_materialized_vue_nodes(self):
-        q = CreateNodesView(results_table=self.table_name)
-        await self.call(q.query(self.swap_table_name_prefix("nodes")))
+    async def create_vue_flows(self, flows_vue_name):
+        """Create the materialized vue on the results table."""
+        q = CreateFlowsView(parent=self.table_name)
+        await self.call(q.query(flows_vue_name))
 
-    async def create_materialized_vue_traceroute(self):
-        q = CreateTraceroutesView(results_table=self.table_name)
-        await self.call(q.query(self.swap_table_name_prefix("traceroutes")))
+    async def create_links_table(self, links_table_name, drop=False):
+        """Create the associated links table."""
+        if drop:
+            await self.drop_table(links_table_name)
+        await self.call(CreateLinksTable().query(links_table_name))
 
     def formatter(self, row):
         """Database row -> response formater."""
@@ -574,8 +578,6 @@ class DatabaseMeasurementResults(Database):
 
     async def insert_csv(self, csv_filepath):
         """Insert CSV file into table."""
-        # We could avoid using clickhouse-client for that,
-        # but since we have it for the Reader, why not, at the moment.
         cmd = (
             "cat "
             + str(csv_filepath)
@@ -589,3 +591,7 @@ class DatabaseMeasurementResults(Database):
         await start_stream_subprocess(
             cmd, stdout=self.logger.info, stderr=self.logger.error
         )
+
+    async def insert_links(self, flows_vue_name, links_table_name):
+        query = GetLinksFromView().query(flows_vue_name)
+        await self.call(f"INSERT INTO {links_table_name} {query}")
