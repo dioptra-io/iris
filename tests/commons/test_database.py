@@ -368,8 +368,8 @@ async def test_database_measurement_results():
     assert (
         DatabaseMeasurementResults(
             session, CommonSettings(), "iris.results__measurement__agent"
-        ).swap_table_name_prefix("nodes")
-        == "iris.nodes__measurement__agent"
+        ).swap_table_name_prefix("flows")
+        == "iris.flows__measurement__agent"
     )
 
     assert (
@@ -386,19 +386,11 @@ async def test_database_measurement_results():
     )
 
     # Test of materialized vues creation
-    assert (
-        await DatabaseMeasurementResults(
-            session, CommonSettings(), "iris.results__measurement__agent"
-        ).create_materialized_vue_nodes()
-        is None
+    database = DatabaseMeasurementResults(
+        session, CommonSettings(), "iris.results__measurement__agent"
     )
-
-    assert (
-        await DatabaseMeasurementResults(
-            session, CommonSettings(), "iris.results__measurement__agent"
-        ).create_materialized_vue_traceroute()
-        is None
-    )
+    flows_vue_name = database.swap_table_name_prefix("flows")
+    await database.create_vue_flows(flows_vue_name) is None
 
     # Test of `.all_count() method`
     session = FakeSession(response=[(10,)])

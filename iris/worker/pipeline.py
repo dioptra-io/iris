@@ -84,16 +84,23 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     )
     database = DatabaseMeasurementResults(session, settings, table_name, logger=logger)
 
+    flows_vue_name = database.swap_table_name_prefix("flows")
+    links_table_name = database.swap_table_name_prefix("links")
+
     logger.info(f"{logger_prefix} Create table `{table_name}`")
     await database.create_table()
 
-    # NOTE: Temporarily deactivate the materialized vue for performance
-    # logger.info(f"{logger_prefix} Create materialized vues for `{table_name}`")
-    # await database.create_materialized_vue_nodes()
-    # await database.create_materialized_vue_traceroute()
+    logger.info(f"{logger_prefix} Create vue `{flows_vue_name}`")
+    await database.create_vue_flows(flows_vue_name)
 
-    logger.info(f"{logger_prefix} Insert CSV file into database")
+    logger.info(f"{logger_prefix} Create links table `{links_table_name}`")
+    await database.create_links_table(links_table_name)
+
+    logger.info(f"{logger_prefix} Insert CSV file into results table")
     await database.insert_csv(results_filepath)
+
+    logger.info(f"{logger_prefix} Insert links into links table")
+    await database.insert_links(flows_vue_name, links_table_name)
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local results file")
