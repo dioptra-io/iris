@@ -385,12 +385,12 @@ async def test_database_measurement_results():
         is None
     )
 
-    # Test of materialized vues creation
+    # Test of materialized views creation
     database = DatabaseMeasurementResults(
         session, CommonSettings(), "iris.results__measurement__agent"
     )
-    flows_vue_name = database.swap_table_name_prefix("flows")
-    await database.create_vue_flows(flows_vue_name) is None
+    flows_view_name = database.swap_table_name_prefix("flows")
+    await database.create_view_flows(flows_view_name) is None
 
     # Test of `.all_count() method`
     session = FakeSession(response=[(10,)])

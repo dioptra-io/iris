@@ -526,10 +526,10 @@ class DatabaseMeasurementResults(Database):
             await self.drop_table(self.table_name)
         await self.call(CreateResultsTable().query(self.table_name))
 
-    async def create_vue_flows(self, flows_vue_name):
-        """Create the materialized vue on the results table."""
+    async def create_view_flows(self, flows_view_name):
+        """Create the materialized view on the results table."""
         q = CreateFlowsView(parent=self.table_name)
-        await self.call(q.query(flows_vue_name))
+        await self.call(q.query(flows_view_name))
 
     async def create_links_table(self, links_table_name, drop=False):
         """Create the associated links table."""
@@ -592,6 +592,6 @@ class DatabaseMeasurementResults(Database):
             cmd, stdout=self.logger.info, stderr=self.logger.error
         )
 
-    async def insert_links(self, flows_vue_name, links_table_name):
-        query = GetLinksFromView().query(flows_vue_name)
+    async def insert_links(self, flows_view_name, links_table_name):
+        query = GetLinksFromView().query(flows_view_name)
         await self.call(f"INSERT INTO {links_table_name} {query}")
