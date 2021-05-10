@@ -592,6 +592,6 @@ class DatabaseMeasurementResults(Database):
             cmd, stdout=self.logger.info, stderr=self.logger.error
         )
 
-    async def insert_links(self, flows_view_name, links_table_name):
-        query = GetLinksFromView().query(flows_view_name)
+    async def insert_links(self, flows_view_name, links_table_name, round_number):
+        query = GetLinksFromView(round_eq=round_number).query(flows_view_name)
         await self.call(f"INSERT INTO {links_table_name} {query}")

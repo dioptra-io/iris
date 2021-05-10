@@ -7,7 +7,6 @@ from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
 from diamond_miner.format import format_probe
 from diamond_miner.rounds.mda import mda_probes
-from diamond_miner.subsets import subsets_for_table
 
 from iris.commons.database import DatabaseMeasurementResults, get_session
 from iris.worker.shuffle import shuffle_next_round_csv
@@ -19,7 +18,8 @@ def extract_round_number(filename):
 
 async def compute_next_round(
     settings,
-    table_name,
+    results_table_name,
+    links_table_name,
     round_number,
     parameters,
     next_round_csv_filepath,
@@ -36,7 +36,7 @@ async def compute_next_round(
     client = Client(host=settings.DATABASE_HOST)
     probes_gen = mda_probes(
         client=client,
-        table=table_name,
+        table=links_table_name,
         round_=round_number,
         mapper_v4=flow_mapper_v4,
         mapper_v6=flow_mapper_v6,
@@ -45,7 +45,7 @@ async def compute_next_round(
         probe_dst_port=parameters.tool_parameters["destination_port"],
         adaptive_eps=True,
         skip_unpopulated_ttls=True,
-        subsets=await subsets_for_table(client, table_name),
+        skip_unpopulated_ttls_table=results_table_name,
     )
 
     async with aiofiles.open(next_round_csv_filepath, "w") as fout:
@@ -87,7 +87,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     flows_view_name = database.swap_table_name_prefix("flows")
     links_table_name = database.swap_table_name_prefix("links")
 
-    logger.info(f"{logger_prefix} Create table `{table_name}`")
+    logger.info(f"{logger_prefix} Create results table `{table_name}`")
     await database.create_table()
 
     logger.info(f"{logger_prefix} Create view `{flows_view_name}`")
@@ -100,7 +100,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     await database.insert_csv(results_filepath)
 
     logger.info(f"{logger_prefix} Insert links into links table")
-    await database.insert_links(flows_view_name, links_table_name)
+    await database.insert_links(flows_view_name, links_table_name, round_number)
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local results file")
@@ -116,7 +116,12 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
 
     await compute_next_round(
-        settings, table_name, round_number, parameters, next_round_csv_filepath
+        settings,
+        table_name,
+        links_table_name,
+        round_number,
+        parameters,
+        next_round_csv_filepath,
     )
 
     shuffled_next_round_csv_filename = (
