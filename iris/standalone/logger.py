@@ -10,9 +10,4 @@ def create_logger(level):
     logger.setLevel(level)
     logger.addHandler(stream_handler)
 
-    # Caracal logger
-    logger_ca = logging.getLogger("caracal")
-    logger_ca.setLevel(logging.DEBUG)
-    logger_ca.addHandler(stream_handler)
-
     return logger

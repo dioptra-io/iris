@@ -1,5 +1,6 @@
 """Agents settings."""
 
+import logging
 from enum import Enum
 from pathlib import Path
 from uuid import uuid4
@@ -19,10 +20,9 @@ class AgentSettings(CommonSettings):
 
     SETTINGS_CLASS = "agent"
 
-    AGENT_DEBUG_MODE: bool = False
-
     AGENT_CARACAL_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
     AGENT_CARACAL_RATE_LIMITING_METHOD: RateLimitingMethod = RateLimitingMethod.auto
+    AGENT_CARACAL_LOGGING_LEVEL: int = logging.INFO
     AGENT_CARACAL_INTEGRITY_CHECK: bool = True
 
     AGENT_UUID: str = str(uuid4())
@@ -36,3 +36,5 @@ class AgentSettings(CommonSettings):
     AGENT_RECOVER_TIME_REDIS_FAILURE: int = 10  # seconds
 
     WORKER_STOPPER_REFRESH: int = 1  # seconds
+
+    AGENT_DEBUG_MODE: bool = False

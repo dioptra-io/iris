@@ -1,7 +1,6 @@
 """Prober executor."""
 
 import asyncio
-import logging
 
 from diamond_miner.generator import probe_generator_by_flow
 from pycaracal import cast_addr, make_probe, prober, set_log_level
@@ -48,8 +47,7 @@ def probe(
     # This set the log level of the C++ logger (spdlog).
     # This allow the logs to be filtered in C++ (fast)
     # before being forwarded to the (slower) Python logger.
-    caracal_logging_level = logging.DEBUG if settings.AGENT_DEBUG_MODE else logging.INFO
-    set_log_level(caracal_logging_level)
+    set_log_level(settings.AGENT_CARACAL_LOGGING_LEVEL)
 
     # Prober configuration
     config = prober.Config()

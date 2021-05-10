@@ -16,7 +16,7 @@ The easiest way to run Iris from a single machine is to use the standalone versi
 
 First, run a ClickHouse instance locally:
 ```bash
-docker run -d -v $(pwd)/volumes/clickhouse:/var/lib/clickhouse -p 9000:9000
+docker run -d -v $(pwd)/volumes/clickhouse:/var/lib/clickhouse -p 9000:9000 \
   yandex/clickhouse-server:latest
 ```
 

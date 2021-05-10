@@ -10,12 +10,13 @@ from rich.text import Text
 
 def display_results(results: dict, console: Optional[Console] = None):
     if not console:
-        console = Console(force_terminal=True, force_interactive=True)
+        console = Console(force_terminal=True, force_interactive=True, width=160)
 
     console.print()
 
-    items_table = Table.grid(padding=(0, 1), expand=False)
+    items_table = Table.grid(padding=(0, 1), expand=True)
     items_table.add_column(justify="right")
+    items_table.add_column()
     items_table.add_row(
         "agent uuid =",
         Pretty(
@@ -56,6 +57,21 @@ def display_results(results: dict, console: Optional[Console] = None):
         "end time =",
         Pretty(
             results["end_time"].isoformat(),
+            highlighter=ReprHighlighter(),
+        ),
+    )
+    items_table.add_row("")
+    items_table.add_row(
+        "distinct nodes =",
+        Pretty(
+            results["n_nodes"],
+            highlighter=ReprHighlighter(),
+        ),
+    )
+    items_table.add_row(
+        "distinct links =",
+        Pretty(
+            results["n_links"],
             highlighter=ReprHighlighter(),
         ),
     )

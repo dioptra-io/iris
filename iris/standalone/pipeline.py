@@ -1,9 +1,14 @@
+import logging
 import uuid
+import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import aiofiles
+from clickhouse_driver import Client
+from diamond_miner.queries.count_links import CountLinks
+from diamond_miner.queries.count_nodes import CountNodesFromResults
 
 from iris import __version__
 from iris.agent.measurements import measurement
@@ -112,8 +117,13 @@ async def pipeline(
     logger,
 ) -> Dict:
     """Measurement pipeline."""
+    # Silence the tzlocal timezone configuration warning
+    warnings.filterwarnings("ignore", category=UserWarning, module="tzlocal")
+
     # Get all settings
     agent_settings = AgentSettings()
+    if logger.level >= logging.INFO:
+        agent_settings.AGENT_CARACAL_LOGGING_LEVEL = logging.WARNING
     worker_settings = WorkerSettings()
 
     measurement_uuid: str = str(uuid.uuid4())
@@ -194,6 +204,19 @@ async def pipeline(
     # Stamp the measurement
     await stamp_measurement(dataclass, worker_settings, logger)
 
+    # Compute distinct nodes/links
+    client = Client(agent_settings.DATABASE_HOST)
+    results_table_name = DatabaseMeasurementResults.forge_table_name(
+        measurement_uuid, agent_settings.AGENT_UUID
+    )
+    links_table_name = "links__" + "__".join(results_table_name.split("__")[1:3])
+    n_nodes = CountNodesFromResults().execute(
+        client, agent_settings.DATABASE_NAME + "." + results_table_name
+    )[0][0]
+    n_links = CountLinks().execute(
+        client, agent_settings.DATABASE_NAME + "." + links_table_name
+    )[0][0]
+
     return {
         "measurement_uuid": measurement_uuid,
         "agent_uuid": agent_settings.AGENT_UUID,
@@ -204,4 +227,6 @@ async def pipeline(
         "n_rounds": round_number,
         "start_time": start_time,
         "end_time": datetime.now(),
+        "n_nodes": n_nodes,
+        "n_links": n_links,
     }
