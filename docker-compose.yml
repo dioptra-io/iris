@@ -31,6 +31,8 @@ services:
       - "traefik.enable=false"
     volumes:
       - "./volumes/clickhouse:/var/lib/clickhouse"
+    ports:
+      - "9000:9000"
 
   redis:
     image: "redis:latest"

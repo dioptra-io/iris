@@ -1,4 +1,5 @@
 import logging
+import socket
 import uuid
 import warnings
 from datetime import datetime
@@ -34,6 +35,7 @@ def create_request(
     tool: Tool,
     target_file: Path,
     probes_filename,
+    username,
     probing_rate: int,
     tool_parameters: ToolParameters,
     measurement_uuid: str,
@@ -45,12 +47,12 @@ def create_request(
     tool_parameters["n_flow_ids"] = 6 if tool == "diamond-miner" else 1
     return {
         "measurement_uuid": measurement_uuid,
-        "username": "standalone",
+        "username": username,
         "round": round_number,
         "probes": probes_filename,
         "parameters": {
             "version": __version__,
-            "hostname": "",
+            "hostname": socket.gethostname(),
             "ip_address": get_own_ip_address(),
             "min_ttl": settings.AGENT_MIN_TTL,
             "max_probing_rate": settings.AGENT_MAX_PROBING_RATE,
@@ -60,7 +62,7 @@ def create_request(
             "tool_parameters": tool_parameters,
             "tags": tags,
             "measurement_uuid": measurement_uuid,
-            "user": "standalone",
+            "user": username,
             "start_time": start_time,
             "agent_uuid": settings.AGENT_UUID,
         },
@@ -74,7 +76,7 @@ async def register_measurement(dataclass, settings, logger):
     await database_measurements.register(
         {
             "measurement_uuid": dataclass.measurement_uuid,
-            "user": "standalone",
+            "user": dataclass.user,
             "tool": dataclass.tool,
             "tags": dataclass.tags,
             "start_time": dataclass.start_time,
@@ -105,12 +107,26 @@ async def register_agent(dataclass, settings, logger):
 async def stamp_measurement(dataclass, settings, logger):
     session = get_session(settings)
     database_measurements = DatabaseMeasurements(session, settings, logger=logger)
-    await database_measurements.stamp_end_time("standalone", dataclass.measurement_uuid)
+    await database_measurements.stamp_finished(
+        dataclass.user, dataclass.measurement_uuid
+    )
+    await database_measurements.stamp_end_time(
+        dataclass.user, dataclass.measurement_uuid
+    )
+
+
+async def stamp_agent(dataclass, settings, logger):
+    session = get_session(settings)
+    database_agents_specific = DatabaseAgentsSpecific(session, settings, logger=logger)
+    await database_agents_specific.stamp_finished(
+        dataclass.measurement_uuid, dataclass.agent_uuid
+    )
 
 
 async def pipeline(
     tool: Tool,
     prefixes: list,
+    username: str,
     probing_rate: int,
     tool_parameters: ToolParameters,
     tags: List[str],
@@ -147,7 +163,7 @@ async def pipeline(
     # Copy the target file to the local storage
     storage = LocalStorage(agent_settings.AGENT_TARGETS_DIR_PATH / "local_storage")
     await storage.upload_file(
-        agent_settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + "standalone",
+        agent_settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + username,
         target_file.name,
         target_file,
     )
@@ -159,6 +175,7 @@ async def pipeline(
             tool,
             target_file,
             shuffled_next_round_csv_filepath,
+            username,
             probing_rate,
             tool_parameters,
             measurement_uuid,
@@ -200,6 +217,9 @@ async def pipeline(
                 except OSError:
                     logger.error("Impossible to remove local measurement directory")
             break
+
+    # Stamp the agent
+    await stamp_agent(dataclass, agent_settings, logger)
 
     # Stamp the measurement
     await stamp_measurement(dataclass, worker_settings, logger)

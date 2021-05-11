@@ -26,6 +26,7 @@ def coroutine(f):
 @app.command()
 @coroutine
 async def diamond_miner(
+    user: str = typer.Option("standalone"),
     probing_rate: int = typer.Argument(1000),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
@@ -55,7 +56,7 @@ async def diamond_miner(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, probing_rate, tool_parameters, tag, logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag, logger
     )
     display_results(pipeline_info)
 
@@ -63,6 +64,7 @@ async def diamond_miner(
 @app.command()
 @coroutine
 async def yarrp(
+    user: str = typer.Option("standalone"),
     probing_rate: int = typer.Argument(1000),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
@@ -91,7 +93,7 @@ async def yarrp(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, probing_rate, tool_parameters, tag, logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag, logger
     )
     display_results(pipeline_info)
 
@@ -99,6 +101,7 @@ async def yarrp(
 @app.command()
 @coroutine
 async def ping(
+    user: str = typer.Option("standalone"),
     probing_rate: int = typer.Argument(1000),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
@@ -127,7 +130,7 @@ async def ping(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, probing_rate, tool_parameters, tag, logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag, logger
     )
     display_results(pipeline_info)
 
