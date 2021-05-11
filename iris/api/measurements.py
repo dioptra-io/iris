@@ -47,7 +47,6 @@ async def get_measurements(
     querier = DatabasePagination(database, request, offset, limit)
     output = await querier.query(user=user["username"], tag=tag)
 
-    # Refine measurements output
     measurements = []
     for measurement in output["results"]:
         state = await request.app.redis.get_measurement_state(measurement["uuid"])
@@ -253,7 +252,7 @@ async def get_measurement_by_uuid(
         )
 
     state = await request.app.redis.get_measurement_state(measurement_uuid)
-    measurement["state"] = "finished" if state is None else state
+    measurement["state"] = state if state is not None else measurement["state"]
 
     agents_specific = await DatabaseAgentsSpecific(
         session, request.app.settings, request.app.logger
@@ -267,8 +266,6 @@ async def get_measurement_by_uuid(
 
         if measurement["state"] == "waiting":
             agent_specific["state"] = "waiting"
-        elif measurement["state"] == "finished":
-            agent_specific["state"] = "finished"
 
         try:
             target_file = await request.app.storage.get_file_no_retry(
@@ -335,7 +332,7 @@ async def delete_measurement(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement already finished"
         )
 
-    await request.app.redis.delete_measurement_state(measurement_uuid)
+    await request.app.redis.set_measurement_state(measurement_uuid, "canceled")
     return {"uuid": measurement_uuid, "action": "canceled"}
 
 

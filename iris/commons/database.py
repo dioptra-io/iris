@@ -207,6 +207,7 @@ class DatabaseMeasurements(Database):
                 user       String,
                 tool       String,
                 tags       Array(String),
+                state      Enum8('ongoing' = 1, 'finished' = 2, 'canceled' = 3),
                 start_time DateTime,
                 end_time   Nullable(DateTime)
             )
@@ -222,8 +223,9 @@ class DatabaseMeasurements(Database):
             "user": row[1],
             "tool": row[2],
             "tags": row[3],
-            "start_time": row[4].isoformat(),
-            "end_time": row[5].isoformat() if row[5] is not None else None,
+            "state": row[4],
+            "start_time": row[5].isoformat(),
+            "end_time": row[6].isoformat() if row[6] is not None else None,
         }
 
     async def all_count(self, user, tag=None):
@@ -274,12 +276,35 @@ class DatabaseMeasurements(Database):
                     "user": measurement_parameters["user"],
                     "tool": measurement_parameters["tool"],
                     "tags": measurement_parameters["tags"],
+                    "state": "ongoing",
                     "start_time": datetime.fromtimestamp(
                         measurement_parameters["start_time"]
                     ),
                     "end_time": None,
                 }
             ],
+        )
+
+    async def stamp_finished(self, user, uuid):
+        """Stamp the end time for a measurement."""
+        await self.call(
+            f"""
+            ALTER TABLE {self.table_name}
+            UPDATE state=%(state)s
+            WHERE user=%(user)s AND uuid=%(uuid)s
+            """,
+            {"state": "finished", "user": user, "uuid": uuid},
+        )
+
+    async def stamp_canceled(self, user, uuid):
+        """Stamp the end time for a measurement."""
+        await self.call(
+            f"""
+            ALTER TABLE {self.table_name}
+            UPDATE state=%(state)s
+            WHERE user=%(user)s AND uuid=%(uuid)s
+            """,
+            {"state": "canceled", "user": user, "uuid": uuid},
         )
 
     async def stamp_end_time(self, user, uuid):
@@ -404,10 +429,10 @@ class DatabaseAgentsSpecific(Database):
             (
                 measurement_uuid UUID,
                 agent_uuid       UUID,
-                target_file     String,
+                target_file      String,
                 probing_rate     Nullable(UInt32),
                 tool_parameters  String,
-                finished         UInt8,
+                state            Enum8('ongoing' = 1, 'finished' = 2, 'canceled' = 3),
                 timestamp        DateTime
             )
             ENGINE=MergeTree()
@@ -422,7 +447,7 @@ class DatabaseAgentsSpecific(Database):
             "target_file": row[2],
             "probing_rate": row[3],
             "tool_parameters": json.loads(row[4]),
-            "state": "finished" if bool(row[5]) else "ongoing",
+            "state": row[5],
         }
 
     async def all(self, measurement_uuid):
@@ -460,7 +485,7 @@ class DatabaseAgentsSpecific(Database):
                     "target_file": parameters.target_file,
                     "probing_rate": parameters.probing_rate,
                     "tool_parameters": json.dumps(parameters.tool_parameters),
-                    "finished": int(False),
+                    "state": "ongoing",
                     "timestamp": datetime.now(),
                 }
             ],
@@ -470,12 +495,27 @@ class DatabaseAgentsSpecific(Database):
         await self.call(
             f"""
             ALTER TABLE {self.table_name}
-            UPDATE finished=%(finished)s
+            UPDATE state=%(state)s
             WHERE measurement_uuid=%(measurement_uuid)s
             AND agent_uuid=%(agent_uuid)s
             """,
             {
-                "finished": int(True),
+                "state": "finished",
+                "measurement_uuid": measurement_uuid,
+                "agent_uuid": agent_uuid,
+            },
+        )
+
+    async def stamp_canceled(self, measurement_uuid, agent_uuid):
+        await self.call(
+            f"""
+            ALTER TABLE {self.table_name}
+            UPDATE state=%(state)s
+            WHERE measurement_uuid=%(measurement_uuid)s
+            AND agent_uuid=%(agent_uuid)s
+            """,
+            {
+                "state": "canceled",
                 "measurement_uuid": measurement_uuid,
                 "agent_uuid": agent_uuid,
             },

@@ -78,9 +78,9 @@ async def watch(redis, storage, parameters, logger):
             measurement_state = await redis.get_measurement_state(
                 parameters.measurement_uuid
             )
-            if measurement_state is None:
+            if measurement_state is None or measurement_state == "canceled":
                 logger.warning(f"{logger_prefix} Measurement canceled")
-                await database_agents_specific.stamp_finished(
+                await database_agents_specific.stamp_canceled(
                     parameters.measurement_uuid, parameters.agent_uuid
                 )
                 break
@@ -258,7 +258,13 @@ async def callback(agents_information, measurement_parameters, logger):
     except Exception:
         logger.error(f"{logger_prefix} Impossible to remove bucket")
 
-    logger.info(f"{logger_prefix} Stamp the end time for measurement")
+    logger.info(f"{logger_prefix} Stamp measurement state")
+    if await redis.get_measurement_state(measurement_uuid) == "canceled":
+        await database_measurements.stamp_canceled(username, measurement_uuid)
+    else:
+        await database_measurements.stamp_finished(username, measurement_uuid)
+
+    logger.info(f"{logger_prefix} Stamp measurement end time")
     await database_measurements.stamp_end_time(username, measurement_uuid)
 
     logger.info(f"{logger_prefix} Measurement done")

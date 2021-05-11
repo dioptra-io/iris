@@ -32,7 +32,7 @@ async def consumer(settings, agent_uuid, queue, logger):
                 continue
 
         measurement_state = await redis.get_measurement_state(measurement_uuid)
-        if measurement_state is None:
+        if measurement_state is None or measurement_state == "canceled":
             logger.warning(f"{logger_prefix} The measurement has been canceled")
             continue
 

@@ -13,7 +13,7 @@ async def watcher(
     while process.is_alive():
         if redis is not None:
             measurement_state = await redis.get_measurement_state(measurement_uuid)
-            if measurement_state is None:
+            if measurement_state is None or measurement_state == "canceled":
                 process.kill()
                 logger.warning(logger_prefix + "Measurement canceled")
                 return False

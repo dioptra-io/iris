@@ -550,6 +550,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "user": user,
             "tool": "diamond-miner",
             "tags": ["test"],
+            "state": "finished",
             "start_time": start_time,
             "end_time": end_time,
         }
@@ -767,7 +768,7 @@ def test_delete_measurement_by_uuid(client, monkeypatch):
         async def get_measurement_state(*args, **kwargs):
             return "ongoing"
 
-        async def delete_measurement_state(*args, **kwargs):
+        async def set_measurement_state(*args, **kwargs):
             pass
 
     async def get(self, username, measurement_uuid):

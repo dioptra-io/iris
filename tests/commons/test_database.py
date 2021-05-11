@@ -68,6 +68,7 @@ async def test_database_measurements():
         "admin",
         "diamond-miner",
         ["test"],
+        "canceled",
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
         datetime.strptime("2020-01-02", "%Y-%m-%d"),
     )
@@ -78,6 +79,7 @@ async def test_database_measurements():
         "admin",
         "diamond-miner",
         [],
+        "ongoing",
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
         None,
     )
@@ -87,6 +89,7 @@ async def test_database_measurements():
         "user": "admin",
         "tool": "diamond-miner",
         "tags": ["test"],
+        "state": "canceled",
         "start_time": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
         "end_time": datetime.strptime("2020-01-02", "%Y-%m-%d").isoformat(),
     }
@@ -96,6 +99,7 @@ async def test_database_measurements():
         "user": "admin",
         "tool": "diamond-miner",
         "tags": [],
+        "state": "ongoing",
         "start_time": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
         "end_time": None,
     }
@@ -246,7 +250,7 @@ async def test_database_agents_specific():
         "test.csv",
         1000,
         json.dumps({"parameters": 0}),
-        0,
+        "ongoing",
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
     )
 
@@ -258,7 +262,7 @@ async def test_database_agents_specific():
         "test.csv",
         1000,
         json.dumps({"parameters": 0}),
-        1,
+        "finished",
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
     )
 
