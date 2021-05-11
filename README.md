@@ -20,26 +20,39 @@ docker run -d -v $(pwd)/volumes/clickhouse:/var/lib/clickhouse -p 9000:9000 \
   yandex/clickhouse-server:latest
 ```
 
-Then, simply run Iris standalone with a target/prefix list as an input:
+Then, simply run Iris standalone with a prefix list as an input:
 ```bash
 docker run -i --network host -e DATABASE_HOST=127.0.0.1 \
   dioptraio/iris-standalone diamond-miner < prefixes.csv
 ```
 
+The prefix list is a CSV file decribing for each line a prefix to probe with the protocol and the TTL range.
+For instance:
+
+```
+8.8.8.0/24,icmp,2,32
+8.8.8.0/24,udp,2,32
+```
+
+Note that a prefix can be a uniqe target (e.g., `8.8.8.8/32`).
+
 **TODO (when public)**
 - [ ] Push iris-standalone to Docker Hub
-- [ ] Describe the target/prefix list format
 
 ## ✨ Iris Constellation
 
 You can set up a production-ready system to orchestrate multiple vantage points from a dedicated API and monitor the operation through a monitoring stack.
 
+We provide a [docker-compose.yml](docker-compose.yml) file to set up Iris Constellation locally. Feel free to adapt it with your own configurations. Don't forget to change the default passwords before pushing it to production!
+
+Then, simply run the stack with docker-compose:
 ```bash
 docker-compose up -d --build
 ```
 
+With the configuration provided, the API is reachable via this link : [http://iris.docker.localhost/api/docs/](http://iris.docker.localhost/api/docs/). The API default credentials are `admin:admin`.
 
-## Citation
+## Publications
 
 ## Contributing
 
