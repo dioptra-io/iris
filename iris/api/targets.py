@@ -5,7 +5,6 @@ from typing import Dict
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     File,
     HTTPException,
@@ -109,15 +108,6 @@ async def verify_target_file(target_file):
     return True
 
 
-async def upload_target_file(storage, target_bucket, target_file):
-    """Upload target file asynchronously."""
-    await storage.upload_file_no_retry(
-        target_bucket,
-        target_file.filename,
-        target_file.file,
-    )
-
-
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
@@ -131,7 +121,6 @@ async def upload_target_file(storage, target_bucket, target_file):
 )
 async def post_target(
     request: Request,
-    background_tasks: BackgroundTasks,
     target_file: UploadFile = File(...),
     user: Dict = Depends(get_current_active_user),
 ):
@@ -150,8 +139,8 @@ async def post_target(
         )
 
     target_bucket = request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"]
-    background_tasks.add_task(
-        upload_target_file, request.app.storage, target_bucket, target_file
+    await request.app.storage.upload_file_no_retry(
+        target_bucket, target_file.filename, target_file.file
     )
     return {"key": target_file.filename, "action": "upload"}
 
