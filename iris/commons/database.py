@@ -619,7 +619,7 @@ class DatabaseMeasurementResults(Database):
     async def insert_csv(self, csv_filepath):
         """Insert CSV file into table."""
         cmd = (
-            "cat "
+            "zstd --decompress --stdout "
             + str(csv_filepath)
             + " | clickhouse-client --max_insert_block_size=100000 --host="
             + self.host

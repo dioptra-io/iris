@@ -9,6 +9,7 @@ from diamond_miner.format import format_probe
 from diamond_miner.rounds.mda import mda_probes
 
 from iris.commons.database import DatabaseMeasurementResults, get_session
+from iris.worker.compress import compress_next_round_csv
 from iris.worker.shuffle import shuffle_next_round_csv
 
 
@@ -142,6 +143,22 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
             logger_prefix=logger_prefix + " ",
         )
 
+        logger.info(f"{logger_prefix} Compress next round CSV probe file")
+        compress_shuffled_next_round_csv_filename = (
+            f"{agent_uuid}_shuffled_next_round_csv_{next_round_number}.csv.zst"
+        )
+        compress_shuffled_next_round_csv_filepath = str(
+            measurement_results_path / compress_shuffled_next_round_csv_filename
+        )
+
+        await compress_next_round_csv(
+            settings,
+            shuffled_next_round_csv_filepath,
+            compress_shuffled_next_round_csv_filepath,
+            logger,
+            logger_prefix=logger_prefix + " ",
+        )
+
         if not settings.WORKER_DEBUG_MODE:
             logger.info(f"{logger_prefix} Remove local next round CSV probe file")
             await aios.remove(next_round_csv_filepath)
@@ -149,16 +166,16 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
         logger.info(f"{logger_prefix} Uploading shuffled next round CSV probe file")
         await storage.upload_file(
             measurement_uuid,
-            shuffled_next_round_csv_filename,
-            shuffled_next_round_csv_filepath,
+            compress_shuffled_next_round_csv_filename,
+            compress_shuffled_next_round_csv_filepath,
         )
 
         if not settings.WORKER_DEBUG_MODE:
             logger.info(
                 f"{logger_prefix} Remove local shuffled next round CSV probe file"
             )
-            await aios.remove(shuffled_next_round_csv_filepath)
-        return shuffled_next_round_csv_filename
+            await aios.remove(compress_shuffled_next_round_csv_filepath)
+        return compress_shuffled_next_round_csv_filename
 
     else:
         logger.info(f"{logger_prefix} Next round is not required")

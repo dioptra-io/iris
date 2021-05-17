@@ -90,7 +90,7 @@ async def measurement(settings, request, storage, logger, redis=None):
     except FileExistsError:
         logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
-    results_filename = f"{agent_uuid}_results_{request['round']}.csv"
+    results_filename = f"{agent_uuid}_results_{request['round']}.csv.zst"
     results_filepath = str(measurement_results_path / results_filename)
 
     gen_parameters = None

@@ -81,11 +81,13 @@ services:
       - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`) && PathPrefix(`/api`)"
     volumes:
       - "./iris:/app/iris"
+    # ports:
+    #   - "8083:80"
     depends_on:
-      - clickhouse
-      - loki
-      - minio
-      - redis
+    - clickhouse
+    - loki
+    - minio
+    - redis
 
   worker:
     build:

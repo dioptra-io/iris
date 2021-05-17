@@ -21,7 +21,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 # we can push binary wheels on PyPI for diamond-miner.
 RUN apt-get update \
     && apt-get install -y -q --no-install-recommends \
-        apt-transport-https build-essential ca-certificates dirmngr python3-dev \
+        apt-transport-https \
+        build-essential \
+        ca-certificates \
+        dirmngr \
+        python3-dev \
+        zstd \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \

@@ -59,7 +59,7 @@ async def get_targets(
 async def get_target_by_key(
     request: Request, key: str, user: Dict = Depends(get_current_active_user)
 ):
-    """"Get a target list information by key."""
+    """Get a target list information by key."""
     try:
         target_file = await request.app.storage.get_file_no_retry(
             request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"], key
