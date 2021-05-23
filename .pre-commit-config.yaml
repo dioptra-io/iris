@@ -14,7 +14,7 @@ repos:
     rev: 3.8.4
     hooks:
       - id: flake8
-        args: [ "--max-line-length=88" ]
+        args: [ "--ignore=E501" ]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v3.2.0
