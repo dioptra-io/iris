@@ -64,31 +64,7 @@ def test_get_measurements(client, monkeypatch):
     measurements = sorted(measurements, key=lambda x: x["start_time"], reverse=True)
 
     async def all(self, user, offset, limit, tag=None):
-        return [
-            {
-                "uuid": measurements[0]["uuid"],
-                "tool": "diamond-miner",
-                "tags": ["test"],
-                "start_time": measurements[0]["start_time"],
-                "end_time": measurements[0]["end_time"],
-            },
-            {
-                "uuid": measurements[1]["uuid"],
-                "tool": "diamond-miner",
-                "tags": [],
-                "start_time": measurements[1]["start_time"],
-                "end_time": measurements[1]["end_time"],
-            },
-            {
-                "uuid": measurements[2]["uuid"],
-                "tool": "diamond-miner",
-                "tags": [],
-                "start_time": measurements[2]["start_time"],
-                "end_time": measurements[2]["end_time"],
-            },
-        ][
-            offset : offset + limit  # noqa : E203
-        ]
+        return measurements[offset : offset + limit]  # noqa : E203
 
     async def all_count(self, *args, **kwargs):
         return 3

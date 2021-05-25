@@ -53,7 +53,7 @@ async def get_measurements(
         measurements.append(
             {
                 "uuid": measurement["uuid"],
-                "state": "finished" if state is None else state,
+                "state": measurement["state"] if state is None else state,
                 "tool": measurement["tool"],
                 "tags": measurement["tags"],
                 "start_time": measurement["start_time"],
