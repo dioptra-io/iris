@@ -5,6 +5,7 @@ import traceback
 from iris import __version__
 from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
+from iris.agent.ttl import find_exit_ttl
 from iris.commons.logger import create_logger
 from iris.commons.redis import AgentRedis
 from iris.commons.storage import Storage
@@ -66,8 +67,10 @@ async def main():
     """Main agent function."""
     settings = AgentSettings()
     logger = create_logger(settings, tags={"agent_uuid": settings.AGENT_UUID})
-
     redis = AgentRedis(settings.AGENT_UUID, settings=settings, logger=logger)
+
+    if settings.AGENT_MIN_TTL < 0:
+        settings.AGENT_MIN_TTL = find_exit_ttl(logger, "8.8.8.8", min_ttl=2)
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
