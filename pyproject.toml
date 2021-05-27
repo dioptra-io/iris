@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "iris"
-version = "0.9.3"
+version = "0.9.4"
 description = ""
 authors = ["Matthieu Gouel <matthieu.gouel@lip6.fr>"]
 
