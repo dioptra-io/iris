@@ -11,7 +11,7 @@ from iris.agent.prober import probe, watcher
 from iris.commons.dataclasses import ParametersDataclass
 
 
-def build_probe_generator_parameters(target_list, parameters):
+def build_probe_generator_parameters(settings, target_list, parameters):
     flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
 
@@ -26,11 +26,17 @@ def build_probe_generator_parameters(target_list, parameters):
         prefixes = []
         for target in target_list:
             target_line = target.split(",")
+
+            # Implicitly shift the min TTL
+            min_ttl = int(target_line[2])
+            if min_ttl < settings.AGENT_MIN_TTL:
+                min_ttl = settings.AGENT_MIN_TTL
+
             prefixes.append(
                 (
                     target_line[0],
                     target_line[1],
-                    range(int(target_line[2]), int(target_line[3]) + 1),
+                    range(min_ttl, int(target_line[3]) + 1),
                 )
             )
 
@@ -114,7 +120,9 @@ async def measurement(settings, request, storage, logger, redis=None):
         async with aiofiles.open(target_filepath) as fd:
             target_list = await fd.readlines()
 
-        gen_parameters = build_probe_generator_parameters(target_list, parameters)
+        gen_parameters = build_probe_generator_parameters(
+            settings, target_list, parameters
+        )
 
     elif request["round"] == 1 and is_custom_probes_file:
         # Round = 1

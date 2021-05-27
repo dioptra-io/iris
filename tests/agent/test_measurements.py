@@ -1,7 +1,10 @@
 import pytest
 
 from iris.agent.measurements import build_probe_generator_parameters
+from iris.agent.settings import AgentSettings
 from iris.commons.dataclasses import ParametersDataclass
+
+settings = AgentSettings()
 
 request = {
     "measurement_uuid": "ab59dc2d-95d0-4af5-aef6-b75e1a96a13f",
@@ -35,10 +38,12 @@ request = {
 
 
 def test_build_probe_generator_parameters():
-
+    settings.AGENT_MIN_TTL = 2
     target_file = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(target_file, parameters)
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_file, parameters
+    )
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.0/24", "icmp", range(2, 33)),
@@ -49,10 +54,25 @@ def test_build_probe_generator_parameters():
     assert prober_parameters["flow_ids"] == range(6)
     assert prober_parameters["probe_dst_port"] == 33434
 
+    settings.AGENT_MIN_TTL = 6
+    target_file = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
+    parameters = ParametersDataclass.from_request(request)
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_file, parameters
+    )
+
+    assert prober_parameters["prefixes"] == [
+        ("8.8.8.0/24", "icmp", range(6, 33)),
+        ("8.8.4.0/24", "icmp", range(6, 33)),
+    ]
+
+    settings.AGENT_MIN_TTL = 2
     request["parameters"]["tool"] = "yarrp"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(target_file, parameters)
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_file, parameters
+    )
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.0/24", "icmp", range(2, 33)),
@@ -67,7 +87,9 @@ def test_build_probe_generator_parameters():
     request["parameters"]["tool"] = "ping"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(target_file, parameters)
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_file, parameters
+    )
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.8", "icmp", [32]),
@@ -81,4 +103,6 @@ def test_build_probe_generator_parameters():
     request["parameters"]["tool"] = "test"
     parameters = ParametersDataclass.from_request(request)
     with pytest.raises(ValueError):
-        prober_parameters = build_probe_generator_parameters(target_file, parameters)
+        prober_parameters = build_probe_generator_parameters(
+            settings, target_file, parameters
+        )

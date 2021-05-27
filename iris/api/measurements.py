@@ -82,7 +82,7 @@ async def verify_quota(tool, content, user_quota):
     return n_prefixes <= user_quota
 
 
-async def target_file_validator(request, tool, user, target_file, agent_parameters):
+async def target_file_validator(request, tool, user, target_file):
     """Validate the target file input."""
 
     # Verify that the target file exists on AWS S3
@@ -128,15 +128,6 @@ async def target_file_validator(request, tool, user, target_file, agent_paramete
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Tool `ping` only accessible with ICMP protocol",
-            )
-
-        if int(line_split[2]) < agent_parameters["parameters"]["min_ttl"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    f"Invalid `min_ttl` for agent {agent_parameters['uuid']}"
-                    f" (>= {agent_parameters['parameters']['min_ttl']})"
-                ),
             )
 
 
@@ -198,20 +189,12 @@ async def post_measurement(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
             )
 
-        # Get agent parameters
-        agent.tool_parameters = agent.tool_parameters.dict()
-        agent_parameters = [
-            agent for agent in active_agents if agent_uuid == agent["uuid"]
-        ][0]
-
         # Check agent target file
-        await target_file_validator(
-            request, measurement.tool, user, agent.target_file, agent_parameters
-        )
+        await target_file_validator(request, measurement.tool, user, agent.target_file)
 
         # Check tool parameters
         agent.tool_parameters = tool_parameters_validator(
-            measurement.tool, agent.tool_parameters
+            measurement.tool, agent.tool_parameters.dict()
         )
         agents[agent_uuid] = agent.dict()
         del agents[agent_uuid]["uuid"]
