@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import aioboto3
@@ -138,24 +137,14 @@ class Storage(object):
         with Path(filepath).open("rb") as fd:
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(
-                ProcessPoolExecutor(),
-                self._upload_sync_file,
-                bucket,
-                filename,
-                fd,
-                metadata,
+                None, self._upload_sync_file, bucket, filename, fd, metadata
             )
 
     async def upload_file_no_retry(self, bucket, filename, fd, metadata=None):
         """Upload a file in a bucket with no retry."""
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
-            ProcessPoolExecutor(),
-            self._upload_sync_file,
-            bucket,
-            filename,
-            fd,
-            metadata,
+            None, self._upload_sync_file, bucket, filename, fd, metadata
         )
 
     def _download_sync_file(self, bucket, filename, fd):
@@ -169,7 +158,7 @@ class Storage(object):
         loop = asyncio.get_running_loop()
         with Path(output_path).open("wb") as fd:
             await loop.run_in_executor(
-                ProcessPoolExecutor(), self._download_sync_file, bucket, filename, fd
+                None, self._download_sync_file, bucket, filename, fd
             )
 
     async def delete_file_check_no_retry(self, bucket, filename):
