@@ -41,7 +41,6 @@ async def compute_next_round(
         round_=round_number,
         mapper_v4=flow_mapper_v4,
         mapper_v6=flow_mapper_v6,
-        probe_src_addr=parameters.ip_address,
         probe_src_port=parameters.tool_parameters["initial_source_port"],
         probe_dst_port=parameters.tool_parameters["destination_port"],
         adaptive_eps=True,
