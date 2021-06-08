@@ -22,13 +22,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y -q --no-install-recommends \
         apt-transport-https \
-         ca-certificates \
-         dirmngr \
-         gnupg2 \
-         python3-pip \
-         build-essential \
-         python3-dev \
-         zstd \
+        ca-certificates \
+        dirmngr \
+        gnupg2 \
+        python3-pip \
+        build-essential \
+        python3-dev \
+        zstd \
+        mtr \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \

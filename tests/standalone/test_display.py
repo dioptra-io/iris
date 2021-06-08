@@ -21,6 +21,7 @@ def test_display_results():
             measurement_uuid, agent_uuid
         ),
         "n_rounds": 1,
+        "min_ttl": 5,
         "start_time": start_time,
         "end_time": end_time,
         "n_nodes": 10,

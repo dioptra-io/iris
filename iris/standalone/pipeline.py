@@ -14,6 +14,7 @@ from diamond_miner.queries.count_nodes import CountNodesFromResults
 from iris import __version__
 from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
+from iris.agent.ttl import find_exit_ttl
 from iris.api.schemas import Tool, ToolParameters
 from iris.commons.database import (
     Database,
@@ -145,6 +146,12 @@ async def pipeline(
     measurement_uuid: str = str(uuid.uuid4())
     start_time = datetime.now()
 
+    # Find min TTL automatically
+    if agent_settings.AGENT_MIN_TTL < 0:
+        agent_settings.AGENT_MIN_TTL = find_exit_ttl(
+            logger, agent_settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2
+        )
+
     # Create the database if not exists
     session = get_session(agent_settings)
     await Database(session, agent_settings, logger=logger).create_database(
@@ -245,6 +252,7 @@ async def pipeline(
             measurement_uuid, agent_settings.AGENT_UUID
         ),
         "n_rounds": round_number,
+        "min_ttl": agent_settings.AGENT_MIN_TTL,
         "start_time": start_time,
         "end_time": datetime.now(),
         "n_nodes": n_nodes,

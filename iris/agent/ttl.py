@@ -28,7 +28,8 @@ def find_exit_ttl(logger, destination, min_ttl):
     logger.info(f"Finding exit TTL towards {destination}...")
 
     # Ensure that the exit TTL is never in one of these networks.
-    # This can be useful if a spurious/invalid ASN appears before the true "gateway" ASN.
+    # This can be useful if a spurious/invalid ASN appears
+    # before the true "gateway" ASN.
     excluded = [
         None,
         "AS???",
@@ -37,7 +38,7 @@ def find_exit_ttl(logger, destination, min_ttl):
 
     out = mtr(
         logger,
-        destination,
+        str(destination),
         aslookup=True,
         csv=True,
         gracetime=1,

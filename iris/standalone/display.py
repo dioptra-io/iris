@@ -45,6 +45,13 @@ def display_results(results: dict, console: Optional[Console] = None):
             highlighter=ReprHighlighter(),
         ),
     )
+    items_table.add_row(
+        "min_ttl =",
+        Pretty(
+            results["min_ttl"],
+            highlighter=ReprHighlighter(),
+        ),
+    )
     items_table.add_row("")
     items_table.add_row(
         "start time =",

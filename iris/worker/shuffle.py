@@ -14,9 +14,9 @@ async def shuffle_next_round_csv(
         + "; "
         + str(settings.WORKER_TERASHUF_PATH)
         + " < "
-        + csv_filepath
+        + str(csv_filepath)
         + " > "
-        + shuffled_csv_filepath
+        + str(shuffled_csv_filepath)
     )
 
     await start_stream_subprocess(

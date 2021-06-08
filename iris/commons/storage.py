@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import aioboto3
@@ -125,41 +126,49 @@ class Storage(object):
         """Get file information from a bucket."""
         return await self.get_file_no_retry(bucket, filename)
 
-    def _upload_sync_file(self, bucket, filename, fin, metadata=None):
+    def _upload_sync_file(self, bucket, filename, filepath, metadata=None):
         """Underlying synchronous upload function."""
-        s3 = boto3.client("s3", **self.aws_settings)
-        extraargs = {"Metadata": metadata} if metadata else None
-        s3.upload_fileobj(fin, bucket, filename, ExtraArgs=extraargs)
+        with Path(filepath).open("rb") as fd:
+            s3 = boto3.client("s3", **self.aws_settings)
+            extraargs = {"Metadata": metadata} if metadata else None
+            s3.upload_fileobj(fd, bucket, filename, ExtraArgs=extraargs)
 
     @fault_tolerant
     async def upload_file(self, bucket, filename, filepath, metadata=None):
         """Upload a file in a bucket."""
-        with Path(filepath).open("rb") as fd:
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(
-                None, self._upload_sync_file, bucket, filename, fd, metadata
-            )
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(
+            ProcessPoolExecutor(),
+            self._upload_sync_file,
+            bucket,
+            filename,
+            filepath,
+            metadata,
+        )
 
     async def upload_file_no_retry(self, bucket, filename, fd, metadata=None):
         """Upload a file in a bucket with no retry."""
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None, self._upload_sync_file, bucket, filename, fd, metadata
-        )
+        async with aioboto3.client("s3", **self.aws_settings) as s3:
+            extraargs = {"Metadata": metadata} if metadata else None
+            await s3.upload_fileobj(fd, bucket, filename, ExtraArgs=extraargs)
 
-    def _download_sync_file(self, bucket, filename, fd):
+    def _download_sync_file(self, bucket, filename, output_path):
         """Underlying synchronous download function."""
-        s3 = boto3.client("s3", **self.aws_settings)
-        s3.download_fileobj(bucket, filename, fd)
+        with Path(output_path).open("wb") as fd:
+            s3 = boto3.client("s3", **self.aws_settings)
+            s3.download_fileobj(bucket, filename, fd)
 
     @fault_tolerant
     async def download_file(self, bucket, filename, output_path):
         """Download a file in a bucket."""
         loop = asyncio.get_running_loop()
-        with Path(output_path).open("wb") as fd:
-            await loop.run_in_executor(
-                None, self._download_sync_file, bucket, filename, fd
-            )
+        await loop.run_in_executor(
+            ProcessPoolExecutor(),
+            self._download_sync_file,
+            bucket,
+            filename,
+            output_path,
+        )
 
     async def delete_file_check_no_retry(self, bucket, filename):
         """Delete a file with a check that it exists."""

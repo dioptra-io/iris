@@ -2,8 +2,13 @@
 
 import json
 import logging
+import os
+import subprocess
 import uuid
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
+from functools import partial
+from pathlib import Path
 
 from aioch import Client
 from diamond_miner.queries.create_flows_view import CreateFlowsView
@@ -522,6 +527,17 @@ class DatabaseAgentsSpecific(Database):
         )
 
 
+def sync_insert_csv(table_name, chunk_filepath: Path):
+    with chunk_filepath.open("r") as fin:
+        command = [
+            "clickhouse-client",
+            "-q",
+            f"INSERT INTO {table_name} FORMAT CSV",
+        ]
+        subprocess.call(command, stdin=fin)
+    os.remove(str(chunk_filepath))
+
+
 class DatabaseMeasurementResults(Database):
     """Database interface to handle measurement results."""
 
@@ -531,6 +547,7 @@ class DatabaseMeasurementResults(Database):
         self.table_name = table_name
         self.host = session._client.connection.hosts[0][0]
         self.logger = logger
+        self.logger_prefix = " :: ".join(table_name.split("__")[1:]) + " ::"
 
     @staticmethod
     def forge_table_name(
@@ -616,22 +633,48 @@ class DatabaseMeasurementResults(Database):
         response = await self.call(f"EXISTS TABLE {self.table_name}")
         return bool(response[0][0])
 
-    async def insert_csv(self, csv_filepath):
+    async def insert_csv(self, csv_filepath: Path):
         """Insert CSV file into table."""
-        cmd = (
-            "zstd --decompress --stdout "
-            + str(csv_filepath)
-            + " | clickhouse-client --max_insert_block_size=100000 --host="
-            + self.host
-            + " --query='INSERT INTO "
-            + str(self.table_name)
-            + " FORMAT CSV'"
-        )
+        if not self.settings.DATABASE_PARALLEL_CSV_INSERT:
+            # If the parallel insert option is not activated
+            cmd = (
+                "zstd --decompress --stdout "
+                + str(csv_filepath)
+                + " | clickhouse-client --host="
+                + self.host
+                + " --query='INSERT INTO "
+                + str(self.table_name)
+                + " FORMAT CSV'"
+            )
 
-        await start_stream_subprocess(
-            cmd, stdout=self.logger.info, stderr=self.logger.error
-        )
+            await start_stream_subprocess(
+                cmd, stdout=self.logger.info, stderr=self.logger.error
+            )
+        else:
+            # Split
+            chunks_prefix = ".".join(csv_filepath.name.split(".")[:-1]) + "_"
+            chunks_prefix_path = csv_filepath.parent / chunks_prefix
+            await start_stream_subprocess(
+                f"zstd --decompress --stdout {csv_filepath} | "
+                f"split - {chunks_prefix_path} "
+                f"-d -l {self.settings.DATABASE_PARALLEL_CSV_MAX_LINE}",
+                stdout=self.logger.info,
+                stderr=self.logger.error,
+            )
+
+            # Select the chunks
+            chunks = os.listdir(csv_filepath.parent)
+            chunks = [
+                csv_filepath.parent / f for f in chunks if f.startswith(chunks_prefix)
+            ]
+
+            self.logger.info(f"{self.logger_prefix} Number of chunks: {len(chunks)}")
+
+            # Parallel insert
+            with ProcessPoolExecutor() as exe:
+                exe.map(partial(sync_insert_csv, self.table_name), chunks)
 
     async def insert_links(self, flows_view_name, links_table_name, round_number):
+        """Insert the links in the links table from the flow view."""
         query = GetLinksFromView(round_eq=round_number).query(flows_view_name)
         await self.call(f"INSERT INTO {links_table_name} {query}")

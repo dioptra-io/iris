@@ -70,7 +70,9 @@ async def main():
     redis = AgentRedis(settings.AGENT_UUID, settings=settings, logger=logger)
 
     if settings.AGENT_MIN_TTL < 0:
-        settings.AGENT_MIN_TTL = find_exit_ttl(logger, "8.8.8.8", min_ttl=2)
+        settings.AGENT_MIN_TTL = find_exit_ttl(
+            logger, settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2
+        )
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)

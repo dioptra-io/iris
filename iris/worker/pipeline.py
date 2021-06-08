@@ -1,12 +1,10 @@
 """Measurement pipeline."""
 
-import aiofiles
-from aioch import Client
 from aiofiles import os as aios
+from clickhouse_driver import Client
 from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
-from diamond_miner.format import format_probe
-from diamond_miner.rounds.mda import mda_probes
+from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
 from iris.commons.database import DatabaseMeasurementResults, get_session
 from iris.worker.compress import compress_next_round_csv
@@ -19,7 +17,6 @@ def extract_round_number(filename):
 
 async def compute_next_round(
     settings,
-    results_table_name,
     links_table_name,
     round_number,
     parameters,
@@ -35,7 +32,8 @@ async def compute_next_round(
         **{"prefix_size": DEFAULT_PREFIX_SIZE_V6, **flow_mapper_kwargs}
     )
     client = Client(host=settings.DATABASE_HOST)
-    probes_gen = mda_probes(
+    await mda_probes_parallel(
+        filepath=next_round_csv_filepath,
         client=client,
         table=links_table_name,
         round_=round_number,
@@ -44,15 +42,7 @@ async def compute_next_round(
         probe_src_port=parameters.tool_parameters["initial_source_port"],
         probe_dst_port=parameters.tool_parameters["destination_port"],
         adaptive_eps=True,
-        skip_unpopulated_ttls=True,
-        skip_unpopulated_ttls_table=results_table_name,
     )
-
-    async with aiofiles.open(next_round_csv_filepath, "w") as fout:
-        async for probes_specs in probes_gen:
-            await fout.write(
-                "".join(("\n".join(format_probe(*spec) for spec in probes_specs), "\n"))
-            )
 
 
 async def default_pipeline(settings, parameters, results_filename, storage, logger):
@@ -68,7 +58,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
 
     logger.info(f"{logger_prefix} Round {round_number}")
     logger.info(f"{logger_prefix} Download results file")
-    results_filepath = str(measurement_results_path / results_filename)
+    results_filepath = measurement_results_path / results_filename
     await storage.download_file(measurement_uuid, results_filename, results_filepath)
 
     logger.info(f"{logger_prefix} Delete results file from AWS S3")
@@ -113,11 +103,10 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
 
     logger.info(f"{logger_prefix} Compute the next round CSV probe file")
     next_round_csv_filename = f"{agent_uuid}_next_round_csv_{next_round_number}.csv"
-    next_round_csv_filepath = str(measurement_results_path / next_round_csv_filename)
+    next_round_csv_filepath = measurement_results_path / next_round_csv_filename
 
     await compute_next_round(
         settings,
-        table_name,
         links_table_name,
         round_number,
         parameters,
@@ -127,7 +116,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     shuffled_next_round_csv_filename = (
         f"{agent_uuid}_shuffled_next_round_csv_{next_round_number}.csv"
     )
-    shuffled_next_round_csv_filepath = str(
+    shuffled_next_round_csv_filepath = (
         measurement_results_path / shuffled_next_round_csv_filename
     )
 
@@ -146,7 +135,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
         compress_shuffled_next_round_csv_filename = (
             f"{agent_uuid}_shuffled_next_round_csv_{next_round_number}.csv.zst"
         )
-        compress_shuffled_next_round_csv_filepath = str(
+        compress_shuffled_next_round_csv_filepath = (
             measurement_results_path / compress_shuffled_next_round_csv_filename
         )
 

@@ -2,6 +2,7 @@
 
 import logging
 from enum import Enum
+from ipaddress import IPv4Address
 from pathlib import Path
 from uuid import uuid4
 
@@ -28,6 +29,7 @@ class AgentSettings(CommonSettings):
     AGENT_UUID: str = str(uuid4())
     AGENT_MAX_PROBING_RATE: int = 1000  # pps
     AGENT_MIN_TTL: int = -1  # A value < 0 will trigger `find_exit_ttl`
+    AGENT_MIN_TTL_FIND_TARGET: IPv4Address = IPv4Address("8.8.8.8")
 
     AGENT_TARGETS_DIR_PATH: Path = Path("/app/targets")
     AGENT_RESULTS_DIR_PATH: Path = Path("/app/results")

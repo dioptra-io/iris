@@ -33,6 +33,8 @@ class CommonSettings(BaseSettings):
     DATABASE_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
     DATABASE_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     DATABASE_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
+    DATABASE_PARALLEL_CSV_INSERT: bool = True  # linux/macos only
+    DATABASE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
 
     TABLE_NAME_USERS: str = f"{DATABASE_NAME}.users"
     TABLE_NAME_MEASUREMENTS: str = f"{DATABASE_NAME}.measurements"
