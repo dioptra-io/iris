@@ -2,7 +2,20 @@
 name = "iris"
 version = "0.10.1"
 description = ""
-authors = ["Matthieu Gouel <matthieu.gouel@lip6.fr>"]
+license = "MIT"
+authors = [
+    "Matthieu Gouel <matthieu.gouel@lip6.fr>",
+    "Maxime Mouchet <maxime.mouchet@lip6.fr>"
+]
+readme = "README.md"
+homepage = "https://github.com/dioptra-io/iris"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Internet",
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
