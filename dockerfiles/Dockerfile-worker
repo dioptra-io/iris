@@ -1,17 +1,3 @@
-FROM ubuntu:20.04 AS builder
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update \
-    && apt-get install -y -q --no-install-recommends \
-        build-essential \
-        ca-certificates \
-        git \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN git clone https://github.com/alexandres/terashuf.git /tmp/terashuf \
-    && cd /tmp/terashuf \
-    && make -j8
-
 FROM python:3.8
 LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 
@@ -40,9 +26,6 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
 WORKDIR /app
 
 RUN mkdir results
-ENV MEMORY 24
-
-COPY --from=builder /tmp/terashuf/terashuf /app/terashuf/terashuf
 
 RUN mkdir vendors
 COPY vendors/diamond-miner vendors/diamond-miner
