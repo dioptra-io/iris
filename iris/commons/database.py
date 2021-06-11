@@ -22,7 +22,7 @@ from diamond_miner.queries import (
     prefixes_table,
     results_table,
 )
-from diamond_miner.subsets import results_subsets
+from diamond_miner.subsets import subsets_for
 from tenacity import (
     before_sleep_log,
     retry,
@@ -677,20 +677,16 @@ class DatabaseMeasurementResults(Database):
 
     async def insert_links(self, round_number):
         """Insert the links in the links table from the flow view."""
+        # TODO: `subsets_for` fault-tolerancy
         await self.call(f"TRUNCATE {links_table(self.measurement_id)}")
-        subsets = await results_subsets(
-            self.url, self.measurement_id
-        )  # TODO: Fault-tolerency
-        await self.execute_concurrent(
-            InsertLinks(), self.measurement_id, subsets=subsets
-        )
+        query = InsertLinks()
+        subsets = await subsets_for(query, self.url, self.measurement_id)
+        await self.execute_concurrent(query, self.measurement_id, subsets=subsets)
 
     async def insert_prefixes(self, round_number):
         """Insert the invalid prefixes in the prefix table."""
+        # TODO: `subsets_for` fault-tolerancy
         await self.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
-        subsets = await results_subsets(
-            self.url, self.measurement_id
-        )  # TODO: Fault-tolerency
-        await self.execute_concurrent(
-            InsertPrefixes(), self.measurement_id, subsets=subsets
-        )
+        query = InsertPrefixes()
+        subsets = await subsets_for(query, self.url, self.measurement_id)
+        await self.execute_concurrent(query, self.measurement_id, subsets=subsets)
