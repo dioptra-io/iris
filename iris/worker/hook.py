@@ -15,8 +15,9 @@ from iris.commons.database import (
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
+from iris.commons.round import Round
 from iris.commons.storage import Storage
-from iris.worker.pipeline import default_pipeline, extract_round_number
+from iris.worker.pipeline import default_pipeline
 from iris.worker.settings import WorkerSettings
 
 settings = WorkerSettings()
@@ -98,11 +99,11 @@ async def watch(redis, storage, parameters, logger):
             await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
             continue
 
-        shuffled_next_round_csv_filename = await default_pipeline(
+        next_round, shuffled_next_round_csv_filename = await default_pipeline(
             settings, parameters, results_filename, storage, logger
         )
 
-        if shuffled_next_round_csv_filename is None:
+        if next_round is None:
             logger.info(f"{logger_prefix} Measurement done for this agent")
             await database_agents_specific.stamp_finished(
                 parameters.measurement_uuid, parameters.agent_uuid
@@ -110,14 +111,13 @@ async def watch(redis, storage, parameters, logger):
             break
         else:
             logger.info(f"{logger_prefix} Publish next mesurement")
-            round_number = extract_round_number(shuffled_next_round_csv_filename)
             await redis.publish(
                 parameters.agent_uuid,
                 {
                     "measurement_uuid": parameters.measurement_uuid,
                     "username": parameters.user,
                     "parameters": parameters.dict(),
-                    "round": round_number,
+                    "round": next_round.encode(),
                     "probes": shuffled_next_round_csv_filename,
                 },
             )
@@ -217,7 +217,7 @@ async def callback(agents_information, measurement_parameters, logger):
         request = {
             "measurement_uuid": measurement_uuid,
             "username": username,
-            "round": 1,
+            "round": Round(1, settings.WORKER_ROUND_1_SLIDING_WINDOW, 0).encode(),
             "probes": None,
             "parameters": measurement_parameters,
         }

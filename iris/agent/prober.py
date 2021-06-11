@@ -55,6 +55,7 @@ def probe(
 
     config.set_probing_rate(measurement_probing_rate)
     config.set_rate_limiting_method(settings.AGENT_CARACAL_RATE_LIMITING_METHOD.value)
+    config.set_sniffer_wait_time(settings.AGENT_CARACAL_SNIFFER_WAIT_TIME)
     config.set_integrity_check(settings.AGENT_CARACAL_INTEGRITY_CHECK)
     config.set_meta_round(str(round_number))
 

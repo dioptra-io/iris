@@ -797,13 +797,13 @@ def test_get_measurement_results(client, monkeypatch):
 
     results = [
         {
+            "probe_protocol": 0,
             "probe_src_addr": "::ffff:ac12:b",
             "probe_dst_addr": "::ffff:84e3:7b81",
             "probe_src_port": 24000,
             "probe_dst_port": 34334,
-            "probe_ttl_l3": 78,
-            "probe_ttl_l4": 9,
-            "probe_protocol": 0,
+            "probe_ttl": 78,
+            "quoted_ttl": 9,
             "reply_src_addr": "::ffff:869d:fe0a",
             "reply_protocol": 17,
             "reply_icmp_type": 11,

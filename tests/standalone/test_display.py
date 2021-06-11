@@ -2,7 +2,8 @@ import uuid
 from contextlib import redirect_stdout
 from datetime import datetime
 
-from iris.commons.database import DatabaseMeasurementResults
+from diamond_miner.queries import results_table
+
 from iris.standalone.display import display_results
 
 
@@ -17,9 +18,7 @@ def test_display_results():
         "measurement_uuid": measurement_uuid,
         "agent_uuid": agent_uuid,
         "database_name": "iris",
-        "table_name": DatabaseMeasurementResults.forge_table_name(
-            measurement_uuid, agent_uuid
-        ),
+        "table_name": results_table(f"{measurement_uuid}__{agent_uuid}"),
         "n_rounds": 1,
         "min_ttl": 5,
         "start_time": start_time,

@@ -103,7 +103,7 @@ async def target_file_validator(request, tool, user, target_file):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only `yarrp` tool can be used with custom probe file",
             )
-        return
+        return None, None
 
     # Check if the user respects his quota
     try:
@@ -121,14 +121,20 @@ async def target_file_validator(request, tool, user, target_file):
         )
 
     # Check protocol and min/max TTL
+    global_min_ttl = 256
+    global_max_ttl = 0
     for line in [p.strip() for p in target_file["content"].split()]:
-        line_split = line.split(",")
-        if tool == "ping" and line_split[1] == "udp":
+        _, protocol, min_ttl, max_ttl = line.split(",")
+        min_ttl, max_ttl = int(min_ttl), int(max_ttl)
+        global_min_ttl = min(global_min_ttl, min_ttl)
+        global_max_ttl = max(global_max_ttl, max_ttl)
+        if tool == "ping" and protocol == "udp":
             # Disabling UDP port scanning abilities
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Tool `ping` only accessible with ICMP protocol",
             )
+    return global_min_ttl, global_max_ttl
 
 
 def tool_parameters_validator(tool, tool_parameters):
@@ -175,7 +181,6 @@ async def post_measurement(
     user: Dict = Depends(get_current_active_user),
 ):
     """Request a measurement."""
-
     # Get all connected agents
     active_agents = await request.app.redis.get_agents(state=False, parameters=True)
     active_agent_uuids = [agent["uuid"] for agent in active_agents]
@@ -190,12 +195,16 @@ async def post_measurement(
             )
 
         # Check agent target file
-        await target_file_validator(request, measurement.tool, user, agent.target_file)
+        global_min_ttl, global_max_ttl = await target_file_validator(
+            request, measurement.tool, user, agent.target_file
+        )
 
         # Check tool parameters
         agent.tool_parameters = tool_parameters_validator(
             measurement.tool, agent.tool_parameters.dict()
         )
+        agent.tool_parameters["global_min_ttl"] = global_min_ttl
+        agent.tool_parameters["global_max_ttl"] = global_max_ttl
         agents[agent_uuid] = agent.dict()
         del agents[agent_uuid]["uuid"]
 
@@ -334,7 +343,6 @@ async def get_measurement_results(
     user: Dict = Depends(get_current_active_user),
 ):
     """Get measurement results."""
-
     session = get_session(request.app.settings)
 
     measurement_info = await DatabaseMeasurements(
@@ -344,12 +352,6 @@ async def get_measurement_results(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
-
-    table_name = (
-        request.app.settings.DATABASE_NAME
-        + "."
-        + DatabaseMeasurementResults.forge_table_name(measurement_uuid, agent_uuid)
-    )
 
     agent_specific_info = await DatabaseAgentsSpecific(
         session, request.app.settings, request.app.logger
@@ -374,7 +376,7 @@ async def get_measurement_results(
         )
 
     database = DatabaseMeasurementResults(
-        session, request.app.settings, table_name, request.app.logger
+        session, request.app.settings, measurement_uuid, agent_uuid, request.app.logger
     )
 
     is_table_exists = await database.is_exists()

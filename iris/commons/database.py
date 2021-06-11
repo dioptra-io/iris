@@ -1,5 +1,6 @@
 """Interfaces with database."""
 
+import ipaddress
 import json
 import logging
 import os
@@ -11,10 +12,14 @@ from functools import partial
 from pathlib import Path
 
 from aioch import Client
-from diamond_miner.queries.create_flows_view import CreateFlowsView
-from diamond_miner.queries.create_links_table import CreateLinksTable
-from diamond_miner.queries.create_results_table import CreateResultsTable
-from diamond_miner.queries.get_links_from_view import GetLinksFromView
+from diamond_miner.queries import (
+    CreateTables,
+    DropTables,
+    InsertLinks,
+    InsertPrefixes,
+    prefixes_table,
+    results_table,
+)
 from tenacity import (
     before_sleep_log,
     retry,
@@ -27,10 +32,11 @@ from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.subprocess import start_stream_subprocess
 
 
-def get_session(settings):
+def get_session(settings, default=False):
     """Get database session."""
     return Client(
         settings.DATABASE_HOST,
+        database=settings.DATABASE_NAME if not default else "default",
         connect_timeout=settings.DATABASE_CONNECT_TIMEOUT,
         send_receive_timeout=settings.DATABASE_SEND_RECEIVE_TIMEOUT,
         sync_request_timeout=settings.DATABASE_SYNC_REQUEST_TIMEOUT,
@@ -70,6 +76,10 @@ class Database(object):
     @fault_tolerant
     async def call(self, *args, **kwargs):
         return await self.session.execute(*args, **kwargs)
+
+    @fault_tolerant
+    async def call_fn(self, fn):
+        return await fn()
 
     async def create_database(self, database_name):
         """Create a database if not exists."""
@@ -527,10 +537,12 @@ class DatabaseAgentsSpecific(Database):
         )
 
 
-def sync_insert_csv(table_name, chunk_filepath: Path):
+def sync_insert_csv(database_name, host, table_name, chunk_filepath: Path):
     with chunk_filepath.open("r") as fin:
         command = [
             "clickhouse-client",
+            f"--database={database_name}",
+            f"--host={host}",
             "-q",
             f"INSERT INTO {table_name} FORMAT CSV",
         ]
@@ -541,69 +553,32 @@ def sync_insert_csv(table_name, chunk_filepath: Path):
 class DatabaseMeasurementResults(Database):
     """Database interface to handle measurement results."""
 
-    def __init__(self, session, settings, table_name, logger=None):
+    def __init__(self, session, settings, measurement_uuid, agent_uuid, logger=None):
         self.session = session
         self.settings = settings
-        self.table_name = table_name
         self.host = session._client.connection.hosts[0][0]
+        self.measurement_id = f"{measurement_uuid}__{agent_uuid}"
         self.logger = logger
-        self.logger_prefix = " :: ".join(table_name.split("__")[1:]) + " ::"
-
-    @staticmethod
-    def forge_table_name(
-        measurement_uuid,
-        agent_uuid,
-    ):
-        """Forge the table name from measurement UUID and agent UUID."""
-        sanitized_measurement_uuid = str(measurement_uuid).replace("-", "_")
-        sanitized_agent_uuid = str(agent_uuid).replace("-", "_")
-        return f"results__{sanitized_measurement_uuid}" + f"__{sanitized_agent_uuid}"
-
-    @staticmethod
-    def parse_table_name(table_name):
-        """Parse table name to extract parameters."""
-        table_name_split = table_name.split("__")
-        measurement_uuid, agent_uuid = (
-            table_name_split[1],
-            table_name_split[2],
-        )
-        return {
-            "measurement_uuid": measurement_uuid.replace("_", "-"),
-            "agent_uuid": agent_uuid.replace("_", "-"),
-        }
-
-    def swap_table_name_prefix(self, prefix):
-        database_name, table_name = self.table_name.split(".")
-        measurement_uuid, agent_uuid = table_name.split("__")[1:3]
-        return f"{database_name}.{prefix}__{measurement_uuid}__{agent_uuid}"
+        self.logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
     async def create_table(self, drop=False):
         """Create the results table."""
         if drop:
-            await self.drop_table(self.table_name)
-        await self.call(CreateResultsTable().query(self.table_name))
-
-    async def create_view_flows(self, flows_view_name):
-        """Create the materialized view on the results table."""
-        q = CreateFlowsView(parent=self.table_name)
-        await self.call(q.query(flows_view_name))
-
-    async def create_links_table(self, links_table_name, drop=False):
-        """Create the associated links table."""
-        if drop:
-            await self.drop_table(links_table_name)
-        await self.call(CreateLinksTable().query(links_table_name))
+            await self.call(DropTables().statement(self.measurement_id))
+        await self.call_fn(
+            lambda: CreateTables().execute_async(self.session, self.measurement_id)
+        )
 
     def formatter(self, row):
         """Database row -> response formater."""
         return {
-            "probe_src_addr": str(row[0]),
-            "probe_dst_addr": str(row[1]),
-            "probe_src_port": row[2],
-            "probe_dst_port": row[3],
-            "probe_ttl_l3": row[4],
-            "probe_ttl_l4": row[5],
-            "probe_protocol": row[6],
+            "probe_protocol": row[0],
+            "probe_src_addr": str(row[1]),
+            "probe_dst_addr": str(row[2]),
+            "probe_src_port": row[3],
+            "probe_dst_port": row[4],
+            "probe_ttl": row[5],
+            "quoted_ttl": row[6],
             "reply_src_addr": str(row[7]),
             "reply_protocol": row[8],
             "reply_icmp_type": row[9],
@@ -617,20 +592,23 @@ class DatabaseMeasurementResults(Database):
 
     async def all_count(self):
         """Get the count of all results."""
-        response = await self.call(f"SELECT Count() FROM {self.table_name}")
+        response = await self.call(
+            f"SELECT Count() FROM {results_table(self.measurement_id)}"
+        )
         return response[0][0]
 
     async def all(self, offset, limit):
         """Get all results given (offset, limit)."""
         response = await self.call(
-            f"SELECT * FROM {self.table_name} LIMIT %(offset)s,%(limit)s",
+            f"SELECT * FROM {results_table(self.measurement_id)} "
+            "LIMIT %(offset)s,%(limit)s",
             {"offset": offset, "limit": limit},
         )
         return [self.formatter(row) for row in response]
 
     async def is_exists(self):
         """Check if table exists."""
-        response = await self.call(f"EXISTS TABLE {self.table_name}")
+        response = await self.call(f"EXISTS TABLE {results_table(self.measurement_id)}")
         return bool(response[0][0])
 
     async def insert_csv(self, csv_filepath: Path):
@@ -640,10 +618,11 @@ class DatabaseMeasurementResults(Database):
             cmd = (
                 "zstd --decompress --stdout "
                 + str(csv_filepath)
-                + " | clickhouse-client --host="
-                + self.host
+                + " | clickhouse-client "
+                + f"--database={self.settings.DATABASE_NAME} "
+                + f"--host={self.host}"
                 + " --query='INSERT INTO "
-                + str(self.table_name)
+                + results_table(self.measurement_id)
                 + " FORMAT CSV'"
             )
 
@@ -672,9 +651,29 @@ class DatabaseMeasurementResults(Database):
 
             # Parallel insert
             with ProcessPoolExecutor() as exe:
-                exe.map(partial(sync_insert_csv, self.table_name), chunks)
+                exe.map(
+                    partial(
+                        sync_insert_csv,
+                        self.settings.DATABASE_NAME,
+                        self.host,
+                        results_table(self.measurement_id),
+                    ),
+                    chunks,
+                )
 
-    async def insert_links(self, flows_view_name, links_table_name, round_number):
+    async def insert_links(self, round_number):
         """Insert the links in the links table from the flow view."""
-        query = GetLinksFromView(round_eq=round_number).query(flows_view_name)
-        await self.call(f"INSERT INTO {links_table_name} {query}")
+        await self.call(
+            InsertLinks(round_eq=round_number).statement(self.measurement_id)
+        )
+
+    async def insert_prefixes(self, round_number):
+        """Insert the invalid prefixes in the prefix table."""
+        await self.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
+
+        # TODO: Compatibility to IPv6
+        subsets = ipaddress.ip_network("0.0.0.0/0").subnets(new_prefix=6)
+        for subset in subsets:
+            await self.call(
+                InsertPrefixes().statement(self.measurement_id, subset=subset)
+            )

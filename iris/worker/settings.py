@@ -21,4 +21,9 @@ class WorkerSettings(CommonSettings):
     WORKER_SANITY_CHECK_RETRIES: int = 3
     WORKER_SANITY_CHECK_REFRESH: int = 1  # seconds
 
+    WORKER_ROUND_1_SLIDING_WINDOW: int = 10  # put to 0 to deactivate sliding window
+    WORKER_ROUND_1_STOPPING: int = (
+        3  # stops probing a prefix if more than this number of *
+    )
+
     WORKER_DEBUG_MODE: bool = False

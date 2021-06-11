@@ -1,6 +1,7 @@
 """Measurement interface."""
 
 import multiprocessing
+from ipaddress import ip_address, ip_network
 
 import aiofiles
 import aiofiles.os
@@ -9,9 +10,20 @@ from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V
 
 from iris.agent.prober import probe, watcher
 from iris.commons.dataclasses import ParametersDataclass
+from iris.commons.round import Round
 
 
-def build_probe_generator_parameters(settings, target_list, parameters):
+def cast_prefix(prefix: str):
+    base_prefix = ip_address(prefix)
+    base_prefix_mapped = base_prefix.ipv4_mapped
+    if base_prefix_mapped:
+        return ip_network(str(base_prefix_mapped) + "/24")
+    return ip_network(prefix + "/64")
+
+
+async def build_probe_generator_parameters(
+    settings, target_filepath, prefix_filepath, round, parameters
+):
     flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
 
@@ -23,22 +35,44 @@ def build_probe_generator_parameters(settings, target_list, parameters):
             **{"prefix_size": DEFAULT_PREFIX_SIZE_V6, **flow_mapper_kwargs}
         )
 
-        prefixes = []
-        for target in target_list:
-            target_line = target.split(",")
+        prefixes_from_target_file = []
+        async with aiofiles.open(target_filepath) as fd:
+            async for target in fd:
+                target_line = target.split(",")
 
-            # Implicitly shift the min TTL
-            min_ttl = int(target_line[2])
-            if min_ttl < settings.AGENT_MIN_TTL:
-                min_ttl = settings.AGENT_MIN_TTL
-
-            prefixes.append(
-                (
-                    target_line[0],
-                    target_line[1],
-                    range(min_ttl, int(target_line[3]) + 1),
+                min_ttl = max(
+                    settings.AGENT_MIN_TTL, int(target_line[2]), round.min_ttl
                 )
-            )
+                max_ttl = min(int(target_line[3]), round.max_ttl)
+
+                prefixes_from_target_file.append(
+                    [
+                        ip_network(target_line[0]),
+                        target_line[1],
+                        range(min_ttl, max_ttl + 1),
+                    ]
+                )
+
+        prefixes_to_probe = None
+        if prefix_filepath is not None:
+            # There is a list of prefixes to probe
+            # So we use these prefixes along with the TTL information
+            # from the prefix list
+            async with aiofiles.open(prefix_filepath) as fd:
+                prefixes_to_probe = await fd.readlines()
+
+            prefixes_to_probe = [cast_prefix(p.strip()) for p in prefixes_to_probe]
+
+            prefixes = []
+            for prefix in prefixes_to_probe:
+                for prefix_target in prefixes_from_target_file:
+                    if prefix.overlaps(prefix_target[0]):
+                        prefixes.append(tuple([str(prefix)] + prefix_target[1:]))
+        else:
+            # There is no prefix list to probe so we directly take the target list
+            prefixes = []
+            for prefix in prefixes_from_target_file:
+                prefixes.append(tuple([str(prefix[0])] + prefix[1:]))
 
         return {
             "prefixes": prefixes,
@@ -55,15 +89,16 @@ def build_probe_generator_parameters(settings, target_list, parameters):
 
         # Only take the max TTL in the TTL range
         prefixes = []
-        for target in target_list:
-            target_line = target.split(",")
-            prefixes.append(
-                (
-                    target_line[0],
-                    target_line[1],
-                    [int(target_line[3])],
+        async with aiofiles.open(target_filepath) as fd:
+            async for target in fd:
+                target_line = target.split(",")
+                prefixes.append(
+                    (
+                        target_line[0],
+                        target_line[1],
+                        [int(target_line[3])],
+                    )
                 )
-            )
 
         return {
             "prefixes": prefixes,
@@ -82,6 +117,7 @@ async def measurement(settings, request, storage, logger, redis=None):
     """Conduct a measurement."""
     measurement_uuid = request["measurement_uuid"]
     agent_uuid = settings.AGENT_UUID
+    round = Round.decode(request["round"])
 
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
 
@@ -96,7 +132,7 @@ async def measurement(settings, request, storage, logger, redis=None):
     except FileExistsError:
         logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
-    results_filename = f"{agent_uuid}_results_{request['round']}.csv.zst"
+    results_filename = f"{agent_uuid}_results_{round.encode()}.csv.zst"
     results_filepath = str(measurement_results_path / results_filename)
 
     gen_parameters = None
@@ -106,10 +142,10 @@ async def measurement(settings, request, storage, logger, redis=None):
 
     is_custom_probes_file = parameters.target_file.endswith(".probes")
 
-    if request["round"] == 1 and not is_custom_probes_file:
+    if round.number == 1 and not is_custom_probes_file:
         # Round = 1
         # No custom probe file uploaded in advance
-        logger.info(f"{logger_prefix} Download prefixes file locally")
+        logger.info(f"{logger_prefix} Download target file locally")
         target_filename = f"targets__{measurement_uuid}__{agent_uuid}.csv"
         target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
         await storage.download_file(
@@ -117,14 +153,21 @@ async def measurement(settings, request, storage, logger, redis=None):
             target_filename,
             target_filepath,
         )
-        async with aiofiles.open(target_filepath) as fd:
-            target_list = await fd.readlines()
 
-        gen_parameters = build_probe_generator_parameters(
-            settings, target_list, parameters
+        prefix_filename = request["probes"]  # we use the same key as probe file
+        prefix_filepath = None
+        if prefix_filename:
+            logger.info(f"{logger_prefix} Download CSV prefix file locally")
+            prefix_filepath = str(settings.AGENT_TARGETS_DIR_PATH / prefix_filename)
+            await storage.download_file(
+                measurement_uuid, prefix_filename, prefix_filepath
+            )
+
+        gen_parameters = await build_probe_generator_parameters(
+            settings, target_filepath, prefix_filepath, round, parameters
         )
 
-    elif request["round"] == 1 and is_custom_probes_file:
+    elif round.number == 1 and is_custom_probes_file:
         # Round = 1
         # Custom probe file uploaded in advance
         logger.info(f"{logger_prefix} Download custom CSV probe file locally")
@@ -145,6 +188,7 @@ async def measurement(settings, request, storage, logger, redis=None):
 
     logger.info(f"{logger_prefix} Username : {request['username']}")
     logger.info(f"{logger_prefix} Target File: {parameters.target_file}")
+    logger.info(f"{logger_prefix} {round}")
     logger.info(f"{logger_prefix} Tool : {parameters.tool}")
     logger.info(f"{logger_prefix} Tool Parameters : {parameters.tool_parameters}")
     logger.info(f"{logger_prefix} Max Probing Rate : {parameters.probing_rate}")
@@ -154,7 +198,7 @@ async def measurement(settings, request, storage, logger, redis=None):
         args=(
             settings,
             results_filepath,
-            request["round"],
+            round.number,
             parameters.probing_rate,
             gen_parameters,
             probes_filepath,

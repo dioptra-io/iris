@@ -1,8 +1,13 @@
+from io import StringIO
+from unittest import mock
+
+import aiofiles
 import pytest
 
 from iris.agent.measurements import build_probe_generator_parameters
 from iris.agent.settings import AgentSettings
 from iris.commons.dataclasses import ParametersDataclass
+from iris.commons.round import Round
 
 settings = AgentSettings()
 
@@ -37,13 +42,23 @@ request = {
 }
 
 
-def test_build_probe_generator_parameters():
+aiofiles.threadpool.wrap.register(mock.MagicMock)(
+    lambda *args, **kwargs: aiofiles.threadpool.AsyncBufferedIOBase(*args, **kwargs)
+)
+
+
+@pytest.mark.asyncio
+async def test_build_probe_generator_parameters():
     settings.AGENT_MIN_TTL = 2
-    target_file = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(
-        settings, target_file, parameters
+
+    mock_file = mock.MagicMock(
+        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
     )
+    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
+        prober_parameters = await build_probe_generator_parameters(
+            settings, "test_file", None, Round(1, 0, 0), parameters
+        )
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.0/24", "icmp", range(2, 33)),
@@ -55,11 +70,15 @@ def test_build_probe_generator_parameters():
     assert prober_parameters["probe_dst_port"] == 33434
 
     settings.AGENT_MIN_TTL = 6
-    target_file = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(
-        settings, target_file, parameters
+
+    mock_file = mock.MagicMock(
+        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
     )
+    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
+        prober_parameters = await build_probe_generator_parameters(
+            settings, "test_file", None, Round(1, 0, 0), parameters
+        )
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.0/24", "icmp", range(6, 33)),
@@ -70,9 +89,13 @@ def test_build_probe_generator_parameters():
     request["parameters"]["tool"] = "yarrp"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(
-        settings, target_file, parameters
+    mock_file = mock.MagicMock(
+        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
     )
+    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
+        prober_parameters = await build_probe_generator_parameters(
+            settings, "test_file", None, Round(1, 0, 0), parameters
+        )
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.0/24", "icmp", range(2, 33)),
@@ -83,13 +106,14 @@ def test_build_probe_generator_parameters():
     assert prober_parameters["flow_ids"] == range(1)
     assert prober_parameters["probe_dst_port"] == 33434
 
-    target_file = ["8.8.8.8,icmp,2,32", "8.8.4.4,icmp,2,32"]
     request["parameters"]["tool"] = "ping"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    prober_parameters = build_probe_generator_parameters(
-        settings, target_file, parameters
-    )
+    mock_file = mock.MagicMock(wraps=StringIO("8.8.8.8,icmp,2,32\n8.8.4.4,icmp,2,32"))
+    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
+        prober_parameters = await build_probe_generator_parameters(
+            settings, "test_file", None, Round(1, 0, 0), parameters
+        )
 
     assert prober_parameters["prefixes"] == [
         ("8.8.8.8", "icmp", [32]),
@@ -102,7 +126,11 @@ def test_build_probe_generator_parameters():
 
     request["parameters"]["tool"] = "test"
     parameters = ParametersDataclass.from_request(request)
-    with pytest.raises(ValueError):
-        prober_parameters = build_probe_generator_parameters(
-            settings, target_file, parameters
-        )
+    mock_file = mock.MagicMock(
+        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
+    )
+    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
+        with pytest.raises(ValueError):
+            prober_parameters = await build_probe_generator_parameters(
+                settings, "test_file", None, Round(1, 0, 0), parameters
+            )

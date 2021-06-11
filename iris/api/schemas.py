@@ -245,13 +245,13 @@ class MeasurementsDeleteResponse(BaseModel):
 class PacketResponse(BaseModel):
     """Probe response information (Response)."""
 
+    probe_protocol: int
     probe_src_addr: str
     probe_dst_addr: str
     probe_src_port: int
     probe_dst_port: int
-    probe_ttl_l3: int
-    probe_ttl_l4: int
-    probe_protocol: int
+    probe_ttl: int
+    quoted_ttl: int
     reply_src_addr: str
     reply_protocol: int
     reply_icmp_type: int

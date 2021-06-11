@@ -8,8 +8,7 @@ from typing import Dict, List, Optional
 
 import aiofiles
 from clickhouse_driver import Client
-from diamond_miner.queries.count_links import CountLinks
-from diamond_miner.queries.count_nodes import CountNodesFromResults
+from diamond_miner.queries import CountLinks, CountNodesFromResults, results_table
 
 from iris import __version__
 from iris.agent.measurements import measurement
@@ -20,11 +19,11 @@ from iris.commons.database import (
     Database,
     DatabaseAgents,
     DatabaseAgentsSpecific,
-    DatabaseMeasurementResults,
     DatabaseMeasurements,
     get_session,
 )
 from iris.commons.dataclasses import ParametersDataclass
+from iris.commons.round import Round
 from iris.commons.utils import get_own_ip_address
 from iris.standalone.storage import LocalStorage
 from iris.worker.pipeline import default_pipeline
@@ -40,16 +39,18 @@ def create_request(
     probing_rate: int,
     tool_parameters: ToolParameters,
     measurement_uuid: str,
-    round_number: int,
+    round: Round,
     start_time,
     tags: List[str],
 ) -> dict:
     tool_parameters = tool_parameters.dict()
     tool_parameters["n_flow_ids"] = 6 if tool == "diamond-miner" else 1
+    tool_parameters["global_min_ttl"] = 1
+    tool_parameters["global_max_ttl"] = 32
     return {
         "measurement_uuid": measurement_uuid,
         "username": username,
-        "round": round_number,
+        "round": round.encode(),
         "probes": probes_filename,
         "parameters": {
             "version": __version__,
@@ -90,6 +91,10 @@ async def register_agent(dataclass, settings, logger):
     session = get_session(settings)
     database_agents = DatabaseAgents(session, settings, logger=logger)
     database_agents_specific = DatabaseAgentsSpecific(session, settings, logger=logger)
+
+    # Create `agents` and `agents_specific` tables
+    await database_agents.create_table()
+    await database_agents_specific.create_table()
 
     is_already_present = await database_agents.get(dataclass.agent_uuid)
     if is_already_present is None:
@@ -153,7 +158,7 @@ async def pipeline(
         )
 
     # Create the database if not exists
-    session = get_session(agent_settings)
+    session = get_session(agent_settings, default=True)
     await Database(session, agent_settings, logger=logger).create_database(
         agent_settings.DATABASE_NAME
     )
@@ -176,7 +181,10 @@ async def pipeline(
     )
 
     shuffled_next_round_csv_filepath: Optional[str] = None
-    for round_number in range(1, tool_parameters.max_round + 1):
+    round = Round(1, worker_settings.WORKER_ROUND_1_SLIDING_WINDOW, 0)
+    n_rounds = 0
+    while round.number <= tool_parameters.max_round:
+        n_rounds = round.number
         request: dict = create_request(
             agent_settings,
             tool,
@@ -186,7 +194,7 @@ async def pipeline(
             probing_rate,
             tool_parameters,
             measurement_uuid,
-            round_number,
+            round,
             start_time.timestamp(),
             tags,
         )
@@ -195,7 +203,7 @@ async def pipeline(
 
         # If it's the first round,
         # register the measurement and the agent to the database
-        if round_number == 1:
+        if round.number == 1:
             await register_measurement(dataclass, worker_settings, logger)
             await register_agent(dataclass, worker_settings, logger)
 
@@ -205,7 +213,7 @@ async def pipeline(
         )
 
         # Compute the next round
-        shuffled_next_round_csv_filepath = await default_pipeline(
+        round, shuffled_next_round_csv_filepath = await default_pipeline(
             worker_settings,
             dataclass,
             results_filename,
@@ -214,7 +222,7 @@ async def pipeline(
         )
 
         # If the measurement is finished, clean the local files
-        if shuffled_next_round_csv_filepath is None:
+        if round is None:
             if not worker_settings.WORKER_DEBUG_MODE:
                 logger.info("Removing local measurement directory")
                 try:
@@ -232,26 +240,17 @@ async def pipeline(
     await stamp_measurement(dataclass, worker_settings, logger)
 
     # Compute distinct nodes/links
-    client = Client(agent_settings.DATABASE_HOST)
-    results_table_name = DatabaseMeasurementResults.forge_table_name(
-        measurement_uuid, agent_settings.AGENT_UUID
-    )
-    links_table_name = "links__" + "__".join(results_table_name.split("__")[1:3])
-    n_nodes = CountNodesFromResults().execute(
-        client, agent_settings.DATABASE_NAME + "." + results_table_name
-    )[0][0]
-    n_links = CountLinks().execute(
-        client, agent_settings.DATABASE_NAME + "." + links_table_name
-    )[0][0]
+    client = Client(agent_settings.DATABASE_HOST, database=agent_settings.DATABASE_NAME)
+    measurement_id = f"{measurement_uuid}__{agent_settings.AGENT_UUID}"
+    n_nodes = CountNodesFromResults().execute(client, measurement_id)[0][0]
+    n_links = CountLinks().execute(client, measurement_id)[0][0]
 
     return {
         "measurement_uuid": measurement_uuid,
         "agent_uuid": agent_settings.AGENT_UUID,
         "database_name": agent_settings.DATABASE_NAME,
-        "table_name": DatabaseMeasurementResults.forge_table_name(
-            measurement_uuid, agent_settings.AGENT_UUID
-        ),
-        "n_rounds": round_number,
+        "table_name": results_table(measurement_id),
+        "n_rounds": n_rounds,
         "min_ttl": agent_settings.AGENT_MIN_TTL,
         "start_time": start_time,
         "end_time": datetime.now(),

@@ -347,70 +347,35 @@ async def test_database_agents_specific():
 
 @pytest.mark.asyncio
 async def test_database_measurement_results():
-    measurement_uuid = uuid.UUID("1b830be7-2b42-401b-bbe6-6b1baf02c9be")
-    agent_uuid = uuid.UUID("b17fe299-17bf-4dbe-9ae3-f600b540ec1f")
-
-    # Test of `.forge_table_name()` method
-    assert DatabaseMeasurementResults.forge_table_name(
-        measurement_uuid, agent_uuid
-    ) == (
-        "results__"
-        "1b830be7_2b42_401b_bbe6_6b1baf02c9be__"
-        "b17fe299_17bf_4dbe_9ae3_f600b540ec1f"
-    )
-
-    # Test of `.parse_table_name()` method
-    assert DatabaseMeasurementResults.parse_table_name(
-        "results__"
-        "1b830be7_2b42_401b_bbe6_6b1baf02c9be__"
-        "b17fe299_17bf_4dbe_9ae3_f600b540ec1f"
-    ) == {"measurement_uuid": str(measurement_uuid), "agent_uuid": str(agent_uuid)}
-
     session = FakeSession(response=None)
 
-    # Test of `.swap_table_name_prefix()` method
-    assert (
-        DatabaseMeasurementResults(
-            session, CommonSettings(), "iris.results__measurement__agent"
-        ).swap_table_name_prefix("flows")
-        == "iris.flows__measurement__agent"
-    )
-
-    assert (
-        await DatabaseMeasurementResults(
-            session, CommonSettings(), "test"
-        ).create_table()
-        is None
-    )
-    assert (
-        await DatabaseMeasurementResults(
-            session, CommonSettings(), "test"
-        ).create_table(drop=True)
-        is None
-    )
-
-    # Test of materialized views creation
-    database = DatabaseMeasurementResults(
-        session, CommonSettings(), "iris.results__measurement__agent"
-    )
-    flows_view_name = database.swap_table_name_prefix("flows")
-    await database.create_view_flows(flows_view_name) is None
+    # assert (
+    #     await DatabaseMeasurementResults(
+    #         session,
+    #         CommonSettings(),
+    #         "measurement",
+    #         "agent",
+    #     ).create_table()
+    #     is None
+    # )
 
     # Test of `.all_count() method`
     session = FakeSession(response=[(10,)])
     assert (
-        await DatabaseMeasurementResults(session, CommonSettings(), "test").all_count()
+        await DatabaseMeasurementResults(
+            session, CommonSettings(), "measurement", "agent"
+        ).all_count()
         == 10
     )
 
     fake_database_response = [
+        0,
         ipaddress.ip_address("::ffff:ac12:b"),
         ipaddress.ip_address("::ffff:84e3:7b81"),
         24000,
         34334,
         78,
         9,
-        0,
         ipaddress.ip_address("::ffff:869d:fe0a"),
         17,
         11,
@@ -423,13 +388,13 @@ async def test_database_measurement_results():
     ]
 
     fake_formated_response_1 = {
+        "probe_protocol": 0,
         "probe_src_addr": "::ffff:ac12:b",
         "probe_dst_addr": "::ffff:84e3:7b81",
         "probe_src_port": 24000,
         "probe_dst_port": 34334,
-        "probe_ttl_l3": 78,
-        "probe_ttl_l4": 9,
-        "probe_protocol": 0,
+        "probe_ttl": 78,
+        "quoted_ttl": 9,
         "reply_src_addr": "::ffff:869d:fe0a",
         "reply_protocol": 17,
         "reply_icmp_type": 11,
@@ -443,18 +408,22 @@ async def test_database_measurement_results():
 
     # Test of `.all() method`
     session = FakeSession(response=[fake_database_response])
-    assert await DatabaseMeasurementResults(session, CommonSettings(), "test").all(
-        0, 100
-    ) == [fake_formated_response_1]
+    assert await DatabaseMeasurementResults(
+        session, CommonSettings(), "measurement", "agent"
+    ).all(0, 100) == [fake_formated_response_1]
 
     # Test of `.is_exists()` method
     session = FakeSession(response=[(0,)])
     assert (
-        await DatabaseMeasurementResults(session, CommonSettings(), "test").is_exists()
+        await DatabaseMeasurementResults(
+            session, CommonSettings(), "measurement", "agent"
+        ).is_exists()
         is False
     )
     session = FakeSession(response=[(1,)])
     assert (
-        await DatabaseMeasurementResults(session, CommonSettings(), "test").is_exists()
+        await DatabaseMeasurementResults(
+            session, CommonSettings(), "measurement", "agent"
+        ).is_exists()
         is True
     )

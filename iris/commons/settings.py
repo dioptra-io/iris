@@ -36,10 +36,10 @@ class CommonSettings(BaseSettings):
     DATABASE_PARALLEL_CSV_INSERT: bool = True  # linux/macos only
     DATABASE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
 
-    TABLE_NAME_USERS: str = f"{DATABASE_NAME}.users"
-    TABLE_NAME_MEASUREMENTS: str = f"{DATABASE_NAME}.measurements"
-    TABLE_NAME_AGENTS: str = f"{DATABASE_NAME}.agents"
-    TABLE_NAME_AGENTS_SPECIFIC: str = f"{DATABASE_NAME}.agents_specific"
+    TABLE_NAME_USERS: str = "users"
+    TABLE_NAME_MEASUREMENTS: str = "measurements"
+    TABLE_NAME_AGENTS: str = "agents"
+    TABLE_NAME_AGENTS_SPECIFIC: str = "agents_specific"
 
     REDIS_URL: str = "redis://redis"
     REDIS_HOSTNAME: str = "redis"

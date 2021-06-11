@@ -23,6 +23,7 @@ class AgentSettings(CommonSettings):
 
     AGENT_CARACAL_EXCLUDE_PATH: Path = Path("/app/statics/excluded_prefixes")
     AGENT_CARACAL_RATE_LIMITING_METHOD: RateLimitingMethod = RateLimitingMethod.auto
+    AGENT_CARACAL_SNIFFER_WAIT_TIME: int = 5
     AGENT_CARACAL_LOGGING_LEVEL: int = logging.INFO
     AGENT_CARACAL_INTEGRITY_CHECK: bool = True
 
