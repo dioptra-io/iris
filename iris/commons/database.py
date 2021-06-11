@@ -574,6 +574,7 @@ class DatabaseMeasurementResults(Database):
         self.measurement_id = f"{measurement_uuid}__{agent_uuid}"
         self.logger = logger
         self.logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
+        super().__init__(session, settings, logger=logger)
 
     async def create_table(self, drop=False):
         """Create the results table."""
@@ -675,7 +676,9 @@ class DatabaseMeasurementResults(Database):
 
     async def insert_links(self, round_number):
         """Insert the links in the links table from the flow view."""
-        subsets = await results_subsets(self.url, self.measurement_id)
+        subsets = await results_subsets(
+            self.url, self.measurement_id, round_eq=round_number
+        )  # TODO: Fault-tolerency
         await self.execute_concurrent(
             InsertLinks(round_eq=round_number), self.measurement_id, subsets=subsets
         )
@@ -683,7 +686,9 @@ class DatabaseMeasurementResults(Database):
     async def insert_prefixes(self, round_number):
         """Insert the invalid prefixes in the prefix table."""
         await self.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
-        subsets = await results_subsets(self.url, self.measurement_id)
+        subsets = await results_subsets(
+            self.url, self.measurement_id
+        )  # TODO: Fault-tolerency
         await self.execute_concurrent(
             InsertPrefixes(), self.measurement_id, subsets=subsets
         )

@@ -2,7 +2,6 @@
 
 import aiofiles
 from aiofiles import os as aios
-from clickhouse_driver import Client
 from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
 from diamond_miner.queries import GetSlidingPrefixes
@@ -64,6 +63,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     if next_round.number == 1:
         # We are in a sub-round 1
         # Compute the list of the prefixes need to be probed in the next ttl window
+        # TODO: Fault-tolerency
         prefixes_to_probe = []
         async for _, _, prefix in GetSlidingPrefixes(
             window_min_ttl=round.min_ttl,
@@ -107,10 +107,9 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     flow_mapper_v6 = flow_mapper_cls(
         **{"prefix_size": DEFAULT_PREFIX_SIZE_V6, **flow_mapper_kwargs}
     )
-    client = Client(host=settings.DATABASE_HOST, database=settings.DATABASE_NAME)
     n_probes_to_send = await mda_probes_parallel(
         filepath=next_round_csv_filepath,
-        client=client,
+        url=get_url(settings),
         measurement_id=f"{measurement_uuid}__{agent_uuid}",
         round_=round.number,
         mapper_v4=flow_mapper_v4,
