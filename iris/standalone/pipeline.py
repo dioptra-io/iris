@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import aiofiles
-from clickhouse_driver import Client
 from diamond_miner.queries import CountLinks, CountNodesFromResults, results_table
 
 from iris import __version__
@@ -21,6 +20,7 @@ from iris.commons.database import (
     DatabaseAgentsSpecific,
     DatabaseMeasurements,
     get_session,
+    get_url,
 )
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
@@ -240,10 +240,10 @@ async def pipeline(
     await stamp_measurement(dataclass, worker_settings, logger)
 
     # Compute distinct nodes/links
-    client = Client(agent_settings.DATABASE_HOST, database=agent_settings.DATABASE_NAME)
+    url = get_url(agent_settings)
     measurement_id = f"{measurement_uuid}__{agent_settings.AGENT_UUID}"
-    n_nodes = CountNodesFromResults().execute(client, measurement_id)[0][0]
-    n_links = CountLinks().execute(client, measurement_id)[0][0]
+    n_nodes = CountNodesFromResults().execute(url, measurement_id)[0][0]
+    n_links = CountLinks().execute(url, measurement_id)[0][0]
 
     return {
         "measurement_uuid": measurement_uuid,

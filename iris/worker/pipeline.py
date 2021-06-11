@@ -8,7 +8,7 @@ from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V
 from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
-from iris.commons.database import DatabaseMeasurementResults, get_session
+from iris.commons.database import DatabaseMeasurementResults, get_session, get_url
 from iris.commons.round import Round
 
 
@@ -69,7 +69,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
             window_min_ttl=round.min_ttl,
             window_max_ttl=round.max_ttl,
             stopping_condition=settings.WORKER_ROUND_1_STOPPING,
-        ).execute_iter_async(session, f"{measurement_uuid}__{agent_uuid}"):
+        ).execute_iter_async(get_url(settings), f"{measurement_uuid}__{agent_uuid}"):
             prefixes_to_probe.append(str(prefix))
 
         if prefixes_to_probe:

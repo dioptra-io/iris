@@ -1,6 +1,5 @@
 """Interfaces with database."""
 
-import ipaddress
 import json
 import logging
 import os
@@ -10,6 +9,7 @@ from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from functools import partial
 from pathlib import Path
+from typing import Any
 
 from aioch import Client
 from diamond_miner.queries import (
@@ -17,9 +17,11 @@ from diamond_miner.queries import (
     DropTables,
     InsertLinks,
     InsertPrefixes,
+    Query,
     prefixes_table,
     results_table,
 )
+from diamond_miner.subsets import results_subsets
 from tenacity import (
     before_sleep_log,
     retry,
@@ -32,19 +34,25 @@ from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.subprocess import start_stream_subprocess
 
 
+def get_url(settings, default=False):
+    """Get database URL."""
+    host = settings.DATABASE_HOST
+    database = settings.DATABASE_NAME if not default else "default"
+    url = f"clickhouse://{host}/{database}"
+    url += f"?connect_timeout={settings.DATABASE_CONNECT_TIMEOUT}"
+    url += f"&send_receive_timeout={settings.DATABASE_SEND_RECEIVE_TIMEOUT}"
+    url += f"&sync_request_timeout={settings.DATABASE_SYNC_REQUEST_TIMEOUT}"
+    return url
+
+
 def get_session(settings, default=False):
     """Get database session."""
-    return Client(
-        settings.DATABASE_HOST,
-        database=settings.DATABASE_NAME if not default else "default",
-        connect_timeout=settings.DATABASE_CONNECT_TIMEOUT,
-        send_receive_timeout=settings.DATABASE_SEND_RECEIVE_TIMEOUT,
-        sync_request_timeout=settings.DATABASE_SYNC_REQUEST_TIMEOUT,
-    )
+    return Client.from_url(get_url(settings, default))
 
 
 class Database(object):
     def __init__(self, session, settings, logger=None):
+        self.url = get_url(settings)
         self.session = session
         self.settings = settings
         self.logger = logger
@@ -78,8 +86,14 @@ class Database(object):
         return await self.session.execute(*args, **kwargs)
 
     @fault_tolerant
-    async def call_fn(self, fn):
-        return await fn()
+    async def execute(self, query: Query, measurement_id: str, **kwargs: Any):
+        return await query.execute_async(self.url, measurement_id, **kwargs)
+
+    @fault_tolerant
+    async def execute_concurrent(
+        self, query: Query, measurement_id: str, **kwargs: Any
+    ):
+        return await query.execute_concurrent(self.url, measurement_id, **kwargs)
 
     async def create_database(self, database_name):
         """Create a database if not exists."""
@@ -564,10 +578,8 @@ class DatabaseMeasurementResults(Database):
     async def create_table(self, drop=False):
         """Create the results table."""
         if drop:
-            await self.call(DropTables().statement(self.measurement_id))
-        await self.call_fn(
-            lambda: CreateTables().execute_async(self.session, self.measurement_id)
-        )
+            await self.execute(DropTables(), self.measurement_id)
+        await self.execute(CreateTables(), self.measurement_id)
 
     def formatter(self, row):
         """Database row -> response formater."""
@@ -663,17 +675,15 @@ class DatabaseMeasurementResults(Database):
 
     async def insert_links(self, round_number):
         """Insert the links in the links table from the flow view."""
-        await self.call(
-            InsertLinks(round_eq=round_number).statement(self.measurement_id)
+        subsets = await results_subsets(self.url, self.measurement_id)
+        await self.execute_concurrent(
+            InsertLinks(round_eq=round_number), self.measurement_id, subsets=subsets
         )
 
     async def insert_prefixes(self, round_number):
         """Insert the invalid prefixes in the prefix table."""
         await self.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
-
-        # TODO: Compatibility to IPv6
-        subsets = ipaddress.ip_network("0.0.0.0/0").subnets(new_prefix=6)
-        for subset in subsets:
-            await self.call(
-                InsertPrefixes().statement(self.measurement_id, subset=subset)
-            )
+        subsets = await results_subsets(self.url, self.measurement_id)
+        await self.execute_concurrent(
+            InsertPrefixes(), self.measurement_id, subsets=subsets
+        )
