@@ -75,8 +75,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
         if prefixes_to_probe:
             # Write the prefix to be probed in a next round file
             async with aiofiles.open(next_round_csv_filepath, "w") as fd:
-                for prefix in prefixes_to_probe:
-                    await fd.write(prefix + "\n")
+                await fd.writelines(prefix + "\n" for prefix in prefixes_to_probe)
 
             logger.info(f"{logger_prefix} Uploading next round CSV prefix file")
             await storage.upload_file(
