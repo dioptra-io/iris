@@ -680,7 +680,10 @@ class DatabaseMeasurementResults(Database):
             self.url, self.measurement_id, round_eq=round_number
         )  # TODO: Fault-tolerency
         await self.execute_concurrent(
-            InsertLinks(round_eq=round_number), self.measurement_id, subsets=subsets
+            InsertLinks(round_eq=round_number),
+            self.measurement_id,
+            subsets=subsets,
+            concurrent_requests=16,
         )
 
     async def insert_prefixes(self, round_number):
@@ -690,5 +693,8 @@ class DatabaseMeasurementResults(Database):
             self.url, self.measurement_id
         )  # TODO: Fault-tolerency
         await self.execute_concurrent(
-            InsertPrefixes(), self.measurement_id, subsets=subsets
+            InsertPrefixes(),
+            self.measurement_id,
+            subsets=subsets,
+            concurrent_requests=16,
         )
