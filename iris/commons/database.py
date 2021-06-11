@@ -18,6 +18,7 @@ from diamond_miner.queries import (
     InsertLinks,
     InsertPrefixes,
     Query,
+    links_table,
     prefixes_table,
     results_table,
 )
@@ -676,11 +677,12 @@ class DatabaseMeasurementResults(Database):
 
     async def insert_links(self, round_number):
         """Insert the links in the links table from the flow view."""
+        await self.call(f"TRUNCATE {links_table(self.measurement_id)}")
         subsets = await results_subsets(
-            self.url, self.measurement_id, round_eq=round_number
+            self.url, self.measurement_id
         )  # TODO: Fault-tolerency
         await self.execute_concurrent(
-            InsertLinks(round_eq=round_number), self.measurement_id, subsets=subsets
+            InsertLinks(), self.measurement_id, subsets=subsets
         )
 
     async def insert_prefixes(self, round_number):
