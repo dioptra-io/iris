@@ -5,6 +5,7 @@ from aiofiles import os as aios
 from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
 from diamond_miner.queries import GetSlidingPrefixes
+from diamond_miner.queries.query import AddrType
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
 from iris.commons.database import DatabaseMeasurementResults, get_session, get_url
@@ -66,11 +67,12 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
         # TODO: Fault-tolerency
         prefixes_to_probe = []
         async for _, _, prefix in GetSlidingPrefixes(
+            addr_type=AddrType.IPv6NumToString,
             window_min_ttl=round.min_ttl,
             window_max_ttl=round.max_ttl,
             stopping_condition=settings.WORKER_ROUND_1_STOPPING,
         ).execute_iter_async(get_url(settings), f"{measurement_uuid}__{agent_uuid}"):
-            prefixes_to_probe.append(str(prefix))
+            prefixes_to_probe.append(prefix)
 
         if prefixes_to_probe:
             # Write the prefix to be probed in a next round file
