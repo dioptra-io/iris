@@ -2,6 +2,7 @@ import asyncio
 import logging
 import sys
 from functools import wraps
+from pathlib import Path
 from typing import List, Optional
 
 import typer
@@ -27,6 +28,7 @@ def coroutine(f):
 @coroutine
 async def diamond_miner(
     user: str = typer.Option("standalone"),
+    prefix_list: Optional[Path] = typer.Option(None),
     probing_rate: int = typer.Argument(1000),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
@@ -37,10 +39,10 @@ async def diamond_miner(
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """Diamond-miner command."""
-    prefixes: list = sys.stdin.readlines()
-    if not prefixes:
-        typer.echo("Please provide a prefixes list in stdin")
-        raise typer.Exit()
+    if prefix_list:
+        prefixes = prefix_list.read_text().splitlines()
+    else:
+        prefixes = sys.stdin.readlines()
 
     tool: Tool = Tool("diamond-miner")
     tool_parameters = ToolParameters(
@@ -65,6 +67,7 @@ async def diamond_miner(
 @coroutine
 async def yarrp(
     user: str = typer.Option("standalone"),
+    prefix_list: Optional[Path] = typer.Option(None),
     probing_rate: int = typer.Argument(1000),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
@@ -74,10 +77,10 @@ async def yarrp(
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """YARRP command."""
-    prefixes: list = sys.stdin.readlines()
-    if not prefixes:
-        typer.echo("Please provide a prefixes list in stdin")
-        raise typer.Exit()
+    if prefix_list:
+        prefixes = prefix_list.read_text().splitlines()
+    else:
+        prefixes = sys.stdin.readlines()
 
     tool: Tool = Tool("yarrp")
     tool_parameters = ToolParameters(
@@ -102,6 +105,7 @@ async def yarrp(
 @coroutine
 async def ping(
     user: str = typer.Option("standalone"),
+    prefix_list: Optional[Path] = typer.Option(None),
     probing_rate: int = typer.Argument(1000),
     initial_source_port: Optional[int] = typer.Option(
         default_parameters.initial_source_port
@@ -111,10 +115,10 @@ async def ping(
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """Ping command."""
-    prefixes: list = sys.stdin.readlines()
-    if not prefixes:
-        typer.echo("Please provide a prefixes list in stdin")
-        raise typer.Exit()
+    if prefix_list:
+        prefixes = prefix_list.read_text().splitlines()
+    else:
+        prefixes = sys.stdin.readlines()
 
     tool = Tool("ping")
     tool_parameters = ToolParameters(
