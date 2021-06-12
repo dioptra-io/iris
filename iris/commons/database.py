@@ -681,7 +681,11 @@ class DatabaseMeasurementResults(Database):
         await self.call(f"TRUNCATE {links_table(self.measurement_id)}")
         query = InsertLinks()
         subsets = await subsets_for(query, self.url, self.measurement_id)
-        await query.execute_concurrent(self.url, self.measurement_id, subsets)
+        # We limit the number of concurrent requests since this query
+        # uses a lot of memory (aggregation of the flows table).
+        await query.execute_concurrent(
+            self.url, self.measurement_id, subsets, concurrent_requests=8
+        )
 
     @Database.fault_tolerant
     async def insert_prefixes(self, round_number):
@@ -689,8 +693,4 @@ class DatabaseMeasurementResults(Database):
         await self.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
         query = InsertPrefixes()
         subsets = await subsets_for(query, self.url, self.measurement_id)
-        # We limit the number of concurrent requests since this query
-        # uses a lot of memory (aggregation of the flows table).
-        await query.execute_concurrent(
-            self.url, self.measurement_id, subsets, concurrent_requests=8
-        )
+        await query.execute_concurrent(self.url, self.measurement_id, subsets)
