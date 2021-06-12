@@ -675,18 +675,22 @@ class DatabaseMeasurementResults(Database):
                     chunks,
                 )
 
+    @Database.fault_tolerant
     async def insert_links(self, round_number):
         """Insert the links in the links table from the flow view."""
-        # TODO: `subsets_for` fault-tolerancy
         await self.call(f"TRUNCATE {links_table(self.measurement_id)}")
         query = InsertLinks()
         subsets = await subsets_for(query, self.url, self.measurement_id)
-        await self.execute_concurrent(query, self.measurement_id, subsets=subsets)
+        await query.execute_concurrent(self.url, self.measurement_id, subsets)
 
+    @Database.fault_tolerant
     async def insert_prefixes(self, round_number):
         """Insert the invalid prefixes in the prefix table."""
-        # TODO: `subsets_for` fault-tolerancy
         await self.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
         query = InsertPrefixes()
         subsets = await subsets_for(query, self.url, self.measurement_id)
-        await self.execute_concurrent(query, self.measurement_id, subsets=subsets)
+        # We limit the number of concurrent requests since this query
+        # uses a lot of memory (aggregation of the flows table).
+        await query.execute_concurrent(
+            self.url, self.measurement_id, subsets, concurrent_requests=8
+        )
