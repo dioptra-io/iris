@@ -693,4 +693,7 @@ class DatabaseMeasurementResults(Database):
         await self.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
         query = InsertPrefixes()
         subsets = await subsets_for(query, self.url, self.measurement_id)
-        await query.execute_concurrent(self.url, self.measurement_id, subsets)
+        # We also limit the number of concurrent requests here...
+        await query.execute_concurrent(
+            self.url, self.measurement_id, subsets, concurrent_requests=8
+        )
