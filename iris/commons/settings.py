@@ -39,7 +39,6 @@ class CommonSettings(BaseSettings):
     TABLE_NAME_USERS: str = "users"
     TABLE_NAME_MEASUREMENTS: str = "measurements"
     TABLE_NAME_AGENTS: str = "agents"
-    TABLE_NAME_AGENTS_SPECIFIC: str = "agents_specific"
 
     REDIS_URL: str = "redis://redis"
     REDIS_HOSTNAME: str = "redis"
