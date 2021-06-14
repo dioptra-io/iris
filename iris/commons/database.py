@@ -350,7 +350,7 @@ class DatabaseMeasurements(Database):
 
 
 class DatabaseAgents(Database):
-    """Interface that handle agents history."""
+    """Interface that handle agents parameters."""
 
     def __init__(self, session, settings, logger=None):
         super().__init__(session, settings, logger=logger)
@@ -365,105 +365,14 @@ class DatabaseAgents(Database):
             f"""
             CREATE TABLE IF NOT EXISTS {self.table_name}
             (
-                uuid             UUID,
-                user             String,
-                version          String,
-                hostname         String,
-                ip_address       IPv4,
-                min_ttl          UInt32,
-                max_probing_rate UInt32,
-                last_used        DateTime
-            )
-            ENGINE=MergeTree()
-            ORDER BY (uuid)
-            """,
-        )
-
-    def formatter(self, row):
-        """Database row -> response formater."""
-        return {
-            "uuid": str(row[0]),
-            "user": row[1],
-            "version": row[2],
-            "hostname": row[3],
-            "ip_address": str(row[4]),
-            "min_ttl": row[5],
-            "max_probing_rate": row[6],
-            "last_used": row[7].isoformat(),
-        }
-
-    async def all(self, user="all"):
-        """Get all measurements uuid for a given user."""
-        responses = await self.call(
-            f"SELECT uuid FROM {self.table_name} WHERE user=%(user)s",
-            {"user": user},
-        )
-        return [str(response[0]) for response in responses]
-
-    async def get(self, uuid, user="all"):
-        responses = await self.call(
-            f"SELECT * FROM {self.table_name} WHERE user=%(user)s AND uuid=%(uuid)s",
-            {"user": user, "uuid": uuid},
-        )
-        try:
-            response = responses[0]
-        except IndexError:
-            return None
-        return self.formatter(response)
-
-    async def register(self, uuid, parameters):
-        """Register a physical agent."""
-        await self.call(
-            f"INSERT INTO {self.table_name} VALUES",
-            [
-                {
-                    "uuid": uuid,
-                    "user": "all",  # agents shared for all user at the moment
-                    "version": parameters["version"],
-                    "hostname": parameters["hostname"],
-                    "ip_address": parameters["ip_address"],
-                    "min_ttl": parameters["min_ttl"],
-                    "max_probing_rate": parameters["max_probing_rate"],
-                    "last_used": datetime.now(),
-                }
-            ],
-        )
-
-    async def stamp_last_used(self, uuid, user="all"):
-        """Stamp the last used for an agent."""
-        await self.call(
-            f"""
-            ALTER TABLE {self.table_name}
-            UPDATE last_used=toDateTime(%(last_used)s)
-            WHERE user=%(user)s AND uuid=%(uuid)s
-            """,
-            {"last_used": datetime.now(), "user": user, "uuid": uuid},
-        )
-
-
-class DatabaseAgentsSpecific(Database):
-    """Interface that handle agents parameters specific by measurements history."""
-
-    def __init__(self, session, settings, logger=None):
-        super().__init__(session, settings, logger=logger)
-        self.table_name = settings.TABLE_NAME_AGENTS_SPECIFIC
-
-    async def create_table(self, drop=False):
-        """Create the table with all registered agents."""
-        if drop:
-            await self.drop_table(self.table_name)
-
-        await self.call(
-            f"""
-            CREATE TABLE IF NOT EXISTS {self.table_name}
-            (
-                measurement_uuid UUID,
-                agent_uuid       UUID,
-                target_file      String,
-                probing_rate     Nullable(UInt32),
-                tool_parameters  String,
-                state            Enum8('ongoing' = 1, 'finished' = 2, 'canceled' = 3),
-                timestamp        DateTime
+                measurement_uuid    UUID,
+                agent_uuid          UUID,
+                target_file         String,
+                probing_rate        Nullable(UInt32),
+                agent_parameters String,
+                tool_parameters     String,
+                state              Enum8('ongoing' = 1, 'finished' = 2, 'canceled' = 3),
+                timestamp           DateTime
             )
             ENGINE=MergeTree()
             ORDER BY (measurement_uuid, agent_uuid)
@@ -476,8 +385,9 @@ class DatabaseAgentsSpecific(Database):
             "uuid": str(row[1]),
             "target_file": row[2],
             "probing_rate": row[3],
-            "tool_parameters": json.loads(row[4]),
-            "state": row[5],
+            "agent_parameters": json.loads(row[4]),
+            "tool_parameters": json.loads(row[5]),
+            "state": row[6],
         }
 
     async def all(self, measurement_uuid):
@@ -514,6 +424,7 @@ class DatabaseAgentsSpecific(Database):
                     "agent_uuid": parameters.agent_uuid,
                     "target_file": parameters.target_file,
                     "probing_rate": parameters.probing_rate,
+                    "agent_parameters": json.dumps(parameters.agent_parameters),
                     "tool_parameters": json.dumps(parameters.tool_parameters),
                     "state": "ongoing",
                     "timestamp": datetime.now(),

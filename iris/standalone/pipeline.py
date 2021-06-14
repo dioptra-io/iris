@@ -17,7 +17,6 @@ from iris.api.schemas import Tool, ToolParameters
 from iris.commons.database import (
     Database,
     DatabaseAgents,
-    DatabaseAgentsSpecific,
     DatabaseMeasurements,
     get_session,
     get_url,
@@ -90,24 +89,12 @@ async def register_measurement(dataclass, settings, logger):
 async def register_agent(dataclass, settings, logger):
     session = get_session(settings)
     database_agents = DatabaseAgents(session, settings, logger=logger)
-    database_agents_specific = DatabaseAgentsSpecific(session, settings, logger=logger)
 
     # Create `agents` and `agents_specific` tables
     await database_agents.create_table()
-    await database_agents_specific.create_table()
-
-    is_already_present = await database_agents.get(dataclass.agent_uuid)
-    if is_already_present is None:
-        # Physical agent not present, registering
-        await database_agents.register(
-            dataclass.agent_uuid, dataclass.physical_parameters
-        )
-    else:
-        # Already present, updating last used
-        await database_agents.stamp_last_used(dataclass.agent_uuid)
 
     # Register agent in this measurement and specific information
-    await database_agents_specific.register(dataclass)
+    await database_agents.register(dataclass)
 
 
 async def stamp_measurement(dataclass, settings, logger):
@@ -123,8 +110,8 @@ async def stamp_measurement(dataclass, settings, logger):
 
 async def stamp_agent(dataclass, settings, logger):
     session = get_session(settings)
-    database_agents_specific = DatabaseAgentsSpecific(session, settings, logger=logger)
-    await database_agents_specific.stamp_finished(
+    database_agents = DatabaseAgents(session, settings, logger=logger)
+    await database_agents.stamp_finished(
         dataclass.measurement_uuid, dataclass.agent_uuid
     )
 

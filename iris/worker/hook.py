@@ -6,12 +6,7 @@ import traceback
 import dramatiq
 from aiofiles import os as aios
 
-from iris.commons.database import (
-    DatabaseAgents,
-    DatabaseAgentsSpecific,
-    DatabaseMeasurements,
-    get_session,
-)
+from iris.commons.database import DatabaseAgents, DatabaseMeasurements, get_session
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
@@ -57,7 +52,7 @@ async def watch(redis, storage, parameters, logger):
     logger_prefix = f"{parameters.measurement_uuid} :: {parameters.agent_uuid} ::"
 
     session = get_session(settings)
-    database_agents_specific = DatabaseAgentsSpecific(session, settings, logger=logger)
+    database_agents = DatabaseAgents(session, settings, logger=logger)
 
     while True:
         if settings.WORKER_SANITY_CHECK_ENABLE:
@@ -71,7 +66,7 @@ async def watch(redis, storage, parameters, logger):
             )
             if not is_agent_alive:
                 logger.warning(f"{logger_prefix} Stop watching agent")
-                await database_agents_specific.stamp_finished(
+                await database_agents.stamp_finished(
                     parameters.measurement_uuid, parameters.agent_uuid
                 )
                 break
@@ -81,7 +76,7 @@ async def watch(redis, storage, parameters, logger):
             )
             if measurement_state is None or measurement_state == "canceled":
                 logger.warning(f"{logger_prefix} Measurement canceled")
-                await database_agents_specific.stamp_canceled(
+                await database_agents.stamp_canceled(
                     parameters.measurement_uuid, parameters.agent_uuid
                 )
                 break
@@ -105,7 +100,7 @@ async def watch(redis, storage, parameters, logger):
 
         if next_round is None:
             logger.info(f"{logger_prefix} Measurement done for this agent")
-            await database_agents_specific.stamp_finished(
+            await database_agents.stamp_finished(
                 parameters.measurement_uuid, parameters.agent_uuid
             )
             break
@@ -136,7 +131,6 @@ async def callback(agents_information, measurement_parameters, logger):
     session = get_session(settings)
     database_measurements = DatabaseMeasurements(session, settings, logger=logger)
     database_agents = DatabaseAgents(session, settings, logger=logger)
-    database_agents_specific = DatabaseAgentsSpecific(session, settings, logger=logger)
 
     redis = Redis(settings=settings, logger=logger)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
@@ -144,13 +138,13 @@ async def callback(agents_information, measurement_parameters, logger):
     logger.info(f"{logger_prefix} Getting agents information")
     agents = []
     for agent_uuid, specific_parameters in agents_information.items():
-        physical_parameters = await redis.get_agent_parameters(agent_uuid)
-        if physical_parameters:
+        agent_parameters = await redis.get_agent_parameters(agent_uuid)
+        if agent_parameters:
             agents.append(
                 ParametersDataclass(
                     agent_uuid,
                     measurement_parameters,
-                    physical_parameters,
+                    agent_parameters,
                     specific_parameters,
                 )
             )
@@ -177,21 +171,9 @@ async def callback(agents_information, measurement_parameters, logger):
 
         logger.info(f"{logger_prefix} Register agents into database")
         await database_agents.create_table()
-        await database_agents_specific.create_table()
         for agent in agents:
-            # Register information about the physical agent
-            is_already_present = await database_agents.get(agent.agent_uuid)
-            if is_already_present is None:
-                # Physical agent not present, registering
-                await database_agents.register(
-                    agent.agent_uuid, agent.physical_parameters
-                )
-            else:
-                # Already present, updating last used
-                await database_agents.stamp_last_used(agent.agent_uuid)
-
-            # Register agent in this measurement and specific information
-            await database_agents_specific.register(agent)
+            # Register agent in this measurement
+            await database_agents.register(agent)
 
         logger.info(f"{logger_prefix} Archive target files")
         for agent in agents:
@@ -229,10 +211,8 @@ async def callback(agents_information, measurement_parameters, logger):
     else:
         # We are in this state when the worker has failed and replays the measurement
         # So we stip off the agents those which are finished
-        agent_specific_info = await database_agents_specific.all(measurement_uuid)
-        finished_agents = [
-            a["uuid"] for a in agent_specific_info if a["state"] == "finished"
-        ]
+        agent_info = await database_agents.all(measurement_uuid)
+        finished_agents = [a["uuid"] for a in agent_info if a["state"] == "finished"]
         filtered_agents = []
         for agent in agents:
             if agent.agent_uuid not in finished_agents:

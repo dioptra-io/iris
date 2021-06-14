@@ -8,7 +8,6 @@ import pytest
 from iris.commons.database import (
     Database,
     DatabaseAgents,
-    DatabaseAgentsSpecific,
     DatabaseMeasurementResults,
     DatabaseMeasurements,
 )
@@ -169,79 +168,6 @@ async def test_database_agents():
         await DatabaseAgents(session, CommonSettings()).create_table(drop=True) is None
     )
 
-    agent_uuid = uuid.uuid4()
-    fake_database_response = (
-        agent_uuid,
-        "all",
-        "0.1.0",
-        "hostname",
-        "1.2.3.4",
-        1,
-        1000,
-        datetime.strptime("2020-01-01", "%Y-%m-%d"),
-    )
-
-    fake_formated_response = {
-        "uuid": str(agent_uuid),
-        "user": "all",
-        "version": "0.1.0",
-        "hostname": "hostname",
-        "ip_address": "1.2.3.4",
-        "min_ttl": 1,
-        "max_probing_rate": 1000,
-        "last_used": datetime.strptime("2020-01-01", "%Y-%m-%d").isoformat(),
-    }
-
-    # Test of `.all() method`
-    session = FakeSession(response=[(agent_uuid,)])
-    assert await DatabaseAgents(session, CommonSettings()).all() == [
-        str(agent_uuid),
-    ]
-
-    # Test of `.get() method`
-    session = FakeSession(response=[fake_database_response])
-    assert (
-        await DatabaseAgents(session, CommonSettings()).get(agent_uuid)
-        == fake_formated_response
-    )
-    session = FakeSession(response=[])
-    assert await DatabaseAgents(session, CommonSettings()).get(agent_uuid) is None
-
-    parameters = {
-        "user": "all",
-        "version": "0.1.0",
-        "hostname": "hostname",
-        "ip_address": "1.2.3.4",
-        "min_ttl": 1,
-        "max_probing_rate": 1000,
-    }
-
-    # Test of `.register() method`
-    session = FakeSession(response=None)
-    assert (
-        await DatabaseAgents(session, CommonSettings()).register(uuid, parameters)
-        is None
-    )
-
-    # Test of `.stamp_last_used() method`
-    session = FakeSession(response=None)
-    assert (
-        await DatabaseAgents(session, CommonSettings()).stamp_last_used(agent_uuid)
-        is None
-    )
-
-
-@pytest.mark.asyncio
-async def test_database_agents_specific():
-    session = FakeSession(response=None)
-    assert (
-        await DatabaseAgentsSpecific(session, CommonSettings()).create_table() is None
-    )
-    assert (
-        await DatabaseAgentsSpecific(session, CommonSettings()).create_table(drop=True)
-        is None
-    )
-
     measurement_uuid_1 = uuid.uuid4()
     agent_uuid_1 = uuid.uuid4()
     fake_database_response_1 = (
@@ -249,6 +175,7 @@ async def test_database_agents_specific():
         agent_uuid_1,
         "test.csv",
         1000,
+        json.dumps({"agent": 0}),
         json.dumps({"parameters": 0}),
         "ongoing",
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
@@ -261,6 +188,7 @@ async def test_database_agents_specific():
         agent_uuid_2,
         "test.csv",
         1000,
+        json.dumps({"agent": 0}),
         json.dumps({"parameters": 0}),
         "finished",
         datetime.strptime("2020-01-01", "%Y-%m-%d"),
@@ -271,6 +199,7 @@ async def test_database_agents_specific():
         "target_file": "test.csv",
         "probing_rate": 1000,
         "tool_parameters": {"parameters": 0},
+        "agent_parameters": {"agent": 0},
         "state": "ongoing",
     }
 
@@ -279,14 +208,13 @@ async def test_database_agents_specific():
         "target_file": "test.csv",
         "probing_rate": 1000,
         "tool_parameters": {"parameters": 0},
+        "agent_parameters": {"agent": 0},
         "state": "finished",
     }
 
     # Test of `.all() method`
     session = FakeSession(response=[fake_database_response_1, fake_database_response_2])
-    assert await DatabaseAgentsSpecific(session, CommonSettings()).all(
-        measurement_uuid_1
-    ) == [
+    assert await DatabaseAgents(session, CommonSettings()).all(measurement_uuid_1) == [
         fake_formated_response_1,
         fake_formated_response_2,
     ]
@@ -294,51 +222,67 @@ async def test_database_agents_specific():
     # Test of `.get() method`
     session = FakeSession(response=[fake_database_response_1])
     assert (
-        await DatabaseAgentsSpecific(session, CommonSettings()).get(
+        await DatabaseAgents(session, CommonSettings()).get(
             measurement_uuid_1, agent_uuid_1
         )
         == fake_formated_response_1
     )
     session = FakeSession(response=[fake_database_response_2])
     assert (
-        await DatabaseAgentsSpecific(session, CommonSettings()).get(
+        await DatabaseAgents(session, CommonSettings()).get(
             measurement_uuid_2, agent_uuid_2
         )
         == fake_formated_response_2
     )
     session = FakeSession(response=[])
     assert (
-        await DatabaseAgentsSpecific(session, CommonSettings()).get(
+        await DatabaseAgents(session, CommonSettings()).get(
             measurement_uuid_1, agent_uuid_1
         )
         is None
     )
 
     agent = ParametersDataclass(
-        "agent_uuid",
+        agent_uuid_1,
         {
-            "measurement_uuid": "test",
-            "target_file": "test.csv",
+            "tool": "diamond-miner",
+            "measurement_uuid": measurement_uuid_1,
+            "user": "admin",
+            "tags": ["test"],
+            "start_time": 1605630993.092607,
+        },
+        {
+            "user": "all",
+            "version": "0.1.0",
+            "hostname": "hostname",
+            "ip_address": "1.2.3.4",
+            "min_ttl": 1,
+            "max_probing_rate": 1000,
+        },
+        {
+            "target_file": "custom.csv",
+            "probing_rate": 200,
             "tool_parameters": {
-                "min_ttl": 2,
-                "max_ttl": 30,
+                "protocol": "udp",
+                "initial_source_port": 24000,
+                "destination_port": 33434,
+                "global_min_ttl": 5,
+                "global_max_ttl": 20,
                 "max_round": 10,
+                "flow_mapper": "IntervalFlowMapper",
+                "flow_mapper_kwargs": None,
             },
         },
-        {"probing_rate": 100},
-        {},
     )
 
     # Test of `.register() method`
     session = FakeSession(response=[])
-    assert (
-        await DatabaseAgentsSpecific(session, CommonSettings()).register(agent) is None
-    )
+    assert await DatabaseAgents(session, CommonSettings()).register(agent) is None
 
     # Test of `.stamp_finished() method`
     session = FakeSession(response=None)
     assert (
-        await DatabaseAgentsSpecific(session, CommonSettings()).stamp_finished(
+        await DatabaseAgents(session, CommonSettings()).stamp_finished(
             measurement_uuid_1, agent_uuid_1
         )
         is None

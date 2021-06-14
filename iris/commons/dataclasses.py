@@ -3,14 +3,14 @@ class ParametersDataclass(object):
         self,
         agent_uuid,
         measurement_parameters,
-        physical_parameters,
+        agent_parameters,
         specific_parameters,
     ):
         self.measurement_parameters = measurement_parameters
-        self.physical_parameters = physical_parameters
+        self.agent_parameters = agent_parameters
         self.specific_parameters = specific_parameters
         self._dataclass = {
-            **physical_parameters,
+            **agent_parameters,
             **measurement_parameters,
             **specific_parameters,
             **{"agent_uuid": agent_uuid},

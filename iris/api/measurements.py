@@ -20,7 +20,6 @@ from iris.api.schemas import (
 from iris.api.security import get_current_active_user
 from iris.commons.database import (
     DatabaseAgents,
-    DatabaseAgentsSpecific,
     DatabaseMeasurementResults,
     DatabaseMeasurements,
     get_session,
@@ -246,23 +245,19 @@ async def get_measurement_by_uuid(
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     measurement["state"] = state if state is not None else measurement["state"]
 
-    agents_specific = await DatabaseAgentsSpecific(
+    agents_info = await DatabaseAgents(
         session, request.app.settings, request.app.logger
     ).all(measurement["uuid"])
 
     agents = []
-    for agent_specific in agents_specific:
-        agent_info = await DatabaseAgents(
-            session, request.app.settings, request.app.logger
-        ).get(agent_specific["uuid"])
-
+    for agent_info in agents_info:
         if measurement["state"] == "waiting":
-            agent_specific["state"] = "waiting"
+            agent_info["state"] = "waiting"
 
         try:
             target_file = await request.app.storage.get_file_no_retry(
                 request.app.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user["username"],
-                f"targets__{measurement['uuid']}__{agent_specific['uuid']}.csv",
+                f"targets__{measurement['uuid']}__{agent_info['uuid']}.csv",
             )
             target_file_content = [c.strip() for c in target_file["content"].split()]
             if len(target_file_content) > 100:
@@ -274,21 +269,15 @@ async def get_measurement_by_uuid(
 
         agents.append(
             {
-                "uuid": agent_specific["uuid"],
-                "state": agent_specific["state"],
+                "uuid": agent_info["uuid"],
+                "state": agent_info["state"],
                 "specific": {
-                    "target_file": agent_specific["target_file"],
+                    "target_file": agent_info["target_file"],
                     "target_file_content": target_file_content,
-                    "probing_rate": agent_specific["probing_rate"],
-                    "tool_parameters": agent_specific["tool_parameters"],
+                    "probing_rate": agent_info["probing_rate"],
+                    "tool_parameters": agent_info["tool_parameters"],
                 },
-                "parameters": {
-                    "version": agent_info["version"],
-                    "hostname": agent_info["hostname"],
-                    "ip_address": agent_info["ip_address"],
-                    "min_ttl": agent_info["min_ttl"],
-                    "max_probing_rate": agent_info["max_probing_rate"],
-                },
+                "parameters": agent_info["agent_parameters"],
             }
         )
     measurement["agents"] = agents
@@ -353,11 +342,11 @@ async def get_measurement_results(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
-    agent_specific_info = await DatabaseAgentsSpecific(
+    agent_info = await DatabaseAgents(
         session, request.app.settings, request.app.logger
     ).get(measurement_uuid, agent_uuid)
 
-    if agent_specific_info is None:
+    if agent_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=(
@@ -366,7 +355,7 @@ async def get_measurement_results(
             ),
         )
 
-    if agent_specific_info["state"] != "finished":
+    if agent_info["state"] != "finished":
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail=(
