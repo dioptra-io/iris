@@ -61,8 +61,8 @@ async def test_build_probe_generator_parameters():
         )
 
     assert prober_parameters["prefixes"] == [
-        ("8.8.8.0/24", "icmp", range(2, 33)),
         ("8.8.4.0/24", "icmp", range(2, 33)),
+        ("8.8.8.0/24", "icmp", range(2, 33)),
     ]
     assert prober_parameters["prefix_len_v4"] == 24
     assert prober_parameters["prefix_len_v6"] == 64
@@ -81,8 +81,8 @@ async def test_build_probe_generator_parameters():
         )
 
     assert prober_parameters["prefixes"] == [
-        ("8.8.8.0/24", "icmp", range(6, 33)),
         ("8.8.4.0/24", "icmp", range(6, 33)),
+        ("8.8.8.0/24", "icmp", range(6, 33)),
     ]
 
     settings.AGENT_MIN_TTL = 2
@@ -98,8 +98,8 @@ async def test_build_probe_generator_parameters():
         )
 
     assert prober_parameters["prefixes"] == [
-        ("8.8.8.0/24", "icmp", range(2, 33)),
         ("8.8.4.0/24", "icmp", range(2, 33)),
+        ("8.8.8.0/24", "icmp", range(2, 33)),
     ]
     assert prober_parameters["prefix_len_v4"] == 24
     assert prober_parameters["prefix_len_v6"] == 64

@@ -39,6 +39,7 @@ python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 typer = "^0.3.2"
 rich = "^10.1.0"
 pycaracal = "^0.4.20"
+py-radix = "^0.10.0"
 
 [tool.poetry.dev-dependencies]
 black = {version = "^21.4b2", allow-prereleases = true}

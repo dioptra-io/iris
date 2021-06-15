@@ -1,10 +1,12 @@
 """Measurement interface."""
 
+
 import multiprocessing
 from ipaddress import ip_address, ip_network
 
 import aiofiles
 import aiofiles.os
+import radix
 from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
 
@@ -13,7 +15,7 @@ from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
 
 
-def cast_prefix(prefix: str):
+def addr_to_network(prefix: str):
     base_prefix = ip_address(prefix)
     base_prefix_mapped = base_prefix.ipv4_mapped
     if base_prefix_mapped:
@@ -35,7 +37,7 @@ async def build_probe_generator_parameters(
             **{"prefix_size": DEFAULT_PREFIX_SIZE_V6, **flow_mapper_kwargs}
         )
 
-        prefixes_from_target_file = []
+        prefixes_from_target_file = radix.Radix()
         async with aiofiles.open(target_filepath) as fd:
             async for target in fd:
                 target_line = target.split(",")
@@ -45,13 +47,9 @@ async def build_probe_generator_parameters(
                 )
                 max_ttl = min(int(target_line[3]), round.max_ttl)
 
-                prefixes_from_target_file.append(
-                    [
-                        ip_network(target_line[0]),
-                        target_line[1],
-                        range(min_ttl, max_ttl + 1),
-                    ]
-                )
+                node = prefixes_from_target_file.add(target_line[0])
+                node.data["protocol"] = target_line[1]
+                node.data["ttl_range"] = range(min_ttl, max_ttl + 1)
 
         prefixes_to_probe = None
         if prefix_filepath is not None:
@@ -61,18 +59,22 @@ async def build_probe_generator_parameters(
             async with aiofiles.open(prefix_filepath) as fd:
                 prefixes_to_probe = await fd.readlines()
 
-            prefixes_to_probe = [cast_prefix(p.strip()) for p in prefixes_to_probe]
+            prefixes_to_probe = [addr_to_network(p.strip()) for p in prefixes_to_probe]
 
             prefixes = []
             for prefix in prefixes_to_probe:
-                for prefix_target in prefixes_from_target_file:
-                    if prefix.overlaps(prefix_target[0]):
-                        prefixes.append(tuple([str(prefix)] + prefix_target[1:]))
+                nodes = prefixes_from_target_file.search_covered(str(prefix))
+                for node in nodes:
+                    prefixes.append(
+                        (node.prefix, node.data["protocol"], node.data["ttl_range"])
+                    )
         else:
             # There is no prefix list to probe so we directly take the target list
             prefixes = []
-            for prefix in prefixes_from_target_file:
-                prefixes.append(tuple([str(prefix[0])] + prefix[1:]))
+            for node in prefixes_from_target_file:
+                prefixes.append(
+                    (node.prefix, node.data["protocol"], node.data["ttl_range"])
+                )
 
         return {
             "prefixes": prefixes,
