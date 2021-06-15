@@ -8,11 +8,14 @@ from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.queries.query import AddrType
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
-from iris.commons.database import DatabaseMeasurementResults, get_session, get_url
+from iris.commons.database import MeasurementResults
 from iris.commons.round import Round
+from iris.worker import WorkerSettings
 
 
-async def default_pipeline(settings, parameters, results_filename, storage, logger):
+async def default_pipeline(
+    settings: WorkerSettings, parameters, results_filename, storage, logger
+):
     """Process results and eventually request a new round."""
     measurement_uuid = parameters.measurement_uuid
     agent_uuid = parameters.agent_uuid
@@ -33,10 +36,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     if not is_deleted:
         logger.error(f"Impossible to remove result file `{results_filename}`")
 
-    session = get_session(settings)
-    database = DatabaseMeasurementResults(
-        session, settings, measurement_uuid, agent_uuid, logger=logger
-    )
+    database = MeasurementResults(settings, logger, measurement_uuid, agent_uuid)
 
     logger.info(f"{logger_prefix} Create results tables")
     await database.create_table()
@@ -45,10 +45,10 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     await database.insert_csv(results_filepath)
 
     logger.info(f"{logger_prefix} Insert prefixes")
-    await database.insert_prefixes(round.number)
+    await database.insert_prefixes()
 
     logger.info(f"{logger_prefix} Insert links")
-    await database.insert_links(round.number)
+    await database.insert_links()
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local results file")
@@ -71,7 +71,9 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
             window_min_ttl=round.min_ttl,
             window_max_ttl=round.max_ttl,
             stopping_condition=settings.WORKER_ROUND_1_STOPPING,
-        ).execute_iter_async(get_url(settings), f"{measurement_uuid}__{agent_uuid}"):
+        ).execute_iter_async(
+            settings.database_url(), f"{measurement_uuid}__{agent_uuid}"
+        ):
             prefixes_to_probe.append(prefix)
 
         if prefixes_to_probe:
@@ -110,7 +112,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
     )
     n_probes_to_send = await mda_probes_parallel(
         filepath=next_round_csv_filepath,
-        url=get_url(settings),
+        url=settings.database_url(),
         measurement_id=f"{measurement_uuid}__{agent_uuid}",
         round_=round.number,
         mapper_v4=flow_mapper_v4,

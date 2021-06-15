@@ -18,12 +18,7 @@ from iris.api.schemas import (
     MeasurementsResultsResponse,
 )
 from iris.api.security import get_current_active_user
-from iris.commons.database import (
-    DatabaseAgents,
-    DatabaseMeasurementResults,
-    DatabaseMeasurements,
-    get_session,
-)
+from iris.commons.database import Agents, MeasurementResults, Measurements
 from iris.worker.hook import hook
 
 router = APIRouter()
@@ -40,8 +35,7 @@ async def get_measurements(
     user: Dict = Depends(get_current_active_user),
 ):
     """Get all measurements."""
-    session = get_session(request.app.settings)
-    database = DatabaseMeasurements(session, request.app.settings, request.app.logger)
+    database = Measurements(request.app.settings, request.app.logger)
 
     querier = DatabasePagination(database, request, offset, limit)
     output = await querier.query(user=user["username"], tag=tag)
@@ -233,10 +227,9 @@ async def get_measurement_by_uuid(
     user: Dict = Depends(get_current_active_user),
 ):
     """Get measurement information by uuid."""
-    session = get_session(request.app.settings)
-    measurement = await DatabaseMeasurements(
-        session, request.app.settings, request.app.logger
-    ).get(user["username"], measurement_uuid)
+    measurement = await Measurements(request.app.settings, request.app.logger).get(
+        user["username"], measurement_uuid
+    )
     if measurement is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -245,9 +238,9 @@ async def get_measurement_by_uuid(
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     measurement["state"] = state if state is not None else measurement["state"]
 
-    agents_info = await DatabaseAgents(
-        session, request.app.settings, request.app.logger
-    ).all(measurement["uuid"])
+    agents_info = await Agents(request.app.settings, request.app.logger).all(
+        measurement["uuid"]
+    )
 
     agents = []
     for agent_info in agents_info:
@@ -297,11 +290,9 @@ async def delete_measurement(
     user: Dict = Depends(get_current_active_user),
 ):
     """Cancel a measurement."""
-    session = get_session(request.app.settings)
-
-    measurement_info = await DatabaseMeasurements(
-        session, request.app.settings, request.app.logger
-    ).get(user["username"], measurement_uuid)
+    measurement_info = await Measurements(request.app.settings, request.app.logger).get(
+        user["username"], measurement_uuid
+    )
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -332,19 +323,17 @@ async def get_measurement_results(
     user: Dict = Depends(get_current_active_user),
 ):
     """Get measurement results."""
-    session = get_session(request.app.settings)
-
-    measurement_info = await DatabaseMeasurements(
-        session, request.app.settings, request.app.logger
-    ).get(user["username"], measurement_uuid)
+    measurement_info = await Measurements(request.app.settings, request.app.logger).get(
+        user["username"], measurement_uuid
+    )
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
-    agent_info = await DatabaseAgents(
-        session, request.app.settings, request.app.logger
-    ).get(measurement_uuid, agent_uuid)
+    agent_info = await Agents(request.app.settings, request.app.logger).get(
+        measurement_uuid, agent_uuid
+    )
 
     if agent_info is None:
         raise HTTPException(
@@ -364,11 +353,11 @@ async def get_measurement_results(
             ),
         )
 
-    database = DatabaseMeasurementResults(
-        session, request.app.settings, measurement_uuid, agent_uuid, request.app.logger
+    database = MeasurementResults(
+        request.app.settings, request.app.logger, measurement_uuid, agent_uuid
     )
 
-    is_table_exists = await database.is_exists()
+    is_table_exists = await database.exists()
     if not is_table_exists:
         return {"count": 0, "next": None, "previous": None, "results": []}
 

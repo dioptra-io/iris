@@ -8,6 +8,7 @@ from iris.api.main import app
 from iris.api.security import get_current_active_user
 from iris.api.settings import APISettings
 from iris.commons.redis import Redis
+from iris.commons.settings import CommonSettings
 
 uuid_user = str(uuid4())
 
@@ -89,3 +90,11 @@ def client():
     app.logger = logging.getLogger("test")
     app.settings = TestSettings()
     return client
+
+
+@pytest.fixture(scope="function")
+def common_settings():
+    # The `function` scope ensures that the settings are reset before every test.
+    return CommonSettings(
+        DATABASE_HOST="localhost", DATABASE_NAME="iris_test", DATABASE_TIMEOUT=0
+    )

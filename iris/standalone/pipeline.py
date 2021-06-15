@@ -14,13 +14,7 @@ from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
 from iris.api.schemas import Tool, ToolParameters
-from iris.commons.database import (
-    Database,
-    DatabaseAgents,
-    DatabaseMeasurements,
-    get_session,
-    get_url,
-)
+from iris.commons.database import Agents, Database, Measurements
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
 from iris.commons.utils import get_own_ip_address
@@ -71,8 +65,7 @@ def create_request(
 
 
 async def register_measurement(dataclass, settings, logger):
-    session = get_session(settings)
-    database_measurements = DatabaseMeasurements(session, settings, logger=logger)
+    database_measurements = Measurements(settings, logger)
     await database_measurements.create_table()
     await database_measurements.register(
         {
@@ -87,8 +80,7 @@ async def register_measurement(dataclass, settings, logger):
 
 
 async def register_agent(dataclass, settings, logger):
-    session = get_session(settings)
-    database_agents = DatabaseAgents(session, settings, logger=logger)
+    database_agents = Agents(settings, logger)
 
     # Create `agents` and `agents_specific` tables
     await database_agents.create_table()
@@ -98,8 +90,7 @@ async def register_agent(dataclass, settings, logger):
 
 
 async def stamp_measurement(dataclass, settings, logger):
-    session = get_session(settings)
-    database_measurements = DatabaseMeasurements(session, settings, logger=logger)
+    database_measurements = Measurements(settings, logger)
     await database_measurements.stamp_finished(
         dataclass.user, dataclass.measurement_uuid
     )
@@ -109,8 +100,7 @@ async def stamp_measurement(dataclass, settings, logger):
 
 
 async def stamp_agent(dataclass, settings, logger):
-    session = get_session(settings)
-    database_agents = DatabaseAgents(session, settings, logger=logger)
+    database_agents = Agents(settings, logger)
     await database_agents.stamp_finished(
         dataclass.measurement_uuid, dataclass.agent_uuid
     )
@@ -145,10 +135,7 @@ async def pipeline(
         )
 
     # Create the database if not exists
-    session = get_session(agent_settings, default=True)
-    await Database(session, agent_settings, logger=logger).create_database(
-        agent_settings.DATABASE_NAME
-    )
+    await Database(agent_settings, logger).create_database()
 
     # Create a target file
     target_file: Path = (
@@ -227,10 +214,11 @@ async def pipeline(
     await stamp_measurement(dataclass, worker_settings, logger)
 
     # Compute distinct nodes/links
-    url = get_url(agent_settings)
     measurement_id = f"{measurement_uuid}__{agent_settings.AGENT_UUID}"
-    n_nodes = CountNodesFromResults().execute(url, measurement_id)[0][0]
-    n_links = CountLinks().execute(url, measurement_id)[0][0]
+    n_nodes = CountNodesFromResults().execute(
+        agent_settings.database_url(), measurement_id
+    )[0][0]
+    n_links = CountLinks().execute(agent_settings.database_url(), measurement_id)[0][0]
 
     return {
         "measurement_uuid": measurement_uuid,

@@ -1,4 +1,5 @@
 import logging
+import platform
 
 from pydantic import BaseSettings
 
@@ -60,3 +61,16 @@ class CommonSettings(BaseSettings):
     LOKI_LOGGING_LEVEL: int = logging.INFO
 
     STREAM_LOGGING_LEVEL: int = logging.DEBUG
+
+    SPLIT_EXE: str = "gsplit" if platform.system() == "Darwin" else "split"
+    ZSTD_EXE: str = "zstd"
+
+    def database_url(self, default: bool = False) -> str:
+        """Return the ClickHouse URL."""
+        host = self.DATABASE_HOST
+        database = self.DATABASE_NAME if not default else "default"
+        url = f"clickhouse://{host}/{database}"
+        url += f"?connect_timeout={self.DATABASE_CONNECT_TIMEOUT}"
+        url += f"&send_receive_timeout={self.DATABASE_SEND_RECEIVE_TIMEOUT}"
+        url += f"&sync_request_timeout={self.DATABASE_SYNC_REQUEST_TIMEOUT}"
+        return url

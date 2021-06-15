@@ -3,7 +3,9 @@ from datetime import datetime
 
 import pytest
 
-import iris.commons.database
+import iris.commons.database.agents
+import iris.commons.database.measurement_results
+import iris.commons.database.measurements
 from iris.api.measurements import verify_quota
 from iris.api.security import get_current_active_user
 
@@ -19,9 +21,9 @@ def test_get_measurements_empty(client, monkeypatch):
     async def all_count(self, *args, **kwargs):
         return 0
 
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
+    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "all", all)
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "all_count", all_count
+        iris.commons.database.measurements.Measurements, "all_count", all_count
     )
 
     response = client.get("/api/measurements")
@@ -69,9 +71,9 @@ def test_get_measurements(client, monkeypatch):
     async def all_count(self, *args, **kwargs):
         return 3
 
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "all", all)
+    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "all", all)
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "all_count", all_count
+        iris.commons.database.measurements.Measurements, "all_count", all_count
     )
 
     # No (offset, limit)
@@ -540,12 +542,12 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         }
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgents,
+        iris.commons.database.agents.Agents,
         "all",
         all_agents,
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+        iris.commons.database.measurements.Measurements, "get", get_measurements
     )
 
     class FakeStorage(object):
@@ -653,12 +655,12 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
     client.app.redis = FakeRedis()
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgents,
+        iris.commons.database.agents.Agents,
         "all",
         all_agents,
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+        iris.commons.database.measurements.Measurements, "get", get_measurements
     )
 
     class FakeStorage(object):
@@ -718,7 +720,7 @@ def test_get_measurement_by_uuid_not_found(client, monkeypatch):
     async def get(self, username, measurement_uuid):
         return None
 
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
 
     response = client.get(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
@@ -747,7 +749,7 @@ def test_delete_measurement_by_uuid(client, monkeypatch):
         return {"uuid": "uuid"}
 
     client.app.redis = FakeRedis()
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
 
     response = client.delete(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {"uuid": measurement_uuid, "action": "canceled"}
@@ -759,7 +761,7 @@ def test_delete_measurement_by_uuid_not_found(client, monkeypatch):
     async def get(self, username, measurement_uuid):
         return None
 
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
 
     response = client.delete(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
@@ -777,7 +779,7 @@ def test_delete_measurement_by_uuid_already_finished(client, monkeypatch):
         return {"uuid": "uuid"}
 
     client.app.redis = FakeRedis()
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
 
     response = client.delete(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
@@ -831,29 +833,31 @@ def test_get_measurement_results(client, monkeypatch):
     async def all_measurement_results_count(self):
         return 1
 
-    async def measurement_results_is_exists(self):
+    async def measurement_results_exists(self):
         return 1
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+        iris.commons.database.measurements.Measurements, "get", get_measurements
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgents,
+        iris.commons.database.agents.Agents,
         "get",
         get_agents_results,
     )
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurementResults,
-        "is_exists",
-        measurement_results_is_exists,
+        iris.commons.database.measurement_results.MeasurementResults,
+        "exists",
+        measurement_results_exists,
     )
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurementResults, "all", all_measurement_results
+        iris.commons.database.measurement_results.MeasurementResults,
+        "all",
+        all_measurement_results,
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurementResults,
+        iris.commons.database.measurement_results.MeasurementResults,
         "all_count",
         all_measurement_results_count,
     )
@@ -884,22 +888,22 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
     async def get_agents_results(self, measurement_uuid, agent_uuid):
         return {"state": "finished"}
 
-    async def measurement_results_is_exists(self):
+    async def measurement_results_exists(self):
         return 0
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+        iris.commons.database.measurements.Measurements, "get", get_measurements
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgents,
+        iris.commons.database.agents.Agents,
         "get",
         get_agents_results,
     )
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurementResults,
-        "is_exists",
-        measurement_results_is_exists,
+        iris.commons.database.measurement_results.MeasurementResults,
+        "exists",
+        measurement_results_exists,
     )
 
     response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
@@ -929,10 +933,10 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
         return {"state": "ongoing"}
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+        iris.commons.database.measurements.Measurements, "get", get_measurements
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgents,
+        iris.commons.database.agents.Agents,
         "get",
         get_agents_results,
     )
@@ -959,10 +963,10 @@ def test_get_measurement_results_no_agent(client, monkeypatch):
         return None
 
     monkeypatch.setattr(
-        iris.commons.database.DatabaseMeasurements, "get", get_measurements
+        iris.commons.database.measurements.Measurements, "get", get_measurements
     )
     monkeypatch.setattr(
-        iris.commons.database.DatabaseAgents,
+        iris.commons.database.agents.Agents,
         "get",
         get_agents_results,
     )
@@ -984,7 +988,7 @@ def test_get_measurement_result_not_found(client, monkeypatch):
     async def get(self, username, measurement_uuid):
         return None
 
-    monkeypatch.setattr(iris.commons.database.DatabaseMeasurements, "get", get)
+    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
 
     response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
     assert response.status_code == 404
