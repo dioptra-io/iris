@@ -9,12 +9,7 @@ from starlette_exporter import PrometheusMiddleware, handle_metrics
 from iris import __version__
 from iris.api import router
 from iris.api.settings import APISettings
-from iris.commons.database import (
-    Database,
-    DatabaseMeasurements,
-    DatabaseUsers,
-    get_session,
-)
+from iris.commons.database import Database, Measurements, Users, get_session
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
@@ -64,11 +59,11 @@ async def startup_event():
 
     # Create  the measurement table
     session = get_session(app.settings)
-    database = DatabaseMeasurements(session, app.settings, logger=app.logger)
+    database = Measurements(session, app.settings, logger=app.logger)
     await database.create_table()
 
     # Create the users database on Clickhouse and admin user
-    database = DatabaseUsers(session, app.settings, logger=app.logger)
+    database = Users(session, app.settings, logger=app.logger)
     await database.create_table()
     admin_user = await database.get(app.settings.API_ADMIN_USERNAME)
     if admin_user is None:

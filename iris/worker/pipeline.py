@@ -8,7 +8,7 @@ from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.queries.query import AddrType
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
-from iris.commons.database import DatabaseMeasurementResults, get_session, get_url
+from iris.commons.database import MeasurementResults, get_session, get_url
 from iris.commons.round import Round
 
 
@@ -34,7 +34,7 @@ async def default_pipeline(settings, parameters, results_filename, storage, logg
         logger.error(f"Impossible to remove result file `{results_filename}`")
 
     session = get_session(settings)
-    database = DatabaseMeasurementResults(
+    database = MeasurementResults(
         session, settings, measurement_uuid, agent_uuid, logger=logger
     )
 

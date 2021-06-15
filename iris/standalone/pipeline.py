@@ -14,13 +14,7 @@ from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
 from iris.api.schemas import Tool, ToolParameters
-from iris.commons.database import (
-    Database,
-    DatabaseAgents,
-    DatabaseMeasurements,
-    get_session,
-    get_url,
-)
+from iris.commons.database import Agents, Database, Measurements, get_session, get_url
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
 from iris.commons.utils import get_own_ip_address
@@ -72,7 +66,7 @@ def create_request(
 
 async def register_measurement(dataclass, settings, logger):
     session = get_session(settings)
-    database_measurements = DatabaseMeasurements(session, settings, logger=logger)
+    database_measurements = Measurements(session, settings, logger=logger)
     await database_measurements.create_table()
     await database_measurements.register(
         {
@@ -88,7 +82,7 @@ async def register_measurement(dataclass, settings, logger):
 
 async def register_agent(dataclass, settings, logger):
     session = get_session(settings)
-    database_agents = DatabaseAgents(session, settings, logger=logger)
+    database_agents = Agents(session, settings, logger=logger)
 
     # Create `agents` and `agents_specific` tables
     await database_agents.create_table()
@@ -99,7 +93,7 @@ async def register_agent(dataclass, settings, logger):
 
 async def stamp_measurement(dataclass, settings, logger):
     session = get_session(settings)
-    database_measurements = DatabaseMeasurements(session, settings, logger=logger)
+    database_measurements = Measurements(session, settings, logger=logger)
     await database_measurements.stamp_finished(
         dataclass.user, dataclass.measurement_uuid
     )
@@ -110,7 +104,7 @@ async def stamp_measurement(dataclass, settings, logger):
 
 async def stamp_agent(dataclass, settings, logger):
     session = get_session(settings)
-    database_agents = DatabaseAgents(session, settings, logger=logger)
+    database_agents = Agents(session, settings, logger=logger)
     await database_agents.stamp_finished(
         dataclass.measurement_uuid, dataclass.agent_uuid
     )

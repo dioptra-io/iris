@@ -6,7 +6,7 @@ import traceback
 import dramatiq
 from aiofiles import os as aios
 
-from iris.commons.database import DatabaseAgents, DatabaseMeasurements, get_session
+from iris.commons.database import Agents, Measurements, get_session
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
@@ -52,7 +52,7 @@ async def watch(redis, storage, parameters, logger):
     logger_prefix = f"{parameters.measurement_uuid} :: {parameters.agent_uuid} ::"
 
     session = get_session(settings)
-    database_agents = DatabaseAgents(session, settings, logger=logger)
+    database_agents = Agents(session, settings, logger=logger)
 
     while True:
         if settings.WORKER_SANITY_CHECK_ENABLE:
@@ -129,8 +129,8 @@ async def callback(agents_information, measurement_parameters, logger):
 
     logger.info(f"{logger_prefix} New measurement received")
     session = get_session(settings)
-    database_measurements = DatabaseMeasurements(session, settings, logger=logger)
-    database_agents = DatabaseAgents(session, settings, logger=logger)
+    database_measurements = Measurements(session, settings, logger=logger)
+    database_agents = Agents(session, settings, logger=logger)
 
     redis = Redis(settings=settings, logger=logger)
     await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)

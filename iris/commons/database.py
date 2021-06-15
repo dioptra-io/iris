@@ -32,11 +32,12 @@ from tenacity import (
 )
 
 from iris.commons.dataclasses import ParametersDataclass
+from iris.commons.settings import CommonSettings
 from iris.commons.subprocess import start_stream_subprocess
 
 
-def get_url(settings, default=False):
-    """Get database URL."""
+def get_url(settings: CommonSettings, default: bool = False) -> str:
+    """Return the ClickHouse URL according to ``settings``."""
     host = settings.DATABASE_HOST
     database = settings.DATABASE_NAME if not default else "default"
     url = f"clickhouse://{host}/{database}"
@@ -46,8 +47,8 @@ def get_url(settings, default=False):
     return url
 
 
-def get_session(settings, default=False):
-    """Get database session."""
+def get_session(settings: CommonSettings, default: bool = False):
+    """Return an instance of the ClickHouse client according to ``settings``."""
     return Client.from_url(get_url(settings, default))
 
 
@@ -113,7 +114,7 @@ class Database(object):
         await self.session.disconnect()
 
 
-class DatabaseUsers(Database):
+class Users(Database):
     """Interface that handle users"""
 
     def __init__(self, session, settings, logger=None):
@@ -217,7 +218,7 @@ class DatabaseUsers(Database):
             )
 
 
-class DatabaseMeasurements(Database):
+class Measurements(Database):
     """Interface that handle measurements history."""
 
     def __init__(self, session, settings, logger=None):
@@ -349,7 +350,7 @@ class DatabaseMeasurements(Database):
         )
 
 
-class DatabaseAgents(Database):
+class Agents(Database):
     """Interface that handle agents parameters."""
 
     def __init__(self, session, settings, logger=None):
@@ -476,7 +477,7 @@ def sync_insert_csv(database_name, host, table_name, chunk_filepath: Path):
     os.remove(str(chunk_filepath))
 
 
-class DatabaseMeasurementResults(Database):
+class MeasurementResults(Database):
     """Database interface to handle measurement results."""
 
     def __init__(self, session, settings, measurement_uuid, agent_uuid, logger=None):

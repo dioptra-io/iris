@@ -5,12 +5,7 @@ from datetime import datetime
 
 import pytest
 
-from iris.commons.database import (
-    Database,
-    DatabaseAgents,
-    DatabaseMeasurementResults,
-    DatabaseMeasurements,
-)
+from iris.commons.database import Agents, Database, MeasurementResults, Measurements
 from iris.commons.settings import CommonSettings
 from iris.worker.hook import ParametersDataclass
 
@@ -48,18 +43,12 @@ async def test_database(monkeypatch):
 @pytest.mark.asyncio
 async def test_database_measurements():
     session = FakeSession(response=None)
-    assert await DatabaseMeasurements(session, CommonSettings()).create_table() is None
-    assert (
-        await DatabaseMeasurements(session, CommonSettings()).create_table(drop=True)
-        is None
-    )
+    assert await Measurements(session, CommonSettings()).create_table() is None
+    assert await Measurements(session, CommonSettings()).create_table(drop=True) is None
 
     # Test of `.all_count() method`
     session = FakeSession(response=[(10,)])
-    assert (
-        await DatabaseMeasurements(session, CommonSettings()).all_count(user="admin")
-        == 10
-    )
+    assert await Measurements(session, CommonSettings()).all_count(user="admin") == 10
 
     measurement_uuid_1 = uuid.uuid4()
     fake_database_response_1 = (
@@ -105,9 +94,7 @@ async def test_database_measurements():
 
     # Test of `.all() method`
     session = FakeSession(response=[fake_database_response_1, fake_database_response_2])
-    assert await DatabaseMeasurements(session, CommonSettings()).all(
-        "admin", 0, 100
-    ) == [
+    assert await Measurements(session, CommonSettings()).all("admin", 0, 100) == [
         fake_formated_response_1,
         fake_formated_response_2,
     ]
@@ -115,23 +102,17 @@ async def test_database_measurements():
     # Test of `.get() method`
     session = FakeSession(response=[fake_database_response_1])
     assert (
-        await DatabaseMeasurements(session, CommonSettings()).get(
-            "admin", measurement_uuid_1
-        )
+        await Measurements(session, CommonSettings()).get("admin", measurement_uuid_1)
         == fake_formated_response_1
     )
     session = FakeSession(response=[fake_database_response_2])
     assert (
-        await DatabaseMeasurements(session, CommonSettings()).get(
-            "admin", measurement_uuid_2
-        )
+        await Measurements(session, CommonSettings()).get("admin", measurement_uuid_2)
         == fake_formated_response_2
     )
     session = FakeSession(response=[])
     assert (
-        await DatabaseMeasurements(session, CommonSettings()).get(
-            "admin", measurement_uuid_1
-        )
+        await Measurements(session, CommonSettings()).get("admin", measurement_uuid_1)
         is None
     )
 
@@ -145,15 +126,12 @@ async def test_database_measurements():
 
     # Test of `.register() method`
     session = FakeSession(response=None)
-    assert (
-        await DatabaseMeasurements(session, CommonSettings()).register(parameters)
-        is None
-    )
+    assert await Measurements(session, CommonSettings()).register(parameters) is None
 
     # Test of `.stamp_end_time() method`
     session = FakeSession(response=None)
     assert (
-        await DatabaseMeasurements(session, CommonSettings()).stamp_end_time(
+        await Measurements(session, CommonSettings()).stamp_end_time(
             "admin", measurement_uuid_1
         )
         is None
@@ -163,10 +141,8 @@ async def test_database_measurements():
 @pytest.mark.asyncio
 async def test_database_agents():
     session = FakeSession(response=None)
-    assert await DatabaseAgents(session, CommonSettings()).create_table() is None
-    assert (
-        await DatabaseAgents(session, CommonSettings()).create_table(drop=True) is None
-    )
+    assert await Agents(session, CommonSettings()).create_table() is None
+    assert await Agents(session, CommonSettings()).create_table(drop=True) is None
 
     measurement_uuid_1 = uuid.uuid4()
     agent_uuid_1 = uuid.uuid4()
@@ -214,7 +190,7 @@ async def test_database_agents():
 
     # Test of `.all() method`
     session = FakeSession(response=[fake_database_response_1, fake_database_response_2])
-    assert await DatabaseAgents(session, CommonSettings()).all(measurement_uuid_1) == [
+    assert await Agents(session, CommonSettings()).all(measurement_uuid_1) == [
         fake_formated_response_1,
         fake_formated_response_2,
     ]
@@ -222,23 +198,17 @@ async def test_database_agents():
     # Test of `.get() method`
     session = FakeSession(response=[fake_database_response_1])
     assert (
-        await DatabaseAgents(session, CommonSettings()).get(
-            measurement_uuid_1, agent_uuid_1
-        )
+        await Agents(session, CommonSettings()).get(measurement_uuid_1, agent_uuid_1)
         == fake_formated_response_1
     )
     session = FakeSession(response=[fake_database_response_2])
     assert (
-        await DatabaseAgents(session, CommonSettings()).get(
-            measurement_uuid_2, agent_uuid_2
-        )
+        await Agents(session, CommonSettings()).get(measurement_uuid_2, agent_uuid_2)
         == fake_formated_response_2
     )
     session = FakeSession(response=[])
     assert (
-        await DatabaseAgents(session, CommonSettings()).get(
-            measurement_uuid_1, agent_uuid_1
-        )
+        await Agents(session, CommonSettings()).get(measurement_uuid_1, agent_uuid_1)
         is None
     )
 
@@ -277,12 +247,12 @@ async def test_database_agents():
 
     # Test of `.register() method`
     session = FakeSession(response=[])
-    assert await DatabaseAgents(session, CommonSettings()).register(agent) is None
+    assert await Agents(session, CommonSettings()).register(agent) is None
 
     # Test of `.stamp_finished() method`
     session = FakeSession(response=None)
     assert (
-        await DatabaseAgents(session, CommonSettings()).stamp_finished(
+        await Agents(session, CommonSettings()).stamp_finished(
             measurement_uuid_1, agent_uuid_1
         )
         is None
@@ -306,7 +276,7 @@ async def test_database_measurement_results():
     # Test of `.all_count() method`
     session = FakeSession(response=[(10,)])
     assert (
-        await DatabaseMeasurementResults(
+        await MeasurementResults(
             session, CommonSettings(), "measurement", "agent"
         ).all_count()
         == 10
@@ -352,21 +322,21 @@ async def test_database_measurement_results():
 
     # Test of `.all() method`
     session = FakeSession(response=[fake_database_response])
-    assert await DatabaseMeasurementResults(
+    assert await MeasurementResults(
         session, CommonSettings(), "measurement", "agent"
     ).all(0, 100) == [fake_formated_response_1]
 
     # Test of `.is_exists()` method
     session = FakeSession(response=[(0,)])
     assert (
-        await DatabaseMeasurementResults(
+        await MeasurementResults(
             session, CommonSettings(), "measurement", "agent"
         ).is_exists()
         is False
     )
     session = FakeSession(response=[(1,)])
     assert (
-        await DatabaseMeasurementResults(
+        await MeasurementResults(
             session, CommonSettings(), "measurement", "agent"
         ).is_exists()
         is True

@@ -18,12 +18,7 @@ from iris.api.schemas import (
     MeasurementsResultsResponse,
 )
 from iris.api.security import get_current_active_user
-from iris.commons.database import (
-    DatabaseAgents,
-    DatabaseMeasurementResults,
-    DatabaseMeasurements,
-    get_session,
-)
+from iris.commons.database import Agents, MeasurementResults, Measurements, get_session
 from iris.worker.hook import hook
 
 router = APIRouter()
@@ -41,7 +36,7 @@ async def get_measurements(
 ):
     """Get all measurements."""
     session = get_session(request.app.settings)
-    database = DatabaseMeasurements(session, request.app.settings, request.app.logger)
+    database = Measurements(session, request.app.settings, request.app.logger)
 
     querier = DatabasePagination(database, request, offset, limit)
     output = await querier.query(user=user["username"], tag=tag)
@@ -234,7 +229,7 @@ async def get_measurement_by_uuid(
 ):
     """Get measurement information by uuid."""
     session = get_session(request.app.settings)
-    measurement = await DatabaseMeasurements(
+    measurement = await Measurements(
         session, request.app.settings, request.app.logger
     ).get(user["username"], measurement_uuid)
     if measurement is None:
@@ -245,9 +240,9 @@ async def get_measurement_by_uuid(
     state = await request.app.redis.get_measurement_state(measurement_uuid)
     measurement["state"] = state if state is not None else measurement["state"]
 
-    agents_info = await DatabaseAgents(
-        session, request.app.settings, request.app.logger
-    ).all(measurement["uuid"])
+    agents_info = await Agents(session, request.app.settings, request.app.logger).all(
+        measurement["uuid"]
+    )
 
     agents = []
     for agent_info in agents_info:
@@ -299,7 +294,7 @@ async def delete_measurement(
     """Cancel a measurement."""
     session = get_session(request.app.settings)
 
-    measurement_info = await DatabaseMeasurements(
+    measurement_info = await Measurements(
         session, request.app.settings, request.app.logger
     ).get(user["username"], measurement_uuid)
     if measurement_info is None:
@@ -334,7 +329,7 @@ async def get_measurement_results(
     """Get measurement results."""
     session = get_session(request.app.settings)
 
-    measurement_info = await DatabaseMeasurements(
+    measurement_info = await Measurements(
         session, request.app.settings, request.app.logger
     ).get(user["username"], measurement_uuid)
     if measurement_info is None:
@@ -342,9 +337,9 @@ async def get_measurement_results(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
-    agent_info = await DatabaseAgents(
-        session, request.app.settings, request.app.logger
-    ).get(measurement_uuid, agent_uuid)
+    agent_info = await Agents(session, request.app.settings, request.app.logger).get(
+        measurement_uuid, agent_uuid
+    )
 
     if agent_info is None:
         raise HTTPException(
@@ -364,7 +359,7 @@ async def get_measurement_results(
             ),
         )
 
-    database = DatabaseMeasurementResults(
+    database = MeasurementResults(
         session, request.app.settings, measurement_uuid, agent_uuid, request.app.logger
     )
 

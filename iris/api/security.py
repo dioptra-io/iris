@@ -14,7 +14,7 @@ with warnings.catch_warnings():
 
 from passlib.context import CryptContext
 
-from iris.commons.database import DatabaseUsers, get_session
+from iris.commons.database import Users, get_session
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="profile/token")
@@ -43,7 +43,7 @@ def create_access_token(
 
 async def get_user(request: Request, username: str):
     session = get_session(request.app.settings)
-    database = DatabaseUsers(session, request.app.settings, request.app.logger)
+    database = Users(session, request.app.settings, request.app.logger)
     return await database.get(username)
 
 
