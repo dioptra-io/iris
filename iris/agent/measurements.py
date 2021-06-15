@@ -48,8 +48,12 @@ async def build_probe_generator_parameters(
                 max_ttl = min(int(target_line[3]), round.max_ttl)
 
                 node = prefixes_from_target_file.add(target_line[0])
-                node.data["protocol"] = target_line[1]
-                node.data["ttl_range"] = range(min_ttl, max_ttl + 1)
+                if node.data.get("todo"):
+                    node.data["todo"].append(
+                        (target_line[1], range(min_ttl, max_ttl + 1))
+                    )
+                else:
+                    node.data["todo"] = [(target_line[1], range(min_ttl, max_ttl + 1))]
 
         prefixes_to_probe = None
         if prefix_filepath is not None:
@@ -65,16 +69,14 @@ async def build_probe_generator_parameters(
             for prefix in prefixes_to_probe:
                 nodes = prefixes_from_target_file.search_covered(str(prefix))
                 for node in nodes:
-                    prefixes.append(
-                        (node.prefix, node.data["protocol"], node.data["ttl_range"])
-                    )
+                    for todo in node.data["todo"]:
+                        prefixes.append((node.prefix, todo[0], todo[1]))
         else:
             # There is no prefix list to probe so we directly take the target list
             prefixes = []
             for node in prefixes_from_target_file:
-                prefixes.append(
-                    (node.prefix, node.data["protocol"], node.data["ttl_range"])
-                )
+                for todo in node.data["todo"]:
+                    prefixes.append((node.prefix, todo[0], todo[1]))
 
         return {
             "prefixes": prefixes,
