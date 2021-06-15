@@ -49,6 +49,7 @@ aiofiles.threadpool.wrap.register(mock.MagicMock)(
 
 @pytest.mark.asyncio
 async def test_build_probe_generator_parameters():
+    # D-Miner
     settings.AGENT_MIN_TTL = 2
     parameters = ParametersDataclass.from_request(request)
 
@@ -69,6 +70,7 @@ async def test_build_probe_generator_parameters():
     assert prober_parameters["flow_ids"] == range(6)
     assert prober_parameters["probe_dst_port"] == 33434
 
+    # D-Miner: Different agent min ttl
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
 
@@ -85,6 +87,24 @@ async def test_build_probe_generator_parameters():
         ("8.8.8.0/24", "icmp", range(6, 33)),
     ]
 
+    # D-Miner: Same prefix twice
+    settings.AGENT_MIN_TTL = 6
+    parameters = ParametersDataclass.from_request(request)
+
+    mock_file = mock.MagicMock(
+        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
+    )
+    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
+        prober_parameters = await build_probe_generator_parameters(
+            settings, "test_file", None, Round(1, 0, 0), parameters
+        )
+
+    assert prober_parameters["prefixes"] == [
+        ("8.8.8.0/24", "icmp", range(6, 33)),
+        ("8.8.8.0/24", "icmp", range(6, 21)),
+    ]
+
+    # YARRP
     settings.AGENT_MIN_TTL = 2
     request["parameters"]["tool"] = "yarrp"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
@@ -106,6 +126,7 @@ async def test_build_probe_generator_parameters():
     assert prober_parameters["flow_ids"] == range(1)
     assert prober_parameters["probe_dst_port"] == 33434
 
+    # Ping
     request["parameters"]["tool"] = "ping"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
@@ -124,6 +145,7 @@ async def test_build_probe_generator_parameters():
     assert prober_parameters["flow_ids"] == range(1)
     assert prober_parameters["probe_dst_port"] == 33434
 
+    # Invalid tool
     request["parameters"]["tool"] = "test"
     parameters = ParametersDataclass.from_request(request)
     mock_file = mock.MagicMock(
