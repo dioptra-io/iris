@@ -17,7 +17,7 @@ from iris.api.security import (
     create_access_token,
     get_current_active_user,
 )
-from iris.commons.database import Users, get_session
+from iris.commons.database import Users
 
 router = APIRouter()
 
@@ -82,8 +82,7 @@ async def put_ripe_profile(
     ripe_info: ProfileRIPEPutBody,
     user: Dict = Depends(get_current_active_user),
 ):
-    session = get_session(request.app.settings)
-    users_database = Users(session, request.app.settings, request.app.logger)
+    users_database = Users(request.app.settings, request.app.logger)
 
     if not isinstance(ripe_info.account, type(ripe_info.key)):
         raise HTTPException(

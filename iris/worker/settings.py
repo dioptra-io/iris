@@ -8,8 +8,6 @@ class WorkerSettings(CommonSettings):
 
     SETTINGS_CLASS = "worker"
 
-    WORKER_EXCLUSION_FILE_PATH: Path = Path("/app/reader/resources/excluded_prefixes")
-
     WORKER_RESULTS_DIR_PATH: Path = Path("/app/results")
 
     WORKER_TIME_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)

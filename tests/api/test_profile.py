@@ -1,6 +1,6 @@
 import uuid
 
-import iris.commons.database
+import iris.commons.database.users
 from iris.api.security import get_current_active_user
 
 from ..conftest import override_get_current_active_user
@@ -180,7 +180,7 @@ def test_put_profile_ripe(client, monkeypatch):
         return
 
     monkeypatch.setattr(
-        iris.commons.database.Users, "register_ripe", fake_register_ripe
+        iris.commons.database.users.Users, "register_ripe", fake_register_ripe
     )
     response = client.put("/api/profile/ripe", json={"account": "test", "key": "test"})
     assert response.json() == {"account": "test", "key": "test"}
@@ -191,7 +191,7 @@ def test_put_profile_ripe_clear(client, monkeypatch):
         return
 
     monkeypatch.setattr(
-        iris.commons.database.Users, "register_ripe", fake_register_ripe
+        iris.commons.database.users.Users, "register_ripe", fake_register_ripe
     )
     response = client.put("/api/profile/ripe", json={"account": None, "key": None})
     assert response.json() == {"account": None, "key": None}
@@ -202,7 +202,7 @@ def test_put_profile_ripe_invalid_input(client, monkeypatch):
         return
 
     monkeypatch.setattr(
-        iris.commons.database.Users, "register_ripe", fake_register_ripe
+        iris.commons.database.users.Users, "register_ripe", fake_register_ripe
     )
 
     response = client.put("/api/profile/ripe", json={"account": "test", "key": None})
