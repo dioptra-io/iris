@@ -4,7 +4,11 @@ from unittest import mock
 import aiofiles
 import pytest
 
-from iris.agent.measurements import build_probe_generator_parameters
+from iris.agent.measurements import (
+    addr_to_network,
+    build_probe_generator_parameters,
+    cast_addr,
+)
 from iris.agent.settings import AgentSettings
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
@@ -45,6 +49,16 @@ request = {
 aiofiles.threadpool.wrap.register(mock.MagicMock)(
     lambda *args, **kwargs: aiofiles.threadpool.AsyncBufferedIOBase(*args, **kwargs)
 )
+
+
+def test_cast_addr():
+    assert cast_addr("::FFFF:8.8.8.0") == "8.8.8.0"
+    assert cast_addr("2001:12::") == "2001:12::"
+
+
+def test_addr_to_network():
+    assert addr_to_network("8.8.8.0") == "8.8.8.0/24"
+    assert addr_to_network("2001:12::") == "2001:12::/64"
 
 
 @pytest.mark.asyncio
@@ -145,12 +159,11 @@ async def test_build_probe_generator_parameters():
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
 
+    settings.AGENT_MIN_TTL = 6
+    parameters = ParametersDataclass.from_request(request)
+
     with mock.patch("aiofiles.threadpool.sync_open") as mock_open:
-        handle1 = mock.MagicMock(
-            wraps=StringIO(
-                "8.8.4.0/26,icmp,2,32\n8.8.4.128/26,icmp,2,20\n8.8.8.0/24,icmp,2,25"
-            )
-        )
+        handle1 = mock.MagicMock(wraps=StringIO("8.8.4.0/22,icmp,2,32"))
         handle2 = mock.MagicMock(wraps=StringIO("::FFFF:8.8.4.0\n"))
         mock_open.side_effect = (handle1, handle2)
 
@@ -159,8 +172,7 @@ async def test_build_probe_generator_parameters():
         )
 
     assert prober_parameters["prefixes"] == [
-        ("8.8.4.0/26", "icmp", range(6, 33)),
-        ("8.8.4.128/26", "icmp", range(6, 21)),
+        ("8.8.4.0/24", "icmp", range(6, 33)),
     ]
 
     # YARRP

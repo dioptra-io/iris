@@ -15,12 +15,19 @@ from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
 
 
-def addr_to_network(addr: str):
-    base_prefix = ip_address(addr)
-    base_prefix_mapped = base_prefix.ipv4_mapped
-    if base_prefix_mapped:
-        return ip_network(str(base_prefix_mapped) + "/24")
-    return ip_network(addr + "/64")
+def cast_addr(addr: str) -> str:
+    base_addr = ip_address(addr)
+    base_addr_mapped = base_addr.ipv4_mapped
+    if base_addr_mapped:
+        return str(base_addr_mapped)
+    return str(base_addr)
+
+
+def addr_to_network(addr: str, prefix_len_v4: int = 24, prefix_len_v6: int = 64) -> str:
+    base_addr = ip_address(addr)
+    if base_addr.version == 4:
+        return str(ip_network(addr + f"/{prefix_len_v4}"))
+    return str(ip_network(addr + f"/{prefix_len_v6}"))
 
 
 async def build_probe_generator_parameters(
@@ -55,22 +62,23 @@ async def build_probe_generator_parameters(
                 else:
                     node.data["todo"] = [(target_line[1], range(min_ttl, max_ttl + 1))]
 
-        prefixes_to_probe = None
+        prefixes_addr_to_probe = None
         if prefix_filepath is not None:
             # There is a list of prefixes to probe
             # So we use these prefixes along with the TTL information
             # from the prefix list
             async with aiofiles.open(prefix_filepath) as fd:
-                prefixes_to_probe = await fd.readlines()
+                prefixes_addr_to_probe = await fd.readlines()
 
-            prefixes_to_probe = [addr_to_network(p.strip()) for p in prefixes_to_probe]
+            prefixes_addr_to_probe = [
+                cast_addr(p.strip()) for p in prefixes_addr_to_probe
+            ]
 
             prefixes = []
-            for prefix in prefixes_to_probe:
-                nodes = prefixes_from_target_file.search_covered(str(prefix))
-                for node in nodes:
-                    for todo in node.data["todo"]:
-                        prefixes.append((node.prefix, todo[0], todo[1]))
+            for prefix_addr in prefixes_addr_to_probe:
+                node = prefixes_from_target_file.search_best(prefix_addr)
+                for todo in node.data["todo"]:
+                    prefixes.append((addr_to_network(prefix_addr), todo[0], todo[1]))
         else:
             # There is no prefix list to probe so we directly take the target list
             prefixes = []
