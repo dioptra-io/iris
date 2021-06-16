@@ -104,6 +104,65 @@ async def test_build_probe_generator_parameters():
         ("8.8.8.0/24", "icmp", range(6, 21)),
     ]
 
+    # D-Miner: for subround 1.1, 1.2, ...
+    settings.AGENT_MIN_TTL = 6
+    parameters = ParametersDataclass.from_request(request)
+
+    with mock.patch("aiofiles.threadpool.sync_open") as mock_open:
+        handle1 = mock.MagicMock(
+            wraps=StringIO("8.8.4.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
+        )
+        handle2 = mock.MagicMock(wraps=StringIO("::FFFF:8.8.4.0\n::FFFF:8.8.8.0"))
+        mock_open.side_effect = (handle1, handle2)
+
+        prober_parameters = await build_probe_generator_parameters(
+            settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
+        )
+
+    assert prober_parameters["prefixes"] == [
+        ("8.8.4.0/24", "icmp", range(6, 33)),
+        ("8.8.8.0/24", "icmp", range(6, 21)),
+    ]
+
+    settings.AGENT_MIN_TTL = 6
+    parameters = ParametersDataclass.from_request(request)
+
+    with mock.patch("aiofiles.threadpool.sync_open") as mock_open:
+        handle1 = mock.MagicMock(
+            wraps=StringIO("8.8.4.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
+        )
+        handle2 = mock.MagicMock(wraps=StringIO("::FFFF:8.8.4.0\n"))
+        mock_open.side_effect = (handle1, handle2)
+
+        prober_parameters = await build_probe_generator_parameters(
+            settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
+        )
+
+    assert prober_parameters["prefixes"] == [
+        ("8.8.4.0/24", "icmp", range(6, 33)),
+    ]
+
+    settings.AGENT_MIN_TTL = 6
+    parameters = ParametersDataclass.from_request(request)
+
+    with mock.patch("aiofiles.threadpool.sync_open") as mock_open:
+        handle1 = mock.MagicMock(
+            wraps=StringIO(
+                "8.8.4.0/26,icmp,2,32\n8.8.4.128/26,icmp,2,20\n8.8.8.0/24,icmp,2,25"
+            )
+        )
+        handle2 = mock.MagicMock(wraps=StringIO("::FFFF:8.8.4.0\n"))
+        mock_open.side_effect = (handle1, handle2)
+
+        prober_parameters = await build_probe_generator_parameters(
+            settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
+        )
+
+    assert prober_parameters["prefixes"] == [
+        ("8.8.4.0/26", "icmp", range(6, 33)),
+        ("8.8.4.128/26", "icmp", range(6, 21)),
+    ]
+
     # YARRP
     settings.AGENT_MIN_TTL = 2
     request["parameters"]["tool"] = "yarrp"

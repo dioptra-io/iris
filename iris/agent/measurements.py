@@ -15,12 +15,12 @@ from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
 
 
-def addr_to_network(prefix: str):
-    base_prefix = ip_address(prefix)
+def addr_to_network(addr: str):
+    base_prefix = ip_address(addr)
     base_prefix_mapped = base_prefix.ipv4_mapped
     if base_prefix_mapped:
         return ip_network(str(base_prefix_mapped) + "/24")
-    return ip_network(prefix + "/64")
+    return ip_network(addr + "/64")
 
 
 async def build_probe_generator_parameters(
