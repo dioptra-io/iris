@@ -38,6 +38,6 @@ class AgentSettings(CommonSettings):
     AGENT_WAIT_FOR_START: int = 10  # seconds
     AGENT_RECOVER_TIME_REDIS_FAILURE: int = 10  # seconds
 
-    WORKER_STOPPER_REFRESH: int = 1  # seconds
+    AGENT_STOPPER_REFRESH: int = 1  # seconds
 
     AGENT_DEBUG_MODE: bool = False

@@ -17,7 +17,7 @@ async def watcher(
                 process.kill()
                 logger.warning(logger_prefix + "Measurement canceled")
                 return False
-        await asyncio.sleep(settings.WORKER_STOPPER_REFRESH)
+        await asyncio.sleep(settings.AGENT_STOPPER_REFRESH)
     return True
 
 

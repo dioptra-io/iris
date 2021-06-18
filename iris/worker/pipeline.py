@@ -64,8 +64,15 @@ async def default_pipeline(
     if next_round.number == 1:
         # We are in a sub-round 1
         # Compute the list of the prefixes need to be probed in the next ttl window
-        # TODO: Fault-tolerency
+
+        if round.max_ttl < parameters.min_ttl:
+            # In this case the window was below the agent's min TTL
+            # So there is no response for this round
+            # and we don't want to compute and send a prefix list to probe
+            return (next_round, None)
+
         prefixes_to_probe = []
+        # TODO: Fault-tolerency
         async for _, _, prefix in GetSlidingPrefixes(
             addr_type=AddrType.IPv6NumToString,
             window_min_ttl=round.min_ttl,
@@ -96,6 +103,10 @@ async def default_pipeline(
             # If there is no prefixes to probe left, skip the last sub-rounds
             # and directly go to round 2
             next_round = Round(2, 0, 0)
+            next_round_csv_filename = (
+                f"{agent_uuid}_next_round_csv_{next_round.encode()}.csv.zst"
+            )
+            next_round_csv_filepath = measurement_results_path / next_round_csv_filename
 
     if next_round.number > parameters.tool_parameters["max_round"]:
         logger.info(f"{logger_prefix} Maximum round reached. Stopping.")
@@ -141,5 +152,8 @@ async def default_pipeline(
         logger.info(f"{logger_prefix} Next round is not required")
         if not settings.WORKER_DEBUG_MODE:
             logger.info(f"{logger_prefix} Remove local empty next round CSV probe file")
-            await aios.remove(next_round_csv_filepath)
+            try:
+                await aios.remove(next_round_csv_filepath)
+            except FileNotFoundError:
+                pass
         return (None, None)
