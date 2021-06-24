@@ -1,6 +1,7 @@
+# Reserved IPv4 addresses
+# https://en.wikipedia.org/wiki/Reserved_IP_addresses
 0.0.0.0/8
 10.0.0.0/8
-59.167.84.176/29
 100.64.0.0/10
 127.0.0.0/8
 169.254.0.0/16
@@ -12,10 +13,19 @@
 198.18.0.0/15
 198.51.100.0/24
 203.0.113.0/24
-203.122.238.0/29
-204.79.139.0/24
-204.79.172.0/24
 224.0.0.0/4
 233.252.0.0/24
 240.0.0.0/4
 255.255.255.255/32
+# Reserved IPv6 addresses
+# https://en.wikipedia.org/wiki/Reserved_IP_addresses
+# We do not exclude IPv4-mapped addresses as they are used internally by caracal
+2001:db8::/32
+fc00::/7
+fe80::/10
+ff00::/8
+# Exclusion requests
+59.167.84.176/29
+203.122.238.0/29
+204.79.139.0/24
+204.79.172.0/24

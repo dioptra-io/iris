@@ -29,17 +29,17 @@ diamond-miner = {develop = true, path = "vendors/diamond-miner"}
 dramatiq = {extras = ["redis", "watch"], version = "^1.9.0"}
 fastapi = "^0.60.1"
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+py-radix = "^0.10.0"
+pycaracal = "^0.4.21"
+python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 python-logging-loki = "^0.3.1"
 python-multipart = "^0.0.5"
 redis = "^3.5.3"
+rich = "^10.1.0"
 starlette_exporter = "^0.4.1"
 tenacity = "^6.2.0"
-uvicorn = "^0.11.5"
-python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 typer = "^0.3.2"
-rich = "^10.1.0"
-pycaracal = "^0.4.20"
-py-radix = "^0.10.0"
+uvicorn = "^0.11.5"
 
 [tool.poetry.dev-dependencies]
 black = {version = "^21.4b2", allow-prereleases = true}
