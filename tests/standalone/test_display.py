@@ -25,6 +25,30 @@ def test_display_results():
         "end_time": end_time,
         "n_nodes": 10,
         "n_links": 20,
+        "probing_statistics": {
+            "1:10:0": {
+                "probes_read": 30,
+                "packets_sent": 30,
+                "packets_failed": 0,
+                "filtered_low_ttl": 0,
+                "filtered_high_ttl": 0,
+                "filtered_prefix_excl": 0,
+                "filtered_prefix_not_incl": 0,
+                "packets_received": 30,
+                "packets_received_invalid": 0,
+            },
+            "1:10:1": {
+                "probes_read": 60,
+                "packets_sent": 60,
+                "packets_failed": 0,
+                "filtered_low_ttl": 0,
+                "filtered_high_ttl": 0,
+                "filtered_prefix_excl": 0,
+                "filtered_prefix_not_incl": 0,
+                "packets_received": 12,
+                "packets_received_invalid": 0,
+            },
+        },
     }
 
     class FakeStdout(object):

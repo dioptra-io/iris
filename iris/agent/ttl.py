@@ -48,6 +48,9 @@ def find_exit_ttl(logger, destination, min_ttl):
     reader = csv.DictReader(io.StringIO(out))
     hops = {int(row["Hop"]): row for row in reader}
 
+    if not hops:
+        logger.error("No response from MTR")
+
     # (current asn, first TTL where it appeared)
     curr_asn = (None, 0)
     max_ttl = max(hops.keys())

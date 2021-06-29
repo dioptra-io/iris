@@ -506,6 +506,19 @@ def test_get_measurement_by_uuid(client, monkeypatch):
         "uuid": str(uuid.uuid4()),
         "target_file": "test.csv",
         "probing_rate": 100,
+        "probing_statistics": {
+            "1:10:0": {
+                "probes_read": 240,
+                "packets_sent": 240,
+                "packets_failed": 0,
+                "filtered_low_ttl": 0,
+                "filtered_high_ttl": 0,
+                "filtered_prefix_excl": 0,
+                "filtered_prefix_not_incl": 0,
+                "packets_received": 72,
+                "packets_received_invalid": 0,
+            }
+        },
         "tool_parameters": {
             "initial_source_port": 24000,
             "destination_port": 34334,
@@ -593,6 +606,22 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                     "min_ttl": 1,
                     "max_probing_rate": 200,
                 },
+                "probing_statistics": [
+                    {
+                        "round": "1:10:0",
+                        "statistics": {
+                            "probes_read": 240,
+                            "packets_sent": 240,
+                            "packets_failed": 0,
+                            "filtered_low_ttl": 0,
+                            "filtered_high_ttl": 0,
+                            "filtered_prefix_excl": 0,
+                            "filtered_prefix_not_incl": 0,
+                            "packets_received": 72,
+                            "packets_received_invalid": 0,
+                        },
+                    }
+                ],
             }
         ],
         "tags": ["test"],
@@ -608,6 +637,19 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
         "uuid": str(uuid.uuid4()),
         "target_file": "test.csv",
         "probing_rate": None,
+        "probing_statistics": {
+            "1:10:0": {
+                "probes_read": 240,
+                "packets_sent": 240,
+                "packets_failed": 0,
+                "filtered_low_ttl": 0,
+                "filtered_high_ttl": 0,
+                "filtered_prefix_excl": 0,
+                "filtered_prefix_not_incl": 0,
+                "packets_received": 72,
+                "packets_received_invalid": 0,
+            }
+        },
         "tool_parameters": {
             "initial_source_port": 24000,
             "destination_port": 34334,
@@ -706,6 +748,22 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                     "min_ttl": 1,
                     "max_probing_rate": 200,
                 },
+                "probing_statistics": [
+                    {
+                        "round": "1:10:0",
+                        "statistics": {
+                            "probes_read": 240,
+                            "packets_sent": 240,
+                            "packets_failed": 0,
+                            "filtered_low_ttl": 0,
+                            "filtered_high_ttl": 0,
+                            "filtered_prefix_excl": 0,
+                            "filtered_prefix_not_incl": 0,
+                            "packets_received": 72,
+                            "packets_received_invalid": 0,
+                        },
+                    }
+                ],
             }
         ],
         "tags": ["test"],

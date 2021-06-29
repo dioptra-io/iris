@@ -82,6 +82,23 @@ def display_results(results: dict, console: Optional[Console] = None):
             highlighter=ReprHighlighter(),
         ),
     )
+    items_table.add_row("")
+    items_table.add_row(
+        "packets sent =",
+        Pretty(
+            sum([v["packets_sent"] for v in results["probing_statistics"].values()]),
+            highlighter=ReprHighlighter(),
+        ),
+    )
+    items_table.add_row(
+        "packets received =",
+        Pretty(
+            sum(
+                [v["packets_received"] for v in results["probing_statistics"].values()]
+            ),
+            highlighter=ReprHighlighter(),
+        ),
+    )
 
     console.print(
         Panel.fit(

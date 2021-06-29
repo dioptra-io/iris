@@ -26,14 +26,15 @@ class Agents(Database):
             f"""
             CREATE TABLE IF NOT EXISTS {self.table}
             (
-                measurement_uuid    UUID,
-                agent_uuid          UUID,
-                target_file         String,
-                probing_rate        Nullable(UInt32),
-                agent_parameters    String,
-                tool_parameters     String,
-                state               Enum8('ongoing' = 1, 'finished' = 2, 'canceled' = 3),
-                timestamp           DateTime
+                measurement_uuid   UUID,
+                agent_uuid         UUID,
+                target_file        String,
+                probing_rate       Nullable(UInt32),
+                probing_statistics String,
+                agent_parameters   String,
+                tool_parameters    String,
+                state              Enum8('ongoing' = 1, 'finished' = 2, 'canceled' = 3),
+                timestamp          DateTime
             )
             ENGINE MergeTree
             ORDER BY (measurement_uuid, agent_uuid)
@@ -69,12 +70,44 @@ class Agents(Database):
                     "agent_uuid": parameters.agent_uuid,
                     "target_file": parameters.target_file,
                     "probing_rate": parameters.probing_rate,
+                    "probing_statistics": json.dumps({}),
                     "agent_parameters": json.dumps(parameters.agent_parameters),
                     "tool_parameters": json.dumps(parameters.tool_parameters),
                     "state": "ongoing",
                     "timestamp": datetime.now(),
                 }
             ],
+        )
+
+    async def store_probing_statistics(
+        self,
+        measurement_uuid: UUID,
+        agent_uuid: UUID,
+        round_number: str,
+        probing_statistics: dict,
+    ) -> None:
+        # Get the probing statistics already stored
+        current_probing_statistics = (await self.get(measurement_uuid, agent_uuid))[
+            "probing_statistics"
+        ]
+
+        # Update the probing statistics
+        current_probing_statistics[round_number] = probing_statistics
+
+        # Store the updated statistics on the database
+        await self.call(
+            f"""
+            ALTER TABLE {self.table}
+            UPDATE probing_statistics=%(probing_statistics)s
+            WHERE measurement_uuid=%(measurement_uuid)s
+            AND agent_uuid=%(agent_uuid)s
+            SETTINGS mutations_sync=1
+            """,
+            {
+                "probing_statistics": json.dumps(current_probing_statistics),
+                "measurement_uuid": measurement_uuid,
+                "agent_uuid": agent_uuid,
+            },
         )
 
     async def stamp_finished(self, measurement_uuid: UUID, agent_uuid: UUID) -> None:
@@ -115,7 +148,8 @@ class Agents(Database):
             "uuid": str(row[1]),
             "target_file": row[2],
             "probing_rate": row[3],
-            "agent_parameters": json.loads(row[4]),
-            "tool_parameters": json.loads(row[5]),
-            "state": row[6],
+            "probing_statistics": json.loads(row[4]),
+            "agent_parameters": json.loads(row[5]),
+            "tool_parameters": json.loads(row[6]),
+            "state": row[7],
         }

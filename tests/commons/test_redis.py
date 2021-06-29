@@ -29,6 +29,8 @@ def test_redis_attributes():
 
     assert redis.KEY_MEASUREMENT_STATE == "measurement_state"
 
+    assert redis.KEY_MEASUREMENT_STATS == "measurement_stats"
+
     assert redis.KEY_AGENT_LISTEN == "agent_listen"
     assert redis.KEY_AGENT_STATE == "agent_state"
     assert redis.KEY_AGENT_PARAMETERS == "agent_parameters"
@@ -134,7 +136,7 @@ async def test_redis_get_measurement_state():
     assert await redis.get_measurement_state("test") is None
 
     redis._redis.assign("get", fake(b"ongoing"))
-    assert await redis.get_measurement_state(b"test") == "ongoing"
+    assert await redis.get_measurement_state("test") == "ongoing"
 
 
 @pytest.mark.asyncio
@@ -153,6 +155,41 @@ async def test_redis_delete_measurement_state():
 
     redis._redis.assign("delete", fake(None))
     assert await redis.delete_measurement_state("test") is None
+
+
+@pytest.mark.asyncio
+async def test_redis_get_measurement_stats():
+    redis = Redis(settings=CommonSettings(), logger=None)
+    redis._redis = FakeRedisConnection()
+
+    redis._redis.assign("get", fake(None))
+    assert await redis.get_measurement_stats("measurement", "agent") == {}
+
+    redis._redis.assign("get", fake(b'{"packets_sent":10}'))
+    assert await redis.get_measurement_stats("measurement", "agent") == {
+        "packets_sent": 10
+    }
+
+
+@pytest.mark.asyncio
+async def test_redis_set_measurement_stats():
+    redis = Redis(settings=CommonSettings(), logger=None)
+    redis._redis = FakeRedisConnection()
+
+    redis._redis.assign("set", fake(None))
+    assert (
+        await redis.set_measurement_stats("measurement", "agent", {"packets_sent": 10})
+        is None
+    )
+
+
+@pytest.mark.asyncio
+async def test_redis_delete_measurement_stats():
+    redis = Redis(settings=CommonSettings(), logger=None)
+    redis._redis = FakeRedisConnection()
+
+    redis._redis.assign("delete", fake(None))
+    assert await redis.delete_measurement_stats("measurement", "agent") is None
 
 
 @pytest.mark.asyncio

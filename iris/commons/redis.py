@@ -18,6 +18,7 @@ class Redis(object):
     """Redis interface."""
 
     KEY_MEASUREMENT_STATE: str = "measurement_state"
+    KEY_MEASUREMENT_STATS: str = "measurement_stats"
 
     KEY_AGENT_LISTEN: str = "agent_listen"
     KEY_AGENT_STATE: str = "agent_state"
@@ -119,13 +120,38 @@ class Redis(object):
 
     @fault_tolerant
     async def set_measurement_state(self, uuid, state):
-        """Set measurement_parameters."""
+        """Set measurement state."""
         await self._redis.set(f"{self.KEY_MEASUREMENT_STATE}:{uuid}", state)
 
     @fault_tolerant
     async def delete_measurement_state(self, uuid):
-        """Delete agent state."""
+        """Delete measurement state."""
         await self._redis.delete(f"{self.KEY_MEASUREMENT_STATE}:{uuid}")
+
+    @fault_tolerant
+    async def get_measurement_stats(self, measurement_uuid, agent_uuid):
+        """Get measurement statistics."""
+        state = await self._redis.get(
+            f"{self.KEY_MEASUREMENT_STATS}:{measurement_uuid}:{agent_uuid}"
+        )
+        if state is not None:
+            return json.loads(state.decode("utf8"))
+        return {}
+
+    @fault_tolerant
+    async def set_measurement_stats(self, measurement_uuid, agent_uuid, stats):
+        """Set measurement statistics."""
+        await self._redis.set(
+            f"{self.KEY_MEASUREMENT_STATS}:{measurement_uuid}:{agent_uuid}",
+            json.dumps(stats),
+        )
+
+    @fault_tolerant
+    async def delete_measurement_stats(self, measurement_uuid, agent_uuid):
+        """Delete measurement statistics."""
+        await self._redis.delete(
+            f"{self.KEY_MEASUREMENT_STATS}:{measurement_uuid}:{agent_uuid}"
+        )
 
     @fault_tolerant
     async def publish(self, channel, data):

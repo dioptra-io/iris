@@ -53,6 +53,7 @@ async def test_agents(common_settings):
         "uuid": str(obj.agent_uuid),
         "target_file": obj.target_file,
         "probing_rate": obj.probing_rate,
+        "probing_statistics": {},
         "agent_parameters": obj.agent_parameters,
         "tool_parameters": obj.tool_parameters,
         "state": "ongoing",
@@ -66,6 +67,28 @@ async def test_agents(common_settings):
         await db.get(measurement_uuid=measurement_uuid, agent_uuid=agent_uuid)
         == formatted
     )
+
+    assert (
+        await db.store_probing_statistics(
+            measurement_uuid, agent_uuid, "1:0:0", {"packets_sent": 10}
+        )
+        is None
+    )
+
+    assert (await db.get(measurement_uuid=measurement_uuid, agent_uuid=agent_uuid))[
+        "probing_statistics"
+    ] == {"1:0:0": {"packets_sent": 10}}
+
+    assert (
+        await db.store_probing_statistics(
+            measurement_uuid, agent_uuid, "2:0:0", {"packets_sent": 30}
+        )
+        is None
+    )
+
+    assert (await db.get(measurement_uuid=measurement_uuid, agent_uuid=agent_uuid))[
+        "probing_statistics"
+    ] == {"1:0:0": {"packets_sent": 10}, "2:0:0": {"packets_sent": 30}}
 
     assert (
         await db.stamp_canceled(

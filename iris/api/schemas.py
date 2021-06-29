@@ -214,6 +214,27 @@ class MeasurementAgentSpecific(BaseModel):
     tool_parameters: ToolParameters
 
 
+class StatisticsSresponse(BaseModel):
+    """Probing Statistics (Response)."""
+
+    probes_read: int
+    packets_sent: int
+    packets_failed: int
+    filtered_low_ttl: int
+    filtered_high_ttl: int
+    filtered_prefix_excl: int
+    filtered_prefix_not_incl: int
+    packets_received: int
+    packets_received_invalid: int
+
+
+class MeasurementAgentStatisticsResponse(BaseModel):
+    """Information of the statistics of each round of a measurement (Response)."""
+
+    round: str
+    statistics: StatisticsSresponse
+
+
 class MeasurementAgentInfoResponse(BaseModel):
     """Information about information of agents specific to a measurement (Response)."""
 
@@ -221,6 +242,7 @@ class MeasurementAgentInfoResponse(BaseModel):
     state: str
     specific: MeasurementAgentSpecific
     parameters: AgentParametersResponse
+    probing_statistics: List[MeasurementAgentStatisticsResponse]
 
 
 class MeasurementInfoResponse(BaseModel):

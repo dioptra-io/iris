@@ -1,8 +1,7 @@
 """Measurement interface."""
 
-
-import multiprocessing
 from ipaddress import ip_address, ip_network
+from multiprocessing import Manager, Process
 
 import aiofiles
 import aiofiles.os
@@ -205,34 +204,45 @@ async def measurement(settings, request, storage, logger, redis=None):
     logger.info(f"{logger_prefix} Tool Parameters : {parameters.tool_parameters}")
     logger.info(f"{logger_prefix} Max Probing Rate : {parameters.probing_rate}")
 
-    prober_process = multiprocessing.Process(
-        target=probe,
-        args=(
-            settings,
-            results_filepath,
-            round.number,
-            parameters.probing_rate,
-            gen_parameters,
-            probes_filepath,
-        ),
-    )
+    with Manager() as manager:
+        prober_statistics = manager.dict()
+        sniffer_statistics = manager.dict()
 
-    prober_process.start()
-    is_not_canceled = await watcher(
-        prober_process,
-        settings,
-        measurement_uuid,
-        logger,
-        logger_prefix=logger_prefix,
-        redis=redis,
-    )
+        prober_process = Process(
+            target=probe,
+            args=(
+                settings,
+                results_filepath,
+                round.number,
+                parameters.probing_rate,
+                prober_statistics,
+                sniffer_statistics,
+                gen_parameters,
+                probes_filepath,
+            ),
+        )
+
+        prober_process.start()
+        is_not_canceled = await watcher(
+            prober_process,
+            settings,
+            measurement_uuid,
+            logger,
+            logger_prefix=logger_prefix,
+            redis=redis,
+        )
+
+        prober_statistics = dict(prober_statistics)
+        sniffer_statistics = dict(sniffer_statistics)
+
+    statistics = {**prober_statistics, **sniffer_statistics}
 
     if is_not_canceled:
         logger.info(f"{logger_prefix} Upload results file into AWS S3")
         await storage.upload_file(measurement_uuid, results_filename, results_filepath)
 
     if not settings.AGENT_DEBUG_MODE:
-        logger.info(f"{logger_prefix} Remove local result file")
+        logger.info(f"{logger_prefix} Remove local results file")
         await aiofiles.os.remove(results_filepath)
 
     if not settings.AGENT_DEBUG_MODE:
@@ -258,6 +268,6 @@ async def measurement(settings, request, storage, logger, redis=None):
             measurement_uuid, probes_filename
         )
         if not is_deleted:
-            logger.error(f"Impossible to remove result file `{probes_filename}`")
+            logger.error(f"Impossible to remove results file `{probes_filename}`")
 
-    return results_filename
+    return results_filename, statistics

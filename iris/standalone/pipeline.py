@@ -155,6 +155,9 @@ async def pipeline(
     )
 
     shuffled_next_round_csv_filepath: Optional[str] = None
+
+    statistics = {}
+
     round = Round(1, worker_settings.WORKER_ROUND_1_SLIDING_WINDOW, 0)
     n_rounds = 0
     while round.number <= tool_parameters.max_round:
@@ -182,15 +185,19 @@ async def pipeline(
             await register_agent(dataclass, worker_settings, logger)
 
         # Perform the measurement
-        results_filename: str = await measurement(
+        results_filename, round_statistics = await measurement(
             agent_settings, request, storage, logger
         )
+
+        # Store the probing statistics of the round
+        statistics[round.encode()] = round_statistics
 
         # Compute the next round
         round, shuffled_next_round_csv_filepath = await default_pipeline(
             worker_settings,
             dataclass,
             results_filename,
+            round_statistics,
             storage,
             logger,
         )
@@ -231,4 +238,5 @@ async def pipeline(
         "end_time": datetime.now(),
         "n_nodes": n_nodes,
         "n_links": n_links,
+        "probing_statistics": statistics,
     }

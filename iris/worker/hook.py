@@ -92,8 +92,18 @@ async def watch(redis, storage, parameters, logger):
             await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
             continue
 
+        # Get the statistics from Redis
+        statistics = await redis.get_measurement_stats(
+            parameters.measurement_uuid, parameters.agent_uuid
+        )
+
         next_round, shuffled_next_round_csv_filename = await default_pipeline(
-            settings, parameters, results_filename, storage, logger
+            settings, parameters, results_filename, statistics, storage, logger
+        )
+
+        # Remove the statistics from Redis
+        await redis.delete_measurement_stats(
+            parameters.measurement_uuid, parameters.agent_uuid
         )
 
         if next_round is None:

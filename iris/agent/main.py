@@ -45,7 +45,10 @@ async def consumer(settings, agent_uuid, queue, logger):
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
         storage = Storage(settings, logger)
-        await measurement(settings, request, storage, logger, redis=redis)
+        _, statistics = await measurement(
+            settings, request, storage, logger, redis=redis
+        )
+        await redis.set_measurement_stats(measurement_uuid, agent_uuid, statistics)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
         await redis.set_agent_state("idle")

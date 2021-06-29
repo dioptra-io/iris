@@ -80,7 +80,7 @@ class MeasurementResults(Database):
             cmd = (
                 f"{self.settings.ZSTD_EXE} --decompress --stdout "
                 + str(csv_filepath)
-                + " | clickhouse-client "
+                + f" | {self.settings.CLICKHOUSE_EXE} "
                 + f"--database={self.settings.DATABASE_NAME} "
                 + f"--host={self.settings.DATABASE_HOST}"
                 + " --query='INSERT INTO "

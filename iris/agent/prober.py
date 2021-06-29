@@ -26,6 +26,8 @@ def probe(
     results_filepath,
     round_number,
     probing_rate,
+    prober_statistics,
+    sniffer_statistics,
     gen_parameters=None,
     probes_filepath=None,
 ):
@@ -81,7 +83,23 @@ def probe(
         )
 
         # Use the prober generator
-        prober.probe(config, gen)
+        prober_stats, sniffer_stats = prober.probe(config, gen)
     else:
         # In case of round > 1, use a probes file
-        prober.probe(config, probes_filepath)
+        prober_stats, sniffer_stats = prober.probe(config, probes_filepath)
+
+    # Populate the statistics
+    prober_statistics["probes_read"] = prober_stats.read
+    prober_statistics["packets_sent"] = prober_stats.sent
+    prober_statistics["packets_failed"] = prober_stats.failed
+    prober_statistics["filtered_low_ttl"] = prober_stats.filtered_lo_ttl
+    prober_statistics["filtered_high_ttl"] = prober_stats.filtered_hi_ttl
+    prober_statistics["filtered_prefix_excl"] = prober_stats.filtered_prefix_excl
+    prober_statistics[
+        "filtered_prefix_not_incl"
+    ] = prober_stats.filtered_prefix_not_incl
+
+    sniffer_statistics["packets_received"] = sniffer_stats.received_count
+    sniffer_statistics[
+        "packets_received_invalid"
+    ] = sniffer_stats.received_invalid_count

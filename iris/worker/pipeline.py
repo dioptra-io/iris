@@ -8,20 +8,20 @@ from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.queries.query import AddrType
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
-from iris.commons.database import MeasurementResults
+from iris.commons.database import Agents, MeasurementResults
 from iris.commons.round import Round
 from iris.worker import WorkerSettings
 
 
 async def default_pipeline(
-    settings: WorkerSettings, parameters, results_filename, storage, logger
+    settings: WorkerSettings, parameters, results_filename, statistics, storage, logger
 ):
     """Process results and eventually request a new round."""
     measurement_uuid = parameters.measurement_uuid
     agent_uuid = parameters.agent_uuid
 
     logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
-    logger.info(f"{logger_prefix} New files detected")
+    logger.info(f"{logger_prefix} New measurement file detected")
 
     round = Round.decode_from_filename(results_filename)
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / measurement_uuid
@@ -34,7 +34,15 @@ async def default_pipeline(
     logger.info(f"{logger_prefix} Delete results file from AWS S3")
     is_deleted = await storage.delete_file_no_check(measurement_uuid, results_filename)
     if not is_deleted:
-        logger.error(f"Impossible to remove result file `{results_filename}`")
+        logger.error(
+            f"{logger_prefix} Impossible to remove results file `{results_filename}`"
+        )
+
+    logger.info(f"{logger_prefix} Store probing statistics")
+    database_agents = Agents(settings, logger)
+    await database_agents.store_probing_statistics(
+        measurement_uuid, agent_uuid, round.encode(), statistics
+    )
 
     database = MeasurementResults(settings, logger, measurement_uuid, agent_uuid)
 
