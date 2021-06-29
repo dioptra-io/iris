@@ -1,10 +1,12 @@
 import socket
 
-from iris.commons.utils import get_own_ip_address
+from iris.commons.utils import get_ipv4_address, get_ipv6_address
+
+# IPv4
 
 
-def test_get_own_ip_address(monkeypatch):
-    """Test get own ip address."""
+def test_get_ipv4_address(monkeypatch):
+    """Test get own ipv4 address."""
 
     class Socket(object):
         def __init__(self, *args, **kwargs):
@@ -20,11 +22,11 @@ def test_get_own_ip_address(monkeypatch):
             pass
 
     monkeypatch.setattr(socket, "socket", Socket)
-    assert get_own_ip_address() == "1.2.3.4"
+    assert get_ipv4_address() == "1.2.3.4"
 
 
-def test_get_own_ip_address_error(monkeypatch):
-    """Test get own ip address when it's not possible."""
+def test_get_ipv4_address_error(monkeypatch):
+    """Test get own ipv4 address when it's not possible."""
 
     class Socket(object):
         def __init__(self, *args, **kwargs):
@@ -40,4 +42,47 @@ def test_get_own_ip_address_error(monkeypatch):
             pass
 
     monkeypatch.setattr(socket, "socket", Socket)
-    assert get_own_ip_address() == "127.0.0.1"
+    assert get_ipv4_address() == "127.0.0.1"
+
+
+# IPv6
+
+
+def test_get_ipv6_address(monkeypatch):
+    """Test get own ipv6 address."""
+
+    class Socket(object):
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def connect(self, *args, **kwargs):
+            pass
+
+        def getsockname(self, *args, **kwargs):
+            return ("::1234",)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(socket, "socket", Socket)
+    assert get_ipv6_address() == "::1234"
+
+
+def test_get_ipv6_address_error(monkeypatch):
+    """Test get own ipv6 address when it's not possible."""
+
+    class Socket(object):
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def connect(self, *args, **kwargs):
+            pass
+
+        def getsockname(self, *args, **kwargs):
+            raise Exception
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(socket, "socket", Socket)
+    assert get_ipv6_address() == "::1"

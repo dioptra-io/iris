@@ -260,13 +260,6 @@ async def get_measurement_by_uuid(
         except Exception:
             target_file_content = []
 
-        print(
-            [
-                {"round": round_number, "statistics": statistics}
-                for round_number, statistics in agent_info["probing_statistics"].items()
-            ]
-        )
-
         agents.append(
             {
                 "uuid": agent_info["uuid"],

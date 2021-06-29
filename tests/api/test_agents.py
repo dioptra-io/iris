@@ -8,7 +8,8 @@ def test_get_agents(client):
                     "parameters": {
                         "version": "0.1.0",
                         "hostname": "test",
-                        "ip_address": "1.2.3.4",
+                        "ipv4_address": "1.2.3.4",
+                        "ipv6_address": "::1234",
                         "min_ttl": 1,
                         "max_probing_rate": 1000,
                     },
@@ -29,7 +30,8 @@ def test_get_agents(client):
                 "parameters": {
                     "version": "0.1.0",
                     "hostname": "test",
-                    "ip_address": "1.2.3.4",
+                    "ipv4_address": "1.2.3.4",
+                    "ipv6_address": "::1234",
                     "min_ttl": 1,
                     "max_probing_rate": 1000,
                 },
@@ -50,7 +52,8 @@ def test_get_agent_by_uuid(client):
             return {
                 "version": "0.1.0",
                 "hostname": "test",
-                "ip_address": "1.2.3.4",
+                "ipv4_address": "1.2.3.4",
+                "ipv6_address": "::1234",
                 "min_ttl": 1,
                 "max_probing_rate": 1000,
             }
@@ -64,7 +67,8 @@ def test_get_agent_by_uuid(client):
         "parameters": {
             "version": "0.1.0",
             "hostname": "test",
-            "ip_address": "1.2.3.4",
+            "ipv4_address": "1.2.3.4",
+            "ipv6_address": "::1234",
             "min_ttl": 1,
             "max_probing_rate": 1000,
         },

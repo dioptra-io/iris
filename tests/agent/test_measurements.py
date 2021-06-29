@@ -23,7 +23,8 @@ request = {
     "parameters": {
         "version": "0.6.1",
         "hostname": "b581c1224f87",
-        "ip_address": "172.22.0.12",
+        "ipv4_address": "1.2.3.4",
+        "ipv6_address": "::1234",
         "min_ttl": 1,
         "max_probing_rate": 100,
         "probing_rate": 100,

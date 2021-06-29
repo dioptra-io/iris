@@ -17,7 +17,7 @@ from iris.api.schemas import Tool, ToolParameters
 from iris.commons.database import Agents, Database, Measurements
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
-from iris.commons.utils import get_own_ip_address
+from iris.commons.utils import get_ipv4_address, get_ipv6_address
 from iris.standalone.storage import LocalStorage
 from iris.worker.pipeline import default_pipeline
 from iris.worker.settings import WorkerSettings
@@ -48,7 +48,8 @@ def create_request(
         "parameters": {
             "version": __version__,
             "hostname": socket.gethostname(),
-            "ip_address": get_own_ip_address(),
+            "ipv4_address": get_ipv4_address(),
+            "ipv6_address": get_ipv6_address(),
             "min_ttl": settings.AGENT_MIN_TTL,
             "max_probing_rate": settings.AGENT_MAX_PROBING_RATE,
             "target_file": target_file.name,

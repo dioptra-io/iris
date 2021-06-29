@@ -9,7 +9,7 @@ from iris.agent.ttl import find_exit_ttl
 from iris.commons.logger import create_logger
 from iris.commons.redis import AgentRedis
 from iris.commons.storage import Storage
-from iris.commons.utils import get_own_ip_address
+from iris.commons.utils import get_ipv4_address, get_ipv6_address
 
 
 async def consumer(settings, agent_uuid, queue, logger):
@@ -89,7 +89,8 @@ async def main():
             {
                 "version": __version__,
                 "hostname": socket.gethostname(),
-                "ip_address": get_own_ip_address(),
+                "ipv4_address": get_ipv4_address(),
+                "ipv6_address": get_ipv6_address(),
                 "min_ttl": settings.AGENT_MIN_TTL,
                 "max_probing_rate": settings.AGENT_MAX_PROBING_RATE,
             }

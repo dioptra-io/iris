@@ -33,13 +33,7 @@ async def get_agents(
             {
                 "uuid": agent["uuid"],
                 "state": agent["state"],
-                "parameters": {
-                    "version": agent["parameters"]["version"],
-                    "hostname": agent["parameters"]["hostname"],
-                    "ip_address": agent["parameters"]["ip_address"],
-                    "max_probing_rate": agent["parameters"]["max_probing_rate"],
-                    "min_ttl": agent["parameters"]["min_ttl"],
-                },
+                "parameters": agent["parameters"],
             }
         )
 

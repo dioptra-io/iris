@@ -53,7 +53,8 @@ class AgentParametersResponse(BaseModel):
 
     version: str
     hostname: str
-    ip_address: str
+    ipv4_address: str
+    ipv6_address: str
     min_ttl: int
     max_probing_rate: int
 

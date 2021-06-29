@@ -16,7 +16,7 @@ from iris.commons.storage import Storage
 
 app = FastAPI(
     title="Iris",
-    description="Iris API",
+    description="Resilient Internet-scale measurement system.",
     version=__version__,
     openapi_url="/api/openapi.json",
     docs_url="/api/docs",
