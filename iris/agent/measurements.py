@@ -236,6 +236,9 @@ async def measurement(settings, request, storage, logger, redis=None):
         sniffer_statistics = dict(sniffer_statistics)
 
     statistics = {**prober_statistics, **sniffer_statistics}
+    if redis:
+        logger.info("Upload probing statistics in Redis")
+        await redis.set_measurement_stats(measurement_uuid, agent_uuid, statistics)
 
     if is_not_canceled:
         logger.info(f"{logger_prefix} Upload results file into AWS S3")
