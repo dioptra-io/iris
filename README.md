@@ -34,7 +34,7 @@ For instance:
 8.8.8.0/24,udp,2,32
 ```
 
-Note that a prefix can be a uniqe target (e.g., `8.8.8.8/32`).
+Note that a prefix can be a unique target (e.g., `8.8.8.8/32`) in the case of ping.
 
 **TODO (when public)**
 - [ ] Push iris-standalone to Docker Hub

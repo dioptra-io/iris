@@ -65,6 +65,10 @@ async def producer(redis, queue, logger):
         logger.info(f"{redis.uuid} :: New request received! Putting in task queue")
         await queue.put(request)
 
+        logger.info(
+            f"{redis.uuid} :: Measurements currently in the queue: {queue.qsize()}"
+        )
+
 
 async def main():
     """Main agent function."""
