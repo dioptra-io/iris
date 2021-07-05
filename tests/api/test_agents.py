@@ -12,6 +12,7 @@ def test_get_agents(client):
                         "ipv6_address": "::1234",
                         "min_ttl": 1,
                         "max_probing_rate": 1000,
+                        "agent_tags": ["all"],
                     },
                 }
             ]
@@ -34,6 +35,7 @@ def test_get_agents(client):
                     "ipv6_address": "::1234",
                     "min_ttl": 1,
                     "max_probing_rate": 1000,
+                    "agent_tags": ["all"],
                 },
             }
         ],
@@ -56,6 +58,7 @@ def test_get_agent_by_uuid(client):
                 "ipv6_address": "::1234",
                 "min_ttl": 1,
                 "max_probing_rate": 1000,
+                "agent_tags": ["all"],
             }
 
     client.app.redis = FakeRedis()
@@ -71,6 +74,7 @@ def test_get_agent_by_uuid(client):
             "ipv6_address": "::1234",
             "min_ttl": 1,
             "max_probing_rate": 1000,
+            "agent_tags": ["all"],
         },
     }
 

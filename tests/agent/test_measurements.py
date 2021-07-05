@@ -27,6 +27,7 @@ request = {
         "ipv6_address": "::1234",
         "min_ttl": 1,
         "max_probing_rate": 100,
+        "agent_tags": ["all"],
         "probing_rate": 100,
         "target_file": "prefixes.csv",
         "tool": "diamond-miner",

@@ -52,6 +52,7 @@ class FakeRedis(Redis):
                     "ip_address": "1.2.3.4",
                     "min_ttl": 1,
                     "max_probing_rate": 1000,
+                    "agent_tags": ["test"],
                 },
             }
         ]

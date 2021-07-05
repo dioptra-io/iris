@@ -94,6 +94,7 @@ async def main():
                 "ipv6_address": get_ipv6_address(),
                 "min_ttl": settings.AGENT_MIN_TTL,
                 "max_probing_rate": settings.AGENT_MAX_PROBING_RATE,
+                "agent_tags": settings.AGENT_TAGS,
             }
         )
 

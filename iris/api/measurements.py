@@ -164,7 +164,7 @@ async def post_measurement(
             "tool": "diamond-miner",
             "agents": [
                 {
-                    "uuid": "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47",
+                    "agent_tag": "all",
                     "target_file": "prefixes.csv",
                 }
             ],
@@ -180,26 +180,57 @@ async def post_measurement(
 
     agents = {}
     for agent in measurement.agents:
-        # Check if the agent exists
-        agent_uuid = str(agent.uuid)
-        if agent_uuid not in active_agent_uuids:
+        # Two possibilities: an agent UUID or an agent tag
+        if (not agent.uuid and not agent.agent_tag) or (agent.uuid and agent.agent_tag):
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+                status_code=status.HTTP_412_PRECONDITION_FAILED,
+                detail="Either an agent UUID or an agent tag must be provided",
             )
 
-        # Check agent target file
-        global_min_ttl, global_max_ttl = await target_file_validator(
-            request, measurement.tool, user, agent.target_file
-        )
+        # If agent_tag is provided,
+        # get the list of the agent UUID associated with this tag
+        if agent.agent_tag:
+            selected_agent_uuids = [
+                a["uuid"]
+                for a in active_agents
+                if agent.agent_tag in a["parameters"]["agent_tags"]
+            ]
+            if not selected_agent_uuids:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No agent associated with this tag",
+                )
+        else:
+            agent_uuid = str(agent.uuid)
+            # Check if the agent exists
+            if agent_uuid not in active_agent_uuids:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+                )
+            selected_agent_uuids = [agent_uuid]
 
-        # Check tool parameters
-        agent.tool_parameters = tool_parameters_validator(
-            measurement.tool, agent.tool_parameters.dict()
-        )
-        agent.tool_parameters["global_min_ttl"] = global_min_ttl
-        agent.tool_parameters["global_max_ttl"] = global_max_ttl
-        agents[agent_uuid] = agent.dict()
-        del agents[agent_uuid]["uuid"]
+        # Register the agent(s)
+        for agent_uuid in selected_agent_uuids:
+            # Verify that this agent has not been already defined
+            if agent_uuid in agents:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Multiple definition of agent `{agent_uuid}`",
+                )
+
+            # Check agent target file
+            global_min_ttl, global_max_ttl = await target_file_validator(
+                request, measurement.tool, user, agent.target_file
+            )
+
+            # Check tool parameters
+            agent.tool_parameters = tool_parameters_validator(
+                measurement.tool, agent.tool_parameters.dict()
+            )
+            agent.tool_parameters["global_min_ttl"] = global_min_ttl
+            agent.tool_parameters["global_max_ttl"] = global_max_ttl
+            agents[agent_uuid] = agent.dict()
+            del agents[agent_uuid]["uuid"]
 
     measurement = measurement.dict()
     del measurement["agents"]

@@ -45,6 +45,7 @@ class ParametersDataclass(object):
                 "ipv6_address": parameters["ipv6_address"],
                 "min_ttl": parameters["min_ttl"],
                 "max_probing_rate": parameters["max_probing_rate"],
+                "tags": parameters["tags"],
             },
             {
                 "target_file": parameters["target_file"],

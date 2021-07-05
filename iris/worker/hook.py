@@ -209,7 +209,6 @@ async def callback(agents_information, measurement_parameters, logger):
             "username": username,
             "round": Round(1, settings.WORKER_ROUND_1_SLIDING_WINDOW, 0).encode(),
             "probes": None,
-            "parameters": measurement_parameters,
         }
 
         for agent in agents:
@@ -263,11 +262,11 @@ async def callback(agents_information, measurement_parameters, logger):
 @dramatiq.actor(
     time_limit=settings.WORKER_TIME_LIMIT, max_age=settings.WORKER_MESSAGE_AGE_LIMIT
 )
-def hook(agents_specific, measurement_parameters):
+def hook(agents, measurement_parameters):
     """Hook a worker process to a measurement"""
     logger = create_logger(settings)
     try:
-        asyncio.run(callback(agents_specific, measurement_parameters, logger))
+        asyncio.run(callback(agents, measurement_parameters, logger))
     except Exception as exception:
         measurement_uuid = measurement_parameters["measurement_uuid"]
         traceback_content = traceback.format_exc()

@@ -57,6 +57,7 @@ class AgentParametersResponse(BaseModel):
     ipv6_address: str
     min_ttl: int
     max_probing_rate: int
+    agent_tags: List[str]
 
 
 class AgentSummaryResponse(BaseModel):
@@ -176,7 +177,8 @@ class ToolParameters(BaseModel):
 class MeasurementsAgentsPostBody(BaseModel):
     """POST /measurements (Body)."""
 
-    uuid: UUID
+    uuid: Optional[UUID]
+    agent_tag: Optional[str]
     target_file: str = Field(..., title="Target file key")
     probing_rate: int = Field(None, title="Probing rate")
     tool_parameters: ToolParameters = Field(ToolParameters(), title="Tool parameters")

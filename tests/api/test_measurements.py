@@ -440,7 +440,109 @@ def test_post_measurement_ping_quota_exceeded(client, monkeypatch):
     ] = override_get_current_active_user
 
 
-def test_post_measurement_with_agents_not_found(client, monkeypatch):
+def test_post_measurement_agent_tag(client, monkeypatch):
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.csv",
+                "size": 42,
+                "content": "8.8.8.0/23,icmp,2,32",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    client.app.storage = FakeStorage()
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/api/measurements/",
+        json={
+            "tool": "diamond-miner",
+            "agents": [
+                {
+                    "agent_tag": "test",
+                    "target_file": "test.csv",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_post_measurement_no_uuid_or_tag(client, monkeypatch):
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.csv",
+                "size": 42,
+                "content": "8.8.8.0/23,icmp,2,32",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    client.app.storage = FakeStorage()
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/api/measurements/",
+        json={
+            "tool": "diamond-miner",
+            "agents": [
+                {
+                    "target_file": "test.csv",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 412
+    assert response.json() == {
+        "detail": "Either an agent UUID or an agent tag must be provided"
+    }
+
+
+def test_post_measurement_tag_and_uuid(client, monkeypatch):
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.csv",
+                "size": 42,
+                "content": "8.8.8.0/23,icmp,2,32",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    client.app.storage = FakeStorage()
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/api/measurements/",
+        json={
+            "tool": "diamond-miner",
+            "agents": [
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776550",
+                    "agent_tag": "test",
+                    "target_file": "test.csv",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 412
+    assert response.json() == {
+        "detail": "Either an agent UUID or an agent tag must be provided"
+    }
+
+
+def test_post_measurement_with_agent_not_found(client, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -471,6 +573,78 @@ def test_post_measurement_with_agents_not_found(client, monkeypatch):
     )
     assert response.status_code == 404
     assert response.json() == {"detail": "Agent not found"}
+
+
+def test_post_measurement_tag_not_found(client, monkeypatch):
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.csv",
+                "size": 42,
+                "content": "8.8.8.0/23,icmp,2,32",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    client.app.storage = FakeStorage()
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/api/measurements/",
+        json={
+            "tool": "diamond-miner",
+            "agents": [
+                {
+                    "agent_tag": "toto",
+                    "target_file": "test.csv",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "No agent associated with this tag"}
+
+
+def test_post_measurement_agent_multiple_definition(client, monkeypatch):
+    class FakeStorage(object):
+        async def get_file_no_retry(*args, **kwargs):
+            return {
+                "key": "test.csv",
+                "size": 42,
+                "content": "8.8.8.0/23,icmp,2,32",
+                "last_modified": "test",
+            }
+
+    class FakeSend(object):
+        def send(*args, **kwargs):
+            pass
+
+    client.app.storage = FakeStorage()
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    response = client.post(
+        "/api/measurements/",
+        json={
+            "tool": "diamond-miner",
+            "agents": [
+                {
+                    "agent_tag": "test",
+                    "target_file": "test.csv",
+                },
+                {
+                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+                    "target_file": "test.csv",
+                },
+            ],
+        },
+    )
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "Multiple definition of agent `6f4ed428-8de6-460e-9e19-6e6173776552`"
+    }
 
 
 def test_post_measurement_target_file_not_found(client, monkeypatch):
@@ -534,6 +708,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
             "ipv6_address": "::1234",
             "min_ttl": 1,
             "max_probing_rate": 200,
+            "agent_tags": ["all"],
         },
         "state": "finished",
     }
@@ -607,6 +782,7 @@ def test_get_measurement_by_uuid(client, monkeypatch):
                     "ipv6_address": "::1234",
                     "min_ttl": 1,
                     "max_probing_rate": 200,
+                    "agent_tags": ["all"],
                 },
                 "probing_statistics": [
                     {
@@ -667,6 +843,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
             "ipv6_address": "::1234",
             "min_ttl": 1,
             "max_probing_rate": 200,
+            "agent_tags": ["all"],
         },
         "state": "finished",
     }
@@ -751,6 +928,7 @@ def test_get_measurement_by_uuid_waiting(client, monkeypatch):
                     "ipv6_address": "::1234",
                     "min_ttl": 1,
                     "max_probing_rate": 200,
+                    "agent_tags": ["all"],
                 },
                 "probing_statistics": [
                     {
