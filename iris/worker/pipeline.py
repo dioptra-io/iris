@@ -73,8 +73,11 @@ async def default_pipeline(
         # We are in a sub-round 1
         # Compute the list of the prefixes need to be probed in the next ttl window
 
-        if round.max_ttl < parameters.min_ttl:
+        if round.max_ttl < max(
+            parameters.min_ttl, parameters.tool_parameters["global_min_ttl"]
+        ):
             # In this case the window was below the agent's min TTL
+            # and the measuremnt's min TTL.
             # So there is no response for this round
             # and we don't want to compute and send a prefix list to probe
             return (next_round, None)
