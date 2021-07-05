@@ -224,13 +224,17 @@ async def post_measurement(
             )
 
             # Check tool parameters
-            agent.tool_parameters = tool_parameters_validator(
-                measurement.tool, agent.tool_parameters.dict()
+            selected_agent = agent.dict()
+            selected_agent["agent_parameters"] = tool_parameters_validator(
+                measurement.tool, selected_agent["tool_parameters"]
             )
-            agent.tool_parameters["global_min_ttl"] = global_min_ttl
-            agent.tool_parameters["global_max_ttl"] = global_max_ttl
-            agents[agent_uuid] = agent.dict()
-            del agents[agent_uuid]["uuid"]
+            selected_agent["agent_parameters"]["global_min_ttl"] = global_min_ttl
+            selected_agent["agent_parameters"]["global_max_ttl"] = global_max_ttl
+
+            selected_agent.pop("uuid")
+            selected_agent.pop("agent_tag")
+
+            agents[agent_uuid] = selected_agent
 
     measurement = measurement.dict()
     del measurement["agents"]
