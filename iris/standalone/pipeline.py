@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import aiofiles
-from diamond_miner.queries import CountLinks, CountNodes, results_table
+from diamond_miner.queries import Count, GetLinks, GetNodes, results_table
 
 from iris import __version__
 from iris.agent.measurements import measurement
@@ -225,8 +225,12 @@ async def pipeline(
     # Compute distinct nodes/links
     measurement_id = f"{measurement_uuid}__{agent_settings.AGENT_UUID}"
 
-    n_nodes = CountNodes().execute(agent_settings.database_url(), measurement_id)[0][2]
-    n_links = CountLinks().execute(agent_settings.database_url(), measurement_id)[0][2]
+    n_nodes = Count(query=GetNodes()).execute(
+        agent_settings.database_url(), measurement_id
+    )[0][0]
+    n_links = Count(query=GetLinks()).execute(
+        agent_settings.database_url(), measurement_id
+    )[0][0]
 
     return {
         "measurement_uuid": measurement_uuid,
