@@ -74,6 +74,11 @@ class ListPagination(Pagination):
 
 
 class DatabasePagination(Pagination):
+    """
+    Get database results paginated.
+    Only `.all()` and `.all_count()` methods must be implemented."
+    """
+
     def __init__(self, database, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.database = database

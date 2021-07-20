@@ -4,7 +4,7 @@ from subprocess import run
 
 import pytest
 
-from iris.commons.database import MeasurementResults
+from iris.commons.database import InsertResults
 from iris.commons.settings import CommonSettings
 
 settings = CommonSettings(DATABASE_HOST="localhost")
@@ -12,7 +12,7 @@ settings = CommonSettings(DATABASE_HOST="localhost")
 
 @pytest.mark.asyncio
 async def test_measurement_results(common_settings, tmp_path):
-    db = MeasurementResults(
+    db = InsertResults(
         common_settings, logging.getLogger(__name__), uuid.uuid4(), uuid.uuid4()
     )
     assert await db.create_database() is None
@@ -57,7 +57,7 @@ async def test_measurement_results(common_settings, tmp_path):
 async def test_measurement_results_sequential(common_settings, tmp_path):
     common_settings.DATABASE_PARALLEL_CSV_INSERT = False
 
-    db = MeasurementResults(
+    db = InsertResults(
         common_settings, logging.getLogger(__name__), uuid.uuid4(), uuid.uuid4()
     )
     assert await db.create_database() is None

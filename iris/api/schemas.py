@@ -253,8 +253,11 @@ class MeasurementsDeleteResponse(BaseModel):
     action: str
 
 
-class PacketResponse(BaseModel):
-    """Probe response information (Response)."""
+# --- Results ----
+
+
+class ReplyResponse(BaseModel):
+    """Probe reply information (Response)."""
 
     probe_protocol: int
     probe_src_addr: str
@@ -274,10 +277,70 @@ class PacketResponse(BaseModel):
     round: int
 
 
-class MeasurementsResultsResponse(BaseModel):
-    """GET /measurements/{uuid} (Response)."""
+class InterfaceResponse(BaseModel):
+    """Probe reply information (Response)."""
+
+    probe_protocol: int
+    probe_src_addr: str
+    probe_dst_addr: str
+    probe_src_port: int
+    probe_dst_port: int
+    probe_ttl: int
+    quoted_ttl: int
+    reply_src_addr: str
+    reply_protocol: int
+    reply_icmp_type: int
+    reply_icmp_code: int
+    reply_ttl: int
+    reply_size: int
+    reply_mpls_labels: List[int]
+    rtt: float
+    round: int
+
+
+class LinkResponse(BaseModel):
+    """Probe reply information (Response)."""
+
+    probe_protocol: int
+    probe_src_addr: str
+    probe_dst_addr: str
+    probe_src_port: int
+    probe_dst_port: int
+    probe_ttl: int
+    quoted_ttl: int
+    reply_src_addr: str
+    reply_protocol: int
+    reply_icmp_type: int
+    reply_icmp_code: int
+    reply_ttl: int
+    reply_size: int
+    reply_mpls_labels: List[int]
+    rtt: float
+    round: int
+
+
+class RepliesResultsResponse(BaseModel):
+    """GET /results/{measurement_uuid}/{agent_uuid}/replies/{prefix} (Response)."""
 
     count: int
     next: Optional[str] = None
     previous: Optional[str] = None
-    results: List[PacketResponse]
+    results: List[ReplyResponse]
+
+
+class InterfacesResultsResponse(BaseModel):
+    """GET /results/{measurement_uuid}/{agent_uuid}/interfaces/{prefix} (Response)."""
+
+    count: int
+    next: Optional[str] = None
+    previous: Optional[str] = None
+    results: List[InterfaceResponse]
+
+
+class LinksResultsResponse(BaseModel):
+    """GET /results/{measurement_uuid}/{agent_uuid}/links/{prefix} (Response)."""
+
+    count: int
+    next: Optional[str] = None
+    previous: Optional[str] = None
+    results: List[LinkResponse]

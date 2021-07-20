@@ -4,8 +4,8 @@ from datetime import datetime
 import pytest
 
 import iris.commons.database.agents
-import iris.commons.database.measurement_results
 import iris.commons.database.measurements
+import iris.commons.database.results
 from iris.api.measurements import verify_quota
 from iris.api.security import get_current_active_user
 
@@ -1086,18 +1086,18 @@ def test_get_measurement_results(client, monkeypatch):
     )
 
     monkeypatch.setattr(
-        iris.commons.database.measurement_results.MeasurementResults,
+        iris.commons.database.measurement_results.InsertResults,
         "exists",
         measurement_results_exists,
     )
 
     monkeypatch.setattr(
-        iris.commons.database.measurement_results.MeasurementResults,
+        iris.commons.database.measurement_results.InsertResults,
         "all",
         all_measurement_results,
     )
     monkeypatch.setattr(
-        iris.commons.database.measurement_results.MeasurementResults,
+        iris.commons.database.measurement_results.InsertResults,
         "all_count",
         all_measurement_results_count,
     )
@@ -1141,7 +1141,7 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
     )
 
     monkeypatch.setattr(
-        iris.commons.database.measurement_results.MeasurementResults,
+        iris.commons.database.measurement_results.InsertResults,
         "exists",
         measurement_results_exists,
     )

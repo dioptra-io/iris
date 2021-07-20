@@ -8,7 +8,7 @@ from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.queries.query import AddrType
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
-from iris.commons.database import Agents, MeasurementResults
+from iris.commons.database import Agents, InsertResults
 from iris.commons.round import Round
 from iris.worker import WorkerSettings
 
@@ -44,7 +44,7 @@ async def default_pipeline(
         measurement_uuid, agent_uuid, round.encode(), statistics
     )
 
-    database = MeasurementResults(settings, logger, measurement_uuid, agent_uuid)
+    database = InsertResults(settings, logger, measurement_uuid, agent_uuid)
 
     logger.info(f"{logger_prefix} Create results tables")
     await database.create_table()
