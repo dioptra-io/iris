@@ -64,7 +64,6 @@ services:
       context: .
       dockerfile: "./dockerfiles/Dockerfile-api"
     environment:
-      MODULE_NAME: "iris.api.main"
       API_CORS_ALLOW_ORIGIN: "http://localhost:8081"
       API_ADMIN_USERNAME: "admin"
       API_ADMIN_EMAIL: "admin@iris.docker.localhost"
@@ -75,14 +74,13 @@ services:
       AWS_S3_HOST: "http://minio.docker.localhost"
       AWS_ACCESS_KEY_ID: "minioadmin"
       AWS_SECRET_ACCESS_KEY: "minioadmin"
+      GUNICORN_CMD_ARGS: "--workers 1"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"
       - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`) && PathPrefix(`/api`)"
     volumes:
       - "./iris:/app/iris"
-    # ports:
-    #   - "8083:80"
     depends_on:
     - clickhouse
     - loki

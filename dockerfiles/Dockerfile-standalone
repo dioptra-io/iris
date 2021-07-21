@@ -1,6 +1,5 @@
 FROM ubuntu:20.04
-LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
-
+LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # TODO: Remove build-essential and python3-dev once
@@ -17,7 +16,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl --location --output /usr/bin/clickhouse \
-    https://builds.clickhouse.tech/master/$(arch | sed -e "s/x86_64/amd64/")/clickhouse
+    https://builds.clickhouse.tech/master/$(arch | sed -e "s/x86_64/amd64/")/clickhouse && \
+    chmod +x /usr/bin/clickhouse
 
 WORKDIR /app
 
