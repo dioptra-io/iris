@@ -26,10 +26,3 @@ type:
 
 test:
 	@$(ENVRUN) pytest tests
-
-# Hack for running the compose stack on Fedora.
-selinux:
-	sudo setenforce 0
-	mkdir -p volumes/grafana/    && sudo chown -R 472:472     volumes/grafana/
-	mkdir -p volumes/loki/       && sudo chown -R 10001:10001 volumes/loki/
-	mkdir -p volumes/prometheus/ && sudo chown -R 65534:65534 volumes/prometheus/

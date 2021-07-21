@@ -62,7 +62,7 @@ class CommonSettings(BaseSettings):
 
     STREAM_LOGGING_LEVEL: int = logging.DEBUG
 
-    CLICKHOUSE_EXE: str = "clickhouse-client"
+    CLICKHOUSE_EXE: str = "clickhouse"
     SPLIT_EXE: str = "gsplit" if platform.system() == "Darwin" else "split"
     ZSTD_EXE: str = "zstd"
 
