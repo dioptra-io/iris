@@ -4,10 +4,10 @@ LABEL key="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 # TODO: Remove build-essential and python3-dev once
 # we can push binary wheels on PyPI for diamond-miner.
 RUN apt-get update \
-    && apt-get install -y -q --no-install-recommends --reinstall \
+    && apt-get install --no-install-recommends --reinstall --yes \
         build-essential \
-        python3-dev \
         ca-certificates \
+        python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -22,7 +22,7 @@ RUN poetry config virtualenvs.create false
 COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
 
-RUN poetry install --no-root --no-dev \
+RUN poetry install --no-root --no-dev --extras api \
     && rm -rf /root/.cache/*
 
 COPY iris iris

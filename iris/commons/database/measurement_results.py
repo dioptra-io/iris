@@ -25,7 +25,8 @@ from iris.commons.subprocess import start_stream_subprocess
 def sync_insert_csv(database_name, host, table_name, chunk_filepath: Path):
     with chunk_filepath.open("r") as fin:
         command = [
-            "clickhouse-client",
+            "clickhouse",
+            "client",
             f"--database={database_name}",
             f"--host={host}",
             "-q",
@@ -80,7 +81,7 @@ class MeasurementResults(Database):
             cmd = (
                 f"{self.settings.ZSTD_EXE} --decompress --stdout "
                 + str(csv_filepath)
-                + f" | {self.settings.CLICKHOUSE_EXE} "
+                + f" | {self.settings.CLICKHOUSE_EXE} client "
                 + f"--database={self.settings.DATABASE_NAME} "
                 + f"--host={self.settings.DATABASE_HOST}"
                 + " --query='INSERT INTO "
