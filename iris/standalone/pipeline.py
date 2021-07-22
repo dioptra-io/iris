@@ -13,7 +13,7 @@ from iris import __version__
 from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
-from iris.api.schemas import Tool, ToolParameters
+from iris.api.schemas.measurements import Tool, ToolParameters
 from iris.commons.database import Agents, Database, Measurements
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round

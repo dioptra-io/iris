@@ -7,15 +7,8 @@ from uuid import UUID, uuid4
 from diamond_miner.generator import count_prefixes
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
+from iris.api import schemas
 from iris.api.pagination import DatabasePagination
-from iris.api.schemas import (
-    ExceptionResponse,
-    MeasurementInfoResponse,
-    MeasurementsDeleteResponse,
-    MeasurementsGetResponse,
-    MeasurementsPostBody,
-    MeasurementsPostResponse,
-)
 from iris.api.security import get_current_active_user
 from iris.commons.database import Agents, Measurements
 from iris.worker.hook import hook
@@ -23,9 +16,7 @@ from iris.worker.hook import hook
 router = APIRouter()
 
 
-@router.get(
-    "/", response_model=MeasurementsGetResponse, summary="Get all measurements."
-)
+@router.get("/", response_model=schemas.Measurements, summary="Get all measurements.")
 async def get_measurements(
     request: Request,
     tag: str = None,
@@ -151,13 +142,13 @@ def tool_parameters_validator(tool, tool_parameters):
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
-    response_model=MeasurementsPostResponse,
-    responses={404: {"model": ExceptionResponse}},
+    response_model=schemas.MeasurementPostResponse,
+    responses={404: {"model": schemas.GenericException}},
     summary="Request a measurement.",
 )
 async def post_measurement(
     request: Request,
-    measurement: MeasurementsPostBody = Body(
+    measurement: schemas.MeasurementPostBody = Body(
         ...,
         example={
             "tool": "diamond-miner",
@@ -251,9 +242,9 @@ async def post_measurement(
 
 @router.get(
     "/{measurement_uuid}",
-    response_model=MeasurementInfoResponse,
-    responses={404: {"model": ExceptionResponse}},
-    summary="Get measurement information by uuid.",
+    response_model=schemas.Measurement,
+    responses={404: {"model": schemas.GenericException}},
+    summary="Get measurement specified by UUID.",
 )
 async def get_measurement_by_uuid(
     request: Request,
@@ -320,9 +311,9 @@ async def get_measurement_by_uuid(
 
 @router.delete(
     "/{measurement_uuid}",
-    response_model=MeasurementsDeleteResponse,
-    responses={404: {"model": ExceptionResponse}},
-    summary="Cancel measurement",
+    response_model=schemas.MeasurementDeleteResponse,
+    responses={404: {"model": schemas.GenericException}},
+    summary="Cancel measurement specified by UUID.",
 )
 async def delete_measurement(
     request: Request,

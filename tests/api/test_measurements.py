@@ -1084,25 +1084,25 @@ def test_get_measurement_results(client, monkeypatch):
         "get",
         get_agents_results,
     )
-
     monkeypatch.setattr(
-        iris.commons.database.measurement_results.InsertResults,
+        iris.commons.database.results.Replies,
         "exists",
         measurement_results_exists,
     )
-
     monkeypatch.setattr(
-        iris.commons.database.measurement_results.InsertResults,
+        iris.commons.database.results.Replies,
         "all",
         all_measurement_results,
     )
     monkeypatch.setattr(
-        iris.commons.database.measurement_results.InsertResults,
+        iris.commons.database.results.Replies,
         "all_count",
         all_measurement_results_count,
     )
 
-    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(
+        f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
+    )
     assert response.json() == {
         "count": 1,
         "previous": None,
@@ -1139,14 +1139,15 @@ def test_get_measurement_results_table_not_exists(client, monkeypatch):
         "get",
         get_agents_results,
     )
-
     monkeypatch.setattr(
-        iris.commons.database.measurement_results.InsertResults,
+        iris.commons.database.results.Replies,
         "exists",
         measurement_results_exists,
     )
 
-    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(
+        f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
+    )
     assert response.json() == {
         "count": 0,
         "previous": None,
@@ -1181,7 +1182,9 @@ def test_get_measurement_results_not_finished(client, monkeypatch):
         get_agents_results,
     )
 
-    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(
+        f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
+    )
     assert response.status_code == 412
 
 
@@ -1211,7 +1214,9 @@ def test_get_measurement_results_no_agent(client, monkeypatch):
         get_agents_results,
     )
 
-    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(
+        f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
+    )
     assert response.status_code == 404
     assert response.json() == {
         "detail": (
@@ -1230,7 +1235,9 @@ def test_get_measurement_result_not_found(client, monkeypatch):
 
     monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
 
-    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(
+        f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
+    )
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
 
@@ -1238,12 +1245,16 @@ def test_get_measurement_result_not_found(client, monkeypatch):
 def test_get_measurement_results_invalid_measurement_uuid(client):
     measurement_uuid = "test"
     agent_uuid = str(uuid.uuid4())
-    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(
+        f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
+    )
     assert response.status_code == 422
 
 
 def test_get_measurement_results_invalid_agent_uuid(client):
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = "test"
-    response = client.get(f"/api/measurements/{measurement_uuid}/{agent_uuid}")
+    response = client.get(
+        f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
+    )
     assert response.status_code == 422

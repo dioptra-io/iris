@@ -7,11 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
-from iris.api.schemas import (
-    ProfileGetResponse,
-    ProfileRIPEPutBody,
-    ProfileRIPEPutResponse,
-)
+from iris.api import schemas
 from iris.api.security import (
     authenticate_user,
     create_access_token,
@@ -30,7 +26,7 @@ class Token(BaseModel):
 @router.post(
     "/token",
     response_model=Token,
-    summary="Get JWT token.",
+    summary="Authenticate and get a JWT token.",
 )
 async def get_token(
     request: Request,
@@ -56,8 +52,8 @@ async def get_token(
 
 @router.get(
     "/",
-    response_model=ProfileGetResponse,
-    summary="Get profile information.",
+    response_model=schemas.Profile,
+    summary="Get current user profile.",
 )
 async def get_profile(
     request: Request,
@@ -74,12 +70,12 @@ async def get_profile(
 @router.put(
     "/ripe",
     status_code=status.HTTP_201_CREATED,
-    response_model=ProfileRIPEPutResponse,
-    summary="Put RIPE profile information.",
+    response_model=schemas.RIPEAccount,
+    summary="Add RIPE account information to the current user.",
 )
 async def put_ripe_profile(
     request: Request,
-    ripe_info: ProfileRIPEPutBody,
+    ripe_info: schemas.RIPEAccount,
     user: Dict = Depends(get_current_active_user),
 ):
     users_database = Users(request.app.settings, request.app.logger)

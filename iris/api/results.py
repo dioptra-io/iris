@@ -1,25 +1,20 @@
 """Results operations."""
-
+from ipaddress import ip_address, ip_network
 from typing import Dict
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from iris.api import schemas
 from iris.api.pagination import DatabasePagination
-from iris.api.schemas import (
-    ExceptionResponse,
-    InterfacesResultsResponse,
-    LinksResultsResponse,
-    RepliesResultsResponse,
-)
 from iris.api.security import get_current_active_user
 from iris.commons.database import (
     Agents,
-    GetInterfacesResults,
-    GetLinksResults,
-    GetPrefixesResults,
-    GetReplyResults,
+    Interfaces,
+    Links,
     Measurements,
+    Prefixes,
+    Replies,
 )
 
 router = APIRouter()
@@ -68,9 +63,9 @@ async def get_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/prefixes",
-    response_model=RepliesResultsResponse,
-    responses={404: {"model": ExceptionResponse}},
-    summary="Get prefixes results.",
+    response_model=schemas.Prefixes,
+    responses={404: {"model": schemas.GenericException}},
+    summary="Get measurement prefixes.",
 )
 async def get_prefixes_results(
     request: Request,
@@ -81,7 +76,7 @@ async def get_prefixes_results(
     user: Dict = Depends(get_current_active_user),
 ):
     """Get replies results."""
-    database = GetPrefixesResults(
+    database = Prefixes(
         request.app.settings, request.app.logger, measurement_uuid, agent_uuid
     )
     return await get_results(
@@ -90,22 +85,28 @@ async def get_prefixes_results(
 
 
 @router.get(
-    "/{measurement_uuid}/{agent_uuid}/replies",
-    response_model=RepliesResultsResponse,
-    responses={404: {"model": ExceptionResponse}},
-    summary="Get replies results.",
+    "/{measurement_uuid}/{agent_uuid}/replies/{prefix}",
+    response_model=schemas.Replies,
+    responses={404: {"model": schemas.GenericException}},
+    summary="Get measurement replies.",
 )
 async def get_replies_results(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
+    prefix: str,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: Dict = Depends(get_current_active_user),
 ):
     """Get replies results."""
-    database = GetReplyResults(
-        request.app.settings, request.app.logger, measurement_uuid, agent_uuid
+    database = Replies(
+        request.app.settings,
+        request.app.logger,
+        measurement_uuid,
+        agent_uuid,
+        # We make sure that prefix is a /32 or /128
+        ip_network(ip_address(prefix)),
     )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, database
@@ -113,22 +114,28 @@ async def get_replies_results(
 
 
 @router.get(
-    "/{measurement_uuid}/{agent_uuid}/interfaces",
-    response_model=InterfacesResultsResponse,
-    responses={404: {"model": ExceptionResponse}},
-    summary="Get interfaces results.",
+    "/{measurement_uuid}/{agent_uuid}/interfaces/{prefix}",
+    response_model=schemas.Interfaces,
+    responses={404: {"model": schemas.GenericException}},
+    summary="Get measurement interfaces.",
 )
 async def get_interfaces_results(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
+    prefix: str,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: Dict = Depends(get_current_active_user),
 ):
     """Get interfaces results."""
-    database = GetInterfacesResults(
-        request.app.settings, request.app.logger, measurement_uuid, agent_uuid
+    database = Interfaces(
+        request.app.settings,
+        request.app.logger,
+        measurement_uuid,
+        agent_uuid,
+        # We make sure that prefix is a /32 or /128
+        ip_network(ip_address(prefix)),
     )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, database
@@ -136,22 +143,28 @@ async def get_interfaces_results(
 
 
 @router.get(
-    "/{measurement_uuid}/{agent_uuid}/links",
-    response_model=LinksResultsResponse,
-    responses={404: {"model": ExceptionResponse}},
-    summary="Get links results.",
+    "/{measurement_uuid}/{agent_uuid}/links/{prefix}",
+    response_model=schemas.Links,
+    responses={404: {"model": schemas.GenericException}},
+    summary="Get measurement links.",
 )
 async def get_links_results(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
+    prefix: str,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: Dict = Depends(get_current_active_user),
 ):
     """Get links results."""
-    database = GetLinksResults(
-        request.app.settings, request.app.logger, measurement_uuid, agent_uuid
+    database = Links(
+        request.app.settings,
+        request.app.logger,
+        measurement_uuid,
+        agent_uuid,
+        # We make sure that prefix is a /32 or /128
+        ip_network(ip_address(prefix)),
     )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, database

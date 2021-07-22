@@ -2,24 +2,44 @@ import asyncio
 import os
 from asyncio import Semaphore
 from dataclasses import dataclass
+from ipaddress import IPv6Address
 from pathlib import Path
-from typing import List, Union
+from typing import Any, List, Union
 from uuid import UUID
 
 import aiofiles.os
+from diamond_miner.defaults import UNIVERSE_SUBSET
 from diamond_miner.queries import (
+    Count,
     CreateTables,
     DropTables,
+    GetLinks,
+    GetNodes,
+    GetPrefixes,
+    GetResults,
     InsertLinks,
     InsertPrefixes,
+    Query,
     links_table,
     prefixes_table,
     results_table,
 )
 from diamond_miner.subsets import subsets_for
+from diamond_miner.typing import IPNetwork
 
 from iris.commons.database.database import Database
 from iris.commons.subprocess import start_stream_subprocess
+
+
+def addr_to_string(addr: IPv6Address) -> str:
+    """
+    >>> from ipaddress import ip_address
+    >>> addr_to_string(ip_address('::dead:beef'))
+    '::dead:beef'
+    >>> addr_to_string(ip_address('::ffff:8.8.8.8'))
+    '8.8.8.8'
+    """
+    return str(addr.ipv4_mapped or addr)
 
 
 @dataclass(frozen=True)
@@ -118,28 +138,70 @@ class InsertResults(Database):
         )
 
 
-class GetPrefixesResults(Database):
-    """Get raw results from database."""
-
+@dataclass(frozen=True)
+class QueryWrapper(Database):
     measurement_uuid: Union[str, UUID]
     agent_uuid: Union[str, UUID]
+    subset: IPNetwork = UNIVERSE_SUBSET
+
+    def formatter(self, row: tuple) -> Any:
+        ...
+
+    def query(self) -> Query:
+        ...
+
+    def table(self) -> str:
+        ...
 
     @property
     def measurement_id(self) -> str:
         return f"{self.measurement_uuid}__{self.agent_uuid}"
 
-    @staticmethod
-    def formatter(row: tuple) -> dict:
-        """Database row -> response formater."""
+    async def all(self, offset: int, limit: int) -> List[str]:
+        response = await self.execute(
+            self.query(), self.measurement_id, limit=(limit, offset)
+        )
+        return [self.formatter(row) for row in response]
+
+    async def all_count(self) -> int:
+        response = await self.execute(
+            Count(query=self.query()), self.measurement_id, subsets=(self.subset,)
+        )
+        return response[0][0]
+
+    async def exists(self) -> bool:
+        response = await self.call(f"EXISTS TABLE {self.table()}")
+        return bool(response[0][0])
+
+
+@dataclass(frozen=True)
+class Prefixes(QueryWrapper):
+    """Get measurement prefixes."""
+
+    def formatter(self, row):
+        return addr_to_string(row[0])
+
+    def query(self):
+        return GetPrefixes()
+
+    def table(self):
+        return results_table(self.measurement_id)
+
+
+@dataclass(frozen=True)
+class Replies(QueryWrapper):
+    """Get measurement replies."""
+
+    def formatter(self, row: tuple):
         return {
             "probe_protocol": row[0],
-            "probe_src_addr": str(row[1]),
-            "probe_dst_addr": str(row[2]),
+            "probe_src_addr": addr_to_string(row[1]),
+            "probe_dst_addr": addr_to_string(row[2]),
             "probe_src_port": row[3],
             "probe_dst_port": row[4],
             "probe_ttl": row[5],
             "quoted_ttl": row[6],
-            "reply_src_addr": str(row[7]),
+            "reply_src_addr": addr_to_string(row[7]),
             "reply_protocol": row[8],
             "reply_icmp_type": row[9],
             "reply_icmp_code": row[10],
@@ -150,178 +212,40 @@ class GetPrefixesResults(Database):
             "round": row[15],
         }
 
-    async def exists(self) -> bool:
-        """Check if table exists."""
-        response = await self.call(f"EXISTS TABLE {results_table(self.measurement_id)}")
-        return bool(response[0][0])
+    def query(self):
+        return GetResults()
 
-    async def all_count(self) -> int:
-        """Get the count of all results."""
-        response = await self.call(
-            f"SELECT Count() FROM {results_table(self.measurement_id)}"
-        )
-        return response[0][0]
-
-    async def all(self, offset: int, limit: int) -> List[dict]:
-        """Get all results given (offset, limit)."""
-        response = await self.call(
-            f"SELECT * FROM {results_table(self.measurement_id)} "
-            "LIMIT %(offset)s,%(limit)s",
-            {"offset": offset, "limit": limit},
-        )
-        return [self.formatter(row) for row in response]
+    def table(self):
+        return results_table(self.measurement_id)
 
 
-class GetReplyResults(Database):
-    """Get raw results from database."""
+@dataclass(frozen=True)
+class Interfaces(QueryWrapper):
+    """Get measurement interfaces."""
 
-    measurement_uuid: Union[str, UUID]
-    agent_uuid: Union[str, UUID]
+    def formatter(self, row: tuple):
+        return {"ttl": row[0], "addr": addr_to_string(row[1])}
 
-    @property
-    def measurement_id(self) -> str:
-        return f"{self.measurement_uuid}__{self.agent_uuid}"
+    def query(self):
+        return GetNodes(include_probe_ttl=True)
 
-    @staticmethod
-    def formatter(row: tuple) -> dict:
-        """Database row -> response formater."""
+    def table(self):
+        return results_table(self.measurement_id)
+
+
+@dataclass(frozen=True)
+class Links(QueryWrapper):
+    """Get measurement links."""
+
+    def formatter(self, row: tuple):
         return {
-            "probe_protocol": row[0],
-            "probe_src_addr": str(row[1]),
-            "probe_dst_addr": str(row[2]),
-            "probe_src_port": row[3],
-            "probe_dst_port": row[4],
-            "probe_ttl": row[5],
-            "quoted_ttl": row[6],
-            "reply_src_addr": str(row[7]),
-            "reply_protocol": row[8],
-            "reply_icmp_type": row[9],
-            "reply_icmp_code": row[10],
-            "reply_ttl": row[11],
-            "reply_size": row[12],
-            "reply_mpls_labels": row[13],
-            "rtt": row[14],
-            "round": row[15],
+            "near_ttl": row[0],
+            "near_addr": addr_to_string(row[1]),
+            "far_addr": addr_to_string(row[2]),
         }
 
-    async def exists(self) -> bool:
-        """Check if table exists."""
-        response = await self.call(f"EXISTS TABLE {results_table(self.measurement_id)}")
-        return bool(response[0][0])
+    def query(self):
+        return GetLinks(include_near_ttl=True)
 
-    async def all_count(self) -> int:
-        """Get the count of all results."""
-        response = await self.call(
-            f"SELECT Count() FROM {results_table(self.measurement_id)}"
-        )
-        return response[0][0]
-
-    async def all(self, offset: int, limit: int) -> List[dict]:
-        """Get all results given (offset, limit)."""
-        response = await self.call(
-            f"SELECT * FROM {results_table(self.measurement_id)} "
-            "LIMIT %(offset)s,%(limit)s",
-            {"offset": offset, "limit": limit},
-        )
-        return [self.formatter(row) for row in response]
-
-
-class GetInterfacesResults(Database):
-    """Get interfaces results from database."""
-
-    measurement_uuid: Union[str, UUID]
-    agent_uuid: Union[str, UUID]
-
-    @property
-    def measurement_id(self) -> str:
-        return f"{self.measurement_uuid}__{self.agent_uuid}"
-
-    @staticmethod
-    def formatter(row: tuple) -> dict:
-        """Database row -> response formater."""
-        return {
-            "probe_protocol": row[0],
-            "probe_src_addr": str(row[1]),
-            "probe_dst_addr": str(row[2]),
-            "probe_src_port": row[3],
-            "probe_dst_port": row[4],
-            "probe_ttl": row[5],
-            "quoted_ttl": row[6],
-            "reply_src_addr": str(row[7]),
-            "reply_protocol": row[8],
-            "reply_icmp_type": row[9],
-            "reply_icmp_code": row[10],
-            "reply_ttl": row[11],
-            "reply_size": row[12],
-            "reply_mpls_labels": row[13],
-            "rtt": row[14],
-            "round": row[15],
-        }
-
-    async def exists(self) -> bool:
-        """Check if table exists."""
-        response = await self.call(f"EXISTS TABLE {results_table(self.measurement_id)}")
-        return bool(response[0][0])
-
-    async def all_count(self) -> int:
-        """Get the count of all results."""
-        response = await self.call(
-            f"SELECT Count() FROM {results_table(self.measurement_id)}"
-        )
-        return response[0][0]
-
-    async def all(self, offset: int, limit: int) -> List[dict]:
-        """Get all results given (offset, limit)."""
-        response = await self.call(
-            f"SELECT * FROM {results_table(self.measurement_id)} "
-            "LIMIT %(offset)s,%(limit)s",
-            {"offset": offset, "limit": limit},
-        )
-        return [self.formatter(row) for row in response]
-
-
-class GetLinksResults(Database):
-    """Get links results from database."""
-
-    async def exists(self) -> bool:
-        """Check if table exists."""
-        response = await self.call(f"EXISTS TABLE {results_table(self.measurement_id)}")
-        return bool(response[0][0])
-
-    @staticmethod
-    def formatter(row: tuple) -> dict:
-        """Database row -> response formater."""
-        return {
-            "probe_protocol": row[0],
-            "probe_src_addr": str(row[1]),
-            "probe_dst_addr": str(row[2]),
-            "probe_src_port": row[3],
-            "probe_dst_port": row[4],
-            "probe_ttl": row[5],
-            "quoted_ttl": row[6],
-            "reply_src_addr": str(row[7]),
-            "reply_protocol": row[8],
-            "reply_icmp_type": row[9],
-            "reply_icmp_code": row[10],
-            "reply_ttl": row[11],
-            "reply_size": row[12],
-            "reply_mpls_labels": row[13],
-            "rtt": row[14],
-            "round": row[15],
-        }
-
-    async def all_count(self) -> int:
-        """Get the count of all results."""
-        response = await self.call(
-            f"SELECT Count() FROM {results_table(self.measurement_id)}"
-        )
-        return response[0][0]
-
-    async def all(self, offset: int, limit: int) -> List[dict]:
-        """Get all results given (offset, limit)."""
-        response = await self.call(
-            f"SELECT * FROM {results_table(self.measurement_id)} "
-            "LIMIT %(offset)s,%(limit)s",
-            {"offset": offset, "limit": limit},
-        )
-        return [self.formatter(row) for row in response]
+    def table(self):
+        return links_table(self.measurement_id)

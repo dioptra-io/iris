@@ -14,29 +14,21 @@ from fastapi import (
     status,
 )
 
+from iris.api import schemas
 from iris.api.pagination import ListPagination
-from iris.api.schemas import (
-    ExceptionResponse,
-    TargetResponse,
-    TargetsDeleteResponse,
-    TargetsGetResponse,
-    TargetsPostResponse,
-)
 from iris.api.security import get_current_active_user
 
 router = APIRouter()
 
 
-@router.get(
-    "/", response_model=TargetsGetResponse, summary="Get all targets information."
-)
+@router.get("/", response_model=schemas.Targets, summary="Get all target lists.")
 async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
     user: Dict = Depends(get_current_active_user),
 ):
-    """Get all target lists information."""
+    """Get all target lists."""
     try:
         targets = await request.app.storage.get_all_files_no_retry(
             request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"]
@@ -51,9 +43,9 @@ async def get_targets(
 
 @router.get(
     "/{key}",
-    response_model=TargetResponse,
-    responses={404: {"model": ExceptionResponse}},
-    summary="Get target list information by key.",
+    response_model=schemas.Target,
+    responses={404: {"model": schemas.GenericException}},
+    summary="Get target list specified by key.",
 )
 async def get_target_by_key(
     request: Request, key: str, user: Dict = Depends(get_current_active_user)
@@ -111,7 +103,7 @@ async def verify_target_file(target_file):
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
-    response_model=TargetsPostResponse,
+    response_model=schemas.TargetPostResponse,
     summary="Upload a target list.",
     description="""
     Each line of the file must be like `target,protocol,min_ttl,max_ttl`
@@ -147,9 +139,12 @@ async def post_target(
 
 @router.delete(
     "/{key}",
-    response_model=TargetsDeleteResponse,
-    responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
-    summary="Delete a target list from object storage.",
+    response_model=schemas.TargetDeleteResponse,
+    responses={
+        404: {"model": schemas.GenericException},
+        500: {"model": schemas.GenericException},
+    },
+    summary="Delete a target list.",
 )
 async def delete_target_by_key(
     request: Request, key: str, user: Dict = Depends(get_current_active_user)
