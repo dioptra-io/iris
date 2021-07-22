@@ -4,7 +4,7 @@ from subprocess import run
 
 import pytest
 
-from iris.commons.database import InsertResults, Interfaces, Links, Replies
+from iris.commons.database import InsertResults, Interfaces, Links, Prefixes, Replies
 from iris.commons.settings import CommonSettings
 
 settings = CommonSettings(DATABASE_HOST="localhost")
@@ -92,5 +92,15 @@ async def test_measurement_results(common_settings, tmp_path):
     assert await db.all_count() == 1
     assert await db.all(0, 10) == [
         {"near_ttl": 4, "near_addr": "20.20.20.1", "far_addr": "20.20.20.2"}
+    ]
+    assert await db.all(1, 10) == []
+
+    db = Prefixes(
+        common_settings, logging.getLogger(__name__), db.measurement_uuid, db.agent_uuid
+    )
+    assert await db.exists()
+    assert await db.all_count() == 1
+    assert await db.all(0, 10) == [
+        {"prefix": "8.8.8.0", "has_amplification": False, "has_loops": False}
     ]
     assert await db.all(1, 10) == []

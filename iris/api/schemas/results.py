@@ -39,13 +39,12 @@ class Link(BaseModel):
     far_addr: str
 
 
-class Prefixes(BaseModel):
-    """GET /results/{measurement_uuid}/{agent_uuid}/prefixes (Response)."""
+class Prefix(BaseModel):
+    """Probe reply information (Response)."""
 
-    count: int
-    next: Optional[str] = None
-    previous: Optional[str] = None
-    results: List[str]
+    prefix: str
+    has_amplification: bool
+    has_loops: bool
 
 
 class Replies(BaseModel):
@@ -73,3 +72,12 @@ class Links(BaseModel):
     next: Optional[str] = None
     previous: Optional[str] = None
     results: List[Link]
+
+
+class Prefixes(BaseModel):
+    """GET /results/{measurement_uuid}/{agent_uuid}/prefixes (Response)."""
+
+    count: int
+    next: Optional[str] = None
+    previous: Optional[str] = None
+    results: List[Prefix]

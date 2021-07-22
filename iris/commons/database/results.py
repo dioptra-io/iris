@@ -182,13 +182,17 @@ class Prefixes(QueryWrapper):
     """Get measurement prefixes."""
 
     def formatter(self, row):
-        return addr_to_string(row[0])
+        return {
+            "prefix": addr_to_string(row[0]),
+            "has_amplification": bool(row[1]),
+            "has_loops": bool(row[2]),
+        }
 
     def query(self):
         return GetPrefixes()
 
     def table(self):
-        return results_table(self.measurement_id)
+        return prefixes_table(self.measurement_id)
 
 
 @dataclass(frozen=True)
