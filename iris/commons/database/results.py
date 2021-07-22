@@ -1,12 +1,12 @@
+import asyncio
 import os
-import subprocess
-from concurrent.futures import ProcessPoolExecutor
+from asyncio import Semaphore
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
 from typing import List, Union
 from uuid import UUID
 
+import aiofiles.os
 from diamond_miner.queries import (
     CreateTables,
     DropTables,
@@ -20,20 +20,6 @@ from diamond_miner.subsets import subsets_for
 
 from iris.commons.database.database import Database
 from iris.commons.subprocess import start_stream_subprocess
-
-
-def sync_insert_csv(database_name, host, table_name, chunk_filepath: Path):
-    with chunk_filepath.open("r") as fin:
-        command = [
-            "clickhouse",
-            "client",
-            f"--database={database_name}",
-            f"--host={host}",
-            "-q",
-            f"INSERT INTO {table_name} FORMAT CSV",
-        ]
-        subprocess.call(command, stdin=fin)
-    os.remove(str(chunk_filepath))
 
 
 @dataclass(frozen=True)
@@ -55,50 +41,47 @@ class InsertResults(Database):
 
     async def insert_csv(self, csv_filepath: Path) -> None:
         """Insert CSV file into table."""
-        if not self.settings.DATABASE_PARALLEL_CSV_INSERT:
-            # If the parallel insert option is not activated
-            cmd = (
-                f"{self.settings.ZSTD_EXE} --decompress --stdout "
-                + str(csv_filepath)
-                + f" | {self.settings.CLICKHOUSE_EXE} client "
-                + f"--database={self.settings.DATABASE_NAME} "
-                + f"--host={self.settings.DATABASE_HOST}"
-                + " --query='INSERT INTO "
-                + results_table(self.measurement_id)
-                + " FORMAT CSV'"
-            )
+        logger_prefix = f"{self.measurement_uuid} :: {self.agent_uuid} ::"
 
-            await start_stream_subprocess(
-                cmd, stdout=self.logger.info, stderr=self.logger.error
-            )
-        else:
-            # Split
-            chunks_prefix = ".".join(csv_filepath.name.split(".")[:-1]) + "_"
-            chunks_prefix_path = csv_filepath.parent / chunks_prefix
-            await start_stream_subprocess(
-                f"{self.settings.ZSTD_EXE} --decompress --stdout {csv_filepath} | "
-                f"{self.settings.SPLIT_EXE} - {chunks_prefix_path} "
-                f"-d -l {self.settings.DATABASE_PARALLEL_CSV_MAX_LINE}",
-                stdout=self.logger.info,
-                stderr=self.logger.error,
-            )
+        split_dir = csv_filepath.with_suffix(".split")
+        split_dir.mkdir(exist_ok=True)
 
-            # Select the chunks
-            chunks = list(csv_filepath.parent.glob(f"{chunks_prefix}*"))
-            logger_prefix = f"{self.measurement_uuid} :: {self.agent_uuid} ::"
-            self.logger.info(f"{logger_prefix} Number of chunks: {len(chunks)}")
+        await start_stream_subprocess(
+            f"""
+            {self.settings.ZSTD_CMD}  --decompress --stdout {csv_filepath} | \
+            {self.settings.SPLIT_CMD} --lines={self.settings.DATABASE_PARALLEL_CSV_MAX_LINE}
+            """,
+            stdout=self.logger.info,
+            stderr=self.logger.error,
+            cwd=split_dir,
+        )
 
-            # Parallel insert
-            with ProcessPoolExecutor() as exe:
-                exe.map(
-                    partial(
-                        sync_insert_csv,
-                        self.settings.DATABASE_NAME,
-                        self.settings.DATABASE_HOST,
-                        results_table(self.measurement_id),
-                    ),
-                    chunks,
+        files = list(split_dir.glob("*"))
+        self.logger.info(f"{logger_prefix} Number of chunks: {len(files)}")
+
+        concurrency = (os.cpu_count() or 2) // 2
+        semaphore = Semaphore(concurrency)
+        self.logger.info(
+            f"{logger_prefix} Number of concurrent processes: {concurrency}"
+        )
+
+        async def insert(file):
+            async with semaphore:
+                await start_stream_subprocess(
+                    f"""
+                    {self.settings.CLICKHOUSE_CMD} \
+                    --database={self.settings.DATABASE_NAME} \
+                    --host={self.settings.DATABASE_HOST} \
+                    --query='INSERT INTO {results_table(self.measurement_id)} FORMAT CSV' \
+                    < {file}
+                    """,
+                    stdout=self.logger.info,
+                    stderr=self.logger.error,
                 )
+                await aiofiles.os.remove(file)
+
+        await asyncio.gather(*[insert(file) for file in files])
+        await aiofiles.os.rmdir(split_dir)
 
     @Database.fault_tolerant
     async def insert_links(self) -> None:
@@ -125,7 +108,8 @@ class InsertResults(Database):
         subsets = await subsets_for(
             query, self.settings.database_url(), self.measurement_id
         )
-        # We also limit the number of concurrent requests here...
+        # We limit the number of concurrent requests since this query
+        # uses a lot of memory.
         await query.execute_concurrent(
             self.settings.database_url(),
             self.measurement_id,

@@ -1,11 +1,9 @@
 import asyncio
 
 
-async def start_stream_subprocess(cmd, stdout, stderr, prefix=""):
+async def start_stream_subprocess(cmd, stdout, stderr, prefix="", **kwargs):
     proc = await asyncio.create_subprocess_shell(
-        cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, **kwargs
     )
 
     stream_aws = [
