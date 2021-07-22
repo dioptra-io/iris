@@ -159,7 +159,10 @@ class QueryWrapper(Database):
 
     async def all(self, offset: int, limit: int) -> List[str]:
         response = await self.execute(
-            self.query(), self.measurement_id, limit=(limit, offset)
+            self.query(),
+            self.measurement_id,
+            subsets=(self.subset,),
+            limit=(limit, offset),
         )
         return [self.formatter(row) for row in response]
 
