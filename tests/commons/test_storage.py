@@ -1,23 +1,10 @@
-import abc
+import contextlib
 
 import aioboto3
 import pytest
 
 from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
-
-
-class BaseFakeBotoDriver(abc.ABC):
-    def __init__(self, *args, **kwargs):
-        pass
-
-    @abc.abstractmethod
-    async def __aenter__(self, *args, **kwargs):
-        pass
-
-    async def __aexit__(self, *args, **kwargs):
-        pass
-
 
 # Test of buckets methods
 
@@ -29,11 +16,12 @@ async def test_storage_get_measurement_bucket(monkeypatch):
         async def list_buckets(*args, **kwargs):
             return {"Buckets": [{"Name": "bucket1"}, {"Name": "bucket2"}]}
 
-    class FakeBotoDriver(BaseFakeBotoDriver):
-        async def __aenter__(self, *args, **kwargs):
-            return FakeBotoClient()
+    class FakeBotoSession:
+        @contextlib.asynccontextmanager
+        async def client(self, *args, **kwargs):
+            yield FakeBotoClient()
 
-    monkeypatch.setattr(aioboto3, "client", FakeBotoDriver)
+    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
 
     storage = Storage(settings=CommonSettings())
     assert await storage.get_measurement_buckets() == ["bucket1", "bucket2"]
@@ -42,11 +30,12 @@ async def test_storage_get_measurement_bucket(monkeypatch):
         async def list_buckets(*args, **kwargs):
             return {"Buckets": []}
 
-    class FakeBotoDriver(BaseFakeBotoDriver):
-        async def __aenter__(self, *args, **kwargs):
-            return FakeBotoClientEmpty()
+    class FakeBotoSession:
+        @contextlib.asynccontextmanager
+        async def client(self, *args, **kwargs):
+            yield FakeBotoClientEmpty()
 
-    monkeypatch.setattr(aioboto3, "client", FakeBotoDriver)
+    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
 
     storage = Storage(settings=CommonSettings())
     assert await storage.get_measurement_buckets() == []
@@ -58,11 +47,12 @@ async def test_storage_create_bucket(monkeypatch):
         async def create_bucket(*args, **kwargs):
             return None
 
-    class FakeBotoDriver(BaseFakeBotoDriver):
-        async def __aenter__(self, *args, **kwargs):
-            return FakeBotoClient()
+    class FakeBotoSession:
+        @contextlib.asynccontextmanager
+        async def client(self, *args, **kwargs):
+            yield FakeBotoClient()
 
-    monkeypatch.setattr(aioboto3, "client", FakeBotoDriver)
+    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
 
     storage = Storage(settings=CommonSettings())
     assert await storage.create_bucket("bucket") is None
@@ -74,11 +64,12 @@ async def test_storage_delete_bucket(monkeypatch):
         async def delete_bucket(*args, **kwargs):
             return None
 
-    class FakeBotoDriver(BaseFakeBotoDriver):
-        async def __aenter__(self, *args, **kwargs):
-            return FakeBotoClient()
+    class FakeBotoSession:
+        @contextlib.asynccontextmanager
+        async def client(self, *args, **kwargs):
+            yield FakeBotoClient()
 
-    monkeypatch.setattr(aioboto3, "client", FakeBotoDriver)
+    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
 
     storage = Storage(settings=CommonSettings())
     assert await storage.delete_bucket("bucket") is None
@@ -93,11 +84,12 @@ async def test_storage_delete_file(monkeypatch):
         async def delete_object(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 204}}
 
-    class FakeBotoDriver(BaseFakeBotoDriver):
-        async def __aenter__(self, *args, **kwargs):
-            return FakeBotoClient()
+    class FakeBotoSession:
+        @contextlib.asynccontextmanager
+        async def client(self, *args, **kwargs):
+            yield FakeBotoClient()
 
-    monkeypatch.setattr(aioboto3, "client", FakeBotoDriver)
+    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
 
     storage = Storage(settings=CommonSettings())
     assert await storage.delete_file_no_check("bucket", "file") is True
@@ -106,11 +98,12 @@ async def test_storage_delete_file(monkeypatch):
         async def delete_object(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 400}}
 
-    class FakeBotoDriver(BaseFakeBotoDriver):
-        async def __aenter__(self, *args, **kwargs):
-            return FailFakeBotoClient()
+    class FakeBotoSession:
+        @contextlib.asynccontextmanager
+        async def client(self, *args, **kwargs):
+            yield FailFakeBotoClient()
 
-    monkeypatch.setattr(aioboto3, "client", FakeBotoDriver)
+    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
 
     storage = Storage(settings=CommonSettings())
     assert await storage.delete_file_no_check("bucket", "file") is False

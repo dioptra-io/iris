@@ -57,7 +57,8 @@ class Storage(object):
         infrastructure_buckets = ["targets"]
 
         buckets = []
-        async with aioboto3.client("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.client("s3", **self.aws_settings) as s3:
             response = await s3.list_buckets()
         for bucket in response["Buckets"]:
             if bucket["Name"] in infrastructure_buckets:
@@ -68,7 +69,8 @@ class Storage(object):
     @fault_tolerant
     async def create_bucket(self, bucket):
         """Create a bucket."""
-        async with aioboto3.client("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.client("s3", **self.aws_settings) as s3:
             try:
                 await s3.create_bucket(Bucket=bucket)
             except s3.exceptions.BucketAlreadyOwnedByYou:
@@ -77,13 +79,15 @@ class Storage(object):
     @fault_tolerant
     async def delete_bucket(self, bucket):
         """Delete a bucket."""
-        async with aioboto3.client("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.client("s3", **self.aws_settings) as s3:
             await s3.delete_bucket(Bucket=bucket)
 
     async def get_all_files_no_retry(self, bucket):
         """Get all files inside a bucket."""
         targets = []
-        async with aioboto3.resource("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.resource("s3", **self.aws_settings) as s3:
             bucket = await s3.Bucket(bucket)
             async for obj_summary in bucket.objects.all():
                 obj = await obj_summary.Object()
@@ -104,7 +108,8 @@ class Storage(object):
 
     async def get_file_no_retry(self, bucket, filename):
         """Get file information from a bucket."""
-        async with aioboto3.client("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.client("s3", **self.aws_settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
                 content = await stream.read()
@@ -148,7 +153,8 @@ class Storage(object):
 
     async def upload_file_no_retry(self, bucket, filename, fd, metadata=None):
         """Upload a file in a bucket with no retry."""
-        async with aioboto3.client("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.client("s3", **self.aws_settings) as s3:
             extraargs = {"Metadata": metadata} if metadata else None
             await s3.upload_fileobj(fd, bucket, filename, ExtraArgs=extraargs)
 
@@ -172,7 +178,8 @@ class Storage(object):
 
     async def delete_file_check_no_retry(self, bucket, filename):
         """Delete a file with a check that it exists."""
-        async with aioboto3.client("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.client("s3", **self.aws_settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
                 await stream.read()
@@ -182,14 +189,16 @@ class Storage(object):
     @fault_tolerant
     async def delete_file_no_check(self, bucket, filename):
         """Delete a file with no check that it exists."""
-        async with aioboto3.client("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.client("s3", **self.aws_settings) as s3:
             response = await s3.delete_object(Bucket=bucket, Key=filename)
         return response["ResponseMetadata"]["HTTPStatusCode"] == 204
 
     @fault_tolerant
     async def delete_all_files_from_bucket(self, bucket):
         """Delete all files from a bucket."""
-        async with aioboto3.resource("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.resource("s3", **self.aws_settings) as s3:
             bucket = await s3.Bucket(bucket)
             await bucket.objects.all().delete()
 
@@ -198,7 +207,8 @@ class Storage(object):
         self, bucket_src, bucket_dest, filename_src, filename_dst
     ):
         """Copy a file from a bucket to another."""
-        async with aioboto3.resource("s3", **self.aws_settings) as s3:
+        session = aioboto3.Session()
+        async with session.resource("s3", **self.aws_settings) as s3:
             bucket_destination = await s3.Bucket(bucket_dest)
             await bucket_destination.copy(
                 {"Bucket": bucket_src, "Key": filename_src}, filename_dst
