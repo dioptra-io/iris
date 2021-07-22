@@ -34,7 +34,6 @@ class CommonSettings(BaseSettings):
     DATABASE_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
     DATABASE_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     DATABASE_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
-    DATABASE_PARALLEL_CSV_INSERT: bool = True  # linux/macos only
     DATABASE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
 
     TABLE_NAME_USERS: str = "users"
@@ -62,9 +61,9 @@ class CommonSettings(BaseSettings):
 
     STREAM_LOGGING_LEVEL: int = logging.DEBUG
 
-    CLICKHOUSE_EXE: str = "clickhouse"
-    SPLIT_EXE: str = "gsplit" if platform.system() == "Darwin" else "split"
-    ZSTD_EXE: str = "zstd"
+    CLICKHOUSE_CMD: str = "clickhouse client"
+    SPLIT_CMD: str = "gsplit" if platform.system() == "Darwin" else "split"
+    ZSTD_CMD: str = "zstd"
 
     def database_url(self, default: bool = False) -> str:
         """Return the ClickHouse URL."""

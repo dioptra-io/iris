@@ -1,3 +1,3 @@
-from iris.api.schemas import ToolParameters
+from iris.api.schemas.measurements import ToolParameters
 
 default_parameters = ToolParameters()

@@ -4,27 +4,21 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from iris.api import schemas
 from iris.api.pagination import ListPagination
-from iris.api.schemas import (
-    AgentsGetByUUIDResponse,
-    AgentsGetResponse,
-    ExceptionResponse,
-)
 from iris.api.security import get_current_active_user
 
 router = APIRouter()
 
 
-@router.get(
-    "/", response_model=AgentsGetResponse, summary="Get all agents information."
-)
+@router.get("/", response_model=schemas.Agents, summary="Get all agents.")
 async def get_agents(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: str = Depends(get_current_active_user),
 ):
-    """Get all agents information."""
+    """Get all agents."""
     agents_info = await request.app.redis.get_agents()
     agents = []
 
@@ -43,14 +37,17 @@ async def get_agents(
 
 @router.get(
     "/{uuid}",
-    response_model=AgentsGetByUUIDResponse,
-    responses={404: {"model": ExceptionResponse}, 500: {"model": ExceptionResponse}},
-    summary="Get agent information from UUID.",
+    response_model=schemas.Agent,
+    responses={
+        404: {"model": schemas.GenericException},
+        500: {"model": schemas.GenericException},
+    },
+    summary="Get agent specified by UUID.",
 )
 async def get_agent_by_uuid(
     request: Request, uuid: UUID, user: str = Depends(get_current_active_user)
 ):
-    """Get agent information from UUID."""
+    """Get one agent specified by UUID."""
     agents = await request.app.redis.get_agents(state=False, parameters=False)
     filtered_agents = [agent["uuid"] for agent in agents if agent["uuid"] == str(uuid)]
     if len(filtered_agents) == 0:
