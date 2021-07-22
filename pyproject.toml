@@ -45,6 +45,10 @@ boto3-stubs = "^1.18.4"
 bumpversion = "^0.6.0"
 coverage = "^5.2.1"
 flake8 = "^3.8.3"
+# Flask is needed for moto_server
+Flask = "^2.0.1"
+Flask-Cors = "^3.0.10"
+moto = {version = "^2.1.0", extras = ["s3"]}
 mypy = "^0.910"
 pre-commit = "^2.11.1"
 pytest = "^6.0.0"

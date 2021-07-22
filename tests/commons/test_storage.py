@@ -1,109 +1,32 @@
-import contextlib
+from io import BytesIO
 
-import aioboto3
 import pytest
 
-from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
 
-# Test of buckets methods
-
 
 @pytest.mark.asyncio
-async def test_storage_get_measurement_bucket(monkeypatch):
-    # Test when buckets are present
-    class FakeBotoClient(object):
-        async def list_buckets(*args, **kwargs):
-            return {"Buckets": [{"Name": "bucket1"}, {"Name": "bucket2"}]}
+async def test_storage(common_settings):
+    storage = Storage(settings=common_settings)
 
-    class FakeBotoSession:
-        @contextlib.asynccontextmanager
-        async def client(self, *args, **kwargs):
-            yield FakeBotoClient()
-
-    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
-
-    storage = Storage(settings=CommonSettings())
+    assert await storage.create_bucket("bucket1") is None
+    assert await storage.create_bucket("bucket2") is None
     assert await storage.get_measurement_buckets() == ["bucket1", "bucket2"]
 
-    class FakeBotoClientEmpty(object):
-        async def list_buckets(*args, **kwargs):
-            return {"Buckets": []}
+    file = BytesIO(b"1234")
+    await storage.upload_file_no_retry(
+        "bucket1", "1234.txt", file, metadata={"meta": "data"}
+    )
 
-    class FakeBotoSession:
-        @contextlib.asynccontextmanager
-        async def client(self, *args, **kwargs):
-            yield FakeBotoClientEmpty()
+    file = await storage.get_file_no_retry("bucket1", "1234.txt")
+    assert file["key"] == "1234.txt"
+    assert file["content"] == "1234"
+    assert file["metadata"] == {"meta": "data"}
 
-    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
+    await storage.delete_file_check_no_retry("bucket1", "1234.txt")
+    with pytest.raises(Exception):
+        await storage.delete_file_check_no_retry("bucket1", "1234.txt")
 
-    storage = Storage(settings=CommonSettings())
+    assert await storage.delete_bucket("bucket1") is None
+    assert await storage.delete_bucket("bucket2") is None
     assert await storage.get_measurement_buckets() == []
-
-
-@pytest.mark.asyncio
-async def test_storage_create_bucket(monkeypatch):
-    class FakeBotoClient(object):
-        async def create_bucket(*args, **kwargs):
-            return None
-
-    class FakeBotoSession:
-        @contextlib.asynccontextmanager
-        async def client(self, *args, **kwargs):
-            yield FakeBotoClient()
-
-    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
-
-    storage = Storage(settings=CommonSettings())
-    assert await storage.create_bucket("bucket") is None
-
-
-@pytest.mark.asyncio
-async def test_storage_delete_bucket(monkeypatch):
-    class FakeBotoClient(object):
-        async def delete_bucket(*args, **kwargs):
-            return None
-
-    class FakeBotoSession:
-        @contextlib.asynccontextmanager
-        async def client(self, *args, **kwargs):
-            yield FakeBotoClient()
-
-    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
-
-    storage = Storage(settings=CommonSettings())
-    assert await storage.delete_bucket("bucket") is None
-
-
-# Test of delete files methods
-
-
-@pytest.mark.asyncio
-async def test_storage_delete_file(monkeypatch):
-    class FakeBotoClient(object):
-        async def delete_object(*args, **kwargs):
-            return {"ResponseMetadata": {"HTTPStatusCode": 204}}
-
-    class FakeBotoSession:
-        @contextlib.asynccontextmanager
-        async def client(self, *args, **kwargs):
-            yield FakeBotoClient()
-
-    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
-
-    storage = Storage(settings=CommonSettings())
-    assert await storage.delete_file_no_check("bucket", "file") is True
-
-    class FailFakeBotoClient(object):
-        async def delete_object(*args, **kwargs):
-            return {"ResponseMetadata": {"HTTPStatusCode": 400}}
-
-    class FakeBotoSession:
-        @contextlib.asynccontextmanager
-        async def client(self, *args, **kwargs):
-            yield FailFakeBotoClient()
-
-    monkeypatch.setattr(aioboto3, "Session", FakeBotoSession)
-
-    storage = Storage(settings=CommonSettings())
-    assert await storage.delete_file_no_check("bucket", "file") is False

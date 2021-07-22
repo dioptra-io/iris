@@ -1,4 +1,5 @@
 import logging
+import subprocess
 from uuid import uuid4
 
 import pytest
@@ -93,9 +94,26 @@ def client():
     return client
 
 
+@pytest.fixture(scope="session")
+def s3_server():
+    # We cannot use moto decorators directly since they are synchronous.
+    # Instead we launch moto_server in a separate process, this is similar
+    # to what is done by aiobotocore and aioboto3 for testing.
+    p = subprocess.Popen(
+        ["moto_server", "--host", "127.0.0.1", "--port", "3000", "s3"],
+        stderr=subprocess.PIPE,
+    )
+    p.stderr.readline()  # Wait for moto_server to start
+    yield "http://127.0.0.1:3000"
+    p.terminate()
+
+
 @pytest.fixture(scope="function")
-def common_settings():
+def common_settings(s3_server):
     # The `function` scope ensures that the settings are reset before every test.
     return CommonSettings(
-        DATABASE_HOST="localhost", DATABASE_NAME="iris_test", DATABASE_TIMEOUT=0
+        DATABASE_HOST="localhost",
+        DATABASE_NAME="iris_test",
+        DATABASE_TIMEOUT=0,
+        AWS_S3_HOST=s3_server,
     )
