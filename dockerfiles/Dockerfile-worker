@@ -6,18 +6,31 @@ ENV DEBIAN_FRONTEND=noninteractive
 # we can push binary wheels on PyPI for diamond-miner.
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
+        apt-transport-https \
         build-essential \
         ca-certificates \
         curl \
+        dirmngr \
+        gnupg2 \
         python3-dev \
         python3-pip \
         tzdata \
         zstd \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl --location --output /usr/bin/clickhouse \
-    https://builds.clickhouse.tech/master/$(arch | sed -e "s/x86_64/amd64/")/clickhouse && \
-    chmod +x /usr/bin/clickhouse
+RUN [ $(arch) = "x86_64" ] && exit 0 \
+    || curl --location --output /usr/bin/clickhouse \
+        https://builds.clickhouse.tech/master/aarch64/clickhouse \
+    && chmod +x /usr/bin/clickhouse
+
+RUN [ $(arch) = "aarch64" ] && exit 0 \
+    || apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
+    && echo "deb https://repo.clickhouse.tech/deb/stable/ main/" > \
+        /etc/apt/sources.list.d/clickhouse.list \
+    && apt-get update \
+    && apt-get install -y -q --no-install-recommends \
+        clickhouse-client \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
