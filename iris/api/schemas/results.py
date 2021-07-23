@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class Reply(BaseModel):
     """Probe reply information (Response)."""
 
-    probe_protocol: int
+    probe_protocol: str
     probe_src_addr: str
     probe_dst_addr: str
     probe_src_port: int
@@ -14,7 +14,7 @@ class Reply(BaseModel):
     probe_ttl: int
     quoted_ttl: int
     reply_src_addr: str
-    reply_protocol: int
+    reply_protocol: str
     reply_icmp_type: int
     reply_icmp_code: int
     reply_ttl: int
@@ -35,6 +35,7 @@ class Link(BaseModel):
     """Probe reply information (Response)."""
 
     near_ttl: int
+    far_ttl: int
     near_addr: str
     far_addr: str
 

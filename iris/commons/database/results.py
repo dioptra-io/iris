@@ -4,11 +4,11 @@ from asyncio import Semaphore
 from dataclasses import dataclass
 from ipaddress import IPv6Address
 from pathlib import Path
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 from uuid import UUID
 
 import aiofiles.os
-from diamond_miner.defaults import UNIVERSE_SUBSET
+from diamond_miner.defaults import PROTOCOLS, UNIVERSE_SUBSET
 from diamond_miner.queries import (
     Count,
     CreateTables,
@@ -181,6 +181,8 @@ class QueryWrapper(Database):
 class Prefixes(QueryWrapper):
     """Get measurement prefixes."""
 
+    reply_src_addr_in: Optional[IPNetwork] = None
+
     def formatter(self, row):
         return {
             "prefix": addr_to_string(row[0]),
@@ -189,7 +191,7 @@ class Prefixes(QueryWrapper):
         }
 
     def query(self):
-        return GetPrefixes()
+        return GetPrefixes(reply_src_addr_in=self.reply_src_addr_in)
 
     def table(self):
         return prefixes_table(self.measurement_id)
@@ -201,7 +203,7 @@ class Replies(QueryWrapper):
 
     def formatter(self, row: tuple):
         return {
-            "probe_protocol": row[0],
+            "probe_protocol": PROTOCOLS.get(row[0]),
             "probe_src_addr": addr_to_string(row[1]),
             "probe_dst_addr": addr_to_string(row[2]),
             "probe_src_port": row[3],
@@ -209,13 +211,13 @@ class Replies(QueryWrapper):
             "probe_ttl": row[5],
             "quoted_ttl": row[6],
             "reply_src_addr": addr_to_string(row[7]),
-            "reply_protocol": row[8],
+            "reply_protocol": PROTOCOLS.get(row[8]),
             "reply_icmp_type": row[9],
             "reply_icmp_code": row[10],
             "reply_ttl": row[11],
             "reply_size": row[12],
             "reply_mpls_labels": row[13],
-            "rtt": row[14],
+            "rtt": round(row[14], 2),
             "round": row[15],
         }
 
@@ -247,12 +249,13 @@ class Links(QueryWrapper):
     def formatter(self, row: tuple):
         return {
             "near_ttl": row[0],
-            "near_addr": addr_to_string(row[1]),
-            "far_addr": addr_to_string(row[2]),
+            "far_ttl": row[1],
+            "near_addr": addr_to_string(row[2]),
+            "far_addr": addr_to_string(row[3]),
         }
 
     def query(self):
-        return GetLinks(include_near_ttl=True)
+        return GetLinks(include_metadata=True)
 
     def table(self):
         return links_table(self.measurement_id)

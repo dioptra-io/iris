@@ -1035,7 +1035,7 @@ def test_get_measurement_results(client, monkeypatch):
 
     results = [
         {
-            "probe_protocol": 0,
+            "probe_protocol": "icmp",
             "probe_src_addr": "::ffff:ac12:b",
             "probe_dst_addr": "::ffff:84e3:7b81",
             "probe_src_port": 24000,
@@ -1043,7 +1043,7 @@ def test_get_measurement_results(client, monkeypatch):
             "probe_ttl": 78,
             "quoted_ttl": 9,
             "reply_src_addr": "::ffff:869d:fe0a",
-            "reply_protocol": 17,
+            "reply_protocol": "udp",
             "reply_icmp_type": 11,
             "reply_icmp_code": 0,
             "reply_ttl": 37,

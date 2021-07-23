@@ -1,9 +1,10 @@
 """Results operations."""
-from ipaddress import ip_address, ip_network
-from typing import Dict
+from ipaddress import ip_network
+from typing import Dict, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import IPvAnyAddress, IPvAnyNetwork
 
 from iris.api import schemas
 from iris.api.pagination import DatabasePagination
@@ -71,13 +72,18 @@ async def get_prefixes_results(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
+    contains_network: Optional[IPvAnyNetwork] = Query(None),
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: Dict = Depends(get_current_active_user),
 ):
     """Get replies results."""
     database = Prefixes(
-        request.app.settings, request.app.logger, measurement_uuid, agent_uuid
+        request.app.settings,
+        request.app.logger,
+        measurement_uuid,
+        agent_uuid,
+        reply_src_addr_in=contains_network,
     )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, database
@@ -94,7 +100,7 @@ async def get_replies_results(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    prefix: str,
+    prefix: IPvAnyAddress,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: Dict = Depends(get_current_active_user),
@@ -105,8 +111,7 @@ async def get_replies_results(
         request.app.logger,
         measurement_uuid,
         agent_uuid,
-        # We make sure that prefix is a /32 or /128
-        ip_network(ip_address(prefix)),
+        subset=ip_network(prefix),
     )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, database
@@ -123,7 +128,7 @@ async def get_interfaces_results(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    prefix: str,
+    prefix: IPvAnyAddress,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: Dict = Depends(get_current_active_user),
@@ -134,8 +139,7 @@ async def get_interfaces_results(
         request.app.logger,
         measurement_uuid,
         agent_uuid,
-        # We make sure that prefix is a /32 or /128
-        ip_network(ip_address(prefix)),
+        subset=ip_network(prefix),
     )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, database
@@ -152,7 +156,7 @@ async def get_links_results(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    prefix: str,
+    prefix: IPvAnyAddress,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: Dict = Depends(get_current_active_user),
@@ -163,8 +167,7 @@ async def get_links_results(
         request.app.logger,
         measurement_uuid,
         agent_uuid,
-        # We make sure that prefix is a /32 or /128
-        ip_network(ip_address(prefix)),
+        subset=ip_network(prefix),
     )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, database

@@ -36,7 +36,7 @@ async def test_measurement_results(common_settings, tmp_path):
     assert await db.all_count() == 2
     assert await db.all(0, 10) == [
         {
-            "probe_protocol": 1,
+            "probe_protocol": "icmp",
             "probe_src_addr": "10.31.46.69",
             "probe_dst_addr": "8.8.8.8",
             "probe_src_port": 24000,
@@ -44,7 +44,7 @@ async def test_measurement_results(common_settings, tmp_path):
             "probe_ttl": 4,
             "quoted_ttl": 1,
             "reply_src_addr": "20.20.20.1",
-            "reply_protocol": 1,
+            "reply_protocol": "icmp",
             "reply_icmp_type": 11,
             "reply_icmp_code": 0,
             "reply_ttl": 252,
@@ -54,7 +54,7 @@ async def test_measurement_results(common_settings, tmp_path):
             "round": 1,
         },
         {
-            "probe_protocol": 1,
+            "probe_protocol": "icmp",
             "probe_src_addr": "10.31.46.69",
             "probe_dst_addr": "8.8.8.8",
             "probe_src_port": 24000,
@@ -62,7 +62,7 @@ async def test_measurement_results(common_settings, tmp_path):
             "probe_ttl": 5,
             "quoted_ttl": 1,
             "reply_src_addr": "20.20.20.2",
-            "reply_protocol": 1,
+            "reply_protocol": "icmp",
             "reply_icmp_type": 11,
             "reply_icmp_code": 0,
             "reply_ttl": 252,
@@ -91,7 +91,12 @@ async def test_measurement_results(common_settings, tmp_path):
     assert await db.exists()
     assert await db.all_count() == 1
     assert await db.all(0, 10) == [
-        {"near_ttl": 4, "near_addr": "20.20.20.1", "far_addr": "20.20.20.2"}
+        {
+            "near_ttl": 4,
+            "far_ttl": 5,
+            "near_addr": "20.20.20.1",
+            "far_addr": "20.20.20.2",
+        }
     ]
     assert await db.all(1, 10) == []
 
