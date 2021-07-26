@@ -53,15 +53,6 @@ class MeasurementSummary(BaseModel):
     end_time: Optional[str]
 
 
-class Measurements(BaseModel):
-    """GET /measurements (Response)."""
-
-    count: int
-    next: Optional[str] = None
-    previous: Optional[str] = None
-    results: List[MeasurementSummary]
-
-
 class MeasurementAgentSpecific(BaseModel):
     """Information about agent specific information (Response)."""
 

@@ -64,7 +64,7 @@ async def get_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/prefixes",
-    response_model=schemas.Prefixes,
+    response_model=schemas.Paginated[schemas.Prefix],
     responses={404: {"model": schemas.GenericException}},
     summary="Get measurement prefixes.",
 )
@@ -92,7 +92,7 @@ async def get_prefixes_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/replies/{prefix}",
-    response_model=schemas.Replies,
+    response_model=schemas.Paginated[schemas.Reply],
     responses={404: {"model": schemas.GenericException}},
     summary="Get measurement replies.",
 )
@@ -120,7 +120,7 @@ async def get_replies_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/interfaces/{prefix}",
-    response_model=schemas.Interfaces,
+    response_model=schemas.Paginated[schemas.Interface],
     responses={404: {"model": schemas.GenericException}},
     summary="Get measurement interfaces.",
 )
@@ -148,7 +148,7 @@ async def get_interfaces_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/links/{prefix}",
-    response_model=schemas.Links,
+    response_model=schemas.Paginated[schemas.Link],
     responses={404: {"model": schemas.GenericException}},
     summary="Get measurement links.",
 )

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -22,12 +22,3 @@ class Agent(BaseModel):
     uuid: UUID
     state: str
     parameters: AgentParameters
-
-
-class Agents(BaseModel):
-    """GET /agents (Response)."""
-
-    count: int
-    next: Optional[str] = None
-    previous: Optional[str] = None
-    results: List[Agent]

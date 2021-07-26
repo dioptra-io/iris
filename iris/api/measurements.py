@@ -16,7 +16,11 @@ from iris.worker.hook import hook
 router = APIRouter()
 
 
-@router.get("/", response_model=schemas.Measurements, summary="Get all measurements.")
+@router.get(
+    "/",
+    response_model=schemas.Paginated[schemas.MeasurementSummary],
+    summary="Get all measurements.",
+)
 async def get_measurements(
     request: Request,
     tag: str = None,

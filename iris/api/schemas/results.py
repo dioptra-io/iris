@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from pydantic import BaseModel
 
@@ -46,39 +46,3 @@ class Prefix(BaseModel):
     prefix: str
     has_amplification: bool
     has_loops: bool
-
-
-class Replies(BaseModel):
-    """GET /results/{measurement_uuid}/{agent_uuid}/replies/{prefix} (Response)."""
-
-    count: int
-    next: Optional[str] = None
-    previous: Optional[str] = None
-    results: List[Reply]
-
-
-class Interfaces(BaseModel):
-    """GET /results/{measurement_uuid}/{agent_uuid}/interfaces/{prefix} (Response)."""
-
-    count: int
-    next: Optional[str] = None
-    previous: Optional[str] = None
-    results: List[Interface]
-
-
-class Links(BaseModel):
-    """GET /results/{measurement_uuid}/{agent_uuid}/links/{prefix} (Response)."""
-
-    count: int
-    next: Optional[str] = None
-    previous: Optional[str] = None
-    results: List[Link]
-
-
-class Prefixes(BaseModel):
-    """GET /results/{measurement_uuid}/{agent_uuid}/prefixes (Response)."""
-
-    count: int
-    next: Optional[str] = None
-    previous: Optional[str] = None
-    results: List[Prefix]

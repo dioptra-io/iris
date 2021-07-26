@@ -11,7 +11,9 @@ from iris.api.security import get_current_active_user
 router = APIRouter()
 
 
-@router.get("/", response_model=schemas.Agents, summary="Get all agents.")
+@router.get(
+    "/", response_model=schemas.Paginated[schemas.Agent], summary="Get all agents."
+)
 async def get_agents(
     request: Request,
     offset: int = Query(0, ge=0),

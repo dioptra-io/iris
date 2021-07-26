@@ -21,7 +21,11 @@ from iris.api.security import get_current_active_user
 router = APIRouter()
 
 
-@router.get("/", response_model=schemas.Targets, summary="Get all target lists.")
+@router.get(
+    "/",
+    response_model=schemas.Paginated[schemas.TargetSummary],
+    summary="Get all target lists.",
+)
 async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),

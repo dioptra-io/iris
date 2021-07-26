@@ -1,37 +1,36 @@
 """API Body and Response schemas."""
-from .agents import Agent, AgentParameters, Agents
+from .agents import Agent, AgentParameters
 from .exceptions import GenericException
 from .measurements import (
     Measurement,
     MeasurementDeleteResponse,
     MeasurementPostBody,
     MeasurementPostResponse,
-    Measurements,
     MeasurementSummary,
 )
+from .paging import Paginated
 from .profiles import Profile, RIPEAccount
-from .results import Interfaces, Links, Prefixes, Replies
-from .targets import Target, TargetDeleteResponse, TargetPostResponse, Targets
+from .results import Interface, Link, Prefix, Reply
+from .targets import Target, TargetDeleteResponse, TargetPostResponse, TargetSummary
 
 __all__ = [
     "Agent",
     "AgentParameters",
-    "Agents",
     "GenericException",
-    "Interfaces",
-    "Links",
+    "Interface",
+    "Link",
     "Measurement",
     "MeasurementDeleteResponse",
     "MeasurementPostBody",
     "MeasurementPostResponse",
-    "Measurements",
     "MeasurementSummary",
-    "Prefixes",
+    "Paginated",
+    "Prefix",
     "Profile",
-    "Replies",
+    "Reply",
     "RIPEAccount",
     "Target",
     "TargetDeleteResponse",
     "TargetPostResponse",
-    "Targets",
+    "TargetSummary",
 ]

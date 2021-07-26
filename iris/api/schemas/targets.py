@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from pydantic import BaseModel
 
@@ -17,15 +17,6 @@ class Target(BaseModel):
     size: int
     content: List[str]
     last_modified: str
-
-
-class Targets(BaseModel):
-    """GET /targets (Response)."""
-
-    count: int
-    next: Optional[str] = None
-    previous: Optional[str] = None
-    results: List[TargetSummary]
 
 
 class TargetPostResponse(BaseModel):
