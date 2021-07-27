@@ -33,6 +33,6 @@ COPY iris iris
 
 EXPOSE 8000
 
-HEALTHCHECK CMD curl --fail --max-time 5 localhost:8000/api/docs || exit 1
+HEALTHCHECK --interval=5s --timeout=5s --start-period=30s CMD curl --fail --max-time 5 localhost:8000/api/docs || exit 1
 
 CMD ["gunicorn", "--access-logfile", "-", "--error-logfile", "-", "--bind", "0.0.0.0:8000", "--worker-class", "uvicorn.workers.UvicornWorker", "iris.api.main:app"]
