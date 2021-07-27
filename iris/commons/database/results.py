@@ -26,6 +26,7 @@ from diamond_miner.queries import (
 )
 from diamond_miner.subsets import subsets_for
 from diamond_miner.typing import IPNetwork
+from pydantic import IPvAnyAddress
 
 from iris.commons.database.database import Database
 from iris.commons.subprocess import start_stream_subprocess
@@ -246,6 +247,8 @@ class Interfaces(QueryWrapper):
 class Links(QueryWrapper):
     """Get measurement links."""
 
+    near_or_far_addr: Optional[IPvAnyAddress] = None
+
     def formatter(self, row: tuple):
         return {
             "near_ttl": row[0],
@@ -255,7 +258,10 @@ class Links(QueryWrapper):
         }
 
     def query(self):
-        return GetLinks(include_metadata=True)
+        near_or_far_addr = None
+        if self.near_or_far_addr:
+            near_or_far_addr = str(self.near_or_far_addr)
+        return GetLinks(include_metadata=True, near_or_far_addr=near_or_far_addr)
 
     def table(self):
         return links_table(self.measurement_id)

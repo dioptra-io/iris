@@ -147,12 +147,12 @@ async def get_interfaces_results(
 
 
 @router.get(
-    "/{measurement_uuid}/{agent_uuid}/links/{prefix}",
+    "/{measurement_uuid}/{agent_uuid}/links/by-prefix/{prefix}",
     response_model=schemas.Paginated[schemas.Link],
     responses={404: {"model": schemas.GenericException}},
     summary="Get measurement links.",
 )
-async def get_links_results(
+async def get_links_results_by_prefix(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
@@ -168,6 +168,34 @@ async def get_links_results(
         measurement_uuid,
         agent_uuid,
         subset=ip_network(prefix),
+    )
+    return await get_results(
+        request, measurement_uuid, agent_uuid, offset, limit, user, database
+    )
+
+
+@router.get(
+    "/{measurement_uuid}/{agent_uuid}/links/by-adjacency/{address}",
+    response_model=schemas.Paginated[schemas.Link],
+    responses={404: {"model": schemas.GenericException}},
+    summary="Get measurement links.",
+)
+async def get_links_results_by_adjacency(
+    request: Request,
+    measurement_uuid: UUID,
+    agent_uuid: UUID,
+    address: IPvAnyAddress,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=0, le=200),
+    user: Dict = Depends(get_current_active_user),
+):
+    """Get links results."""
+    database = Links(
+        request.app.settings,
+        request.app.logger,
+        measurement_uuid,
+        agent_uuid,
+        near_or_far_addr=address,
     )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, database
