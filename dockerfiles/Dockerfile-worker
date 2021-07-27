@@ -36,9 +36,6 @@ WORKDIR /app
 
 RUN mkdir results
 
-RUN mkdir vendors
-COPY vendors/diamond-miner vendors/diamond-miner
-
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install poetry uvicorn \
     && rm -rf /root/.cache/*

@@ -1,3 +1,0 @@
-[submodule "vendors/diamond-miner"]
-	path = vendors/diamond-miner
-	url = git@github.com:dioptra-io/diamond-miner.git

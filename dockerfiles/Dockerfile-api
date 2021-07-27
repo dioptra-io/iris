@@ -16,9 +16,6 @@ RUN apt-get update \
 
 WORKDIR /app
 
-RUN mkdir vendors
-COPY vendors/diamond-miner vendors/diamond-miner
-
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir gunicorn uvicorn poetry
 RUN poetry config virtualenvs.create false
