@@ -2,7 +2,7 @@
 
 import asyncio
 
-from diamond_miner.generator import probe_generator_by_flow
+from diamond_miner.generators import probe_generator_by_flow
 from pycaracal import cast_addr, make_probe, prober, set_log_level
 
 

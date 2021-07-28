@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Dict
 from uuid import UUID, uuid4
 
-from diamond_miner.generator import count_prefixes
+from diamond_miner.generators import count_prefixes
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
 from iris.api import schemas
