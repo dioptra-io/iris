@@ -35,7 +35,7 @@ python-jose = {extras = ["cryptography"], optional = true, version = "^3.2.0"}
 python-logging-loki = "^0.3.1"
 python-multipart = {optional = true, version = "^0.0.5"}
 rich = {optional = true, version = "^10.1.0"}
-starlette_exporter = {optional = true, version = "^0.4.1"}
+starlette_exporter = {optional = true, version = "^0.10.0"}
 tenacity = "^8.0.1"
 typer = {optional = true, version = "^0.3.2"}
 
