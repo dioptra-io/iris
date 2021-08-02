@@ -1,6 +1,7 @@
 """Tool independant worker hook."""
 
 import asyncio
+import random
 import traceback
 
 import dramatiq
@@ -88,8 +89,12 @@ async def watch(redis, storage, parameters, logger):
                 results_filename = remote_filename
                 break
         else:
-            # The results file is not present, watch again
-            await asyncio.sleep(settings.WORKER_WATCH_REFRESH)
+            # The results file is not present, watch again (with random delay)
+            refresh_time = random.uniform(
+                settings.WORKER_SANITY_CHECK_REFRESH_MIN,
+                settings.WORKER_SANITY_CHECK_REFRESH_MAX,
+            )
+            await asyncio.sleep(refresh_time)
             continue
 
         # Get the statistics from Redis

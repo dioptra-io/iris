@@ -17,7 +17,8 @@ class WorkerSettings(CommonSettings):
 
     WORKER_SANITY_CHECK_ENABLE: bool = True
     WORKER_SANITY_CHECK_RETRIES: int = 3
-    WORKER_SANITY_CHECK_REFRESH: int = 1  # seconds
+    WORKER_SANITY_CHECK_REFRESH_MIN: int = 1  # seconds
+    WORKER_SANITY_CHECK_REFRESH_MAX: int = 10  # seconds
 
     WORKER_ROUND_1_SLIDING_WINDOW: int = 10  # put to 0 to deactivate sliding window
     WORKER_ROUND_1_STOPPING: int = (
