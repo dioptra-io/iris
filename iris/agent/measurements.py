@@ -5,7 +5,8 @@ from multiprocessing import Manager, Process
 
 import aiofiles
 import aiofiles.os
-import radix
+
+# import radix
 from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
 
@@ -43,7 +44,9 @@ async def build_probe_generator_parameters(
             **{"prefix_size": DEFAULT_PREFIX_SIZE_V6, **flow_mapper_kwargs}
         )
 
-        prefixes_from_target_file = radix.Radix()
+        # HACK: temporary disable radix tree (sliding window will not work properly)
+        # prefixes_from_target_file = radix.Radix()
+        prefixes = []
         async with aiofiles.open(target_filepath) as fd:
             async for target in fd:
                 target_line = target.split(",")
@@ -53,37 +56,48 @@ async def build_probe_generator_parameters(
                 )
                 max_ttl = min(int(target_line[3]), round.max_ttl)
 
-                node = prefixes_from_target_file.add(target_line[0])
-                if node.data.get("todo"):
-                    node.data["todo"].append(
-                        (target_line[1], range(min_ttl, max_ttl + 1))
+                # node = prefixes_from_target_file.add(target_line[0])
+                # if node.data.get("todo"):
+                #     node.data["todo"].append(
+                #         (target_line[1], range(min_ttl, max_ttl + 1))
+                #     )
+                # else:
+                #     node.data["todo"] = [
+                # (target_line[1], range(min_ttl, max_ttl + 1))
+                # ]
+
+                # HACK: Replacing with
+                prefixes.append(
+                    (
+                        target_line[0],
+                        target_line[1],
+                        range(min_ttl, max_ttl + 1),
                     )
-                else:
-                    node.data["todo"] = [(target_line[1], range(min_ttl, max_ttl + 1))]
+                )
 
-        prefixes_addr_to_probe = None
-        if prefix_filepath is not None:
-            # There is a list of prefixes to probe
-            # So we use these prefixes along with the TTL information
-            # from the prefix list
-            async with aiofiles.open(prefix_filepath) as fd:
-                prefixes_addr_to_probe = await fd.readlines()
+        # prefixes_addr_to_probe = None
+        # if prefix_filepath is not None:
+        #     # There is a list of prefixes to probe
+        #     # So we use these prefixes along with the TTL information
+        #     # from the prefix list
+        #     async with aiofiles.open(prefix_filepath) as fd:
+        #         prefixes_addr_to_probe = await fd.readlines()
 
-            prefixes_addr_to_probe = [
-                cast_addr(p.strip()) for p in prefixes_addr_to_probe
-            ]
+        #     prefixes_addr_to_probe = [
+        #         cast_addr(p.strip()) for p in prefixes_addr_to_probe
+        #     ]
 
-            prefixes = []
-            for prefix_addr in prefixes_addr_to_probe:
-                node = prefixes_from_target_file.search_best(prefix_addr)
-                for todo in node.data["todo"]:
-                    prefixes.append((addr_to_network(prefix_addr), todo[0], todo[1]))
-        else:
-            # There is no prefix list to probe so we directly take the target list
-            prefixes = []
-            for node in prefixes_from_target_file:
-                for todo in node.data["todo"]:
-                    prefixes.append((node.prefix, todo[0], todo[1]))
+        #     prefixes = []
+        #     for prefix_addr in prefixes_addr_to_probe:
+        #         node = prefixes_from_target_file.search_best(prefix_addr)
+        #         for todo in node.data["todo"]:
+        #             prefixes.append((addr_to_network(prefix_addr), todo[0], todo[1]))
+        # else:
+        #     # There is no prefix list to probe so we directly take the target list
+        #     prefixes = []
+        #     for node in prefixes_from_target_file:
+        #         for todo in node.data["todo"]:
+        #             prefixes.append((node.prefix, todo[0], todo[1]))
 
         return {
             "prefixes": prefixes,
