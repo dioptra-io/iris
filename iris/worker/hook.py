@@ -41,7 +41,11 @@ async def sanity_check(redis, storage, measurement_uuid, agent_uuid, logger):
     checks = []
     for _ in range(settings.WORKER_SANITY_CHECK_RETRIES):
         checks.append(await redis.check_agent(agent_uuid))
-        await asyncio.sleep(settings.WORKER_SANITY_CHECK_REFRESH)
+        refresh_time = random.uniform(
+            settings.WORKER_SANITY_CHECK_REFRESH_MIN,
+            settings.WORKER_SANITY_CHECK_REFRESH_MAX,
+        )
+        await asyncio.sleep(refresh_time)
     if False in checks:
         await sanity_clean(storage, measurement_uuid, agent_uuid, logger)
         return False
