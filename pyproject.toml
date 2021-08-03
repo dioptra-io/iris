@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "iris"
-version = "0.15.5"
+version = "0.15.6"
 description = "Resilient Internet-scale measurement system."
 license = "MIT"
 authors = [
