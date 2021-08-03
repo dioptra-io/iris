@@ -5,6 +5,7 @@ from pathlib import Path
 
 import aioboto3
 import boto3
+from botocore.exceptions import ClientError
 from tenacity import (
     before_sleep_log,
     retry,
@@ -90,15 +91,24 @@ class Storage(object):
         async with session.resource("s3", **self.aws_settings) as s3:
             bucket = await s3.Bucket(bucket)
             async for obj_summary in bucket.objects.all():
-                obj = await obj_summary.Object()
-                targets.append(
-                    {
-                        "key": obj_summary.key,
-                        "size": await obj_summary.size,
-                        "metadata": await obj.metadata,
-                        "last_modified": str(await obj_summary.last_modified),
-                    }
-                )
+                try:
+                    obj = await obj_summary.Object()
+                    targets.append(
+                        {
+                            "key": obj_summary.key,
+                            "size": await obj_summary.size,
+                            "metadata": await obj.metadata,
+                            "last_modified": str(await obj_summary.last_modified),
+                        }
+                    )
+                except ClientError as e:
+                    op = e.operation_name
+                    msg = e.response.get("Error", {}).get("Message", "")
+                    if op == "HeadObject" and msg == "Not Found":
+                        # The file was deleted during looping. Do nothing.
+                        pass
+                    else:
+                        raise
         return targets
 
     @fault_tolerant
