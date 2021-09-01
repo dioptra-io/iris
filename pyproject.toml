@@ -41,7 +41,7 @@ typer = {optional = true, version = "^0.3.2"}
 
 [tool.poetry.dev-dependencies]
 black = {version = "^21.4b2", allow-prereleases = true}
-boto3-stubs = "^1.18.11"
+boto3-stubs = "^1.18.33"
 bumpversion = "^0.6.0"
 coverage = "^5.2.1"
 flake8 = "^3.8.3"
