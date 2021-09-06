@@ -22,7 +22,7 @@ python = "^3.8"
 aioboto3 = "^9.2.0"
 aioch = "^0.0.2"
 aiofiles = "^0.7.0"
-aioredis = "^1.3.1"
+aioredis = "^2.0.0"
 asgiref = {optional = true, version = "^3.2.7"}
 diamond-miner = "^0.1.0"
 dramatiq = {extras = ["redis", "watch"], optional = true, version = "^1.9.0"}
