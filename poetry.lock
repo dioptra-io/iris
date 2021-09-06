@@ -1363,7 +1363,7 @@ python-versions = "*"
 
 [[package]]
 name = "rich"
-version = "10.6.0"
+version = "10.9.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = true
@@ -1648,7 +1648,7 @@ worker = ["dramatiq"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "36d0097a6ab1d4e9b4c1573e5eb79b582bf93160213f2c187d8c26b659ba5c49"
+content-hash = "0f2efa2ad2023647cfbfa08e40b3350bee33cbf45a15d790cdf19691538e92c3"
 
 [metadata.files]
 aioboto3 = [
@@ -2570,8 +2570,8 @@ rfc3339 = [
     {file = "rfc3339-6.2.tar.gz", hash = "sha256:d53c3b5eefaef892b7240ba2a91fef012e86faa4d0a0ca782359c490e00ad4d0"},
 ]
 rich = [
-    {file = "rich-10.6.0-py3-none-any.whl", hash = "sha256:d3f72827cd5df13b2ef7f1a97f81ec65548d4fdeb92cef653234f227580bbb2a"},
-    {file = "rich-10.6.0.tar.gz", hash = "sha256:128261b3e2419a4ef9c97066ccc2abbfb49fa7c5e89c3fe4056d00aa5e9c1e65"},
+    {file = "rich-10.9.0-py3-none-any.whl", hash = "sha256:2c84d9b3459c16bf413fe0f9644c7ae1791971e0bb944dfae56e7c7634b187ab"},
+    {file = "rich-10.9.0.tar.gz", hash = "sha256:ba285f1c519519490034284e6a9d2e6e3f16dc7690f2de3d9140737d81304d22"},
 ]
 rsa = [
     {file = "rsa-4.7.2-py3-none-any.whl", hash = "sha256:78f9a9bf4e7be0c5ded4583326e7461e3a3c5aae24073648b4bdfa797d78c9d2"},
