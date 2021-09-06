@@ -62,7 +62,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: "./dockerfiles/Dockerfile-api"
+      dockerfile: "./dockerfiles/iris-api.dockerfile"
     environment:
       API_CORS_ALLOW_ORIGIN: "http://localhost:8081"
       API_ADMIN_USERNAME: "admin"
@@ -90,7 +90,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: "./dockerfiles/Dockerfile-worker"
+      dockerfile: "./dockerfiles/iris-worker.dockerfile"
     environment:
       REDIS_URL: "redis://redis"
       REDIS_HOSTNAME: "redis"
@@ -115,7 +115,7 @@ services:
   agent:
     build:
       context: .
-      dockerfile: "./dockerfiles/Dockerfile-agent"
+      dockerfile: "./dockerfiles/iris-agent.dockerfile"
     environment:
       REDIS_URL: "redis://redis"
       REDIS_HOSTNAME: "redis"
