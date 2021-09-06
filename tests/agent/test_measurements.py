@@ -63,6 +63,11 @@ def test_addr_to_network():
     assert addr_to_network("2001:12::") == "2001:12::/64"
 
 
+def unordered_eq(a, b):
+    assert len(a) == len(b)
+    assert set(a) == set(b)
+
+
 @pytest.mark.asyncio
 async def test_build_probe_generator_parameters():
     # D-Miner
@@ -77,10 +82,10 @@ async def test_build_probe_generator_parameters():
             settings, "test_file", None, Round(1, 0, 0), parameters
         )
 
-    assert prober_parameters["prefixes"] == [
-        ("8.8.4.0/24", "icmp", range(2, 33)),
-        ("8.8.8.0/24", "icmp", range(2, 33)),
-    ]
+    unordered_eq(
+        prober_parameters["prefixes"],
+        [("8.8.4.0/24", "icmp", range(2, 33)), ("8.8.8.0/24", "icmp", range(2, 33))],
+    )
     assert prober_parameters["prefix_len_v4"] == 24
     assert prober_parameters["prefix_len_v6"] == 64
     assert prober_parameters["flow_ids"] == range(6)
@@ -98,10 +103,10 @@ async def test_build_probe_generator_parameters():
             settings, "test_file", None, Round(1, 0, 0), parameters
         )
 
-    assert prober_parameters["prefixes"] == [
-        ("8.8.4.0/24", "icmp", range(6, 33)),
-        ("8.8.8.0/24", "icmp", range(6, 33)),
-    ]
+    unordered_eq(
+        prober_parameters["prefixes"],
+        [("8.8.4.0/24", "icmp", range(6, 33)), ("8.8.8.0/24", "icmp", range(6, 33))],
+    )
 
     # D-Miner: Same prefix twice
     settings.AGENT_MIN_TTL = 6
@@ -115,10 +120,10 @@ async def test_build_probe_generator_parameters():
             settings, "test_file", None, Round(1, 0, 0), parameters
         )
 
-    assert prober_parameters["prefixes"] == [
-        ("8.8.8.0/24", "icmp", range(6, 33)),
-        ("8.8.8.0/24", "icmp", range(6, 21)),
-    ]
+    unordered_eq(
+        prober_parameters["prefixes"],
+        [("8.8.8.0/24", "icmp", range(6, 33)), ("8.8.8.0/24", "icmp", range(6, 21))],
+    )
 
     # D-Miner: for subround 1.1, 1.2, ...
     settings.AGENT_MIN_TTL = 6
@@ -135,10 +140,10 @@ async def test_build_probe_generator_parameters():
             settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
         )
 
-    assert prober_parameters["prefixes"] == [
-        ("8.8.4.0/24", "icmp", range(6, 33)),
-        ("8.8.8.0/24", "icmp", range(6, 21)),
-    ]
+    unordered_eq(
+        prober_parameters["prefixes"],
+        [("8.8.4.0/24", "icmp", range(6, 33)), ("8.8.8.0/24", "icmp", range(6, 21))],
+    )
 
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
@@ -154,12 +159,7 @@ async def test_build_probe_generator_parameters():
             settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
         )
 
-    assert prober_parameters["prefixes"] == [
-        ("8.8.4.0/24", "icmp", range(6, 33)),
-    ]
-
-    settings.AGENT_MIN_TTL = 6
-    parameters = ParametersDataclass.from_request(request)
+    unordered_eq(prober_parameters["prefixes"], [("8.8.4.0/24", "icmp", range(6, 33))])
 
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
@@ -173,9 +173,7 @@ async def test_build_probe_generator_parameters():
             settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
         )
 
-    assert prober_parameters["prefixes"] == [
-        ("8.8.4.0/24", "icmp", range(6, 33)),
-    ]
+    unordered_eq(prober_parameters["prefixes"], [("8.8.4.0/24", "icmp", range(6, 33))])
 
     # YARRP
     settings.AGENT_MIN_TTL = 2
@@ -190,10 +188,10 @@ async def test_build_probe_generator_parameters():
             settings, "test_file", None, Round(1, 0, 0), parameters
         )
 
-    assert prober_parameters["prefixes"] == [
-        ("8.8.4.0/24", "icmp", range(2, 33)),
-        ("8.8.8.0/24", "icmp", range(2, 33)),
-    ]
+    unordered_eq(
+        prober_parameters["prefixes"],
+        [("8.8.4.0/24", "icmp", range(2, 33)), ("8.8.8.0/24", "icmp", range(2, 33))],
+    )
     assert prober_parameters["prefix_len_v4"] == 24
     assert prober_parameters["prefix_len_v6"] == 64
     assert prober_parameters["flow_ids"] == range(1)
@@ -209,10 +207,10 @@ async def test_build_probe_generator_parameters():
             settings, "test_file", None, Round(1, 0, 0), parameters
         )
 
-    assert prober_parameters["prefixes"] == [
-        ("8.8.8.8", "icmp", [32]),
-        ("8.8.4.4", "icmp", [32]),
-    ]
+    unordered_eq(
+        prober_parameters["prefixes"],
+        [("8.8.4.4", "icmp", (32,)), ("8.8.8.8", "icmp", (32,))],
+    )
     assert prober_parameters["prefix_len_v4"] == 32
     assert prober_parameters["prefix_len_v6"] == 128
     assert prober_parameters["flow_ids"] == range(1)

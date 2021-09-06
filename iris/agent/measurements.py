@@ -107,7 +107,7 @@ async def build_probe_generator_parameters(
                     (
                         target_line[0],
                         target_line[1],
-                        [int(target_line[3])],
+                        (int(target_line[3]),),
                     )
                 )
 
