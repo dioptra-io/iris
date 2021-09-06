@@ -36,10 +36,7 @@ WORKDIR /app
 
 RUN mkdir results
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install poetry uvicorn \
-    && rm -rf /root/.cache/*
-
+RUN pip3 install --no-cache-dir uvicorn poetry==1.1.7
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml

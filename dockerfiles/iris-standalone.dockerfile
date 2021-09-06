@@ -2,8 +2,6 @@ FROM ubuntu:20.04
 LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
 
-# TODO: Remove build-essential and python3-dev once
-# we can push binary wheels on PyPI for diamond-miner.
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         apt-transport-https \
@@ -38,10 +36,7 @@ WORKDIR /app
 RUN mkdir targets
 RUN mkdir results
 
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip install poetry uvicorn \
-    && rm -rf /root/.cache/*
-
+RUN pip3 install --no-cache-dir uvicorn poetry==1.1.7
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
