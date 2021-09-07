@@ -1,4 +1,3 @@
-from io import StringIO
 from unittest import mock
 
 import aiofiles
@@ -54,19 +53,18 @@ def unordered_eq(a, b):
     assert set(a) == set(b)
 
 
-@pytest.mark.asyncio
-async def test_build_probe_generator_parameters():
+def test_build_probe_generator_parameters(tmp_path):
     # D-Miner
     settings.AGENT_MIN_TTL = 2
     parameters = ParametersDataclass.from_request(request)
 
-    mock_file = mock.MagicMock(
-        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
+    target_filepath = tmp_path / "targets"
+    prefix_filepath = tmp_path / "prefixes"
+
+    target_filepath.write_text("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_filepath, None, Round(1, 0, 0), parameters
     )
-    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
-        prober_parameters = await build_probe_generator_parameters(
-            settings, "test_file", None, Round(1, 0, 0), parameters
-        )
 
     unordered_eq(
         prober_parameters["prefixes"],
@@ -81,13 +79,10 @@ async def test_build_probe_generator_parameters():
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
 
-    mock_file = mock.MagicMock(
-        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
+    target_filepath.write_text("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_filepath, None, Round(1, 0, 0), parameters
     )
-    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
-        prober_parameters = await build_probe_generator_parameters(
-            settings, "test_file", None, Round(1, 0, 0), parameters
-        )
 
     unordered_eq(
         prober_parameters["prefixes"],
@@ -98,13 +93,10 @@ async def test_build_probe_generator_parameters():
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
 
-    mock_file = mock.MagicMock(
-        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
+    target_filepath.write_text("8.8.8.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_filepath, None, Round(1, 0, 0), parameters
     )
-    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
-        prober_parameters = await build_probe_generator_parameters(
-            settings, "test_file", None, Round(1, 0, 0), parameters
-        )
 
     unordered_eq(
         prober_parameters["prefixes"],
@@ -115,16 +107,11 @@ async def test_build_probe_generator_parameters():
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
 
-    with mock.patch("aiofiles.threadpool.sync_open") as mock_open:
-        handle1 = mock.MagicMock(
-            wraps=StringIO("8.8.4.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
-        )
-        handle2 = mock.MagicMock(wraps=StringIO("8.8.4.0/24\n8.8.8.0/24"))
-        mock_open.side_effect = (handle1, handle2)
-
-        prober_parameters = await build_probe_generator_parameters(
-            settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
-        )
+    target_filepath.write_text("8.8.4.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
+    prefix_filepath.write_text("8.8.4.0/24\n8.8.8.0/24")
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_filepath, prefix_filepath, Round(1, 0, 0), parameters
+    )
 
     unordered_eq(
         prober_parameters["prefixes"],
@@ -134,30 +121,22 @@ async def test_build_probe_generator_parameters():
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
 
-    with mock.patch("aiofiles.threadpool.sync_open") as mock_open:
-        handle1 = mock.MagicMock(
-            wraps=StringIO("8.8.4.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
-        )
-        handle2 = mock.MagicMock(wraps=StringIO("8.8.4.0/24\n"))
-        mock_open.side_effect = (handle1, handle2)
-
-        prober_parameters = await build_probe_generator_parameters(
-            settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
-        )
+    target_filepath.write_text("8.8.4.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
+    prefix_filepath.write_text("8.8.4.0/24\n")
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_filepath, prefix_filepath, Round(1, 0, 0), parameters
+    )
 
     unordered_eq(prober_parameters["prefixes"], [("8.8.4.0/24", "icmp", range(6, 33))])
 
     settings.AGENT_MIN_TTL = 6
     parameters = ParametersDataclass.from_request(request)
 
-    with mock.patch("aiofiles.threadpool.sync_open") as mock_open:
-        handle1 = mock.MagicMock(wraps=StringIO("8.8.4.0/22,icmp,2,32"))
-        handle2 = mock.MagicMock(wraps=StringIO("8.8.4.0/24\n"))
-        mock_open.side_effect = (handle1, handle2)
-
-        prober_parameters = await build_probe_generator_parameters(
-            settings, "test_file", "prefix_file", Round(1, 0, 0), parameters
-        )
+    target_filepath.write_text("8.8.4.0/22,icmp,2,32")
+    prefix_filepath.write_text("8.8.4.0/24\n")
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_filepath, prefix_filepath, Round(1, 0, 0), parameters
+    )
 
     unordered_eq(prober_parameters["prefixes"], [("8.8.4.0/24", "icmp", range(6, 33))])
 
@@ -166,13 +145,10 @@ async def test_build_probe_generator_parameters():
     request["parameters"]["tool"] = "yarrp"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    mock_file = mock.MagicMock(
-        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
+    target_filepath.write_text("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_filepath, None, Round(1, 0, 0), parameters
     )
-    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
-        prober_parameters = await build_probe_generator_parameters(
-            settings, "test_file", None, Round(1, 0, 0), parameters
-        )
 
     unordered_eq(
         prober_parameters["prefixes"],
@@ -187,11 +163,10 @@ async def test_build_probe_generator_parameters():
     request["parameters"]["tool"] = "ping"
     request["parameters"]["tool_parameters"]["n_flow_ids"] = 1
     parameters = ParametersDataclass.from_request(request)
-    mock_file = mock.MagicMock(wraps=StringIO("8.8.8.8,icmp,2,32\n8.8.4.4,icmp,2,32"))
-    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
-        prober_parameters = await build_probe_generator_parameters(
-            settings, "test_file", None, Round(1, 0, 0), parameters
-        )
+    target_filepath.write_text("8.8.8.8,icmp,2,32\n8.8.4.4,icmp,2,32")
+    prober_parameters = build_probe_generator_parameters(
+        settings, target_filepath, None, Round(1, 0, 0), parameters
+    )
 
     unordered_eq(
         prober_parameters["prefixes"],
@@ -205,11 +180,8 @@ async def test_build_probe_generator_parameters():
     # Invalid tool
     request["parameters"]["tool"] = "test"
     parameters = ParametersDataclass.from_request(request)
-    mock_file = mock.MagicMock(
-        wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
-    )
-    with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
-        with pytest.raises(AssertionError):
-            prober_parameters = await build_probe_generator_parameters(
-                settings, "test_file", None, Round(1, 0, 0), parameters
-            )
+    target_filepath.write_text("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
+    with pytest.raises(AssertionError):
+        prober_parameters = build_probe_generator_parameters(
+            settings, target_filepath, None, Round(1, 0, 0), parameters
+        )

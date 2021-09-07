@@ -5,9 +5,9 @@ from typing import Optional
 
 import aiofiles
 import aiofiles.os
-import radix
 from diamond_miner import mappers
 from diamond_miner.defaults import DEFAULT_PREFIX_LEN_V4, DEFAULT_PREFIX_LEN_V6
+from pytricia import PyTricia
 
 from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
@@ -15,7 +15,7 @@ from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
 
 
-async def build_probe_generator_parameters(
+def build_probe_generator_parameters(
     settings: AgentSettings,
     target_filepath: str,
     prefix_filepath: Optional[str],
@@ -51,9 +51,9 @@ async def build_probe_generator_parameters(
     prefixes = []
     if parameters.tool in ["diamond-miner", "yarrp"]:
         # 2. Build a radix tree that maps prefix -> [(min_ttl...max_ttl), ...]
-        targets = radix.Radix()
-        async with aiofiles.open(target_filepath) as f:
-            async for line in f:
+        targets = PyTricia(128)
+        with open(target_filepath) as f:
+            for line in f:
                 prefix, protocol, min_ttl, max_ttl = line.split(",")
                 ttls = range(
                     # Ensure that the prefix minimum TTL is superior to:
@@ -63,29 +63,30 @@ async def build_probe_generator_parameters(
                     # Ensure that the prefix maximum TTL is inferior to the round maximum TTL
                     min(int(max_ttl), round_.max_ttl) + 1,
                 )
-                node = targets.add(prefix)
-                todo = node.data.setdefault("todo", [])
-                todo.append((protocol, ttls))
+                if todo := targets.get(prefix):
+                    todo.append((protocol, ttls))
+                else:
+                    targets[prefix] = [(protocol, ttls)]
 
         # 3. If a specific list of prefixes to probe is specified, generate a new list of prefixes
         # that includes the TTL ranges previously loaded.
         if prefix_filepath is not None:
-            async with aiofiles.open(prefix_filepath) as f:
-                async for line in f:
+            with open(prefix_filepath) as f:
+                for line in f:
                     prefix = line.strip()
-                    node = targets.search_best(prefix)
-                    for protocol, ttls in node.data["todo"]:
+                    todo = targets[prefix]
+                    for protocol, ttls in todo:
                         prefixes.append((prefix, protocol, ttls))
         else:
             # There is no prefix list to probe so we directly take the target list
-            for node in targets:
-                for protocol, ttls in node.data["todo"]:
-                    prefixes.append((node.prefix, protocol, ttls))
+            for prefix in targets:
+                for protocol, ttls in targets[prefix]:
+                    prefixes.append((prefix, protocol, ttls))
 
     elif parameters.tool == "ping":
         # Only take the max TTL in the TTL range
-        async with aiofiles.open(target_filepath) as f:
-            async for line in f:
+        with open(target_filepath) as f:
+            for line in f:
                 prefix, protocol, min_ttl, max_ttl = line.split(",")
                 prefixes.append((prefix, protocol, (int(max_ttl),)))
 
@@ -151,7 +152,7 @@ async def measurement(settings, request, storage, logger, redis=None):
             )
 
         logger.info(f"{logger_prefix} Build probe generator parameters")
-        gen_parameters = await build_probe_generator_parameters(
+        gen_parameters = build_probe_generator_parameters(
             settings, target_filepath, prefix_filepath, round, parameters
         )
 
