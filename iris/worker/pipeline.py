@@ -3,9 +3,13 @@
 import aiofiles
 from aiofiles import os as aios
 from diamond_miner import mappers
-from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
+from diamond_miner.defaults import (
+    DEFAULT_PREFIX_LEN_V4,
+    DEFAULT_PREFIX_LEN_V6,
+    DEFAULT_PREFIX_SIZE_V4,
+    DEFAULT_PREFIX_SIZE_V6,
+)
 from diamond_miner.queries import GetSlidingPrefixes
-from diamond_miner.queries.query import AddrType
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
 from iris.commons.database import Agents, InsertResults
@@ -84,14 +88,18 @@ async def default_pipeline(
 
         prefixes_to_probe = []
         # TODO: Fault-tolerency
-        async for _, _, prefix in GetSlidingPrefixes(
-            addr_type=AddrType.IPv6NumToString,
+        async for _, _, addr_v6 in GetSlidingPrefixes(
             window_min_ttl=round.min_ttl,
             window_max_ttl=round.max_ttl,
             stopping_condition=settings.WORKER_ROUND_1_STOPPING,
         ).execute_iter_async(
             settings.database_url(), f"{measurement_uuid}__{agent_uuid}"
         ):
+            # TODO: Should we store the prefix length information in the database?
+            if addr_v4 := addr_v6.ipv4_mapped:
+                prefix = f"{addr_v4}/{DEFAULT_PREFIX_LEN_V4}"
+            else:
+                prefix = f"{addr_v6}/{DEFAULT_PREFIX_LEN_V6}"
             prefixes_to_probe.append(prefix)
 
         if prefixes_to_probe:

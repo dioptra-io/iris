@@ -29,7 +29,7 @@ dramatiq = {extras = ["redis", "watch"], optional = true, version = "^1.9.0"}
 fastapi = {optional = true, version = "^0.68.1"}
 passlib = {extras = ["bcrypt"], optional = true, version = "^1.7.4"}
 py-radix = {optional = true, version = "^0.10.0"}
-pycaracal = {optional = true, version = "^0.4.24"}
+pycaracal = {optional = true, version = "^0.4.25"}
 pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], optional = true, version = "^3.2.0"}
 python-logging-loki = "^0.3.1"

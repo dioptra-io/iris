@@ -1112,7 +1112,7 @@ python-versions = "*"
 
 [[package]]
 name = "pycaracal"
-version = "0.4.24"
+version = "0.4.25"
 description = ""
 category = "main"
 optional = true
@@ -1649,7 +1649,7 @@ worker = ["dramatiq"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "c920048e8d2458cb043aaae5970ec76ca30fea5a1ae03fde4466b0346896a83a"
+content-hash = "db7b29863a860bd2818556ad46b724258fd2dd2ba70ffe8db5d717dcd4ec212d"
 
 [metadata.files]
 aioboto3 = [
@@ -2342,11 +2342,9 @@ pyasn1 = [
     {file = "pyasn1-0.4.8.tar.gz", hash = "sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba"},
 ]
 pycaracal = [
-    {file = "pycaracal-0.4.24-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:3591b59a65d09de0e756ed82f4a346aaa8e3979bfaaee7728f0c3f6f7e0b21ce"},
-    {file = "pycaracal-0.4.24-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0f8ebd6e823dc11dfec78bb99639633c1afd8e3129170f8f5a8cf45aca662d0f"},
-    {file = "pycaracal-0.4.24-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:fac12665d8c145b496863000392aea148ab9e1026ef26f29057f926b000b308d"},
-    {file = "pycaracal-0.4.24-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:86274e0d8a71fc4acd17ebb05e6fc59c8a92b002646b1bfbc973a7794d72f67e"},
-    {file = "pycaracal-0.4.24.tar.gz", hash = "sha256:a53a01c620cc74052e990acb6d5c95b5d7f6bb5cac582ca736fc4d8e3bacf9c8"},
+    {file = "pycaracal-0.4.25-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c53982d79e8211255f9237e4a7fd58caf2dd2d1d182227a4cf27850a3f8446fc"},
+    {file = "pycaracal-0.4.25-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:33e0c44e6165e34589e7e88e3a5b7eba22c6753a8673eb21f82a7379682a5eb1"},
+    {file = "pycaracal-0.4.25.tar.gz", hash = "sha256:6ca93a686b17a52896f07902d099757aa04dcc931f955548de4416d56e1a14cd"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.7.0-py2.py3-none-any.whl", hash = "sha256:514f76d918fcc0b55c6680472f0a37970994e07bbb80725808c17089be302068"},

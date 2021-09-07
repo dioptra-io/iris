@@ -4,11 +4,7 @@ from unittest import mock
 import aiofiles
 import pytest
 
-from iris.agent.measurements import (
-    addr_to_network,
-    build_probe_generator_parameters,
-    cast_addr,
-)
+from iris.agent.measurements import build_probe_generator_parameters
 from iris.agent.settings import AgentSettings
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
@@ -51,16 +47,6 @@ request = {
 aiofiles.threadpool.wrap.register(mock.MagicMock)(
     lambda *args, **kwargs: aiofiles.threadpool.AsyncBufferedIOBase(*args, **kwargs)
 )
-
-
-def test_cast_addr():
-    assert cast_addr("::FFFF:8.8.8.0") == "8.8.8.0"
-    assert cast_addr("2001:12::") == "2001:12::"
-
-
-def test_addr_to_network():
-    assert addr_to_network("8.8.8.0") == "8.8.8.0/24"
-    assert addr_to_network("2001:12::") == "2001:12::/64"
 
 
 def unordered_eq(a, b):
@@ -133,7 +119,7 @@ async def test_build_probe_generator_parameters():
         handle1 = mock.MagicMock(
             wraps=StringIO("8.8.4.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
         )
-        handle2 = mock.MagicMock(wraps=StringIO("::FFFF:8.8.4.0\n::FFFF:8.8.8.0"))
+        handle2 = mock.MagicMock(wraps=StringIO("8.8.4.0/24\n8.8.8.0/24"))
         mock_open.side_effect = (handle1, handle2)
 
         prober_parameters = await build_probe_generator_parameters(
@@ -152,7 +138,7 @@ async def test_build_probe_generator_parameters():
         handle1 = mock.MagicMock(
             wraps=StringIO("8.8.4.0/24,icmp,2,32\n8.8.8.0/24,icmp,2,20")
         )
-        handle2 = mock.MagicMock(wraps=StringIO("::FFFF:8.8.4.0\n"))
+        handle2 = mock.MagicMock(wraps=StringIO("8.8.4.0/24\n"))
         mock_open.side_effect = (handle1, handle2)
 
         prober_parameters = await build_probe_generator_parameters(
@@ -166,7 +152,7 @@ async def test_build_probe_generator_parameters():
 
     with mock.patch("aiofiles.threadpool.sync_open") as mock_open:
         handle1 = mock.MagicMock(wraps=StringIO("8.8.4.0/22,icmp,2,32"))
-        handle2 = mock.MagicMock(wraps=StringIO("::FFFF:8.8.4.0\n"))
+        handle2 = mock.MagicMock(wraps=StringIO("8.8.4.0/24\n"))
         mock_open.side_effect = (handle1, handle2)
 
         prober_parameters = await build_probe_generator_parameters(
@@ -223,7 +209,7 @@ async def test_build_probe_generator_parameters():
         wraps=StringIO("8.8.8.0/24,icmp,2,32\n8.8.4.0/24,icmp,2,32")
     )
     with mock.patch("aiofiles.threadpool.sync_open", return_value=mock_file):
-        with pytest.raises(ValueError):
+        with pytest.raises(AssertionError):
             prober_parameters = await build_probe_generator_parameters(
                 settings, "test_file", None, Round(1, 0, 0), parameters
             )

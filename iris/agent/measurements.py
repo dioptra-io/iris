@@ -1,127 +1,103 @@
 """Measurement interface."""
 
-from ipaddress import ip_address, ip_network
 from multiprocessing import Manager, Process
+from typing import Optional
 
 import aiofiles
 import aiofiles.os
 import radix
 from diamond_miner import mappers
-from diamond_miner.defaults import DEFAULT_PREFIX_SIZE_V4, DEFAULT_PREFIX_SIZE_V6
+from diamond_miner.defaults import DEFAULT_PREFIX_LEN_V4, DEFAULT_PREFIX_LEN_V6
 
 from iris.agent.prober import probe, watcher
+from iris.agent.settings import AgentSettings
 from iris.commons.dataclasses import ParametersDataclass
 from iris.commons.round import Round
 
 
-def cast_addr(addr: str) -> str:
-    base_addr = ip_address(addr)
-    base_addr_mapped = base_addr.ipv4_mapped
-    if base_addr_mapped:
-        return str(base_addr_mapped)
-    return str(base_addr)
-
-
-def addr_to_network(addr: str, prefix_len_v4: int = 24, prefix_len_v6: int = 64) -> str:
-    base_addr = ip_address(addr)
-    if base_addr.version == 4:
-        return str(ip_network(addr + f"/{prefix_len_v4}"))
-    return str(ip_network(addr + f"/{prefix_len_v6}"))
-
-
 async def build_probe_generator_parameters(
-    settings, target_filepath, prefix_filepath, round, parameters
+    settings: AgentSettings,
+    target_filepath: str,
+    prefix_filepath: Optional[str],
+    round_: Round,
+    parameters: ParametersDataclass,
 ):
+    """
+    Target file line format: `prefix,protocol,min_ttl,max_ttl`
+    Prefix file line format: `prefix`
+    For both files, `prefix` can be:
+        * a network: 8.8.8.0/24, 2001:4860:4860::/64
+        * an address: 8.8.8.8, 2001:4860:4860::8888
+    Addresses are interpreted as /32 or /128 networks.
+    """
+    assert parameters.tool in ["diamond-miner", "ping", "yarrp"]
+
+    # Diamond-Miner and Yarrp target prefixes (with more than 1 addresses)
+    prefix_len_v4, prefix_len_v6 = DEFAULT_PREFIX_LEN_V4, DEFAULT_PREFIX_LEN_V6
+    # Ping targets single addresses
+    if parameters.tool == "ping":
+        prefix_len_v4, prefix_len_v6 = 32, 128
+
+    # 1. Instantiate the flow mappers
     flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
     flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
+    flow_mapper_v4 = flow_mapper_cls(
+        **{"prefix_size": 2 ** (32 - prefix_len_v4), **flow_mapper_kwargs}
+    )
+    flow_mapper_v6 = flow_mapper_cls(
+        **{"prefix_size": 2 ** (128 - prefix_len_v6), **flow_mapper_kwargs}
+    )
 
+    prefixes = []
     if parameters.tool in ["diamond-miner", "yarrp"]:
-        flow_mapper_v4 = flow_mapper_cls(
-            **{"prefix_size": DEFAULT_PREFIX_SIZE_V4, **flow_mapper_kwargs}
-        )
-        flow_mapper_v6 = flow_mapper_cls(
-            **{"prefix_size": DEFAULT_PREFIX_SIZE_V6, **flow_mapper_kwargs}
-        )
-
-        prefixes_from_target_file = radix.Radix()
-        async with aiofiles.open(target_filepath) as fd:
-            async for target in fd:
-                target_line = target.split(",")
-
-                min_ttl = max(
-                    settings.AGENT_MIN_TTL, int(target_line[2]), round.min_ttl
+        # 2. Build a radix tree that maps prefix -> [(min_ttl...max_ttl), ...]
+        targets = radix.Radix()
+        async with aiofiles.open(target_filepath) as f:
+            async for line in f:
+                prefix, protocol, min_ttl, max_ttl = line.split(",")
+                ttls = range(
+                    # Ensure that the prefix minimum TTL is superior to:
+                    # - the agent minimum TTL
+                    # - the round minimum TTL
+                    max(settings.AGENT_MIN_TTL, int(min_ttl), round_.min_ttl),
+                    # Ensure that the prefix maximum TTL is inferior to the round maximum TTL
+                    min(int(max_ttl), round_.max_ttl) + 1,
                 )
-                max_ttl = min(int(target_line[3]), round.max_ttl)
+                node = targets.add(prefix)
+                todo = node.data.setdefault("todo", [])
+                todo.append((protocol, ttls))
 
-                node = prefixes_from_target_file.add(target_line[0])
-                if node.data.get("todo"):
-                    node.data["todo"].append(
-                        (target_line[1], range(min_ttl, max_ttl + 1))
-                    )
-                else:
-                    node.data["todo"] = [(target_line[1], range(min_ttl, max_ttl + 1))]
-
-        prefixes_addr_to_probe = None
+        # 3. If a specific list of prefixes to probe is specified, generate a new list of prefixes
+        # that includes the TTL ranges previously loaded.
         if prefix_filepath is not None:
-            # There is a list of prefixes to probe
-            # So we use these prefixes along with the TTL information
-            # from the prefix list
-            async with aiofiles.open(prefix_filepath) as fd:
-                prefixes_addr_to_probe = await fd.readlines()
-
-            prefixes_addr_to_probe = [
-                cast_addr(p.strip()) for p in prefixes_addr_to_probe
-            ]
-
-            prefixes = []
-            for prefix_addr in prefixes_addr_to_probe:
-                node = prefixes_from_target_file.search_best(prefix_addr)
-                for todo in node.data["todo"]:
-                    prefixes.append((addr_to_network(prefix_addr), todo[0], todo[1]))
+            async with aiofiles.open(prefix_filepath) as f:
+                async for line in f:
+                    prefix = line.strip()
+                    node = targets.search_best(prefix)
+                    for protocol, ttls in node.data["todo"]:
+                        prefixes.append((prefix, protocol, ttls))
         else:
             # There is no prefix list to probe so we directly take the target list
-            prefixes = []
-            for node in prefixes_from_target_file:
-                for todo in node.data["todo"]:
-                    prefixes.append((node.prefix, todo[0], todo[1]))
+            for node in targets:
+                for protocol, ttls in node.data["todo"]:
+                    prefixes.append((node.prefix, protocol, ttls))
 
-        return {
-            "prefixes": prefixes,
-            "prefix_len_v4": 24,
-            "prefix_len_v6": 64,
-            "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
-            "probe_dst_port": parameters.tool_parameters["destination_port"],
-            "mapper_v4": flow_mapper_v4,
-            "mapper_v6": flow_mapper_v6,
-        }
     elif parameters.tool == "ping":
-        flow_mapper_v4 = flow_mapper_cls(**{"prefix_size": 1, **flow_mapper_kwargs})
-        flow_mapper_v6 = flow_mapper_cls(**{"prefix_size": 1, **flow_mapper_kwargs})
-
         # Only take the max TTL in the TTL range
-        prefixes = []
-        async with aiofiles.open(target_filepath) as fd:
-            async for target in fd:
-                target_line = target.split(",")
-                prefixes.append(
-                    (
-                        target_line[0],
-                        target_line[1],
-                        (int(target_line[3]),),
-                    )
-                )
+        async with aiofiles.open(target_filepath) as f:
+            async for line in f:
+                prefix, protocol, min_ttl, max_ttl = line.split(",")
+                prefixes.append((prefix, protocol, (int(max_ttl),)))
 
-        return {
-            "prefixes": prefixes,
-            "prefix_len_v4": 32,
-            "prefix_len_v6": 128,
-            "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
-            "probe_dst_port": parameters.tool_parameters["destination_port"],
-            "mapper_v4": flow_mapper_v4,
-            "mapper_v6": flow_mapper_v6,
-        }
-    else:
-        raise ValueError("Invalid tool name")
+    return {
+        "prefixes": prefixes,
+        "prefix_len_v4": prefix_len_v4,
+        "prefix_len_v6": prefix_len_v6,
+        "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
+        "probe_dst_port": parameters.tool_parameters["destination_port"],
+        "mapper_v4": flow_mapper_v4,
+        "mapper_v6": flow_mapper_v6,
+    }
 
 
 async def measurement(settings, request, storage, logger, redis=None):
@@ -174,6 +150,7 @@ async def measurement(settings, request, storage, logger, redis=None):
                 measurement_uuid, prefix_filename, prefix_filepath
             )
 
+        logger.info(f"{logger_prefix} Build probe generator parameters")
         gen_parameters = await build_probe_generator_parameters(
             settings, target_filepath, prefix_filepath, round, parameters
         )
