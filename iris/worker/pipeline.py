@@ -35,6 +35,7 @@ async def default_pipeline(
 ):
     """Process results and eventually request a new round."""
     agent = measurement_request.agent(agent_uuid)
+    assert agent.uuid
     logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
     logger.info(f"{logger_prefix} New measurement file detected")
 

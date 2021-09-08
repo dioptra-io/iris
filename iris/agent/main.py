@@ -19,8 +19,7 @@ async def consumer(
     settings: AgentSettings, queue: asyncio.Queue, logger: Logger, agent_uuid: UUID
 ):
     """Wait for a task in a queue and process it."""
-    redis = AgentRedis(settings, logger, agent_uuid)
-    await redis.connect(register=False)
+    redis = AgentRedis(await settings.redis_client(), settings, logger, agent_uuid)
 
     while True:
         request = await queue.get()
@@ -33,7 +32,7 @@ async def consumer(
             logger.error(f"{logger_prefix} Redis connection failed. Re-connecting...")
             await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
             try:
-                await redis.connect()
+                await redis.test()
             except OSError:
                 continue
 
@@ -52,7 +51,7 @@ async def consumer(
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
         storage = Storage(settings, logger)
-        await measurement(settings, request, storage, logger, redis=redis)
+        await measurement(settings, request, logger, storage, redis)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
         await redis.set_agent_state(public.AgentState.Idle)

@@ -162,7 +162,10 @@ async def post_measurement(
         else:
             at_least_one = False
             for uuid, active_agent in active_agents.items():
-                if agent.tag in active_agent.parameters.agent_tags:
+                if (
+                    active_agent.parameters
+                    and agent.tag in active_agent.parameters.agent_tags
+                ):
                     # Matching agent for tag found, replace tag field with uuid field
                     agents.append(agent.copy(exclude={"tag"}, update={"uuid": uuid}))
                     at_least_one = True

@@ -1,7 +1,7 @@
 """Measurement interface."""
 from logging import Logger
 from multiprocessing import Manager, Process
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import aiofiles
 import aiofiles.os
@@ -49,7 +49,7 @@ def build_probe_generator_parameters(
         **{"prefix_size": 2 ** (128 - prefix_len_v6), **flow_mapper_kwargs}
     )
 
-    prefixes = []
+    prefixes: List[Tuple[str, str, Iterable[int]]] = []
     if tool in [public.Tool.diamond_miner, public.Tool.yarrp]:
         # 2. Build a radix tree that maps prefix -> [(min_ttl...max_ttl), ...]
         targets = PyTricia(128)
@@ -153,12 +153,12 @@ async def measurement(
 
         logger.info(f"{logger_prefix} Build probe generator parameters")
         gen_parameters = build_probe_generator_parameters(
-            settings,
-            measurement_request,
-            agent.uuid,
+            settings.AGENT_MIN_TTL,
             request.round,
-            target_filepath,
-            prefix_filepath,
+            measurement_request.tool,
+            agent.tool_parameters,
+            open(target_filepath),
+            open(prefix_filepath) if prefix_filepath else None,
         )
 
     elif request.round.number == 1 and is_custom_probes_file:
@@ -173,13 +173,12 @@ async def measurement(
             probes_filepath,
         )
 
-    else:
+    elif request.probes:
         # Round > 1
         logger.info(f"{logger_prefix} Download CSV probe file locally")
-        probes_filename = request.probes
-        probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
+        probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / request.probes)
         await storage.download_file(
-            measurement_request.uuid, probes_filename, probes_filepath
+            measurement_request.uuid, request.probes, probes_filepath
         )
 
     logger.info(f"{logger_prefix} Username : {measurement_request.username}")

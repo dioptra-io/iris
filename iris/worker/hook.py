@@ -72,6 +72,7 @@ async def watch(
 ):
     """Watch for results from an agent."""
     agent = measurement_request.agent(agent_uuid)
+    assert agent.uuid
     logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
     database_agents = Agents(settings, logger)
 
@@ -158,10 +159,9 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
 
     database_measurements = Measurements(settings, logger)
     database_agents = Agents(settings, logger)
-    redis = Redis(settings, logger)
+    redis = Redis(await settings.redis_client(), settings, logger)
     storage = Storage(settings, logger)
 
-    await redis.connect()
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / str(
         measurement_request.uuid
     )
@@ -187,6 +187,7 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
         await database_agents.create_table()
         for agent in measurement_request.agents:
             # Register agent in this measurement
+            assert agent.uuid
             agent_parameters = await redis.get_agent_parameters(agent.uuid)
             if agent_parameters:
                 await database_agents.register(
@@ -242,7 +243,7 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
     logger.info(f"{logger_prefix} Watching ...")
     await asyncio.gather(
         *[
-            watch(measurement_request, agent.uuid, logger, redis, storage)
+            watch(measurement_request, agent.uuid, logger, redis, storage)  # type: ignore
             for agent in agents
         ]
     )
