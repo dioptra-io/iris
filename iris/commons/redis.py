@@ -90,6 +90,10 @@ class Redis:
         agents = await self.get_agents()
         return {agent.uuid: agent for agent in agents}
 
+    async def get_agent_by_uuid(self, uuid: UUID) -> Optional[public.Agent]:
+        agents = await self.get_agents_by_uuid()
+        return agents.get(uuid)
+
     @fault_tolerant
     async def check_agent(self, uuid: UUID) -> bool:
         """Check the conformity of an agent."""

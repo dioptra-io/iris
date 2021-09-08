@@ -77,7 +77,9 @@ async def main():
     """Main agent function."""
     settings = AgentSettings()
     logger = create_logger(settings, tags={"agent_uuid": settings.AGENT_UUID})
-    redis = AgentRedis(settings, logger, settings.AGENT_UUID)
+    redis = AgentRedis(
+        await settings.redis_client(), settings, logger, settings.AGENT_UUID
+    )
 
     if settings.AGENT_MIN_TTL < 0:
         settings.AGENT_MIN_TTL = find_exit_ttl(
