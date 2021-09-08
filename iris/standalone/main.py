@@ -82,7 +82,7 @@ async def yarrp(
     else:
         prefixes = sys.stdin.readlines()
 
-    tool: Tool = Tool("yarrp")
+    tool: Tool = Tool.Yarrp
     tool_parameters = ToolParameters(
         **{
             "initial_source_port": initial_source_port,
@@ -120,7 +120,7 @@ async def ping(
     else:
         prefixes = sys.stdin.readlines()
 
-    tool = Tool("ping")
+    tool = Tool.Ping
     tool_parameters = ToolParameters(
         **{
             "initial_source_port": initial_source_port,

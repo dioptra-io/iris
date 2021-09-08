@@ -14,22 +14,15 @@ class FlowMapper(str, Enum):
     RandomFlowMapper = "RandomFlowMapper"
 
 
-class Protocol(str, Enum):
-    # TODO: Capitalize
-    udp = "udp"
-    icmp = "icmp"
-
-
 class ProbingStatistics(BaseModel):
     round: str
     statistics: Dict[str, Any]
 
 
 class Tool(str, Enum):
-    # TODO: Capitalize
-    diamond_miner = "diamond-miner"
-    yarrp = "yarrp"
-    ping = "ping"
+    DiamondMiner = "diamond-miner"
+    Yarrp = "yarrp"
+    Ping = "ping"
 
 
 class ToolParameters(BaseModel):
@@ -121,7 +114,7 @@ class MeasurementAgentPostBody(BaseModel):
 class MeasurementPostBody(BaseModel):
     """POST /measurements (Body)."""
 
-    tool: Tool = Field(Tool.diamond_miner, title="Probing tool")
+    tool: Tool = Field(Tool.DiamondMiner, title="Probing tool")
     agents: List[MeasurementAgentPostBody] = Field(
         ...,
         title="Agents participating to the measurement",

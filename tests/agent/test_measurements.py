@@ -9,7 +9,7 @@ def unordered_eq(a, b):
 
 
 def test_build_probe_generator_parameters_diamond_miner():
-    tool = public.Tool.diamond_miner
+    tool = public.Tool.DiamondMiner
     tool_parameters = public.ToolParameters(
         initial_source_port=24000,
         destination_port=33434,
@@ -80,7 +80,7 @@ def test_build_probe_generator_parameters_diamond_miner():
 
 
 def test_build_probe_generator_parameters_yarrp():
-    tool = public.Tool.yarrp
+    tool = public.Tool.Yarrp
     tool_parameters = public.ToolParameters(
         initial_source_port=24000,
         destination_port=33434,
@@ -106,7 +106,7 @@ def test_build_probe_generator_parameters_yarrp():
 
 
 def test_build_probe_generator_parameters_ping():
-    tool = public.Tool.ping
+    tool = public.Tool.Ping
     tool_parameters = public.ToolParameters(
         initial_source_port=24000,
         destination_port=33434,

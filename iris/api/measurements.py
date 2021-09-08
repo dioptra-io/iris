@@ -57,9 +57,9 @@ async def get_measurements(
 async def verify_quota(tool, content, user_quota):
     """Verify that the quota is not exceeded."""
     targets = [p.strip() for p in content.split()]
-    if tool in ["diamond-miner", "yarrp"]:
+    if tool in [public.Tool.DiamondMiner, public.Tool.Yarrp]:
         n_prefixes = count_prefixes([target.split(",")[0] for target in targets])
-    elif tool == "ping":
+    elif tool == public.Tool.Ping:
         n_prefixes = count_prefixes(
             [target.split(",")[0] for target in targets],
             prefix_len_v4=32,
@@ -86,7 +86,7 @@ async def target_file_validator(request, tool, user, target_file):
 
     # Do not check if the target file is a custom probe file
     if target_file["key"].endswith(".probes"):
-        if tool != "yarrp":
+        if tool != public.Tool.Yarrp:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only `yarrp` tool can be used with custom probe file",
@@ -116,7 +116,7 @@ async def target_file_validator(request, tool, user, target_file):
         min_ttl, max_ttl = int(min_ttl), int(max_ttl)
         global_min_ttl = min(global_min_ttl, min_ttl)
         global_max_ttl = max(global_max_ttl, max_ttl)
-        if tool == "ping" and protocol == "udp":
+        if tool == public.Tool.Ping and protocol == "udp":
             # Disabling UDP port scanning abilities
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -204,9 +204,9 @@ async def post_measurement(
 
         # Enforce some tool specific parameters
         # TODO: Can we do this with pydantic?
-        if measurement.tool == public.Tool.diamond_miner:
+        if measurement.tool == public.Tool.DiamondMiner:
             agent.tool_parameters.n_flow_ids = 6
-        if measurement.tool in (public.Tool.ping, public.Tool.yarrp):
+        if measurement.tool in (public.Tool.Ping, public.Tool.Yarrp):
             agent.tool_parameters.n_flow_ids = 1
             agent.tool_parameters.max_round = 1
 

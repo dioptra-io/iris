@@ -36,7 +36,7 @@ def build_probe_generator_parameters(
     # Diamond-Miner and Yarrp target prefixes (with more than 1 addresses)
     prefix_len_v4, prefix_len_v6 = DEFAULT_PREFIX_LEN_V4, DEFAULT_PREFIX_LEN_V6
     # Ping targets single addresses
-    if tool == public.Tool.ping:
+    if tool == public.Tool.Ping:
         prefix_len_v4, prefix_len_v6 = 32, 128
 
     # 1. Instantiate the flow mappers
@@ -50,7 +50,7 @@ def build_probe_generator_parameters(
     )
 
     prefixes: List[Tuple[str, str, Iterable[int]]] = []
-    if tool in [public.Tool.diamond_miner, public.Tool.yarrp]:
+    if tool in [public.Tool.DiamondMiner, public.Tool.Yarrp]:
         # 2. Build a radix tree that maps prefix -> [(min_ttl...max_ttl), ...]
         targets = PyTricia(128)
         for line in target_list:
@@ -82,7 +82,7 @@ def build_probe_generator_parameters(
                 for protocol, ttls in targets[prefix]:
                     prefixes.append((prefix, protocol, ttls))
 
-    elif tool == public.Tool.ping:
+    elif tool == public.Tool.Ping:
         # Only take the max TTL in the TTL range
         for line in target_list:
             prefix, protocol, min_ttl, max_ttl = line.split(",")
