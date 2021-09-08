@@ -34,6 +34,7 @@ async def test_redis_get_agents(common_settings, fake_agent, redis_client):
         redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
     )
 
+    # TODO: Ensure that all agents are disconnected beforehand?
     assert len(await redis.get_agents()) == 0
     await agent_redis.register()
     assert len(await redis.get_agents()) == 1

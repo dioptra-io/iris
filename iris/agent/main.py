@@ -2,7 +2,6 @@ import asyncio
 import socket
 import traceback
 from logging import Logger
-from uuid import UUID
 
 from iris import __version__
 from iris.agent.measurements import measurement
@@ -15,29 +14,46 @@ from iris.commons.storage import Storage
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 
 
+async def producer(
+    settings: AgentSettings, queue: asyncio.Queue, logger: Logger
+) -> None:
+    """Consume tasks from a Redis channel and put them on a queue."""
+    redis = AgentRedis(
+        await settings.redis_client(), settings, logger, settings.AGENT_UUID
+    )
+
+    while True:
+        logger.info(f"{settings.AGENT_UUID} :: Wait for a new request...")
+        request = await redis.subscribe()
+        if request is None:
+            continue
+
+        logger.info(
+            f"{settings.AGENT_UUID} :: New request received! Putting in task queue"
+        )
+        await queue.put(request)
+
+        logger.info(
+            f"{settings.AGENT_UUID} :: Measurements currently in the queue: {queue.qsize()}"
+        )
+
+
 async def consumer(
-    settings: AgentSettings, queue: asyncio.Queue, logger: Logger, agent_uuid: UUID
-):
-    """Wait for a task in a queue and process it."""
-    redis = AgentRedis(await settings.redis_client(), settings, logger, agent_uuid)
+    settings: AgentSettings, queue: asyncio.Queue, logger: Logger
+) -> None:
+    """Consume tasks from the queue."""
+    redis = AgentRedis(
+        await settings.redis_client(), settings, logger, settings.AGENT_UUID
+    )
+    storage = Storage(settings, logger)
 
     while True:
         request = await queue.get()
         measurement_uuid = request["measurement_uuid"]
-
-        logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
-
-        is_alive = await redis.test()
-        if not is_alive:
-            logger.error(f"{logger_prefix} Redis connection failed. Re-connecting...")
-            await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
-            try:
-                await redis.test()
-            except OSError:
-                continue
+        logger_prefix = f"{measurement_uuid} :: {settings.AGENT_UUID} ::"
 
         measurement_state = await redis.get_measurement_state(measurement_uuid)
-        if measurement_state is None or measurement_state == "canceled":
+        if measurement_state in [None, public.MeasurementState.Canceled]:
             logger.warning(f"{logger_prefix} The measurement has been canceled")
             continue
 
@@ -50,27 +66,10 @@ async def consumer(
         )
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
-        storage = Storage(settings, logger)
-        await measurement(settings, request, logger, storage, redis)
+        await measurement(settings, request, logger, storage)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
         await redis.set_agent_state(public.AgentState.Idle)
-
-
-async def producer(redis: AgentRedis, queue: asyncio.Queue, logger: Logger):
-    """Wait a task and put in on the queue."""
-    while True:
-        logger.info(f"{redis.uuid} :: Wait for a new request...")
-        request = await redis.subscribe()
-        if request is None:
-            continue
-
-        logger.info(f"{redis.uuid} :: New request received! Putting in task queue")
-        await queue.put(request)
-
-        logger.info(
-            f"{redis.uuid} :: Measurements currently in the queue: {queue.qsize()}"
-        )
 
 
 async def main():
@@ -107,8 +106,8 @@ async def main():
 
         queue = asyncio.Queue()
         tasks = [
-            asyncio.create_task(producer(redis, queue, logger)),
-            asyncio.create_task(consumer(settings, queue, logger, settings.AGENT_UUID)),
+            asyncio.create_task(producer(settings, queue, logger)),
+            asyncio.create_task(consumer(settings, queue, logger)),
         ]
         await asyncio.gather(*tasks)
 

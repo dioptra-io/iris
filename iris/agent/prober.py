@@ -10,7 +10,8 @@ from diamond_miner.generators import probe_generator_by_flow
 from pycaracal import cast_addr, make_probe, prober, set_log_level
 
 from iris.agent.settings import AgentSettings
-from iris.commons.redis import Redis
+from iris.commons.redis import AgentRedis
+from iris.commons.schemas import public
 
 
 async def watcher(
@@ -19,16 +20,17 @@ async def watcher(
     measurement_uuid: UUID,
     logger: Logger,
     logger_prefix: str = "",
-    redis: Optional[Redis] = None,
 ) -> bool:
     """Watch the prober execution and stop it according to the measurement state."""
+    redis = AgentRedis(
+        await settings.redis_client(), settings, logger, settings.AGENT_UUID
+    )
     while process.is_alive():
-        if redis is not None:
-            measurement_state = await redis.get_measurement_state(measurement_uuid)
-            if measurement_state is None or measurement_state == "canceled":
-                process.kill()
-                logger.warning(logger_prefix + "Measurement canceled")
-                return False
+        measurement_state = await redis.get_measurement_state(measurement_uuid)
+        if measurement_state in [None, public.MeasurementState.Canceled]:
+            process.kill()
+            logger.warning(logger_prefix + "Measurement canceled")
+            return False
         await asyncio.sleep(settings.AGENT_STOPPER_REFRESH)
     return True
 

@@ -11,7 +11,7 @@ from pytricia import PyTricia
 
 from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
-from iris.commons.redis import Redis
+from iris.commons.redis import AgentRedis
 from iris.commons.round import Round
 from iris.commons.schemas import private, public
 from iris.commons.storage import Storage
@@ -104,12 +104,15 @@ async def measurement(
     request: private.MeasurementRoundRequest,
     logger: Logger,
     storage: Storage,
-    redis: Optional[Redis] = None,
 ) -> Tuple[str, Dict]:
     """Conduct a measurement."""
     measurement_request = request.measurement
     agent = measurement_request.agent(settings.AGENT_UUID)
     logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
+
+    redis = AgentRedis(
+        await settings.redis_client(), settings, logger, settings.AGENT_UUID
+    )
 
     measurement_results_path = settings.AGENT_RESULTS_DIR_PATH / str(
         measurement_request.uuid
@@ -125,9 +128,7 @@ async def measurement(
 
     gen_parameters = None
     target_filepath = None
-
     probes_filepath = None
-
     is_custom_probes_file = agent.target_file.endswith(".probes")
 
     if request.round.number == 1 and not is_custom_probes_file:
@@ -213,18 +214,14 @@ async def measurement(
             measurement_request.uuid,
             logger,
             logger_prefix=logger_prefix,
-            redis=redis,
         )
 
         prober_statistics = dict(prober_statistics)
         sniffer_statistics = dict(sniffer_statistics)
 
     statistics = {**prober_statistics, **sniffer_statistics}
-    if redis:
-        logger.info("Upload probing statistics in Redis")
-        await redis.set_measurement_stats(
-            measurement_request.uuid, agent.uuid, statistics
-        )
+    logger.info("Upload probing statistics in Redis")
+    await redis.set_measurement_stats(measurement_request.uuid, agent.uuid, statistics)
 
     if is_not_canceled:
         logger.info(f"{logger_prefix} Upload results file into AWS S3")
