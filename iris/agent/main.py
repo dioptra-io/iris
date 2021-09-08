@@ -85,7 +85,7 @@ async def main():
         )
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
-    await redis.connect()
+    await redis.test()
 
     logger.info(f"{settings.AGENT_UUID} :: Connected to Redis")
     tasks = []
