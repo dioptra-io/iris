@@ -17,6 +17,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Start ClickHouse
         run: docker run -d -p 8123:8213 -p 9000:9000 yandex/clickhouse-server
+      - name: Start Redis
+        run: docker run -d -p 6379:6379 redis redis-server --requirepass redispass
       - name: Install clickhouse-client and zstd
         run: |
           sudo apt install --yes apt-transport-https ca-certificates dirmngr
