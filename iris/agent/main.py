@@ -1,6 +1,8 @@
 import asyncio
 import socket
 import traceback
+from logging import Logger
+from uuid import UUID
 
 from iris import __version__
 from iris.agent.measurements import measurement
@@ -8,14 +10,17 @@ from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
 from iris.commons.logger import create_logger
 from iris.commons.redis import AgentRedis
+from iris.commons.schemas import public
 from iris.commons.storage import Storage
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 
 
-async def consumer(settings, agent_uuid, queue, logger):
+async def consumer(
+    settings: AgentSettings, queue: asyncio.Queue, logger: Logger, agent_uuid: UUID
+):
     """Wait for a task in a queue and process it."""
-    redis = AgentRedis(agent_uuid, settings=settings, logger=logger)
-    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD, register=False)
+    redis = AgentRedis(settings, logger, agent_uuid)
+    await redis.connect(register=False)
 
     while True:
         request = await queue.get()
@@ -28,7 +33,7 @@ async def consumer(settings, agent_uuid, queue, logger):
             logger.error(f"{logger_prefix} Redis connection failed. Re-connecting...")
             await asyncio.sleep(settings.AGENT_RECOVER_TIME_REDIS_FAILURE)
             try:
-                await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+                await redis.connect()
             except OSError:
                 continue
 
@@ -38,20 +43,22 @@ async def consumer(settings, agent_uuid, queue, logger):
             continue
 
         logger.info(f"{logger_prefix} Set agent state to `working`")
-        await redis.set_agent_state("working")
+        await redis.set_agent_state(public.AgentState.Working)
 
         logger.info(f"{logger_prefix} Set measurement state to `ongoing`")
-        await redis.set_measurement_state(measurement_uuid, "ongoing")
+        await redis.set_measurement_state(
+            measurement_uuid, public.MeasurementState.Ongoing
+        )
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
         storage = Storage(settings, logger)
         await measurement(settings, request, storage, logger, redis=redis)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
-        await redis.set_agent_state("idle")
+        await redis.set_agent_state(public.AgentState.Idle)
 
 
-async def producer(redis, queue, logger):
+async def producer(redis: AgentRedis, queue: asyncio.Queue, logger: Logger):
     """Wait a task and put in on the queue."""
     while True:
         logger.info(f"{redis.uuid} :: Wait for a new request...")
@@ -71,7 +78,7 @@ async def main():
     """Main agent function."""
     settings = AgentSettings()
     logger = create_logger(settings, tags={"agent_uuid": settings.AGENT_UUID})
-    redis = AgentRedis(settings.AGENT_UUID, settings=settings, logger=logger)
+    redis = AgentRedis(settings, logger, settings.AGENT_UUID)
 
     if settings.AGENT_MIN_TTL < 0:
         settings.AGENT_MIN_TTL = find_exit_ttl(
@@ -79,29 +86,28 @@ async def main():
         )
 
     await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
-    await redis.connect(settings.REDIS_URL, settings.REDIS_PASSWORD)
+    await redis.connect()
 
     logger.info(f"{settings.AGENT_UUID} :: Connected to Redis")
     tasks = []
     try:
-
-        await redis.set_agent_state("idle")
+        await redis.set_agent_state(public.AgentState.Idle)
         await redis.set_agent_parameters(
-            {
-                "version": __version__,
-                "hostname": socket.gethostname(),
-                "ipv4_address": get_ipv4_address(),
-                "ipv6_address": get_ipv6_address(),
-                "min_ttl": settings.AGENT_MIN_TTL,
-                "max_probing_rate": settings.AGENT_MAX_PROBING_RATE,
-                "agent_tags": settings.AGENT_TAGS,
-            }
+            public.AgentParameters(
+                version=__version__,
+                hostname=socket.gethostname(),
+                ipv4_address=get_ipv4_address(),
+                ipv6_address=get_ipv6_address(),
+                min_ttl=settings.AGENT_MIN_TTL,
+                max_probing_rate=settings.AGENT_MAX_PROBING_RATE,
+                agent_tags=settings.AGENT_TAGS,
+            )
         )
 
         queue = asyncio.Queue()
         tasks = [
             asyncio.create_task(producer(redis, queue, logger)),
-            asyncio.create_task(consumer(settings, redis.uuid, queue, logger)),
+            asyncio.create_task(consumer(settings, queue, logger, settings.AGENT_UUID)),
         ]
         await asyncio.gather(*tasks)
 
@@ -114,7 +120,8 @@ async def main():
     finally:
         for task in tasks:
             task.cancel()
-        await redis.unsubscribe()
+        # TODO: Is this still necessary with aioredis 2.0.0?
+        # await redis.unsubscribe()
         await redis.delete_agent_state()
         await redis.delete_agent_parameters()
         await redis.disconnect()

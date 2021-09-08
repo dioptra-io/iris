@@ -1,6 +1,7 @@
 import logging
 import platform
 
+import aioredis
 from pydantic import BaseSettings
 
 
@@ -40,11 +41,7 @@ class CommonSettings(BaseSettings):
     TABLE_NAME_MEASUREMENTS: str = "measurements"
     TABLE_NAME_AGENTS: str = "agents"
 
-    REDIS_URL: str = "redis://redis"
-    REDIS_HOSTNAME: str = "redis"
-    REDIS_PORT: int = 6379
-    REDIS_PASSWORD: str = "redispass"
-    REDIS_SSL: bool = False
+    REDIS_URL: str = "redis://default:redisspass@redis"
     REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
@@ -74,3 +71,8 @@ class CommonSettings(BaseSettings):
         url += f"&send_receive_timeout={self.DATABASE_SEND_RECEIVE_TIMEOUT}"
         url += f"&sync_request_timeout={self.DATABASE_SYNC_REQUEST_TIMEOUT}"
         return url
+
+    async def redis_client(self) -> aioredis.Redis:
+        return await aioredis.from_url(
+            self.REDIS_URL, encoding="utf-8", decode_responses=True
+        )

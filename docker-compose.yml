@@ -37,14 +37,14 @@ services:
   redis:
     image: "redis:latest"
     command: "redis-server --requirepass redispass"
-    expose:
-      - "6379"
     labels:
       - "traefik.enable=true"
       - "traefik.tcp.routers.redis.entrypoints=redis"
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
     volumes:
       - "./volumes/redis:/data"
+    ports:
+      - "6379:6379"
 
   minio:
     image: "minio/minio:latest"

@@ -1,104 +1,59 @@
-def test_get_agents(client):
-    class FakeRedis(object):
-        async def get_agents(*args, **kwargs):
-            return [
-                {
-                    "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                    "state": "idle",
-                    "parameters": {
-                        "version": "0.1.0",
-                        "hostname": "test",
-                        "ipv4_address": "1.2.3.4",
-                        "ipv6_address": "::1234",
-                        "min_ttl": 1,
-                        "max_probing_rate": 1000,
-                        "agent_tags": ["all"],
-                    },
-                }
-            ]
+import logging
+from uuid import uuid4
 
-    client.app.redis = FakeRedis()
+import pytest
 
-    response = client.get("/api/agents")
-    assert response.json() == {
-        "count": 1,
-        "next": None,
-        "previous": None,
-        "results": [
-            {
-                "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                "state": "idle",
-                "parameters": {
-                    "version": "0.1.0",
-                    "hostname": "test",
-                    "ipv4_address": "1.2.3.4",
-                    "ipv6_address": "::1234",
-                    "min_ttl": 1,
-                    "max_probing_rate": 1000,
-                    "agent_tags": ["all"],
-                },
-            }
-        ],
-    }
+from iris.commons.redis import AgentRedis
 
 
-def test_get_agent_by_uuid(client):
-    class FakeRedis(object):
-        async def get_agents(*args, **kwargs):
-            return [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"}]
+@pytest.mark.asyncio
+async def test_get_agents(api_client, common_settings, fake_agent, redis_client):
+    redis = AgentRedis(
+        redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
+    )
+    await redis.register()
+    await redis.set_agent_parameters(fake_agent.parameters)
+    await redis.set_agent_state(fake_agent.state)
 
-        async def get_agent_state(*args, **kwargs):
-            return "idle"
-
-        async def get_agent_parameters(*args, **kwargs):
-            return {
-                "version": "0.1.0",
-                "hostname": "test",
-                "ipv4_address": "1.2.3.4",
-                "ipv6_address": "::1234",
-                "min_ttl": 1,
-                "max_probing_rate": 1000,
-                "agent_tags": ["all"],
-            }
-
-    client.app.redis = FakeRedis()
-
-    response = client.get("/api/agents/6f4ed428-8de6-460e-9e19-6e6173776552")
-    assert response.json() == {
-        "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
+    formatted = {
+        "uuid": str(fake_agent.uuid),
         "state": "idle",
         "parameters": {
             "version": "0.1.0",
-            "hostname": "test",
-            "ipv4_address": "1.2.3.4",
-            "ipv6_address": "::1234",
+            "hostname": "localhost",
+            "ipv4_address": "127.0.0.1",
+            "ipv6_address": "::1",
             "min_ttl": 1,
             "max_probing_rate": 1000,
-            "agent_tags": ["all"],
+            "agent_tags": ["test"],
         },
     }
 
+    async with api_client as c:
+        response = await c.get("/api/agents")
+        assert response.json() == {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [formatted],
+        }
 
-def test_get_agent_by_uuid_not_found(client):
-    class FakeRedis(object):
-        async def get_agents(*args, **kwargs):
-            return [{"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"}]
+        response = await c.get(f"/api/agents/{fake_agent.uuid}")
+        assert response.json() == formatted
 
-    client.app.redis = FakeRedis()
-
-    response = client.get("/api/agents/6f4ed428-8de6-460e-9e19-6e6173776551")
-    assert response.status_code == 404
+        response = await c.get(f"/api/agents/{uuid4()}")
+        assert response.status_code == 404
 
 
-def test_get_agent_by_uuid_duplicate(client):
-    class FakeRedis(object):
-        async def get_agents(*args, **kwargs):
-            return [
-                {"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"},
-                {"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"},
-            ]
-
-    client.app.redis = FakeRedis()
-
-    response = client.get("/api/agents/6f4ed428-8de6-460e-9e19-6e6173776552")
-    assert response.status_code == 500
+# def test_get_agent_by_uuid_duplicate(client):
+#     class FakeRedis(object):
+#         async def get_agents(*args, **kwargs):
+#             return [
+#                 {"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"},
+#                 {"uuid": "6f4ed428-8de6-460e-9e19-6e6173776552"},
+#             ]
+#
+#     client.app.redis = FakeRedis()
+#
+#     response = client.get("/api/agents/6f4ed428-8de6-460e-9e19-6e6173776552")
+#     assert response.status_code == 500

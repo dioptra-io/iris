@@ -5,7 +5,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from iris.commons.database.database import Database
-from iris.commons.dataclasses import ParametersDataclass
+from iris.commons.schemas import private, public
 
 
 @dataclass(frozen=True)
@@ -61,19 +61,25 @@ class Agents(Database):
             return self.formatter(responses[0])
         return None
 
-    async def register(self, parameters: ParametersDataclass) -> None:
+    async def register(
+        self,
+        measurement_request: private.MeasurementRequest,
+        agent_uuid: UUID,
+        agent_parameters: public.AgentParameters,
+    ) -> None:
+        agent = measurement_request.agent(agent_uuid)
         await self.call(
             f"INSERT INTO {self.table} VALUES",
             [
                 {
-                    "measurement_uuid": parameters.measurement_uuid,
-                    "agent_uuid": parameters.agent_uuid,
-                    "target_file": parameters.target_file,
-                    "probing_rate": parameters.probing_rate,
+                    "measurement_uuid": measurement_request.uuid,
+                    "agent_uuid": agent.uuid,
+                    "target_file": agent.target_file,
+                    "probing_rate": agent.probing_rate,
                     "probing_statistics": json.dumps({}),
-                    "agent_parameters": json.dumps(parameters.agent_parameters),
-                    "tool_parameters": json.dumps(parameters.tool_parameters),
-                    "state": "ongoing",
+                    "agent_parameters": agent_parameters.json(),
+                    "tool_parameters": agent.tool_parameters.json(),
+                    "state": public.MeasurementState.Ongoing.value,
                     "timestamp": datetime.now(),
                 }
             ],
@@ -120,7 +126,7 @@ class Agents(Database):
             SETTINGS mutations_sync=1
             """,
             {
-                "state": "finished",
+                "state": public.MeasurementState.Finished.value,
                 "measurement_uuid": measurement_uuid,
                 "agent_uuid": agent_uuid,
             },
@@ -136,7 +142,7 @@ class Agents(Database):
             SETTINGS mutations_sync=1
             """,
             {
-                "state": "canceled",
+                "state": public.MeasurementState.Canceled.value,
                 "measurement_uuid": measurement_uuid,
                 "agent_uuid": agent_uuid,
             },
@@ -151,5 +157,5 @@ class Agents(Database):
             "probing_statistics": json.loads(row[4]),
             "agent_parameters": json.loads(row[5]),
             "tool_parameters": json.loads(row[6]),
-            "state": row[7],
+            "state": public.MeasurementState(row[7]),
         }

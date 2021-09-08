@@ -1,4 +1,5 @@
-from typing import List
+from enum import Enum
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -16,9 +17,15 @@ class AgentParameters(BaseModel):
     agent_tags: List[str]
 
 
+class AgentState(str, Enum):
+    Idle = "idle"
+    Unknown = "unknown"
+    Working = "working"
+
+
 class Agent(BaseModel):
     """Summary information about a agent (Response)."""
 
     uuid: UUID
-    state: str
-    parameters: AgentParameters
+    parameters: Optional[AgentParameters]
+    state: Optional[AgentState]

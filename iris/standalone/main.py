@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import typer
 
-from iris.api.schemas.measurements import Tool, ToolParameters
+from iris.commons.schemas.public.measurements import Tool, ToolParameters
 from iris.standalone import default_parameters
 from iris.standalone.display import display_results
 from iris.standalone.logger import create_logger

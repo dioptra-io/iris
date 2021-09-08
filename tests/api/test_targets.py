@@ -7,7 +7,7 @@ from iris.api.targets import verify_target_file
 # --- GET /api/targets ---
 
 
-def test_get_targets(client, monkeypatch):
+def test_get_targets(api_client_sync, monkeypatch):
     class FakeStorage(object):
         async def get_all_files_no_retry(*args, **kwargs):
             return [
@@ -20,9 +20,9 @@ def test_get_targets(client, monkeypatch):
                 }
             ]
 
-    client.app.storage = FakeStorage()
+    api_client_sync.app.storage = FakeStorage()
 
-    response = client.get("/api/targets")
+    response = api_client_sync.get("/api/targets")
     assert response.json() == {
         "count": 1,
         "next": None,
@@ -31,14 +31,14 @@ def test_get_targets(client, monkeypatch):
     }
 
 
-def test_get_targets_empty(client, monkeypatch):
+def test_get_targets_empty(api_client_sync, monkeypatch):
     class FakeStorage(object):
         async def get_all_files_no_retry(*args, **kwargs):
             return []
 
-    client.app.storage = FakeStorage()
+    api_client_sync.app.storage = FakeStorage()
 
-    response = client.get("/api/targets")
+    response = api_client_sync.get("/api/targets")
     assert response.json() == {
         "count": 0,
         "next": None,
@@ -50,7 +50,7 @@ def test_get_targets_empty(client, monkeypatch):
 # --- GET /api/targets/{key} ---
 
 
-def test_get_targets_by_key(client, monkeypatch):
+def test_get_targets_by_key(api_client_sync, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             return {
@@ -61,9 +61,9 @@ def test_get_targets_by_key(client, monkeypatch):
                 "metadata": None,
             }
 
-    client.app.storage = FakeStorage()
+    api_client_sync.app.storage = FakeStorage()
 
-    response = client.get("/api/targets/test")
+    response = api_client_sync.get("/api/targets/test")
     assert response.json() == {
         "key": "test",
         "size": 42,
@@ -72,14 +72,14 @@ def test_get_targets_by_key(client, monkeypatch):
     }
 
 
-def test_get_targets_by_key_not_found(client, monkeypatch):
+def test_get_targets_by_key_not_found(api_client_sync, monkeypatch):
     class FakeStorage(object):
         async def get_file_no_retry(*args, **kwargs):
             raise Exception
 
-    client.app.storage = FakeStorage()
+    api_client_sync.app.storage = FakeStorage()
 
-    response = client.get("/api/targets/test")
+    response = api_client_sync.get("/api/targets/test")
     assert response.status_code == 404
 
 
@@ -147,34 +147,34 @@ async def test_verify_prefixes_list_file():
 # --- DELETE /api/targets/{key} ---
 
 
-def test_delete_targets_by_key(client, monkeypatch):
+def test_delete_targets_by_key(api_client_sync, monkeypatch):
     class FakeStorage(object):
         async def delete_file_check_no_retry(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 204}}
 
-    client.app.storage = FakeStorage()
+    api_client_sync.app.storage = FakeStorage()
 
-    response = client.delete("/api/targets/test")
+    response = api_client_sync.delete("/api/targets/test")
     assert response.json() == {"key": "test", "action": "delete"}
 
 
-def test_delete_targets_by_key_not_found(client, monkeypatch):
+def test_delete_targets_by_key_not_found(api_client_sync, monkeypatch):
     class FakeStorage(object):
         async def delete_file_check_no_retry(*args, **kwargs):
             raise Exception
 
-    client.app.storage = FakeStorage()
+    api_client_sync.app.storage = FakeStorage()
 
-    response = client.delete("/api/targets/test")
+    response = api_client_sync.delete("/api/targets/test")
     assert response.status_code == 404
 
 
-def test_delete_targets_internal_error(client, monkeypatch):
+def test_delete_targets_internal_error(api_client_sync, monkeypatch):
     class FakeStorage(object):
         async def delete_file_check_no_retry(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 500}}
 
-    client.app.storage = FakeStorage()
+    api_client_sync.app.storage = FakeStorage()
 
-    response = client.delete("/api/targets/test")
+    response = api_client_sync.delete("/api/targets/test")
     assert response.status_code == 500

@@ -4,6 +4,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from iris.commons.database.database import Database
+from iris.commons.schemas import private, public
 
 
 @dataclass(frozen=True)
@@ -73,20 +74,18 @@ class Measurements(Database):
             return self.formatter(responses[0])
         return None
 
-    async def register(self, measurement_parameters: dict) -> None:
+    async def register(self, measurement_request: private.MeasurementRequest) -> None:
         """Register a measurement."""
         await self.call(
             f"INSERT INTO {self.table} VALUES",
             [
                 {
-                    "uuid": measurement_parameters["measurement_uuid"],
-                    "user": measurement_parameters["user"],
-                    "tool": measurement_parameters["tool"],
-                    "tags": measurement_parameters["tags"],
-                    "state": "ongoing",
-                    "start_time": datetime.fromtimestamp(
-                        measurement_parameters["start_time"]
-                    ),
+                    "uuid": measurement_request.uuid,
+                    "user": measurement_request.username,
+                    "tool": measurement_request.tool,
+                    "tags": measurement_request.tags,
+                    "state": public.MeasurementState.Ongoing.value,
+                    "start_time": measurement_request.start_time,
                     "end_time": None,
                 }
             ],
@@ -100,7 +99,11 @@ class Measurements(Database):
             WHERE user=%(user)s AND uuid=%(uuid)s
             SETTINGS mutations_sync=1
             """,
-            {"state": "finished", "user": user, "uuid": uuid},
+            {
+                "state": public.MeasurementState.Finished.value,
+                "user": user,
+                "uuid": uuid,
+            },
         )
 
     async def stamp_canceled(self, user: str, uuid: UUID) -> None:
@@ -111,7 +114,11 @@ class Measurements(Database):
             WHERE user=%(user)s AND uuid=%(uuid)s
             SETTINGS mutations_sync=1
             """,
-            {"state": "canceled", "user": user, "uuid": uuid},
+            {
+                "state": public.MeasurementState.Canceled.value,
+                "user": user,
+                "uuid": uuid,
+            },
         )
 
     async def stamp_end_time(self, user: str, uuid: UUID) -> None:
@@ -134,7 +141,7 @@ class Measurements(Database):
             "user": row[1],
             "tool": row[2],
             "tags": row[3],
-            "state": row[4],
+            "state": public.MeasurementState(row[4]),
             "start_time": row[5].isoformat(),
             "end_time": row[6].isoformat() if row[6] is not None else None,
         }
