@@ -18,7 +18,7 @@ RUN pip3 install --no-cache-dir poetry==1.1.7
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml pyproject.toml
-COPY poetry.lock poetry.lock
+#COPY poetry.lock poetry.lock
 
 RUN poetry install --no-root --no-dev --extras agent \
     && rm -rf /root/.cache/*
