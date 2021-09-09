@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import typer
 
-from iris.api.schemas.measurements import Tool, ToolParameters
+from iris.commons.schemas.public.measurements import Tool, ToolParameters
 from iris.standalone import default_parameters
 from iris.standalone.display import display_results
 from iris.standalone.logger import create_logger
@@ -44,7 +44,7 @@ async def diamond_miner(
     else:
         prefixes = sys.stdin.readlines()
 
-    tool: Tool = Tool("diamond-miner")
+    tool: Tool = Tool.DiamondMiner
     tool_parameters = ToolParameters(
         **{
             "initial_source_port": initial_source_port,
@@ -82,7 +82,7 @@ async def yarrp(
     else:
         prefixes = sys.stdin.readlines()
 
-    tool: Tool = Tool("yarrp")
+    tool: Tool = Tool.Yarrp
     tool_parameters = ToolParameters(
         **{
             "initial_source_port": initial_source_port,
@@ -96,7 +96,7 @@ async def yarrp(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag, logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag or [], logger
     )
     display_results(pipeline_info)
 
@@ -120,7 +120,7 @@ async def ping(
     else:
         prefixes = sys.stdin.readlines()
 
-    tool = Tool("ping")
+    tool = Tool.Ping
     tool_parameters = ToolParameters(
         **{
             "initial_source_port": initial_source_port,
@@ -134,7 +134,7 @@ async def ping(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag, logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag or [], logger
     )
     display_results(pipeline_info)
 

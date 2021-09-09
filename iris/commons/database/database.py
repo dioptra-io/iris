@@ -1,17 +1,9 @@
-import logging
 from dataclasses import dataclass
 from logging import Logger
 from typing import Any
 
 from aioch import Client
 from diamond_miner.queries import Query
-from tenacity import (
-    before_sleep_log,
-    retry,
-    stop_after_delay,
-    wait_exponential,
-    wait_random,
-)
 
 from iris.commons.settings import CommonSettings
 
@@ -22,26 +14,9 @@ class Database:
     logger: Logger
 
     def fault_tolerant(func):
-        """Exponential back-off strategy."""
-
         async def wrapper(*args, **kwargs):
-            cls = args[0]
-            settings, logger = cls.settings, cls.logger
-            return await retry(
-                stop=stop_after_delay(settings.DATABASE_TIMEOUT),
-                wait=wait_exponential(
-                    multiplier=settings.DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-                    min=settings.DATABASE_TIMEOUT_EXPONENTIAL_MIN,
-                    max=settings.DATABASE_TIMEOUT_EXPONENTIAL_MAX,
-                )
-                + wait_random(
-                    settings.DATABASE_TIMEOUT_RANDOM_MIN,
-                    settings.DATABASE_TIMEOUT_RANDOM_MAX,
-                ),
-                before_sleep=(
-                    before_sleep_log(logger, logging.ERROR) if logger else None
-                ),
-            )(func)(*args, **kwargs)
+            retryer = args[0].settings.database_retryer(args[0].logger)
+            return await retryer(func)(*args, **kwargs)
 
         return wrapper
 

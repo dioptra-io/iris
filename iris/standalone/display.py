@@ -20,7 +20,7 @@ def display_results(results: dict, console: Optional[Console] = None):
     items_table.add_row(
         "agent uuid =",
         Pretty(
-            results["agent_uuid"],
+            str(results["agent_uuid"]),
             highlighter=ReprHighlighter(),
         ),
     )
@@ -105,7 +105,7 @@ def display_results(results: dict, console: Optional[Console] = None):
             RenderGroup(
                 "",
                 Panel(
-                    Text(results["measurement_uuid"], style="bold blue"),
+                    Text(str(results["measurement_uuid"]), style="bold blue"),
                     title="measurement uuid",
                 ),
                 "",

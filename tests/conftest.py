@@ -2,37 +2,36 @@ import logging
 import subprocess
 from uuid import uuid4
 
+import fakeredis.aioredis
 import pytest
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 from iris.api.main import app
 from iris.api.security import get_current_active_user
 from iris.api.settings import APISettings
 from iris.commons.redis import Redis
+from iris.commons.schemas.public import Agent, AgentParameters, AgentState
 from iris.commons.settings import CommonSettings
 
-uuid_user = str(uuid4())
+agent = Agent(
+    uuid=uuid4(),
+    parameters=AgentParameters(
+        version="0.1.0",
+        hostname="localhost",
+        ipv4_address="127.0.0.1",
+        ipv6_address="::1",
+        min_ttl=1,
+        max_probing_rate=1000,
+        agent_tags=["test"],
+    ),
+    state=AgentState.Idle,
+)
 
 
-def override_get_current_active_user():
-    return {
-        "uuid": uuid_user,
-        "username": "test",
-        "email": "test@test",
-        "hashed_password": (
-            "$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve"
-        ),
-        "is_active": True,
-        "is_admin": True,
-        "quota": 1000,
-        "register_date": "date",
-        "ripe_account": None,
-        "ripe_key": None,
-    }
-
-
-class TestSettings(APISettings):
-    pass
+@pytest.fixture
+def fake_agent():
+    return agent
 
 
 class FakeRedis(Redis):
@@ -43,23 +42,10 @@ class FakeRedis(Redis):
         pass
 
     async def get_agents(*args, **kwargs):
-        return [
-            {
-                "uuid": "6f4ed428-8de6-460e-9e19-6e6173776552",
-                "state": "idle",
-                "parameters": {
-                    "version": "0.1.0",
-                    "hostname": "test",
-                    "ip_address": "1.2.3.4",
-                    "min_ttl": 1,
-                    "max_probing_rate": 1000,
-                    "agent_tags": ["test"],
-                },
-            }
-        ]
+        return [agent]
 
     async def get_agent_state(*args, **kwargs):
-        return "idle"
+        return agent.state
 
     async def get_agent_parameters(*args, **kwargs):
         return {}
@@ -83,15 +69,25 @@ class FakeRedis(Redis):
         pass
 
 
-@pytest.fixture
-def client():
-    client = TestClient(app)
-    app.dependency_overrides[get_current_active_user] = override_get_current_active_user
+class TestSettings(APISettings):
+    pass
 
-    app.redis = FakeRedis()
-    app.logger = logging.getLogger("test")
-    app.settings = TestSettings()
-    return client
+
+def override_get_current_active_user():
+    return {
+        "uuid": str(uuid4()),
+        "username": "test",
+        "email": "test@test",
+        "hashed_password": (
+            "$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve"
+        ),
+        "is_active": True,
+        "is_admin": True,
+        "quota": 1000,
+        "register_date": "date",
+        "ripe_account": None,
+        "ripe_key": None,
+    }
 
 
 @pytest.fixture(scope="session")
@@ -112,8 +108,38 @@ def s3_server():
 def common_settings(s3_server):
     # The `function` scope ensures that the settings are reset before every test.
     return CommonSettings(
+        AWS_S3_HOST=s3_server,
+        AWS_TIMEOUT=0,
         DATABASE_HOST="localhost",
         DATABASE_NAME="iris_test",
         DATABASE_TIMEOUT=0,
-        AWS_S3_HOST=s3_server,
+        REDIS_TIMEOUT=0,
     )
+
+
+@pytest.fixture(scope="function")
+async def redis_client():
+    return fakeredis.aioredis.FakeRedis(decode_responses=True)
+
+
+# Async API client with a "real" Redis client
+@pytest.fixture(scope="function")
+def api_client(common_settings, redis_client):
+    app.dependency_overrides[get_current_active_user] = override_get_current_active_user
+    app.logger = logging.getLogger("test")
+    app.redis = Redis(redis_client, common_settings, app.logger)
+    app.settings = TestSettings()
+    client = AsyncClient(app=app, base_url="http://test")
+    return client
+
+
+# Sync API client with a fake Redis client
+# TODO: Use the async client with the "real" redis client everywhere?
+@pytest.fixture(scope="function")
+def api_client_sync(common_settings, redis_client):
+    app.dependency_overrides[get_current_active_user] = override_get_current_active_user
+    app.logger = logging.getLogger("test")
+    app.redis = FakeRedis()
+    app.settings = TestSettings()
+    client = TestClient(app)
+    return client

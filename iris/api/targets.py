@@ -14,16 +14,16 @@ from fastapi import (
     status,
 )
 
-from iris.api import schemas
 from iris.api.pagination import ListPagination
 from iris.api.security import get_current_active_user
+from iris.commons.schemas import public
 
 router = APIRouter()
 
 
 @router.get(
     "/",
-    response_model=schemas.Paginated[schemas.TargetSummary],
+    response_model=public.Paginated[public.TargetSummary],
     summary="Get all target lists.",
 )
 async def get_targets(
@@ -47,8 +47,8 @@ async def get_targets(
 
 @router.get(
     "/{key}",
-    response_model=schemas.Target,
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.Target,
+    responses={404: {"model": public.GenericException}},
     summary="Get target list specified by key.",
 )
 async def get_target_by_key(
@@ -107,7 +107,7 @@ async def verify_target_file(target_file):
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
-    response_model=schemas.TargetPostResponse,
+    response_model=public.TargetPostResponse,
     summary="Upload a target list.",
     description="""
     Each line of the file must be like `target,protocol,min_ttl,max_ttl`
@@ -143,10 +143,10 @@ async def post_target(
 
 @router.delete(
     "/{key}",
-    response_model=schemas.TargetDeleteResponse,
+    response_model=public.TargetDeleteResponse,
     responses={
-        404: {"model": schemas.GenericException},
-        500: {"model": schemas.GenericException},
+        404: {"model": public.GenericException},
+        500: {"model": public.GenericException},
     },
     summary="Delete a target list.",
 )

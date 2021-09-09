@@ -1,36 +1,51 @@
 """Prober executor."""
 
 import asyncio
+from logging import Logger
+from multiprocessing import Process
+from typing import Dict, Optional
+from uuid import UUID
 
 from diamond_miner.generators import probe_generator_by_flow
 from pycaracal import cast_addr, make_probe, prober, set_log_level
 
+from iris.agent.settings import AgentSettings
+from iris.commons.redis import AgentRedis
+from iris.commons.schemas.public import MeasurementState
+
 
 async def watcher(
-    process, settings, measurement_uuid, logger, logger_prefix="", redis=None
+    process: Process,
+    settings: AgentSettings,
+    measurement_uuid: UUID,
+    redis: AgentRedis,
+    logger: Logger,
+    logger_prefix: str = "",
 ) -> bool:
     """Watch the prober execution and stop it according to the measurement state."""
     while process.is_alive():
-        if redis is not None:
-            measurement_state = await redis.get_measurement_state(measurement_uuid)
-            if measurement_state is None or measurement_state == "canceled":
-                process.kill()
-                logger.warning(logger_prefix + "Measurement canceled")
-                return False
+        measurement_state = await redis.get_measurement_state(measurement_uuid)
+        if measurement_state in [
+            MeasurementState.Canceled,
+            MeasurementState.Unknown,
+        ]:
+            process.kill()
+            logger.warning(logger_prefix + "Measurement canceled")
+            return False
         await asyncio.sleep(settings.AGENT_STOPPER_REFRESH)
     return True
 
 
 def probe(
-    settings,
-    results_filepath,
-    round_number,
-    probing_rate,
-    prober_statistics,
-    sniffer_statistics,
-    gen_parameters=None,
-    probes_filepath=None,
-):
+    settings: AgentSettings,
+    results_filepath: str,
+    round_number: int,
+    probing_rate: int,
+    prober_statistics: Dict,
+    sniffer_statistics: Dict,
+    gen_parameters: Optional[Dict] = None,
+    probes_filepath: Optional[str] = None,
+) -> None:
     """Probing interface."""
 
     # Check the input parameters

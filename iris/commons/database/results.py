@@ -4,7 +4,7 @@ from asyncio import Semaphore
 from dataclasses import dataclass
 from ipaddress import IPv6Address
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import Generic, List, Optional, TypeVar, Union
 from uuid import UUID
 
 import aiofiles.os
@@ -29,7 +29,10 @@ from diamond_miner.typing import IPNetwork
 from pydantic import IPvAnyAddress
 
 from iris.commons.database.database import Database
+from iris.commons.schemas import public
 from iris.commons.subprocess import start_stream_subprocess
+
+T = TypeVar("T")
 
 
 def addr_to_string(addr: IPv6Address) -> str:
@@ -140,12 +143,12 @@ class InsertResults(Database):
 
 
 @dataclass(frozen=True)
-class QueryWrapper(Database):
+class QueryWrapper(Database, Generic[T]):
     measurement_uuid: Union[str, UUID]
     agent_uuid: Union[str, UUID]
     subset: IPNetwork = UNIVERSE_SUBSET
 
-    def formatter(self, row: tuple) -> Any:
+    def formatter(self, row: tuple) -> T:
         ...
 
     def query(self) -> Query:
@@ -158,7 +161,7 @@ class QueryWrapper(Database):
     def measurement_id(self) -> str:
         return f"{self.measurement_uuid}__{self.agent_uuid}"
 
-    async def all(self, offset: int, limit: int) -> List[str]:
+    async def all(self, offset: int, limit: int) -> List[T]:
         response = await self.execute(
             self.query(),
             self.measurement_id,
@@ -179,17 +182,17 @@ class QueryWrapper(Database):
 
 
 @dataclass(frozen=True)
-class Prefixes(QueryWrapper):
+class Prefixes(QueryWrapper[public.Prefix]):
     """Get measurement prefixes."""
 
     reply_src_addr_in: Optional[IPNetwork] = None
 
     def formatter(self, row):
-        return {
-            "prefix": addr_to_string(row[0]),
-            "has_amplification": bool(row[1]),
-            "has_loops": bool(row[2]),
-        }
+        return public.Prefix(
+            prefix=addr_to_string(row[0]),
+            has_amplification=bool(row[1]),
+            has_loops=bool(row[2]),
+        )
 
     def query(self):
         return GetPrefixes(reply_src_addr_in=self.reply_src_addr_in)
@@ -199,28 +202,28 @@ class Prefixes(QueryWrapper):
 
 
 @dataclass(frozen=True)
-class Replies(QueryWrapper):
+class Replies(QueryWrapper[public.Reply]):
     """Get measurement replies."""
 
     def formatter(self, row: tuple):
-        return {
-            "probe_protocol": PROTOCOLS.get(row[0]),
-            "probe_src_addr": addr_to_string(row[1]),
-            "probe_dst_addr": addr_to_string(row[2]),
-            "probe_src_port": row[3],
-            "probe_dst_port": row[4],
-            "probe_ttl": row[5],
-            "quoted_ttl": row[6],
-            "reply_src_addr": addr_to_string(row[7]),
-            "reply_protocol": PROTOCOLS.get(row[8]),
-            "reply_icmp_type": row[9],
-            "reply_icmp_code": row[10],
-            "reply_ttl": row[11],
-            "reply_size": row[12],
-            "reply_mpls_labels": row[13],
-            "rtt": round(row[14], 2),
-            "round": row[15],
-        }
+        return public.Reply(
+            probe_protocol=PROTOCOLS.get(row[0]),
+            probe_src_addr=addr_to_string(row[1]),
+            probe_dst_addr=addr_to_string(row[2]),
+            probe_src_port=row[3],
+            probe_dst_port=row[4],
+            probe_ttl=row[5],
+            quoted_ttl=row[6],
+            reply_src_addr=addr_to_string(row[7]),
+            reply_protocol=PROTOCOLS.get(row[8]),
+            reply_icmp_type=row[9],
+            reply_icmp_code=row[10],
+            reply_ttl=row[11],
+            reply_size=row[12],
+            reply_mpls_labels=row[13],
+            rtt=round(row[14], 2),
+            round=row[15],
+        )
 
     def query(self):
         return GetResults()
@@ -230,11 +233,11 @@ class Replies(QueryWrapper):
 
 
 @dataclass(frozen=True)
-class Interfaces(QueryWrapper):
+class Interfaces(QueryWrapper[public.Interface]):
     """Get measurement interfaces."""
 
     def formatter(self, row: tuple):
-        return {"ttl": row[0], "addr": addr_to_string(row[1])}
+        return public.Interface(ttl=row[0], addr=addr_to_string(row[1]))
 
     def query(self):
         return GetNodes(include_probe_ttl=True)
@@ -244,18 +247,18 @@ class Interfaces(QueryWrapper):
 
 
 @dataclass(frozen=True)
-class Links(QueryWrapper):
+class Links(QueryWrapper[public.Link]):
     """Get measurement links."""
 
     near_or_far_addr: Optional[IPvAnyAddress] = None
 
     def formatter(self, row: tuple):
-        return {
-            "near_ttl": row[0],
-            "far_ttl": row[1],
-            "near_addr": addr_to_string(row[2]),
-            "far_addr": addr_to_string(row[3]),
-        }
+        return public.Link(
+            near_ttl=row[0],
+            far_ttl=row[1],
+            near_addr=addr_to_string(row[2]),
+            far_addr=addr_to_string(row[3]),
+        )
 
     def query(self):
         near_or_far_addr = None

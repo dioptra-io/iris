@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from iris.commons.storage import Storage
@@ -5,7 +7,7 @@ from iris.commons.storage import Storage
 
 @pytest.mark.asyncio
 async def test_buckets(common_settings):
-    storage = Storage(settings=common_settings)
+    storage = Storage(common_settings, logging.getLogger(__name__))
 
     assert await storage.create_bucket("bucket1") is None
     # Creating the same bucket twice should not fail
@@ -22,7 +24,7 @@ async def test_buckets(common_settings):
 
 @pytest.mark.asyncio
 async def test_files(common_settings, tmp_path):
-    storage = Storage(settings=common_settings)
+    storage = Storage(common_settings, logging.getLogger(__name__))
     await storage.create_bucket("bucket1")
     await storage.create_bucket("bucket2")
 

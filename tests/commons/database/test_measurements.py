@@ -1,10 +1,11 @@
 import logging
 import uuid
-from datetime import datetime
 
 import pytest
 
 from iris.commons.database import Measurements
+from iris.commons.schemas.private import MeasurementRequest
+from iris.commons.schemas.public import MeasurementState
 
 
 @pytest.mark.asyncio
@@ -14,20 +15,8 @@ async def test_measurements(common_settings):
     assert await db.create_table(drop=True) is None
 
     data = [
-        {
-            "measurement_uuid": uuid.uuid4(),
-            "user": "foo",
-            "tool": "bar",
-            "tags": ["tag1"],
-            "start_time": int(datetime.now().timestamp()),
-        },
-        {
-            "measurement_uuid": uuid.uuid4(),
-            "user": "foo",
-            "tool": "bar",
-            "tags": ["tag1", "tag2"],
-            "start_time": int(datetime.now().timestamp()),
-        },
+        MeasurementRequest(agents=[], tags=["tag1"], username="foo"),
+        MeasurementRequest(agents=[], tags=["tag1", "tag2"], username="foo"),
     ]
 
     for obj in data:
@@ -38,13 +27,13 @@ async def test_measurements(common_settings):
     assert await db.all_count(user="foo", tag="tag2") == 1
 
     for obj in data:
-        assert await db.get(user="foo", uuid=obj["measurement_uuid"]) == {
-            "uuid": str(obj["measurement_uuid"]),
-            "user": obj["user"],
-            "tool": obj["tool"],
-            "tags": obj["tags"],
-            "state": "ongoing",
-            "start_time": datetime.fromtimestamp(obj["start_time"]).isoformat(),
+        assert await db.get(user="foo", uuid=obj.uuid) == {
+            "uuid": str(obj.uuid),
+            "user": obj.username,
+            "tool": obj.tool,
+            "tags": obj.tags,
+            "state": MeasurementState.Ongoing,
+            "start_time": obj.start_time.strftime("%Y-%m-%dT%H:%M:%S"),
             "end_time": None,
         }
 
@@ -52,18 +41,18 @@ async def test_measurements(common_settings):
     assert await db.get(user="foo", uuid=uuid.uuid4()) is None
 
     all1 = await db.all(user="foo", offset=0, limit=10)
-    all2 = [await db.get(user="foo", uuid=obj["measurement_uuid"]) for obj in data]
+    all2 = [await db.get(user="foo", uuid=obj.uuid) for obj in data]
     assert sorted(all1, key=lambda x: x["uuid"]) == sorted(
         all2, key=lambda x: x["uuid"]
     )
 
-    assert await db.stamp_canceled(user="foo", uuid=data[0]["measurement_uuid"]) is None
-    res = await db.get(user="foo", uuid=data[0]["measurement_uuid"])
+    assert await db.stamp_canceled(user="foo", uuid=data[0].uuid) is None
+    res = await db.get(user="foo", uuid=data[0].uuid)
     assert res["state"] == "canceled"
     assert res["end_time"] is None
 
-    assert await db.stamp_finished(user="foo", uuid=data[1]["measurement_uuid"]) is None
-    assert await db.stamp_end_time(user="foo", uuid=data[1]["measurement_uuid"]) is None
-    res = await db.get(user="foo", uuid=data[1]["measurement_uuid"])
+    assert await db.stamp_finished(user="foo", uuid=data[1].uuid) is None
+    assert await db.stamp_end_time(user="foo", uuid=data[1].uuid) is None
+    res = await db.get(user="foo", uuid=data[1].uuid)
     assert res["state"] == "finished"
     assert res["end_time"] is not None

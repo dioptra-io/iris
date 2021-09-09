@@ -49,12 +49,12 @@ async def startup_event():
     app.storage = Storage(app.settings, app.logger)
 
     # Connect into Redis
-    app.redis = Redis(app.settings, app.logger)
-    await app.redis.connect(app.settings.REDIS_URL, app.settings.REDIS_PASSWORD)
+    app.redis = Redis(await app.settings.redis_client(), app.settings, app.logger)
 
+    # Create the database
     await Database(app.settings, app.logger).create_database()
 
-    # Create  the measurement table
+    # Create the measurement table
     database = Measurements(app.settings, app.logger)
     await database.create_table()
 

@@ -2,9 +2,8 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Round(object):
+class Round:
     number: int
-
     limit: int
     offset: int
 

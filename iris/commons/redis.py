@@ -1,259 +1,224 @@
+import asyncio
 import json
 import logging
-import ssl
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+from uuid import UUID
 
 import aioredis
-import aioredis.pubsub
-from aioredis.errors import ConnectionClosedError
-from tenacity import (
-    before_sleep_log,
-    retry,
-    stop_after_delay,
-    wait_exponential,
-    wait_random,
+import async_timeout
+
+from iris.commons.schemas.private import MeasurementRoundRequest
+from iris.commons.schemas.public import (
+    Agent,
+    AgentParameters,
+    AgentState,
+    MeasurementState,
 )
+from iris.commons.settings import CommonSettings
 
 
-class Redis(object):
-    """Redis interface."""
+def agent_heartbeat_key(uuid: Optional[UUID]) -> str:
+    return f"agent_heartbeat:{uuid or '*'}"
 
-    KEY_MEASUREMENT_STATE: str = "measurement_state"
-    KEY_MEASUREMENT_STATS: str = "measurement_stats"
 
-    KEY_AGENT_LISTEN: str = "agent_listen"
-    KEY_AGENT_STATE: str = "agent_state"
-    KEY_AGENT_PARAMETERS: str = "agent_parameters"
+def agent_listen_key(uuid: UUID) -> str:
+    return f"agent_listen:{uuid}"
 
-    def __init__(self, settings, logger=None):
-        self._redis = None
-        self.settings = settings
-        self.logger = logger
+
+def agent_parameters_key(uuid: UUID) -> str:
+    return f"agent_parameters:{uuid}"
+
+
+def agent_state_key(uuid: UUID) -> str:
+    return f"agent_state:{uuid}"
+
+
+def measurement_state_key(uuid: UUID) -> str:
+    return f"measurement_state:{uuid}"
+
+
+def measurement_stats_key(measurement_uuid: UUID, agent_uuid: UUID) -> str:
+    return f"measurement_stats:{measurement_uuid}:{agent_uuid}"
+
+
+@dataclass(frozen=True)
+class Redis:
+    client: aioredis.Redis
+    settings: CommonSettings
+    logger: logging.Logger
 
     def fault_tolerant(func):
-        """Exponential back-off strategy."""
-
         async def wrapper(*args, **kwargs):
-            cls = args[0]
-            settings, logger = cls.settings, cls.logger
-            return await retry(
-                stop=stop_after_delay(settings.REDIS_TIMEOUT),
-                wait=wait_exponential(
-                    multiplier=settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-                    min=settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-                    max=settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-                )
-                + wait_random(
-                    settings.REDIS_TIMEOUT_RANDOM_MIN,
-                    settings.REDIS_TIMEOUT_RANDOM_MAX,
-                ),
-                before_sleep=(
-                    before_sleep_log(logger, logging.ERROR) if logger else None
-                ),
-            )(func)(*args, **kwargs)
+            retryer = args[0].settings.redis_retryer(args[0].logger)
+            return await retryer(func)(*args, **kwargs)
 
         return wrapper
 
     @fault_tolerant
-    async def connect(self, host, password=None):
-        """Connect to Redis instance."""
-        ssl_context = ssl.SSLContext() if self.settings.REDIS_SSL else None
-        self._redis = await aioredis.create_redis(host, ssl=ssl_context)
-        if password:
-            await self._redis.auth(password)
-
-    @fault_tolerant
-    async def get_agent_state(self, uuid):
+    async def get_agent_state(self, uuid: UUID) -> AgentState:
         """Get agent state."""
-        state = await self._redis.get(f"{self.KEY_AGENT_STATE}:{uuid}")
-        if state is None:
-            return "unknown"
-        return state.decode("utf8")
+        if state := await self.client.get(agent_state_key(uuid)):
+            return AgentState(state)
+        return AgentState.Unknown
 
     @fault_tolerant
-    async def get_agent_parameters(self, uuid):
+    async def get_agent_parameters(self, uuid: UUID) -> Optional[AgentParameters]:
         """Get agent parameters."""
-        parameters = await self._redis.get(f"{self.KEY_AGENT_PARAMETERS}:{uuid}")
-        if parameters is None:
-            return {}
-        return json.loads(parameters)
+        if parameters := await self.client.get(agent_parameters_key(uuid)):
+            return AgentParameters.parse_raw(parameters)
+        return None
 
     @fault_tolerant
-    async def get_agents(self, state=True, parameters=True):
+    async def get_agents(self) -> List[Agent]:
         """Get agents UUID along with their state."""
-        agents_list = await self._redis.client_list()
-        agents_list = [agent.name for agent in agents_list if agent.name]
+        # TODO: Use SCAN instead of KEYS for better scaling?
+        alive = await self.client.keys(agent_heartbeat_key(None))
+        uuids = [UUID(key.split(":")[1]) for key in alive]
+        return [
+            Agent(
+                uuid=uuid,
+                parameters=await self.get_agent_parameters(uuid),
+                state=await self.get_agent_state(uuid),
+            )
+            for uuid in uuids
+        ]
 
-        agents = []
-        for agent_uuid in agents_list:
-            agent = {"uuid": agent_uuid}
-            if state:
-                agent_state = await self.get_agent_state(agent_uuid)
-                agent["state"] = agent_state
-            if parameters:
-                agent_parameters = await self.get_agent_parameters(agent_uuid)
-                agent["parameters"] = agent_parameters
+    async def get_agents_by_uuid(self) -> Dict[UUID, Agent]:
+        agents = await self.get_agents()
+        return {agent.uuid: agent for agent in agents}
 
-            agents.append(agent)
-        return agents
+    async def get_agent_by_uuid(self, uuid: UUID) -> Optional[Agent]:
+        if await self.client.exists(agent_heartbeat_key(uuid)):
+            return Agent(
+                uuid=uuid,
+                parameters=await self.get_agent_parameters(uuid),
+                state=await self.get_agent_state(uuid),
+            )
+        return None
 
     @fault_tolerant
-    async def check_agent(self, uuid):
+    async def check_agent(self, uuid: UUID) -> bool:
         """Check the conformity of an agent."""
-        agents = await self.get_agents(state=False, parameters=False)
-        agents = [agent["uuid"] for agent in agents]
-        if uuid not in agents:
+        if not await self.client.exists(agent_heartbeat_key(uuid)):
             return False
-        agent_state = await self.get_agent_state(uuid)
-        if agent_state == "unknown":
+        if not await self.get_agent_parameters(uuid):
             return False
-        agent_parameters = await self.get_agent_parameters(uuid)
-        if not agent_parameters:
+        if await self.get_agent_state(uuid) == AgentState.Unknown:
             return False
         return True
 
     @fault_tolerant
-    async def get_measurement_state(self, uuid):
+    async def get_measurement_state(self, uuid: UUID) -> MeasurementState:
         """Get measurement state."""
-        state = await self._redis.get(f"{self.KEY_MEASUREMENT_STATE}:{uuid}")
-        if state is not None:
-            return state.decode("utf8")
+        if state := await self.client.get(measurement_state_key(uuid)):
+            return MeasurementState(state)
+        return MeasurementState.Unknown
 
     @fault_tolerant
-    async def set_measurement_state(self, uuid, state):
+    async def set_measurement_state(self, uuid: UUID, state: MeasurementState):
         """Set measurement state."""
-        await self._redis.set(f"{self.KEY_MEASUREMENT_STATE}:{uuid}", state)
+        await self.client.set(measurement_state_key(uuid), state)
 
     @fault_tolerant
-    async def delete_measurement_state(self, uuid):
+    async def delete_measurement_state(self, uuid: UUID) -> None:
         """Delete measurement state."""
-        await self._redis.delete(f"{self.KEY_MEASUREMENT_STATE}:{uuid}")
+        await self.client.delete(measurement_state_key(uuid))
 
     @fault_tolerant
-    async def get_measurement_stats(self, measurement_uuid, agent_uuid):
+    async def get_measurement_stats(
+        self, measurement_uuid: UUID, agent_uuid: UUID
+    ) -> Dict:
         """Get measurement statistics."""
-        state = await self._redis.get(
-            f"{self.KEY_MEASUREMENT_STATS}:{measurement_uuid}:{agent_uuid}"
+        state = await self.client.get(
+            measurement_stats_key(measurement_uuid, agent_uuid)
         )
-        if state is not None:
-            return json.loads(state.decode("utf8"))
-        return {}
+        return json.loads(state or "{}")
 
     @fault_tolerant
-    async def set_measurement_stats(self, measurement_uuid, agent_uuid, stats):
+    async def set_measurement_stats(
+        self, measurement_uuid: UUID, agent_uuid: UUID, stats: Dict
+    ) -> None:
         """Set measurement statistics."""
-        await self._redis.set(
-            f"{self.KEY_MEASUREMENT_STATS}:{measurement_uuid}:{agent_uuid}",
-            json.dumps(stats),
+        await self.client.set(
+            measurement_stats_key(measurement_uuid, agent_uuid), json.dumps(stats)
         )
 
     @fault_tolerant
-    async def delete_measurement_stats(self, measurement_uuid, agent_uuid):
+    async def delete_measurement_stats(
+        self, measurement_uuid: UUID, agent_uuid: UUID
+    ) -> None:
         """Delete measurement statistics."""
-        await self._redis.delete(
-            f"{self.KEY_MEASUREMENT_STATS}:{measurement_uuid}:{agent_uuid}"
-        )
+        await self.client.delete(measurement_stats_key(measurement_uuid, agent_uuid))
 
     @fault_tolerant
-    async def publish(self, channel, data):
+    async def publish(self, uuid: UUID, request: MeasurementRoundRequest) -> None:
         """Publish a message via into a channel."""
-        await self._redis.publish_json(f"{self.KEY_AGENT_LISTEN}:{channel}", data)
+        await self.client.publish(agent_listen_key(uuid), request.json())
 
     @fault_tolerant
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         """Close the connection."""
-        self._redis.close()
-        await self._redis.wait_closed()
+        await self.client.close()
 
 
+@dataclass(frozen=True)
 class AgentRedis(Redis):
-    """Redis interface for agents."""
-
-    def __init__(self, uuid, settings, logger=None):
-        self.uuid = uuid
-        self.settings = settings
-        self.logger = logger
+    uuid: UUID
 
     def fault_tolerant(func):
-        """Exponential back-off strategy."""
-
         async def wrapper(*args, **kwargs):
-            cls = args[0]
-            settings, logger = cls.settings, cls.logger
-            return await retry(
-                stop=stop_after_delay(settings.REDIS_TIMEOUT),
-                wait=wait_exponential(
-                    multiplier=settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-                    min=settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-                    max=settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-                )
-                + wait_random(
-                    settings.REDIS_TIMEOUT_RANDOM_MIN,
-                    settings.REDIS_TIMEOUT_RANDOM_MAX,
-                ),
-                before_sleep=(
-                    before_sleep_log(logger, logging.ERROR) if logger else None
-                ),
-            )(func)(*args, **kwargs)
+            retryer = args[0].settings.redis_retryer(args[0].logger)
+            return await retryer(func)(*args, **kwargs)
 
         return wrapper
 
     @fault_tolerant
-    async def connect(self, host, password=None, register=True):
-        """Connect to Redis instance."""
-        await super().connect(host, password=password)
-        if register:
-            await self._redis.client_setname(self.uuid)
-
-    async def test(self):
-        """Test redis connection."""
-        try:
-            await self._redis.get(f"{self.KEY_AGENT_STATE}:{self.uuid}")
-        except ConnectionClosedError:
-            return False
-        return True
+    async def register(self, ttl_seconds: int) -> None:
+        await self.client.set(agent_heartbeat_key(self.uuid), "alive", ex=ttl_seconds)
 
     @fault_tolerant
-    async def set_agent_state(self, state):
+    async def deregister(self) -> None:
+        await self.client.delete(agent_heartbeat_key(self.uuid))
+
+    @fault_tolerant
+    async def set_agent_state(self, state: AgentState) -> None:
         """Set agent state."""
-        await self._redis.set(f"{self.KEY_AGENT_STATE}:{self.uuid}", state)
+        await self.client.set(agent_state_key(self.uuid), state)
 
     @fault_tolerant
-    async def delete_agent_state(self):
+    async def delete_agent_state(self) -> None:
         """Delete agent state."""
-        await self._redis.delete(f"{self.KEY_AGENT_STATE}:{self.uuid}")
+        await self.client.delete(agent_state_key(self.uuid))
 
     @fault_tolerant
-    async def set_agent_parameters(self, parameters):
+    async def set_agent_parameters(self, parameters: AgentParameters) -> None:
         """Set agent parameters."""
-        parameters = json.dumps(parameters)
-        await self._redis.set(f"{self.KEY_AGENT_PARAMETERS}:{self.uuid}", parameters)
+        await self.client.set(agent_parameters_key(self.uuid), parameters.json())
 
     @fault_tolerant
-    async def delete_agent_parameters(self):
+    async def delete_agent_parameters(self) -> None:
         """Delete agent state."""
-        await self._redis.delete(f"{self.KEY_AGENT_PARAMETERS}:{self.uuid}")
+        await self.client.delete(agent_parameters_key(self.uuid))
 
     @fault_tolerant
-    async def subscribe(self):
+    async def subscribe(self) -> MeasurementRoundRequest:
         """Subscribe to agent channels (all, specific) and wait for a response"""
-        mpsc = aioredis.pubsub.Receiver()
-
-        await self._redis.subscribe(
-            mpsc.channel(f"{self.KEY_AGENT_LISTEN}:all"),
-            mpsc.channel(f"{self.KEY_AGENT_LISTEN}:{self.uuid}"),
-        )
-
-        async for _, data in mpsc.iter():
-            response = json.loads(data)
-            break
-
-        await self.unsubscribe()
-
+        psub = self.client.pubsub()
+        async with psub as p:
+            await p.subscribe(agent_listen_key(self.uuid))
+            while True:
+                try:
+                    async with async_timeout.timeout(1.0):
+                        message = await p.get_message(ignore_subscribe_messages=True)
+                        if message:
+                            response = MeasurementRoundRequest.parse_raw(
+                                message["data"]
+                            )
+                            break
+                        await asyncio.sleep(0.1)
+                except asyncio.TimeoutError:
+                    pass
+            await p.unsubscribe()
+        await psub.close()
         return response
-
-    @fault_tolerant
-    async def unsubscribe(self):
-        """Unsubscribe to channels."""
-        await self._redis.unsubscribe(
-            f"{self.KEY_AGENT_LISTEN}:all", f"{self.KEY_AGENT_LISTEN}:{self.uuid}"
-        )

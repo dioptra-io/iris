@@ -1,11 +1,12 @@
 import json
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 
-class LocalStorage(object):
-    def __init__(self, s3_dir):
-        self.s3_dir = Path(s3_dir)
+@dataclass(frozen=True)
+class LocalStorage:
+    s3_dir: Path
 
     async def delete_file_no_check(self, bucket, filename):
         self.__file_path(bucket, filename).unlink(missing_ok=True)

@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from iris.commons.schemas.base import BaseModel
 
 
 class RIPEAccount(BaseModel):

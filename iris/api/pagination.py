@@ -12,7 +12,7 @@ class Pagination(ABC):
         self.limit = limit
 
     @abstractmethod
-    async def get_count(self):
+    async def get_count(self, *args, **kwargs):
         """Get total count query."""
         pass  # pragma: no cover
 
@@ -41,7 +41,7 @@ class Pagination(ABC):
         )
 
     @abstractmethod
-    async def get_results(self):
+    async def get_results(self, *args, **kwargs):
         """Get results according to offset and limit parameters."""
         pass  # pragma: no cover
 

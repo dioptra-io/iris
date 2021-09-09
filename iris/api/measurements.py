@@ -1,16 +1,16 @@
 """Measurements operations."""
 
-from datetime import datetime
-from typing import Dict
-from uuid import UUID, uuid4
+from typing import Dict, List, Set
+from uuid import UUID
 
 from diamond_miner.generators import count_prefixes
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
-from iris.api import schemas
 from iris.api.pagination import DatabasePagination
 from iris.api.security import get_current_active_user
 from iris.commons.database import Agents, Measurements
+from iris.commons.redis import Redis
+from iris.commons.schemas import private, public
 from iris.worker.hook import hook
 
 router = APIRouter()
@@ -18,7 +18,7 @@ router = APIRouter()
 
 @router.get(
     "/",
-    response_model=schemas.Paginated[schemas.MeasurementSummary],
+    response_model=public.Paginated[public.MeasurementSummary],
     summary="Get all measurements.",
 )
 async def get_measurements(
@@ -29,6 +29,7 @@ async def get_measurements(
     user: Dict = Depends(get_current_active_user),
 ):
     """Get all measurements."""
+    redis: Redis = request.app.redis
     database = Measurements(request.app.settings, request.app.logger)
 
     querier = DatabasePagination(database, request, offset, limit)
@@ -36,7 +37,7 @@ async def get_measurements(
 
     measurements = []
     for measurement in output["results"]:
-        state = await request.app.redis.get_measurement_state(measurement["uuid"])
+        state = await redis.get_measurement_state(measurement["uuid"])
         measurements.append(
             {
                 "uuid": measurement["uuid"],
@@ -56,9 +57,9 @@ async def get_measurements(
 async def verify_quota(tool, content, user_quota):
     """Verify that the quota is not exceeded."""
     targets = [p.strip() for p in content.split()]
-    if tool in ["diamond-miner", "yarrp"]:
+    if tool in [public.Tool.DiamondMiner, public.Tool.Yarrp]:
         n_prefixes = count_prefixes([target.split(",")[0] for target in targets])
-    elif tool == "ping":
+    elif tool == public.Tool.Ping:
         n_prefixes = count_prefixes(
             [target.split(",")[0] for target in targets],
             prefix_len_v4=32,
@@ -85,7 +86,7 @@ async def target_file_validator(request, tool, user, target_file):
 
     # Do not check if the target file is a custom probe file
     if target_file["key"].endswith(".probes"):
-        if tool != "yarrp":
+        if tool != public.Tool.Yarrp:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only `yarrp` tool can be used with custom probe file",
@@ -115,7 +116,7 @@ async def target_file_validator(request, tool, user, target_file):
         min_ttl, max_ttl = int(min_ttl), int(max_ttl)
         global_min_ttl = min(global_min_ttl, min_ttl)
         global_max_ttl = max(global_max_ttl, max_ttl)
-        if tool == "ping" and protocol == "udp":
+        if tool == public.Tool.Ping and protocol == "udp":
             # Disabling UDP port scanning abilities
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -124,41 +125,22 @@ async def target_file_validator(request, tool, user, target_file):
     return global_min_ttl, global_max_ttl
 
 
-def tool_parameters_validator(tool, tool_parameters):
-    """Validate tool parameters."""
-    # Specific checks for `diamond-miner`
-    if tool == "diamond-miner":
-        tool_parameters["n_flow_ids"] = 6
-
-    # Specific checks for `yarrp`
-    if tool == "yarrp":
-        tool_parameters["n_flow_ids"] = 1
-        tool_parameters["max_round"] = 1
-
-    # Specific checks for `ping`
-    if tool == "ping":
-        tool_parameters["max_round"] = 1
-        tool_parameters["n_flow_ids"] = 1
-
-    return tool_parameters
-
-
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
-    response_model=schemas.MeasurementPostResponse,
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.MeasurementPostResponse,
+    responses={404: {"model": public.GenericException}},
     summary="Request a measurement.",
 )
 async def post_measurement(
     request: Request,
-    measurement: schemas.MeasurementPostBody = Body(
+    measurement: public.MeasurementPostBody = Body(
         ...,
         example={
             "tool": "diamond-miner",
             "agents": [
                 {
-                    "agent_tag": "all",
+                    "tag": "all",
                     "target_file": "prefixes.csv",
                 }
             ],
@@ -168,86 +150,81 @@ async def post_measurement(
     user: Dict = Depends(get_current_active_user),
 ):
     """Request a measurement."""
-    # Get all connected agents
-    active_agents = await request.app.redis.get_agents(state=False, parameters=True)
-    active_agent_uuids = [agent["uuid"] for agent in active_agents]
+    redis: Redis = request.app.redis
+    active_agents = await redis.get_agents_by_uuid()
 
-    agents = {}
+    # Update the list of requested agents to include agents selected by tag.
+    agents: List[public.MeasurementAgentPostBody] = []
+
     for agent in measurement.agents:
-        # Two possibilities: an agent UUID or an agent tag
-        if (not agent.uuid and not agent.agent_tag) or (agent.uuid and agent.agent_tag):
-            raise HTTPException(
-                status_code=status.HTTP_412_PRECONDITION_FAILED,
-                detail="Either an agent UUID or an agent tag must be provided",
-            )
-
-        # If agent_tag is provided,
-        # get the list of the agent UUID associated with this tag
-        if agent.agent_tag:
-            selected_agent_uuids = [
-                a["uuid"]
-                for a in active_agents
-                if agent.agent_tag in a["parameters"]["agent_tags"]
-            ]
-            if not selected_agent_uuids:
+        if agent.uuid:
+            agents.append(agent)
+        else:
+            at_least_one = False
+            for uuid, active_agent in active_agents.items():
+                if (
+                    active_agent.parameters
+                    and agent.tag in active_agent.parameters.agent_tags
+                ):
+                    # Matching agent for tag found, replace tag field with uuid field
+                    agents.append(agent.copy(exclude={"tag"}, update={"uuid": uuid}))
+                    at_least_one = True
+            if not at_least_one:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="No agent associated with this tag",
-                )
-        else:
-            agent_uuid = str(agent.uuid)
-            # Check if the agent exists
-            if agent_uuid not in active_agent_uuids:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
-                )
-            selected_agent_uuids = [agent_uuid]
-
-        # Register the agent(s)
-        for agent_uuid in selected_agent_uuids:
-            # Verify that this agent has not been already defined
-            if agent_uuid in agents:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Multiple definition of agent `{agent_uuid}`",
+                    detail=f"No agent associated with tag {agent.tag}",
                 )
 
-            # Check agent target file
-            global_min_ttl, global_max_ttl = await target_file_validator(
-                request, measurement.tool, user, agent.target_file
+    # Keep track of the registered agents to make sure that an agent is not
+    # registered twice. e.g. with two overlapping agent tags.
+    registered_agents: Set[UUID] = set()
+
+    for agent in agents:
+        # Ensure that the agent exists
+        if agent.uuid not in active_agents:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No agent associated with UUID {agent.uuid}",
             )
 
-            # Check tool parameters
-            selected_agent = agent.dict()
-            selected_agent["agent_parameters"] = tool_parameters_validator(
-                measurement.tool, selected_agent["tool_parameters"]
+        # Ensure that the agent has not already been registered
+        if agent.uuid in registered_agents:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Multiple definition of agent `{agent.uuid}`",
             )
-            selected_agent["agent_parameters"]["global_min_ttl"] = global_min_ttl
-            selected_agent["agent_parameters"]["global_max_ttl"] = global_max_ttl
+        registered_agents.add(agent.uuid)
 
-            selected_agent.pop("uuid")
-            selected_agent.pop("agent_tag")
+        # Check agent target file
+        global_min_ttl, global_max_ttl = await target_file_validator(
+            request, measurement.tool, user, agent.target_file
+        )
+        agent.tool_parameters.global_min_ttl = global_min_ttl
+        agent.tool_parameters.global_max_ttl = global_max_ttl
 
-            agents[agent_uuid] = selected_agent
+        # Enforce some tool specific parameters
+        # TODO: Can we do this with pydantic?
+        if measurement.tool == public.Tool.DiamondMiner:
+            agent.tool_parameters.n_flow_ids = 6
+        if measurement.tool in (public.Tool.Ping, public.Tool.Yarrp):
+            agent.tool_parameters.n_flow_ids = 1
+            agent.tool_parameters.max_round = 1
 
-    measurement = measurement.dict()
-    del measurement["agents"]
+    # Update the agents list and set private metadata.
+    measurement_request = private.MeasurementRequest(
+        **measurement.dict(exclude={"agents"}), agents=agents, username=user["username"]
+    )
 
-    # Add mesurement metadata
-    measurement["measurement_uuid"] = str(uuid4())
-    measurement["user"] = user["username"]
-    measurement["start_time"] = datetime.timestamp(datetime.now())
+    # Launch a measurement procedure on the worker.
+    hook.send(measurement_request)
 
-    # launch a measurement procedure on the worker.
-    hook.send(agents, measurement)
-
-    return {"uuid": measurement["measurement_uuid"]}
+    return public.MeasurementPostResponse(uuid=measurement_request.uuid)
 
 
 @router.get(
     "/{measurement_uuid}",
-    response_model=schemas.Measurement,
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.Measurement,
+    responses={404: {"model": public.GenericException}},
     summary="Get measurement specified by UUID.",
 )
 async def get_measurement_by_uuid(
@@ -256,6 +233,8 @@ async def get_measurement_by_uuid(
     user: Dict = Depends(get_current_active_user),
 ):
     """Get measurement information by uuid."""
+    redis: Redis = request.app.redis
+
     measurement = await Measurements(request.app.settings, request.app.logger).get(
         user["username"], measurement_uuid
     )
@@ -264,7 +243,7 @@ async def get_measurement_by_uuid(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
-    state = await request.app.redis.get_measurement_state(measurement_uuid)
+    state = await redis.get_measurement_state(measurement_uuid)
     measurement["state"] = state if state is not None else measurement["state"]
 
     agents_info = await Agents(request.app.settings, request.app.logger).all(
@@ -315,8 +294,8 @@ async def get_measurement_by_uuid(
 
 @router.delete(
     "/{measurement_uuid}",
-    response_model=schemas.MeasurementDeleteResponse,
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.MeasurementDeleteResponse,
+    responses={404: {"model": public.GenericException}},
     summary="Cancel measurement specified by UUID.",
 )
 async def delete_measurement(
@@ -325,6 +304,8 @@ async def delete_measurement(
     user: Dict = Depends(get_current_active_user),
 ):
     """Cancel a measurement."""
+    redis: Redis = request.app.redis
+
     measurement_info = await Measurements(request.app.settings, request.app.logger).get(
         user["username"], measurement_uuid
     )
@@ -333,11 +314,13 @@ async def delete_measurement(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
-    state = await request.app.redis.get_measurement_state(measurement_uuid)
+    state = await redis.get_measurement_state(measurement_uuid)
     if state is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement already finished"
         )
 
-    await request.app.redis.set_measurement_state(measurement_uuid, "canceled")
-    return {"uuid": measurement_uuid, "action": "canceled"}
+    await redis.set_measurement_state(
+        measurement_uuid, public.MeasurementState.Canceled
+    )
+    return public.MeasurementDeleteResponse(uuid=measurement_uuid, action="canceled")

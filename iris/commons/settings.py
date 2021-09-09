@@ -1,7 +1,15 @@
 import logging
 import platform
 
+import aioredis
 from pydantic import BaseSettings
+from tenacity import (
+    before_sleep_log,
+    retry,
+    stop_after_delay,
+    wait_exponential,
+    wait_random,
+)
 
 
 class CommonSettings(BaseSettings):
@@ -24,7 +32,6 @@ class CommonSettings(BaseSettings):
 
     DATABASE_HOST: str = "clickhouse"
     DATABASE_NAME: str = "iris"
-    DATABASE_MAX_BLOCK_SIZE: int = 8192
     DATABASE_CONNECT_TIMEOUT: int = 10
     DATABASE_SEND_RECEIVE_TIMEOUT: int = 300
     DATABASE_SYNC_REQUEST_TIMEOUT: int = 5
@@ -40,24 +47,13 @@ class CommonSettings(BaseSettings):
     TABLE_NAME_MEASUREMENTS: str = "measurements"
     TABLE_NAME_AGENTS: str = "agents"
 
-    REDIS_URL: str = "redis://redis"
-    REDIS_HOSTNAME: str = "redis"
-    REDIS_PORT: int = 6379
-    REDIS_PASSWORD: str = "redispass"
-    REDIS_SSL: bool = False
+    REDIS_URL: str = "redis://default:redispass@redis"
     REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
     REDIS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
-    REDIS_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
-
-    LOKI_URL: str = "http://loki:3100/loki/api/v1/push"
-    LOKI_USER: str = "admin"
-    LOKI_PASSWORD: str = "admin"
-    LOKI_VERSION: str = "1"
-    LOKI_QUEUE_SIZE: int = 1000
-    LOKI_LOGGING_LEVEL: int = logging.INFO
+    REDIS_TIMEOUT_RANDOM_MAX: int = 5  # in seconds
 
     STREAM_LOGGING_LEVEL: int = logging.DEBUG
 
@@ -74,3 +70,51 @@ class CommonSettings(BaseSettings):
         url += f"&send_receive_timeout={self.DATABASE_SEND_RECEIVE_TIMEOUT}"
         url += f"&sync_request_timeout={self.DATABASE_SYNC_REQUEST_TIMEOUT}"
         return url
+
+    async def redis_client(self) -> aioredis.Redis:
+        return await aioredis.from_url(self.REDIS_URL, decode_responses=True)
+
+    def database_retryer(self, logger):
+        return retry(
+            stop=stop_after_delay(self.DATABASE_TIMEOUT),
+            wait=wait_exponential(
+                multiplier=self.DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                min=self.DATABASE_TIMEOUT_EXPONENTIAL_MIN,
+                max=self.DATABASE_TIMEOUT_EXPONENTIAL_MAX,
+            )
+            + wait_random(
+                self.DATABASE_TIMEOUT_RANDOM_MIN,
+                self.DATABASE_TIMEOUT_RANDOM_MAX,
+            ),
+            before_sleep=(before_sleep_log(logger, logging.ERROR)),
+        )
+
+    def redis_retryer(self, logger):
+        return retry(
+            stop=stop_after_delay(self.REDIS_TIMEOUT),
+            wait=wait_exponential(
+                multiplier=self.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                min=self.REDIS_TIMEOUT_EXPONENTIAL_MIN,
+                max=self.REDIS_TIMEOUT_EXPONENTIAL_MAX,
+            )
+            + wait_random(
+                self.REDIS_TIMEOUT_RANDOM_MIN,
+                self.REDIS_TIMEOUT_RANDOM_MAX,
+            ),
+            before_sleep=(before_sleep_log(logger, logging.ERROR)),
+        )
+
+    def storage_retryer(self, logger):
+        return retry(
+            stop=stop_after_delay(self.AWS_TIMEOUT),
+            wait=wait_exponential(
+                multiplier=self.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                min=self.AWS_TIMEOUT_EXPONENTIAL_MIN,
+                max=self.AWS_TIMEOUT_EXPONENTIAL_MAX,
+            )
+            + wait_random(
+                self.AWS_TIMEOUT_RANDOM_MIN,
+                self.AWS_TIMEOUT_RANDOM_MAX,
+            ),
+            before_sleep=(before_sleep_log(logger, logging.ERROR)),
+        )

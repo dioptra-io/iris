@@ -1,7 +1,7 @@
 """Measurement interface."""
-
+from logging import Logger
 from multiprocessing import Manager, Process
-from typing import Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import aiofiles
 import aiofiles.os
@@ -11,36 +11,38 @@ from pytricia import PyTricia
 
 from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
-from iris.commons.dataclasses import ParametersDataclass
+from iris.commons.redis import AgentRedis
 from iris.commons.round import Round
+from iris.commons.schemas.private import MeasurementRoundRequest
+from iris.commons.schemas.public import Tool, ToolParameters
+from iris.commons.storage import Storage
 
 
 def build_probe_generator_parameters(
-    settings: AgentSettings,
-    target_filepath: str,
-    prefix_filepath: Optional[str],
+    agent_min_ttl: int,
     round_: Round,
-    parameters: ParametersDataclass,
-):
+    tool: Tool,
+    tool_parameters: ToolParameters,
+    target_list: Iterable[str],
+    prefix_list: Optional[Iterable[str]],
+) -> Dict:
     """
-    Target file line format: `prefix,protocol,min_ttl,max_ttl`
-    Prefix file line format: `prefix`
-    For both files, `prefix` can be:
+    Target list format: `prefix,protocol,min_ttl,max_ttl`
+    Prefix list format: `prefix`
+    For both lists, `prefix` can be:
         * a network: 8.8.8.0/24, 2001:4860:4860::/64
         * an address: 8.8.8.8, 2001:4860:4860::8888
     Addresses are interpreted as /32 or /128 networks.
     """
-    assert parameters.tool in ["diamond-miner", "ping", "yarrp"]
-
     # Diamond-Miner and Yarrp target prefixes (with more than 1 addresses)
     prefix_len_v4, prefix_len_v6 = DEFAULT_PREFIX_LEN_V4, DEFAULT_PREFIX_LEN_V6
     # Ping targets single addresses
-    if parameters.tool == "ping":
+    if tool == Tool.Ping:
         prefix_len_v4, prefix_len_v6 = 32, 128
 
     # 1. Instantiate the flow mappers
-    flow_mapper_cls = getattr(mappers, parameters.tool_parameters["flow_mapper"])
-    flow_mapper_kwargs = parameters.tool_parameters["flow_mapper_kwargs"] or {}
+    flow_mapper_cls = getattr(mappers, tool_parameters.flow_mapper)
+    flow_mapper_kwargs = tool_parameters.flow_mapper_kwargs or {}
     flow_mapper_v4 = flow_mapper_cls(
         **{"prefix_size": 2 ** (32 - prefix_len_v4), **flow_mapper_kwargs}
     )
@@ -48,139 +50,143 @@ def build_probe_generator_parameters(
         **{"prefix_size": 2 ** (128 - prefix_len_v6), **flow_mapper_kwargs}
     )
 
-    prefixes = []
-    if parameters.tool in ["diamond-miner", "yarrp"]:
+    prefixes: List[Tuple[str, str, Iterable[int]]] = []
+    if tool in [Tool.DiamondMiner, Tool.Yarrp]:
         # 2. Build a radix tree that maps prefix -> [(min_ttl...max_ttl), ...]
         targets = PyTricia(128)
-        with open(target_filepath) as f:
-            for line in f:
-                prefix, protocol, min_ttl, max_ttl = line.split(",")
-                ttls = range(
-                    # Ensure that the prefix minimum TTL is superior to:
-                    # - the agent minimum TTL
-                    # - the round minimum TTL
-                    max(settings.AGENT_MIN_TTL, int(min_ttl), round_.min_ttl),
-                    # Ensure that the prefix maximum TTL is inferior to the round maximum TTL
-                    min(int(max_ttl), round_.max_ttl) + 1,
-                )
-                if todo := targets.get(prefix):
-                    todo.append((protocol, ttls))
-                else:
-                    targets[prefix] = [(protocol, ttls)]
+        for line in target_list:
+            prefix, protocol, min_ttl, max_ttl = line.split(",")
+            ttls = range(
+                # Ensure that the prefix minimum TTL is superior to:
+                # - the agent minimum TTL
+                # - the round minimum TTL
+                max(agent_min_ttl, int(min_ttl), round_.min_ttl),
+                # Ensure that the prefix maximum TTL is inferior to the round maximum TTL
+                min(int(max_ttl), round_.max_ttl) + 1,
+            )
+            if todo := targets.get(prefix):
+                todo.append((protocol, ttls))
+            else:
+                targets[prefix] = [(protocol, ttls)]
 
         # 3. If a specific list of prefixes to probe is specified, generate a new list of prefixes
         # that includes the TTL ranges previously loaded.
-        if prefix_filepath is not None:
-            with open(prefix_filepath) as f:
-                for line in f:
-                    prefix = line.strip()
-                    todo = targets[prefix]
-                    for protocol, ttls in todo:
-                        prefixes.append((prefix, protocol, ttls))
+        if prefix_list is not None:
+            for line in prefix_list:
+                prefix = line.strip()
+                todo = targets[prefix]
+                for protocol, ttls in todo:
+                    prefixes.append((prefix, protocol, ttls))
         else:
             # There is no prefix list to probe so we directly take the target list
             for prefix in targets:
                 for protocol, ttls in targets[prefix]:
                     prefixes.append((prefix, protocol, ttls))
 
-    elif parameters.tool == "ping":
+    elif tool == Tool.Ping:
         # Only take the max TTL in the TTL range
-        with open(target_filepath) as f:
-            for line in f:
-                prefix, protocol, min_ttl, max_ttl = line.split(",")
-                prefixes.append((prefix, protocol, (int(max_ttl),)))
+        for line in target_list:
+            prefix, protocol, min_ttl, max_ttl = line.split(",")
+            prefixes.append((prefix, protocol, (int(max_ttl),)))
 
     return {
         "prefixes": prefixes,
         "prefix_len_v4": prefix_len_v4,
         "prefix_len_v6": prefix_len_v6,
-        "flow_ids": range(parameters.tool_parameters["n_flow_ids"]),
-        "probe_dst_port": parameters.tool_parameters["destination_port"],
+        "flow_ids": range(tool_parameters.n_flow_ids),
+        "probe_dst_port": tool_parameters.destination_port,
         "mapper_v4": flow_mapper_v4,
         "mapper_v6": flow_mapper_v6,
     }
 
 
-async def measurement(settings, request, storage, logger, redis=None):
+async def measurement(
+    settings: AgentSettings,
+    request: MeasurementRoundRequest,
+    logger: Logger,
+    redis: AgentRedis,
+    storage: Storage,
+) -> Tuple[str, Dict]:
     """Conduct a measurement."""
-    measurement_uuid = request["measurement_uuid"]
-    agent_uuid = settings.AGENT_UUID
-    round = Round.decode(request["round"])
+    measurement_request = request.measurement
+    agent = measurement_request.agent(settings.AGENT_UUID)
+    logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
 
-    logger_prefix = f"{measurement_uuid} :: {agent_uuid} ::"
-
-    parameters = ParametersDataclass.from_request(request)
-    if agent_uuid != parameters.agent_uuid:
-        logger.error(f"{logger_prefix} Invalid agent UUID in measurement parameters")
-
-    measurement_results_path = settings.AGENT_RESULTS_DIR_PATH / measurement_uuid
+    measurement_results_path = settings.AGENT_RESULTS_DIR_PATH / str(
+        measurement_request.uuid
+    )
     logger.info(f"{logger_prefix} Create local measurement directory")
     try:
         await aiofiles.os.mkdir(str(measurement_results_path))
     except FileExistsError:
         logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
-    results_filename = f"{agent_uuid}_results_{round.encode()}.csv.zst"
+    results_filename = f"{agent.uuid}_results_{request.round.encode()}.csv.zst"
     results_filepath = str(measurement_results_path / results_filename)
 
     gen_parameters = None
     target_filepath = None
-
     probes_filepath = None
+    is_custom_probes_file = agent.target_file.endswith(".probes")
 
-    is_custom_probes_file = parameters.target_file.endswith(".probes")
-
-    if round.number == 1 and not is_custom_probes_file:
+    if request.round.number == 1 and not is_custom_probes_file:
         # Round = 1
         # No custom probe file uploaded in advance
         logger.info(f"{logger_prefix} Download target file locally")
-        target_filename = f"targets__{measurement_uuid}__{agent_uuid}.csv"
+        target_filename = f"targets__{measurement_request.uuid}__{agent.uuid}.csv"
         target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
         await storage.download_file(
-            settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + request["username"],
+            settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + measurement_request.username,
             target_filename,
             target_filepath,
         )
 
-        prefix_filename = request["probes"]  # we use the same key as probe file
+        prefix_filename = request.probes  # we use the same key as probe file
         prefix_filepath = None
         if prefix_filename:
             logger.info(f"{logger_prefix} Download CSV prefix file locally")
             prefix_filepath = str(settings.AGENT_TARGETS_DIR_PATH / prefix_filename)
             await storage.download_file(
-                measurement_uuid, prefix_filename, prefix_filepath
+                str(measurement_request.uuid), prefix_filename, prefix_filepath
             )
 
         logger.info(f"{logger_prefix} Build probe generator parameters")
         gen_parameters = build_probe_generator_parameters(
-            settings, target_filepath, prefix_filepath, round, parameters
+            settings.AGENT_MIN_TTL,
+            request.round,
+            measurement_request.tool,
+            agent.tool_parameters,
+            open(target_filepath),
+            open(prefix_filepath) if prefix_filepath else None,
         )
 
-    elif round.number == 1 and is_custom_probes_file:
+    elif request.round.number == 1 and is_custom_probes_file:
         # Round = 1
         # Custom probe file uploaded in advance
         logger.info(f"{logger_prefix} Download custom CSV probe file locally")
-        probes_filename = parameters.target_file
+        probes_filename = agent.target_file
         probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
         await storage.download_file(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + request["username"],
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + measurement_request.username,
             probes_filename,
             probes_filepath,
         )
 
-    else:
+    elif request.probes:
         # Round > 1
         logger.info(f"{logger_prefix} Download CSV probe file locally")
-        probes_filename = request["probes"]
+        probes_filename = request.probes
         probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
-        await storage.download_file(measurement_uuid, probes_filename, probes_filepath)
+        await storage.download_file(
+            str(measurement_request.uuid), probes_filename, probes_filepath
+        )
 
-    logger.info(f"{logger_prefix} Username : {request['username']}")
-    logger.info(f"{logger_prefix} Target File: {parameters.target_file}")
-    logger.info(f"{logger_prefix} {round}")
-    logger.info(f"{logger_prefix} Tool : {parameters.tool}")
-    logger.info(f"{logger_prefix} Tool Parameters : {parameters.tool_parameters}")
-    logger.info(f"{logger_prefix} Max Probing Rate : {parameters.probing_rate}")
+    logger.info(f"{logger_prefix} Username : {measurement_request.username}")
+    logger.info(f"{logger_prefix} Target File: {agent.target_file}")
+    logger.info(f"{logger_prefix} {request.round}")
+    logger.info(f"{logger_prefix} Tool : {measurement_request.tool}")
+    logger.info(f"{logger_prefix} Tool Parameters : {agent.tool_parameters}")
+    logger.info(f"{logger_prefix} Max Probing Rate : {agent.probing_rate}")
 
     with Manager() as manager:
         prober_statistics = manager.dict()
@@ -191,8 +197,8 @@ async def measurement(settings, request, storage, logger, redis=None):
             args=(
                 settings,
                 results_filepath,
-                round.number,
-                parameters.probing_rate,
+                request.round.number,
+                agent.probing_rate,
                 prober_statistics,
                 sniffer_statistics,
                 gen_parameters,
@@ -204,23 +210,24 @@ async def measurement(settings, request, storage, logger, redis=None):
         is_not_canceled = await watcher(
             prober_process,
             settings,
-            measurement_uuid,
+            measurement_request.uuid,
+            redis,
             logger,
             logger_prefix=logger_prefix,
-            redis=redis,
         )
 
         prober_statistics = dict(prober_statistics)
         sniffer_statistics = dict(sniffer_statistics)
 
     statistics = {**prober_statistics, **sniffer_statistics}
-    if redis:
-        logger.info("Upload probing statistics in Redis")
-        await redis.set_measurement_stats(measurement_uuid, agent_uuid, statistics)
+    logger.info("Upload probing statistics in Redis")
+    await redis.set_measurement_stats(measurement_request.uuid, agent.uuid, statistics)
 
     if is_not_canceled:
         logger.info(f"{logger_prefix} Upload results file into AWS S3")
-        await storage.upload_file(measurement_uuid, results_filename, results_filepath)
+        await storage.upload_file(
+            str(measurement_request.uuid), results_filename, results_filepath
+        )
 
     if not settings.AGENT_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local results file")
@@ -246,7 +253,7 @@ async def measurement(settings, request, storage, logger, redis=None):
 
         logger.info(f"{logger_prefix} Remove CSV probe file from AWS S3")
         is_deleted = await storage.delete_file_no_check(
-            measurement_uuid, probes_filename
+            str(measurement_request.uuid), probes_filename
         )
         if not is_deleted:
             logger.error(f"Impossible to remove results file `{probes_filename}`")

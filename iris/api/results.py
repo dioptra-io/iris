@@ -6,7 +6,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import IPvAnyAddress, IPvAnyNetwork
 
-from iris.api import schemas
 from iris.api.pagination import DatabasePagination
 from iris.api.security import get_current_active_user
 from iris.commons.database import (
@@ -17,6 +16,7 @@ from iris.commons.database import (
     Prefixes,
     Replies,
 )
+from iris.commons.schemas import public
 
 router = APIRouter()
 
@@ -64,8 +64,8 @@ async def get_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/prefixes",
-    response_model=schemas.Paginated[schemas.Prefix],
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.Paginated[public.Prefix],
+    responses={404: {"model": public.GenericException}},
     summary="Get measurement prefixes.",
 )
 async def get_prefixes_results(
@@ -92,8 +92,8 @@ async def get_prefixes_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/replies/{prefix}",
-    response_model=schemas.Paginated[schemas.Reply],
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.Paginated[public.Reply],
+    responses={404: {"model": public.GenericException}},
     summary="Get measurement replies.",
 )
 async def get_replies_results(
@@ -120,8 +120,8 @@ async def get_replies_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/interfaces/{prefix}",
-    response_model=schemas.Paginated[schemas.Interface],
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.Paginated[public.Interface],
+    responses={404: {"model": public.GenericException}},
     summary="Get measurement interfaces.",
 )
 async def get_interfaces_results(
@@ -148,8 +148,8 @@ async def get_interfaces_results(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/links/by-prefix/{prefix}",
-    response_model=schemas.Paginated[schemas.Link],
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.Paginated[public.Link],
+    responses={404: {"model": public.GenericException}},
     summary="Get measurement links.",
 )
 async def get_links_results_by_prefix(
@@ -176,8 +176,8 @@ async def get_links_results_by_prefix(
 
 @router.get(
     "/{measurement_uuid}/{agent_uuid}/links/by-adjacency/{address}",
-    response_model=schemas.Paginated[schemas.Link],
-    responses={404: {"model": schemas.GenericException}},
+    response_model=public.Paginated[public.Link],
+    responses={404: {"model": public.GenericException}},
     summary="Get measurement links.",
 )
 async def get_links_results_by_adjacency(
