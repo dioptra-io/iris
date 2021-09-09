@@ -14,49 +14,39 @@ from iris.commons.storage import Storage
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 
 
-async def heartbeat(settings: AgentSettings, logger: Logger) -> None:
-    redis = AgentRedis(
-        await settings.redis_client(), settings, logger, settings.AGENT_UUID
-    )
+async def heartbeat(redis: AgentRedis) -> None:
     while True:
         await redis.register(15)
         await asyncio.sleep(5)
 
 
-async def producer(
-    settings: AgentSettings, queue: asyncio.Queue, logger: Logger
-) -> None:
+async def producer(redis: AgentRedis, queue: asyncio.Queue, logger: Logger) -> None:
     """Consume tasks from a Redis channel and put them on a queue."""
-    redis = AgentRedis(
-        await settings.redis_client(), settings, logger, settings.AGENT_UUID
-    )
-
     while True:
-        logger.info(f"{settings.AGENT_UUID} :: Waiting for requests...")
+        logger.info(f"{redis.uuid} :: Waiting for requests...")
         request = await redis.subscribe()
 
         logger.info(
-            f"{settings.AGENT_UUID} :: Queuing request {request.measurement.uuid} for {request.round}..."
+            f"{redis.uuid} :: Queuing request {request.measurement.uuid} for {request.round}..."
         )
         await queue.put(request)
 
         logger.info(
-            f"{settings.AGENT_UUID} :: Measurements currently in the queue: {queue.qsize()}"
+            f"{redis.uuid} :: Measurements currently in the queue: {queue.qsize()}"
         )
 
 
 async def consumer(
-    settings: AgentSettings, queue: asyncio.Queue, logger: Logger
+    redis: AgentRedis,
+    storage: Storage,
+    settings: AgentSettings,
+    queue: asyncio.Queue,
+    logger: Logger,
 ) -> None:
     """Consume tasks from the queue."""
-    redis = AgentRedis(
-        await settings.redis_client(), settings, logger, settings.AGENT_UUID
-    )
-    storage = Storage(settings, logger)
-
     while True:
         request = await queue.get()
-        logger_prefix = f"{request.measurement.uuid} :: {settings.AGENT_UUID} ::"
+        logger_prefix = f"{request.measurement.uuid} :: {redis.uuid} ::"
 
         measurement_state = await redis.get_measurement_state(request.measurement.uuid)
         if measurement_state in [
@@ -88,6 +78,7 @@ async def main():
     redis = AgentRedis(
         await settings.redis_client(), settings, logger, settings.AGENT_UUID
     )
+    storage = Storage(settings, logger)
 
     if settings.AGENT_MIN_TTL < 0:
         settings.AGENT_MIN_TTL = find_exit_ttl(
@@ -113,9 +104,9 @@ async def main():
 
         queue = asyncio.Queue()
         tasks = [
-            asyncio.create_task(heartbeat(settings, logger)),
-            asyncio.create_task(producer(settings, queue, logger)),
-            asyncio.create_task(consumer(settings, queue, logger)),
+            asyncio.create_task(heartbeat(redis)),
+            asyncio.create_task(producer(redis, queue, logger)),
+            asyncio.create_task(consumer(redis, storage, settings, queue, logger)),
         ]
         await asyncio.gather(*tasks)
 

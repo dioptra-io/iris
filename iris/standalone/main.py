@@ -44,7 +44,7 @@ async def diamond_miner(
     else:
         prefixes = sys.stdin.readlines()
 
-    tool: Tool = Tool("diamond-miner")
+    tool: Tool = Tool.DiamondMiner
     tool_parameters = ToolParameters(
         **{
             "initial_source_port": initial_source_port,

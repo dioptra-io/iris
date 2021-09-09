@@ -26,15 +26,7 @@ async def get_agents(
     """Get all agents."""
     redis: Redis = request.app.redis
     agents = await redis.get_agents()
-    results = [
-        {
-            "uuid": agent.uuid,
-            "state": agent.state,
-            "parameters": agent.parameters,
-        }
-        for agent in agents
-    ]
-    querier = ListPagination(results, request, offset, limit)
+    querier = ListPagination(agents, request, offset, limit)
     return await querier.query()
 
 
@@ -49,9 +41,6 @@ async def get_agent_by_uuid(
 ):
     """Get one agent specified by UUID."""
     redis: Redis = request.app.redis
-    agent = await redis.get_agent_by_uuid(uuid)
-    if not agent:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
-        )
-    return {"uuid": agent.uuid, "state": agent.state, "parameters": agent.parameters}
+    if agent := await redis.get_agent_by_uuid(uuid):
+        return agent
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")

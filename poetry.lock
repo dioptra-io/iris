@@ -745,7 +745,7 @@ gmpy2 = ["gmpy2"]
 name = "fakeredis"
 version = "1.6.1"
 description = "Fake implementation of redis API for testing purposes."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.5"
 
@@ -1069,7 +1069,7 @@ python-versions = "*"
 name = "packaging"
 version = "21.0"
 description = "Core utilities for Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -1243,7 +1243,7 @@ python-versions = ">=3.5"
 name = "pyparsing"
 version = "2.4.7"
 description = "Python parsing module"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
@@ -1491,7 +1491,7 @@ python-versions = ">=3.5"
 name = "sortedcontainers"
 version = "2.4.0"
 description = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -1733,7 +1733,7 @@ worker = ["dramatiq"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "935fbacb20e7306aca95b6002292d6f2900948bc329ae2b15d59c66f78ad277f"
+content-hash = "3bae5d65dd73fa7f0fe5d936340e9a3c6ac70e797bd0fdad20bc80d7db84fb65"
 
 [metadata.files]
 aioboto3 = [

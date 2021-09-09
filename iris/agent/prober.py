@@ -18,13 +18,11 @@ async def watcher(
     process: Process,
     settings: AgentSettings,
     measurement_uuid: UUID,
+    redis: AgentRedis,
     logger: Logger,
     logger_prefix: str = "",
 ) -> bool:
     """Watch the prober execution and stop it according to the measurement state."""
-    redis = AgentRedis(
-        await settings.redis_client(), settings, logger, settings.AGENT_UUID
-    )
     while process.is_alive():
         measurement_state = await redis.get_measurement_state(measurement_uuid)
         if measurement_state in [

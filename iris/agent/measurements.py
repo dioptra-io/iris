@@ -104,16 +104,13 @@ async def measurement(
     settings: AgentSettings,
     request: MeasurementRoundRequest,
     logger: Logger,
+    redis: AgentRedis,
     storage: Storage,
 ) -> Tuple[str, Dict]:
     """Conduct a measurement."""
     measurement_request = request.measurement
     agent = measurement_request.agent(settings.AGENT_UUID)
     logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
-
-    redis = AgentRedis(
-        await settings.redis_client(), settings, logger, settings.AGENT_UUID
-    )
 
     measurement_results_path = settings.AGENT_RESULTS_DIR_PATH / str(
         measurement_request.uuid
@@ -214,6 +211,7 @@ async def measurement(
             prober_process,
             settings,
             measurement_request.uuid,
+            redis,
             logger,
             logger_prefix=logger_prefix,
         )
