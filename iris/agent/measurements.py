@@ -13,15 +13,16 @@ from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
 from iris.commons.round import Round
-from iris.commons.schemas import private, public
+from iris.commons.schemas.private import MeasurementRoundRequest
+from iris.commons.schemas.public import Tool, ToolParameters
 from iris.commons.storage import Storage
 
 
 def build_probe_generator_parameters(
     agent_min_ttl: int,
     round_: Round,
-    tool: public.Tool,
-    tool_parameters: public.ToolParameters,
+    tool: Tool,
+    tool_parameters: ToolParameters,
     target_list: Iterable[str],
     prefix_list: Optional[Iterable[str]],
 ) -> Dict:
@@ -36,7 +37,7 @@ def build_probe_generator_parameters(
     # Diamond-Miner and Yarrp target prefixes (with more than 1 addresses)
     prefix_len_v4, prefix_len_v6 = DEFAULT_PREFIX_LEN_V4, DEFAULT_PREFIX_LEN_V6
     # Ping targets single addresses
-    if tool == public.Tool.Ping:
+    if tool == Tool.Ping:
         prefix_len_v4, prefix_len_v6 = 32, 128
 
     # 1. Instantiate the flow mappers
@@ -50,7 +51,7 @@ def build_probe_generator_parameters(
     )
 
     prefixes: List[Tuple[str, str, Iterable[int]]] = []
-    if tool in [public.Tool.DiamondMiner, public.Tool.Yarrp]:
+    if tool in [Tool.DiamondMiner, Tool.Yarrp]:
         # 2. Build a radix tree that maps prefix -> [(min_ttl...max_ttl), ...]
         targets = PyTricia(128)
         for line in target_list:
@@ -82,7 +83,7 @@ def build_probe_generator_parameters(
                 for protocol, ttls in targets[prefix]:
                     prefixes.append((prefix, protocol, ttls))
 
-    elif tool == public.Tool.Ping:
+    elif tool == Tool.Ping:
         # Only take the max TTL in the TTL range
         for line in target_list:
             prefix, protocol, min_ttl, max_ttl = line.split(",")
@@ -101,7 +102,7 @@ def build_probe_generator_parameters(
 
 async def measurement(
     settings: AgentSettings,
-    request: private.MeasurementRoundRequest,
+    request: MeasurementRoundRequest,
     logger: Logger,
     storage: Storage,
 ) -> Tuple[str, Dict]:
@@ -149,7 +150,7 @@ async def measurement(
             logger.info(f"{logger_prefix} Download CSV prefix file locally")
             prefix_filepath = str(settings.AGENT_TARGETS_DIR_PATH / prefix_filename)
             await storage.download_file(
-                measurement_request.uuid, prefix_filename, prefix_filepath
+                str(measurement_request.uuid), prefix_filename, prefix_filepath
             )
 
         logger.info(f"{logger_prefix} Build probe generator parameters")
@@ -177,14 +178,15 @@ async def measurement(
     elif request.probes:
         # Round > 1
         logger.info(f"{logger_prefix} Download CSV probe file locally")
-        probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / request.probes)
+        probes_filename = request.probes
+        probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
         await storage.download_file(
-            measurement_request.uuid, request.probes, probes_filepath
+            str(measurement_request.uuid), probes_filename, probes_filepath
         )
 
     logger.info(f"{logger_prefix} Username : {measurement_request.username}")
     logger.info(f"{logger_prefix} Target File: {agent.target_file}")
-    logger.info(f"{logger_prefix} {round}")
+    logger.info(f"{logger_prefix} {request.round}")
     logger.info(f"{logger_prefix} Tool : {measurement_request.tool}")
     logger.info(f"{logger_prefix} Tool Parameters : {agent.tool_parameters}")
     logger.info(f"{logger_prefix} Max Probing Rate : {agent.probing_rate}")
@@ -226,7 +228,7 @@ async def measurement(
     if is_not_canceled:
         logger.info(f"{logger_prefix} Upload results file into AWS S3")
         await storage.upload_file(
-            measurement_request.uuid, results_filename, results_filepath
+            str(measurement_request.uuid), results_filename, results_filepath
         )
 
     if not settings.AGENT_DEBUG_MODE:
@@ -253,7 +255,7 @@ async def measurement(
 
         logger.info(f"{logger_prefix} Remove CSV probe file from AWS S3")
         is_deleted = await storage.delete_file_no_check(
-            measurement_request.uuid, probes_filename
+            str(measurement_request.uuid), probes_filename
         )
         if not is_deleted:
             logger.error(f"Impossible to remove results file `{probes_filename}`")

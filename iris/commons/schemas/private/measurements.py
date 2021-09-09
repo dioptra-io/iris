@@ -2,10 +2,11 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from iris.commons.round import Round
 from iris.commons.schemas import public
+from iris.commons.schemas.base import BaseModel
 
 
 class MeasurementRequest(public.MeasurementPostBody):

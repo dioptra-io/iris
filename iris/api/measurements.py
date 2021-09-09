@@ -218,7 +218,7 @@ async def post_measurement(
     # Launch a measurement procedure on the worker.
     hook.send(measurement_request)
 
-    return {"uuid": str(measurement_request.uuid)}
+    return public.MeasurementPostResponse(uuid=measurement_request.uuid)
 
 
 @router.get(
@@ -323,4 +323,4 @@ async def delete_measurement(
     await redis.set_measurement_state(
         measurement_uuid, public.MeasurementState.Canceled
     )
-    return {"uuid": measurement_uuid, "action": "canceled"}
+    return public.MeasurementDeleteResponse(uuid=measurement_uuid, action="canceled")

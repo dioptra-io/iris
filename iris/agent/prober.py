@@ -11,7 +11,7 @@ from pycaracal import cast_addr, make_probe, prober, set_log_level
 
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
-from iris.commons.schemas import public
+from iris.commons.schemas.public import MeasurementState
 
 
 async def watcher(
@@ -28,8 +28,8 @@ async def watcher(
     while process.is_alive():
         measurement_state = await redis.get_measurement_state(measurement_uuid)
         if measurement_state in [
-            public.MeasurementState.Canceled,
-            public.MeasurementState.Unknown,
+            MeasurementState.Canceled,
+            MeasurementState.Unknown,
         ]:
             process.kill()
             logger.warning(logger_prefix + "Measurement canceled")

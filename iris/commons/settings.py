@@ -3,6 +3,13 @@ import platform
 
 import aioredis
 from pydantic import BaseSettings
+from tenacity import (
+    before_sleep_log,
+    retry,
+    stop_after_delay,
+    wait_exponential,
+    wait_random,
+)
 
 
 class CommonSettings(BaseSettings):
@@ -66,3 +73,48 @@ class CommonSettings(BaseSettings):
 
     async def redis_client(self) -> aioredis.Redis:
         return await aioredis.from_url(self.REDIS_URL, decode_responses=True)
+
+    def database_retryer(self, logger):
+        return retry(
+            stop=stop_after_delay(self.DATABASE_TIMEOUT),
+            wait=wait_exponential(
+                multiplier=self.DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                min=self.DATABASE_TIMEOUT_EXPONENTIAL_MIN,
+                max=self.DATABASE_TIMEOUT_EXPONENTIAL_MAX,
+            )
+            + wait_random(
+                self.DATABASE_TIMEOUT_RANDOM_MIN,
+                self.DATABASE_TIMEOUT_RANDOM_MAX,
+            ),
+            before_sleep=(before_sleep_log(logger, logging.ERROR)),
+        )
+
+    def redis_retryer(self, logger):
+        return retry(
+            stop=stop_after_delay(self.REDIS_TIMEOUT),
+            wait=wait_exponential(
+                multiplier=self.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                min=self.REDIS_TIMEOUT_EXPONENTIAL_MIN,
+                max=self.REDIS_TIMEOUT_EXPONENTIAL_MAX,
+            )
+            + wait_random(
+                self.REDIS_TIMEOUT_RANDOM_MIN,
+                self.REDIS_TIMEOUT_RANDOM_MAX,
+            ),
+            before_sleep=(before_sleep_log(logger, logging.ERROR)),
+        )
+
+    def storage_retryer(self, logger):
+        return retry(
+            stop=stop_after_delay(self.AWS_TIMEOUT),
+            wait=wait_exponential(
+                multiplier=self.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                min=self.AWS_TIMEOUT_EXPONENTIAL_MIN,
+                max=self.AWS_TIMEOUT_EXPONENTIAL_MAX,
+            )
+            + wait_random(
+                self.AWS_TIMEOUT_RANDOM_MIN,
+                self.AWS_TIMEOUT_RANDOM_MAX,
+            ),
+            before_sleep=(before_sleep_log(logger, logging.ERROR)),
+        )

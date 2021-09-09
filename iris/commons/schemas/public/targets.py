@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import BaseModel
+from iris.commons.schemas.base import BaseModel
 
 
 class TargetSummary(BaseModel):

@@ -38,5 +38,6 @@ class AgentSettings(CommonSettings):
     AGENT_RESULTS_DIR_PATH: Path = Path("/app/results")
 
     AGENT_STOPPER_REFRESH: int = 1  # seconds
+    AGENT_WAIT_FOR_START: int = 10  # seconds
 
     AGENT_DEBUG_MODE: bool = False

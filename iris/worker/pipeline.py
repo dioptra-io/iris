@@ -18,14 +18,14 @@ from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 from iris.commons.database import Agents, InsertResults
 from iris.commons.redis import Redis
 from iris.commons.round import Round
-from iris.commons.schemas import private
+from iris.commons.schemas.private import MeasurementRequest
 from iris.commons.storage import Storage
 from iris.worker import WorkerSettings
 
 
 async def default_pipeline(
     settings: WorkerSettings,
-    measurement_request: private.MeasurementRequest,
+    measurement_request: MeasurementRequest,
     agent_uuid: UUID,
     results_filename: str,
     statistics: Dict,
@@ -42,21 +42,21 @@ async def default_pipeline(
     logger.info(f"{logger_prefix} Get agent information")
     agent_parameters = await redis.get_agent_parameters(agent.uuid)
 
-    round = Round.decode_from_filename(results_filename)
+    round_ = Round.decode_from_filename(results_filename)
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / str(
         measurement_request.uuid
     )
 
-    logger.info(f"{logger_prefix} {round}")
+    logger.info(f"{logger_prefix} {round_}")
     logger.info(f"{logger_prefix} Download results file")
     results_filepath = measurement_results_path / results_filename
     await storage.download_file(
-        measurement_request.uuid, results_filename, results_filepath
+        str(measurement_request.uuid), results_filename, results_filepath
     )
 
     logger.info(f"{logger_prefix} Delete results file from AWS S3")
     is_deleted = await storage.delete_file_no_check(
-        measurement_request.uuid, results_filename
+        str(measurement_request.uuid), results_filename
     )
     if not is_deleted:
         logger.error(
@@ -66,7 +66,7 @@ async def default_pipeline(
     logger.info(f"{logger_prefix} Store probing statistics")
     database_agents = Agents(settings, logger)
     await database_agents.store_probing_statistics(
-        measurement_request.uuid, agent.uuid, round.encode(), statistics
+        measurement_request.uuid, agent.uuid, round_.encode(), statistics
     )
 
     database = InsertResults(settings, logger, measurement_request.uuid, agent.uuid)
@@ -87,7 +87,7 @@ async def default_pipeline(
         logger.info(f"{logger_prefix} Remove local results file")
         await aios.remove(results_filepath)
 
-    next_round = round.next_round(agent.tool_parameters.global_max_ttl)
+    next_round = round_.next_round(agent.tool_parameters.global_max_ttl)
 
     next_round_csv_filename = (
         f"{agent.uuid}_next_round_csv_{next_round.encode()}.csv.zst"
@@ -98,7 +98,7 @@ async def default_pipeline(
         # We are in a sub-round 1
         # Compute the list of the prefixes need to be probed in the next ttl window
 
-        if round.max_ttl < max(
+        if round_.max_ttl < max(
             agent_parameters.min_ttl, agent.tool_parameters.global_min_ttl
         ):
             # In this case the window was below the agent's min TTL
@@ -110,8 +110,8 @@ async def default_pipeline(
         prefixes_to_probe = []
         # TODO: Fault-tolerency
         async for _, _, addr_v6 in GetSlidingPrefixes(
-            window_min_ttl=round.min_ttl,
-            window_max_ttl=round.max_ttl,
+            window_min_ttl=round_.min_ttl,
+            window_max_ttl=round_.max_ttl,
             stopping_condition=settings.WORKER_ROUND_1_STOPPING,
         ).execute_iter_async(
             settings.database_url(), f"{measurement_request.uuid}__{agent.uuid}"
@@ -130,7 +130,7 @@ async def default_pipeline(
 
             logger.info(f"{logger_prefix} Uploading next round CSV prefix file")
             await storage.upload_file(
-                measurement_request.uuid,
+                str(measurement_request.uuid),
                 next_round_csv_filename,
                 next_round_csv_filepath,
             )
@@ -165,7 +165,7 @@ async def default_pipeline(
         filepath=next_round_csv_filepath,
         url=settings.database_url(),
         measurement_id=f"{measurement_request.uuid}__{agent.uuid}",
-        round_=round.number,
+        round_=round_.number,
         mapper_v4=flow_mapper_v4,
         mapper_v6=flow_mapper_v6,
         probe_src_port=agent.tool_parameters.initial_source_port,
@@ -178,7 +178,7 @@ async def default_pipeline(
         logger.info(f"{logger_prefix} Probes to send: {n_probes_to_send}")
         logger.info(f"{logger_prefix} Uploading next round CSV probe file")
         await storage.upload_file(
-            measurement_request.uuid,
+            str(measurement_request.uuid),
             next_round_csv_filename,
             next_round_csv_filepath,
         )

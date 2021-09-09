@@ -1,8 +1,7 @@
 import logging
-from typing import Optional
 
 
-def create_logger(settings, tags: Optional[dict] = None):
+def create_logger(settings):
     # Why are there two setLevel() methods?
     # The level set in the logger determines which severity of messages
     # it will pass to its handlers.

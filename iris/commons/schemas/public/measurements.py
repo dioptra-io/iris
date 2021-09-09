@@ -2,8 +2,9 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import Field, root_validator
 
+from iris.commons.schemas.base import BaseModel
 from iris.commons.schemas.public.agents import AgentParameters
 
 

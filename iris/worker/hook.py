@@ -1,7 +1,6 @@
 """Tool independant worker hook."""
 
 import asyncio
-import json
 import random
 import traceback
 from logging import Logger
@@ -14,7 +13,8 @@ from iris.commons.database import Agents, Measurements
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
 from iris.commons.round import Round
-from iris.commons.schemas import private, public
+from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
+from iris.commons.schemas.public import MeasurementState
 from iris.commons.storage import Storage
 from iris.worker.pipeline import default_pipeline
 from iris.worker.settings import WorkerSettings
@@ -26,13 +26,13 @@ async def sanity_clean(
     measurement_uuid: UUID, agent_uuid: UUID, logger: Logger, storage: Storage
 ):
     """Clean AWS S3 if the sanity check don't pass."""
-    remote_files = await storage.get_all_files(measurement_uuid)
+    remote_files = await storage.get_all_files(str(measurement_uuid))
     for remote_file in remote_files:
         remote_filename = remote_file["key"]
-        if remote_filename.startswith(agent_uuid):
+        if remote_filename.startswith(str(agent_uuid)):
             logger.warning(f"Sanity remove `{remote_filename}` from AWS S3")
             is_deleted = await storage.delete_file_no_check(
-                measurement_uuid, remote_filename
+                str(measurement_uuid), remote_filename
             )
             if not is_deleted:
                 logger.error(f"Impossible to remove `{remote_filename}`")
@@ -64,7 +64,7 @@ async def sanity_check(
 
 
 async def watch(
-    measurement_request: private.MeasurementRequest,
+    measurement_request: MeasurementRequest,
     agent_uuid: UUID,
     logger: Logger,
     redis: Redis,
@@ -93,8 +93,8 @@ async def watch(
                 measurement_request.uuid
             )
             if measurement_state in [
-                public.MeasurementState.Canceled,
-                public.MeasurementState.Unknown,
+                MeasurementState.Canceled,
+                MeasurementState.Unknown,
             ]:
                 logger.warning(f"{logger_prefix} Measurement canceled")
                 await database_agents.stamp_canceled(
@@ -103,7 +103,7 @@ async def watch(
                 break
 
         # Search for results file
-        remote_files = await storage.get_all_files(measurement_request.uuid)
+        remote_files = await storage.get_all_files(str(measurement_request.uuid))
         for remote_file in remote_files:
             remote_filename = remote_file["key"]
             if remote_filename.startswith(f"{agent.uuid}_results"):
@@ -143,19 +143,15 @@ async def watch(
             break
         else:
             logger.info(f"{logger_prefix} Publish next measurement")
-            await redis.publish(
-                str(agent.uuid),
-                json.dumps(
-                    {
-                        "measurement_request": measurement_request,
-                        "probes": shuffled_next_round_csv_filename,
-                        "round": next_round.encode(),
-                    }
-                ),
+            request = MeasurementRoundRequest(
+                measurement=measurement_request,
+                probes=shuffled_next_round_csv_filename,
+                round=next_round,
             )
+            await redis.publish(agent.uuid, request)
 
 
-async def callback(measurement_request: private.MeasurementRequest, logger: Logger):
+async def callback(measurement_request: MeasurementRequest, logger: Logger):
     """Asynchronous callback."""
     logger_prefix = f"{measurement_request.uuid} ::"
     logger.info(f"{logger_prefix} New measurement received")
@@ -171,12 +167,12 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
 
     if (
         await redis.get_measurement_state(measurement_request.uuid)
-        is public.MeasurementState.Unknown
+        is MeasurementState.Unknown
     ):
         # There is no measurement state, so the measurement hasn't started yet
         logger.info(f"{logger_prefix} Set measurement state to `waiting`")
         await redis.set_measurement_state(
-            measurement_request.uuid, public.MeasurementState.Waiting
+            measurement_request.uuid, MeasurementState.Waiting
         )
 
         logger.info(f"{logger_prefix} Create local measurement directory")
@@ -219,20 +215,20 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
         logger.info(f"{logger_prefix} Create bucket in AWS S3")
         # noinspection PyBroadException
         try:
-            await storage.create_bucket(bucket=measurement_request.uuid)
+            await storage.create_bucket(bucket=str(measurement_request.uuid))
         except Exception:
             logger.error(f"{logger_prefix} Impossible to create bucket")
             return
 
         logger.info(f"{logger_prefix} Publish measurement to agents")
-        request = {
-            "measurement_request": measurement_request,
-            "probes": None,
-            "round": Round(1, settings.WORKER_ROUND_1_SLIDING_WINDOW, 0).encode(),
-        }
+        request = MeasurementRoundRequest(
+            measurement=measurement_request,
+            probes=None,
+            round=Round(1, settings.WORKER_ROUND_1_SLIDING_WINDOW, 0),
+        )
 
         for agent in measurement_request.agents:
-            await redis.publish(str(agent.uuid), json.dumps(request))
+            await redis.publish(agent.uuid, request)
         agents = measurement_request.agents
 
     else:
@@ -266,15 +262,15 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
     logger.info(f"{logger_prefix} Delete bucket")
     # noinspection PyBroadException
     try:
-        await storage.delete_all_files_from_bucket(bucket=measurement_request.uuid)
-        await storage.delete_bucket(bucket=measurement_request.uuid)
+        await storage.delete_all_files_from_bucket(bucket=str(measurement_request.uuid))
+        await storage.delete_bucket(bucket=str(measurement_request.uuid))
     except Exception:
         logger.error(f"{logger_prefix} Impossible to remove bucket")
 
     logger.info(f"{logger_prefix} Stamp measurement state")
     if (
         await redis.get_measurement_state(measurement_request.uuid)
-        == public.MeasurementState.Canceled
+        == MeasurementState.Canceled
     ):
         await database_measurements.stamp_canceled(
             measurement_request.username, measurement_request.uuid
@@ -294,10 +290,11 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
     await redis.disconnect()
 
 
+# noinspection PyTypeChecker
 @dramatiq.actor(
     time_limit=settings.WORKER_TIME_LIMIT, max_age=settings.WORKER_MESSAGE_AGE_LIMIT
 )
-def hook(measurement_request: private.MeasurementRequest):
+def hook(measurement_request: MeasurementRequest):
     """Hook a worker process to a measurement"""
     logger = create_logger(settings)
     try:

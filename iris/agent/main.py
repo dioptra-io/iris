@@ -9,7 +9,7 @@ from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
 from iris.commons.logger import create_logger
 from iris.commons.redis import AgentRedis
-from iris.commons.schemas import public
+from iris.commons.schemas.public import AgentParameters, AgentState, MeasurementState
 from iris.commons.storage import Storage
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 
@@ -56,36 +56,35 @@ async def consumer(
 
     while True:
         request = await queue.get()
-        measurement_uuid = request["measurement_uuid"]
-        logger_prefix = f"{measurement_uuid} :: {settings.AGENT_UUID} ::"
+        logger_prefix = f"{request.measurement.uuid} :: {settings.AGENT_UUID} ::"
 
-        measurement_state = await redis.get_measurement_state(measurement_uuid)
+        measurement_state = await redis.get_measurement_state(request.measurement.uuid)
         if measurement_state in [
-            public.MeasurementState.Canceled,
-            public.MeasurementState.Unknown,
+            MeasurementState.Canceled,
+            MeasurementState.Unknown,
         ]:
             logger.warning(f"{logger_prefix} The measurement has been canceled")
             continue
 
         logger.info(f"{logger_prefix} Set agent state to `working`")
-        await redis.set_agent_state(public.AgentState.Working)
+        await redis.set_agent_state(AgentState.Working)
 
         logger.info(f"{logger_prefix} Set measurement state to `ongoing`")
         await redis.set_measurement_state(
-            measurement_uuid, public.MeasurementState.Ongoing
+            request.measurement.uuid, MeasurementState.Ongoing
         )
 
         logger.info(f"{logger_prefix} Launch measurement procedure")
         await measurement(settings, request, logger, storage)
 
         logger.info(f"{logger_prefix} Set agent state to `idle`")
-        await redis.set_agent_state(public.AgentState.Idle)
+        await redis.set_agent_state(AgentState.Idle)
 
 
 async def main():
     """Main agent function."""
     settings = AgentSettings()
-    logger = create_logger(settings, tags={"agent_uuid": str(settings.AGENT_UUID)})
+    logger = create_logger(settings)
     redis = AgentRedis(
         await settings.redis_client(), settings, logger, settings.AGENT_UUID
     )
@@ -95,11 +94,13 @@ async def main():
             logger, settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2
         )
 
+    await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
+
     tasks = []
     try:
-        await redis.set_agent_state(public.AgentState.Idle)
+        await redis.set_agent_state(AgentState.Idle)
         await redis.set_agent_parameters(
-            public.AgentParameters(
+            AgentParameters(
                 version=__version__,
                 hostname=socket.gethostname(),
                 ipv4_address=get_ipv4_address(),
@@ -129,6 +130,7 @@ async def main():
             task.cancel()
         await redis.delete_agent_state()
         await redis.delete_agent_parameters()
+        await redis.deregister()
         await redis.disconnect()
 
 

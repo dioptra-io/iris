@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from iris.commons.schemas.base import BaseModel
 
 
 class AgentParameters(BaseModel):
