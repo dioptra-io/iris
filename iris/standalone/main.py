@@ -96,7 +96,7 @@ async def yarrp(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag, logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag or [], logger
     )
     display_results(pipeline_info)
 
@@ -134,7 +134,7 @@ async def ping(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag, logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag or [], logger
     )
     display_results(pipeline_info)
 
