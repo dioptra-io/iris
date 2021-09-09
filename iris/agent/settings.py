@@ -37,9 +37,6 @@ class AgentSettings(CommonSettings):
     AGENT_TARGETS_DIR_PATH: Path = Path("/app/targets")
     AGENT_RESULTS_DIR_PATH: Path = Path("/app/results")
 
-    AGENT_WAIT_FOR_START: int = 10  # seconds
-    AGENT_RECOVER_TIME_REDIS_FAILURE: int = 10  # seconds
-
     AGENT_STOPPER_REFRESH: int = 1  # seconds
 
     AGENT_DEBUG_MODE: bool = False

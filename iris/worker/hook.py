@@ -92,7 +92,10 @@ async def watch(
             measurement_state = await redis.get_measurement_state(
                 measurement_request.uuid
             )
-            if measurement_state is None or measurement_state == "canceled":
+            if measurement_state in [
+                public.MeasurementState.Canceled,
+                public.MeasurementState.Unknown,
+            ]:
                 logger.warning(f"{logger_prefix} Measurement canceled")
                 await database_agents.stamp_canceled(
                     measurement_request.uuid, agent.uuid
@@ -166,7 +169,10 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
         measurement_request.uuid
     )
 
-    if await redis.get_measurement_state(measurement_request.uuid) is None:
+    if (
+        await redis.get_measurement_state(measurement_request.uuid)
+        is public.MeasurementState.Unknown
+    ):
         # There is no measurement state, so the measurement hasn't started yet
         logger.info(f"{logger_prefix} Set measurement state to `waiting`")
         await redis.set_measurement_state(
@@ -266,7 +272,10 @@ async def callback(measurement_request: private.MeasurementRequest, logger: Logg
         logger.error(f"{logger_prefix} Impossible to remove bucket")
 
     logger.info(f"{logger_prefix} Stamp measurement state")
-    if await redis.get_measurement_state(measurement_request.uuid) == "canceled":
+    if (
+        await redis.get_measurement_state(measurement_request.uuid)
+        == public.MeasurementState.Canceled
+    ):
         await database_measurements.stamp_canceled(
             measurement_request.username, measurement_request.uuid
         )

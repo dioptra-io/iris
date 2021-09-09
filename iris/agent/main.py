@@ -14,6 +14,15 @@ from iris.commons.storage import Storage
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 
 
+async def heartbeat(settings: AgentSettings, logger: Logger) -> None:
+    redis = AgentRedis(
+        await settings.redis_client(), settings, logger, settings.AGENT_UUID
+    )
+    while True:
+        await redis.register(15)
+        await asyncio.sleep(5)
+
+
 async def producer(
     settings: AgentSettings, queue: asyncio.Queue, logger: Logger
 ) -> None:
@@ -23,13 +32,11 @@ async def producer(
     )
 
     while True:
-        logger.info(f"{settings.AGENT_UUID} :: Wait for a new request...")
+        logger.info(f"{settings.AGENT_UUID} :: Waiting for requests...")
         request = await redis.subscribe()
-        if request is None:
-            continue
 
         logger.info(
-            f"{settings.AGENT_UUID} :: New request received! Putting in task queue"
+            f"{settings.AGENT_UUID} :: Queuing request {request.measurement.uuid} for {request.round}..."
         )
         await queue.put(request)
 
@@ -53,7 +60,10 @@ async def consumer(
         logger_prefix = f"{measurement_uuid} :: {settings.AGENT_UUID} ::"
 
         measurement_state = await redis.get_measurement_state(measurement_uuid)
-        if measurement_state in [None, public.MeasurementState.Canceled]:
+        if measurement_state in [
+            public.MeasurementState.Canceled,
+            public.MeasurementState.Unknown,
+        ]:
             logger.warning(f"{logger_prefix} The measurement has been canceled")
             continue
 
@@ -75,7 +85,7 @@ async def consumer(
 async def main():
     """Main agent function."""
     settings = AgentSettings()
-    logger = create_logger(settings, tags={"agent_uuid": settings.AGENT_UUID})
+    logger = create_logger(settings, tags={"agent_uuid": str(settings.AGENT_UUID)})
     redis = AgentRedis(
         await settings.redis_client(), settings, logger, settings.AGENT_UUID
     )
@@ -85,10 +95,6 @@ async def main():
             logger, settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2
         )
 
-    await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
-    await redis.test()
-
-    logger.info(f"{settings.AGENT_UUID} :: Connected to Redis")
     tasks = []
     try:
         await redis.set_agent_state(public.AgentState.Idle)
@@ -106,6 +112,7 @@ async def main():
 
         queue = asyncio.Queue()
         tasks = [
+            asyncio.create_task(heartbeat(settings, logger)),
             asyncio.create_task(producer(settings, queue, logger)),
             asyncio.create_task(consumer(settings, queue, logger)),
         ]
@@ -120,15 +127,12 @@ async def main():
     finally:
         for task in tasks:
             task.cancel()
-        # TODO: Is this still necessary with aioredis 2.0.0?
-        # await redis.unsubscribe()
         await redis.delete_agent_state()
         await redis.delete_agent_parameters()
         await redis.disconnect()
 
 
 def app():
-    """ASGI interface."""
     asyncio.run(main())
 
 

@@ -12,10 +12,11 @@ from tenacity import (
     retry,
     stop_after_delay,
     wait_exponential,
+    wait_fixed,
     wait_random,
 )
 
-from iris.commons.schemas import public
+from iris.commons.schemas import private, public
 from iris.commons.settings import CommonSettings
 
 
@@ -28,6 +29,7 @@ class Redis:
     KEY_MEASUREMENT_STATE = "measurement_state"
     KEY_MEASUREMENT_STATS = "measurement_stats"
 
+    KEY_AGENT_HEARTBEAT = "agent_heartbeat"
     KEY_AGENT_LISTEN = "agent_listen"
     KEY_AGENT_STATE = "agent_state"
     KEY_AGENT_PARAMETERS = "agent_parameters"
@@ -75,15 +77,16 @@ class Redis:
     @fault_tolerant
     async def get_agents(self) -> List[public.Agent]:
         """Get agents UUID along with their state."""
-        clients = await self.client.client_list()
+        # TODO: Use SCAN instead of KEYS for better scaling?
+        alive = await self.client.keys(f"{self.KEY_AGENT_HEARTBEAT}:*")
+        uuids = [UUID(key.split(":")[1]) for key in alive]
         return [
             public.Agent(
-                uuid=UUID(client["name"]),
-                parameters=await self.get_agent_parameters(client["name"]),
-                state=await self.get_agent_state(client["name"]),
+                uuid=uuid,
+                parameters=await self.get_agent_parameters(uuid),
+                state=await self.get_agent_state(uuid),
             )
-            for client in clients
-            if client["name"]
+            for uuid in uuids
         ]
 
     async def get_agents_by_uuid(self) -> Dict[UUID, public.Agent]:
@@ -91,23 +94,28 @@ class Redis:
         return {agent.uuid: agent for agent in agents}
 
     async def get_agent_by_uuid(self, uuid: UUID) -> Optional[public.Agent]:
-        agents = await self.get_agents_by_uuid()
-        return agents.get(uuid)
+        is_alive = await self.client.exists(f"{self.KEY_AGENT_HEARTBEAT}:{uuid}")
+        if is_alive:
+            return public.Agent(
+                uuid=uuid,
+                parameters=await self.get_agent_parameters(uuid),
+                state=await self.get_agent_state(uuid),
+            )
+        return None
 
     @fault_tolerant
     async def check_agent(self, uuid: UUID) -> bool:
         """Check the conformity of an agent."""
-        clients = await self.client.client_list()
-        for client in clients:
-            if client["name"] and UUID(client["name"]) == uuid:
-                state = await self.get_agent_state(uuid)
-                if state == public.AgentState.Unknown:
-                    return False
-                parameters = await self.get_agent_parameters(uuid)
-                if not parameters:
-                    return False
-                return True
-        return False  # Agent not found
+        is_alive = await self.client.exists(f"{self.KEY_AGENT_HEARTBEAT}:{uuid}")
+        if not is_alive:
+            return False
+        state = await self.get_agent_state(uuid)
+        if state == public.AgentState.Unknown:
+            return False
+        parameters = await self.get_agent_parameters(uuid)
+        if not parameters:
+            return False
+        return True
 
     @fault_tolerant
     async def get_measurement_state(self, uuid: UUID) -> public.MeasurementState:
@@ -181,11 +189,7 @@ class AgentRedis(Redis):
             settings, logger = cls.settings, cls.logger
             return await retry(
                 stop=stop_after_delay(settings.REDIS_TIMEOUT),
-                wait=wait_exponential(
-                    multiplier=settings.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-                    min=settings.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-                    max=settings.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-                )
+                wait=wait_fixed(5)
                 + wait_random(
                     settings.REDIS_TIMEOUT_RANDOM_MIN,
                     settings.REDIS_TIMEOUT_RANDOM_MAX,
@@ -198,16 +202,14 @@ class AgentRedis(Redis):
         return wrapper
 
     @fault_tolerant
-    async def register(self) -> None:
-        await self.client.client_setname(str(self.uuid))
+    async def register(self, ttl_seconds: int) -> None:
+        await self.client.set(
+            f"{self.KEY_AGENT_HEARTBEAT}:{self.uuid}", "alive", ex=ttl_seconds
+        )
 
-    async def test(self) -> bool:
-        """Test redis connection."""
-        try:
-            await self.client.get(f"{self.KEY_AGENT_STATE}:{self.uuid}")
-        except aioredis.ConnectionError:
-            return False
-        return True
+    @fault_tolerant
+    async def deregister(self) -> None:
+        await self.client.delete(f"{self.KEY_AGENT_HEARTBEAT}:{self.uuid}")
 
     @fault_tolerant
     async def set_agent_state(self, state: public.AgentState) -> None:
@@ -232,7 +234,7 @@ class AgentRedis(Redis):
         await self.client.delete(f"{self.KEY_AGENT_PARAMETERS}:{self.uuid}")
 
     @fault_tolerant
-    async def subscribe(self) -> None:
+    async def subscribe(self) -> private.MeasurementRoundRequest:
         """Subscribe to agent channels (all, specific) and wait for a response"""
         psub = self.client.pubsub()
         async with psub as p:
@@ -243,7 +245,9 @@ class AgentRedis(Redis):
                     async with async_timeout.timeout(1.0):
                         message = await p.get_message(ignore_subscribe_messages=True)
                         if message:
-                            response = json.loads(message)
+                            response = private.MeasurementRoundRequest.parse_raw(
+                                json.loads(message)
+                            )
                             break
                         await asyncio.sleep(0.1)
                 except asyncio.TimeoutError:

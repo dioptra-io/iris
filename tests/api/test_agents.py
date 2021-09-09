@@ -11,7 +11,7 @@ async def test_get_agents(api_client, common_settings, fake_agent, redis_client)
     redis = AgentRedis(
         redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
     )
-    await redis.register()
+    await redis.register(5)
     await redis.set_agent_parameters(fake_agent.parameters)
     await redis.set_agent_state(fake_agent.state)
 

@@ -1,7 +1,7 @@
+import asyncio
 import logging
 from uuid import uuid4
 
-import aioredis
 import pytest
 
 from iris.commons.redis import AgentRedis, Redis
@@ -9,36 +9,36 @@ from iris.commons.schemas.public import AgentState, MeasurementState
 
 
 @pytest.mark.asyncio
-async def test_redis_test(common_settings, redis_client):
-    # Valid connection
-    redis = AgentRedis(
-        redis_client, common_settings, logging.getLogger(__name__), uuid4()
-    )
-    assert await redis.test()
-    await redis.disconnect()
-
-    # Invalid connection
-    redis = AgentRedis(
-        aioredis.from_url("redis://127.0.0.1:6380"),
-        common_settings,
-        logging.getLogger(__name__),
-        uuid4(),
-    )
-    assert not await redis.test()
-
-
-@pytest.mark.asyncio
 async def test_redis_get_agents(common_settings, fake_agent, redis_client):
     redis = Redis(redis_client, common_settings, logging.getLogger(__name__))
-    agent_redis = AgentRedis(
+    agent_redis_1 = AgentRedis(
         redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
     )
+    agent_redis_2 = AgentRedis(
+        redis_client, common_settings, logging.getLogger(__name__), uuid4()
+    )
 
-    # TODO: Ensure that all agents are disconnected beforehand?
+    # No agents
     assert len(await redis.get_agents()) == 0
-    await agent_redis.register()
+
+    # Registered for 1 second
+    await agent_redis_1.register(1)
     assert len(await redis.get_agents()) == 1
     assert len(await redis.get_agents_by_uuid()) == 1
+
+    # Registration expired
+    await asyncio.sleep(1)
+    assert len(await redis.get_agents()) == 0
+
+    # Register/Deregister
+    await agent_redis_1.register(1)
+    await agent_redis_1.deregister()
+    assert len(await redis.get_agents()) == 0
+
+    # Two agents
+    await agent_redis_1.register(1)
+    await agent_redis_2.register(1)
+    assert len(await redis.get_agents()) == 2
 
 
 @pytest.mark.asyncio
@@ -50,7 +50,7 @@ async def test_redis_check_agent(common_settings, fake_agent, redis_client):
 
     # Not registered
     assert not await redis.check_agent(uuid4())
-    await agent_redis.register()
+    await agent_redis.register(5)
 
     # Fully registered
     await agent_redis.set_agent_parameters(fake_agent.parameters)

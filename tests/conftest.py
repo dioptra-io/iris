@@ -2,6 +2,7 @@ import logging
 import subprocess
 from uuid import uuid4
 
+import fakeredis.aioredis
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -113,16 +114,15 @@ def common_settings(s3_server):
         DATABASE_NAME="iris_test",
         DATABASE_TIMEOUT=0,
         REDIS_TIMEOUT=0,
-        REDIS_URL="redis://default:redispass@localhost",
     )
 
 
 @pytest.fixture(scope="function")
-async def redis_client(common_settings):
-    return await common_settings.redis_client()
+async def redis_client():
+    return fakeredis.aioredis.FakeRedis(decode_responses=True)
 
 
-# Async API client with a real Redis client
+# Async API client with a "real" Redis client
 @pytest.fixture(scope="function")
 def api_client(common_settings, redis_client):
     app.dependency_overrides[get_current_active_user] = override_get_current_active_user
@@ -134,6 +134,7 @@ def api_client(common_settings, redis_client):
 
 
 # Sync API client with a fake Redis client
+# TODO: Use the async client with the "real" redis client everywhere?
 @pytest.fixture(scope="function")
 def api_client_sync(common_settings, redis_client):
     app.dependency_overrides[get_current_active_user] = override_get_current_active_user

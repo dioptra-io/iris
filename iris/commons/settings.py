@@ -40,20 +40,13 @@ class CommonSettings(BaseSettings):
     TABLE_NAME_MEASUREMENTS: str = "measurements"
     TABLE_NAME_AGENTS: str = "agents"
 
-    REDIS_URL: str = "redis://default:redisspass@redis"
+    REDIS_URL: str = "redis://default:redispass@redis"
     REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
     REDIS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
-    REDIS_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
-
-    LOKI_URL: str = "http://loki:3100/loki/api/v1/push"
-    LOKI_USER: str = "admin"
-    LOKI_PASSWORD: str = "admin"
-    LOKI_VERSION: str = "1"
-    LOKI_QUEUE_SIZE: int = 1000
-    LOKI_LOGGING_LEVEL: int = logging.INFO
+    REDIS_TIMEOUT_RANDOM_MAX: int = 5  # in seconds
 
     STREAM_LOGGING_LEVEL: int = logging.DEBUG
 
@@ -72,6 +65,4 @@ class CommonSettings(BaseSettings):
         return url
 
     async def redis_client(self) -> aioredis.Redis:
-        return await aioredis.from_url(
-            self.REDIS_URL, encoding="utf-8", decode_responses=True
-        )
+        return await aioredis.from_url(self.REDIS_URL, decode_responses=True)
