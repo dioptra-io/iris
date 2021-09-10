@@ -1,7 +1,6 @@
 """Targets operations."""
 
 import ipaddress
-from typing import Dict
 
 from fastapi import (
     APIRouter,
@@ -14,9 +13,11 @@ from fastapi import (
     status,
 )
 
+from iris.api.dependencies import get_storage, settings
 from iris.api.pagination import ListPagination
 from iris.api.security import get_current_active_user
 from iris.commons.schemas import public
+from iris.commons.storage import Storage
 
 router = APIRouter()
 
@@ -30,12 +31,13 @@ async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    storage: Storage = Depends(get_storage),
 ):
     """Get all target lists."""
     try:
-        targets = await request.app.storage.get_all_files_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"]
+        targets = await storage.get_all_files_no_retry(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username
         )
     except Exception:
         raise HTTPException(
@@ -52,12 +54,15 @@ async def get_targets(
     summary="Get target list specified by key.",
 )
 async def get_target_by_key(
-    request: Request, key: str, user: Dict = Depends(get_current_active_user)
+    request: Request,
+    key: str,
+    user: public.Profile = Depends(get_current_active_user),
+    storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
     try:
-        target_file = await request.app.storage.get_file_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"], key
+        target_file = await storage.get_file_no_retry(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username, key
         )
     except Exception:
         raise HTTPException(
@@ -118,7 +123,8 @@ async def verify_target_file(target_file):
 async def post_target(
     request: Request,
     target_file: UploadFile = File(...),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    storage: Storage = Depends(get_storage),
 ):
     """Upload a target list to object storage."""
     if not target_file.filename.endswith(".csv"):
@@ -134,8 +140,8 @@ async def post_target(
             detail="Bad target file structure",
         )
 
-    target_bucket = request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"]
-    await request.app.storage.upload_file_no_retry(
+    target_bucket = settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username
+    await storage.upload_file_no_retry(
         target_bucket, target_file.filename, target_file.file
     )
     return {"key": target_file.filename, "action": "upload"}
@@ -151,12 +157,15 @@ async def post_target(
     summary="Delete a target list.",
 )
 async def delete_target_by_key(
-    request: Request, key: str, user: Dict = Depends(get_current_active_user)
+    request: Request,
+    key: str,
+    user: public.Profile = Depends(get_current_active_user),
+    storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""
     try:
-        response = await request.app.storage.delete_file_check_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"], key
+        response = await storage.delete_file_check_no_retry(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username, key
         )
     except Exception:
         raise HTTPException(

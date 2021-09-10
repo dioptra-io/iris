@@ -1,18 +1,18 @@
 """Profile operations."""
 
 from datetime import timedelta
-from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
+from iris.api.dependencies import get_database, settings
 from iris.api.security import (
     authenticate_user,
     create_access_token,
     get_current_active_user,
 )
-from iris.commons.database import Users
+from iris.commons.database import Database, Users
 from iris.commons.schemas import public
 
 router = APIRouter()
@@ -31,8 +31,11 @@ class Token(BaseModel):
 async def get_token(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
+    database: Database = Depends(get_database),
 ):
-    user = await authenticate_user(request, form_data.username, form_data.password)
+    user = await authenticate_user(
+        request, database, form_data.username, form_data.password
+    )
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -40,11 +43,9 @@ async def get_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token_expires = timedelta(
-        days=request.app.settings.API_TOKEN_EXPIRATION_TIME
-    )
+    access_token_expires = timedelta(days=settings.API_TOKEN_EXPIRATION_TIME)
     access_token = create_access_token(
-        request, data={"sub": user["username"]}, expires_delta=access_token_expires
+        request, data={"sub": user.username}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
@@ -57,13 +58,8 @@ async def get_token(
 )
 async def get_profile(
     request: Request,
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
 ):
-    """Get profile information."""
-    user["ripe"] = {
-        "account": user["ripe_account"],
-        "key": user["ripe_key"],
-    }
     return user
 
 
@@ -76,17 +72,19 @@ async def get_profile(
 async def put_ripe_profile(
     request: Request,
     ripe_info: public.RIPEAccount,
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
 ):
-    users_database = Users(request.app.settings, request.app.logger)
+    await Users(database).register_ripe(user.username, ripe_info)
+    return ripe_info
 
-    if not isinstance(ripe_info.account, type(ripe_info.key)):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="`account` and `key` must have the same type",
-        )
 
-    await users_database.register_ripe(
-        user["username"], ripe_info.account, ripe_info.key
-    )
-    return {"account": ripe_info.account, "key": ripe_info.key}
+@router.delete(
+    "/ripe", summary="Remove RIPE account information from the current user."
+)
+async def delete_ripe_profile(
+    request: Request,
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
+):
+    await Users(database).deregister_ripe(user.username)

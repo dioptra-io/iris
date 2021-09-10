@@ -7,6 +7,9 @@ from typing import Optional
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 
+from iris.api.dependencies import get_database, settings
+from iris.commons.schemas import public
+
 with warnings.catch_warnings():
     # NOTE: https://github.com/mpdavis/python-jose/issues/208
     warnings.filterwarnings("ignore", message="int_from_bytes is deprecated")
@@ -14,7 +17,7 @@ with warnings.catch_warnings():
 
 from passlib.context import CryptContext
 
-from iris.commons.database import Users
+from iris.commons.database import Database, Users
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="profile/token")
@@ -35,31 +38,36 @@ def create_access_token(
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
         to_encode,
-        request.app.settings.API_TOKEN_SECRET_KEY,
-        algorithm=request.app.settings.API_TOKEN_ALGORITHM,
+        settings.API_TOKEN_SECRET_KEY,
+        algorithm=settings.API_TOKEN_ALGORITHM,
     )
     return encoded_jwt
 
 
-async def get_user(request: Request, username: str):
-    database = Users(request.app.settings, request.app.logger)
-    return await database.get(username)
+async def get_user(
+    request: Request, database: Database, username: str
+) -> Optional[public.Profile]:
+    return await Users(database).get(username)
 
 
-async def authenticate_user(request: Request, username: str, password: str):
-    user = await get_user(request, username)
-
+async def authenticate_user(
+    request: Request, database: Database, username: str, password: str
+) -> Optional[public.Profile]:
+    user = await get_user(request, database, username)
     if not user:
-        return False
-    if not user["is_active"]:
-        return False
-    if not verify_password(password, user["hashed_password"]):
-        return False
-
+        return None
+    if not user.is_active:
+        return None
+    if not verify_password(password, user._hashed_password):
+        return None
     return user
 
 
-async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    request: Request,
+    database: Database = Depends(get_database),
+    token: str = Depends(oauth2_scheme),
+) -> public.Profile:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -68,21 +76,23 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
     try:
         payload = jwt.decode(
             token,
-            request.app.settings.API_TOKEN_SECRET_KEY,
-            algorithms=[request.app.settings.API_TOKEN_ALGORITHM],
+            settings.API_TOKEN_SECRET_KEY,
+            algorithms=[settings.API_TOKEN_ALGORITHM],
         )
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = await get_user(request, username=username)
-    if user is None:
+    user = await get_user(request, database, username=username)
+    if not user:
         raise credentials_exception
     return user
 
 
-async def get_current_active_user(current_user=Depends(get_current_user)):
-    if not current_user["is_active"]:
+async def get_current_active_user(
+    current_user: public.Profile = Depends(get_current_user),
+):
+    if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user

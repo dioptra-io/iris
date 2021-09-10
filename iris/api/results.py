@@ -1,40 +1,47 @@
 """Results operations."""
 from ipaddress import ip_network
-from typing import Dict, Optional
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import IPvAnyAddress, IPvAnyNetwork
 
+from iris.api.dependencies import get_database
 from iris.api.pagination import DatabasePagination
 from iris.api.security import get_current_active_user
 from iris.commons.database import (
     Agents,
+    Database,
     Interfaces,
     Links,
     Measurements,
     Prefixes,
     Replies,
 )
+from iris.commons.database.results import QueryWrapper
 from iris.commons.schemas import public
 
 router = APIRouter()
 
 
 async def get_results(
-    request, measurement_uuid, agent_uuid, offset, limit, user, database
+    request,
+    measurement_uuid: UUID,
+    agent_uuid: UUID,
+    offset: int,
+    limit: int,
+    user: public.Profile,
+    wrapper: QueryWrapper,
 ):
-    measurement_info = await Measurements(request.app.settings, request.app.logger).get(
-        user["username"], measurement_uuid
+    measurement_info = await Measurements(wrapper.database).get(
+        user.username, measurement_uuid
     )
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
-    agent_info = await Agents(request.app.settings, request.app.logger).get(
-        measurement_uuid, agent_uuid
-    )
+    agent_info = await Agents(wrapper.database).get(measurement_uuid, agent_uuid)
 
     if agent_info is None:
         raise HTTPException(
@@ -54,11 +61,11 @@ async def get_results(
             ),
         )
 
-    is_table_exists = await database.exists()
+    is_table_exists = await wrapper.exists()
     if not is_table_exists:
         return {"count": 0, "next": None, "previous": None, "results": []}
 
-    querier = DatabasePagination(database, request, offset, limit)
+    querier = DatabasePagination(wrapper, request, offset, limit)
     return await querier.query()
 
 
@@ -75,18 +82,15 @@ async def get_prefixes_results(
     contains_network: Optional[IPvAnyNetwork] = Query(None),
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
 ):
     """Get replies results."""
-    database = Prefixes(
-        request.app.settings,
-        request.app.logger,
-        measurement_uuid,
-        agent_uuid,
-        reply_src_addr_in=contains_network,
+    wrapper = Prefixes(
+        database, measurement_uuid, agent_uuid, reply_src_addr_in=contains_network
     )
     return await get_results(
-        request, measurement_uuid, agent_uuid, offset, limit, user, database
+        request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
     )
 
 
@@ -103,18 +107,13 @@ async def get_replies_results(
     prefix: IPvAnyAddress,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
 ):
     """Get replies results."""
-    database = Replies(
-        request.app.settings,
-        request.app.logger,
-        measurement_uuid,
-        agent_uuid,
-        subset=ip_network(prefix),
-    )
+    wrapper = Replies(database, measurement_uuid, agent_uuid, subset=ip_network(prefix))
     return await get_results(
-        request, measurement_uuid, agent_uuid, offset, limit, user, database
+        request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
     )
 
 
@@ -131,18 +130,15 @@ async def get_interfaces_results(
     prefix: IPvAnyAddress,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
 ):
     """Get interfaces results."""
-    database = Interfaces(
-        request.app.settings,
-        request.app.logger,
-        measurement_uuid,
-        agent_uuid,
-        subset=ip_network(prefix),
+    wrapper = Interfaces(
+        database, measurement_uuid, agent_uuid, subset=ip_network(prefix)
     )
     return await get_results(
-        request, measurement_uuid, agent_uuid, offset, limit, user, database
+        request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
     )
 
 
@@ -159,18 +155,13 @@ async def get_links_results_by_prefix(
     prefix: IPvAnyAddress,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
 ):
     """Get links results."""
-    database = Links(
-        request.app.settings,
-        request.app.logger,
-        measurement_uuid,
-        agent_uuid,
-        subset=ip_network(prefix),
-    )
+    wrapper = Links(database, measurement_uuid, agent_uuid, subset=ip_network(prefix))
     return await get_results(
-        request, measurement_uuid, agent_uuid, offset, limit, user, database
+        request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
     )
 
 
@@ -187,16 +178,11 @@ async def get_links_results_by_adjacency(
     address: IPvAnyAddress,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
 ):
     """Get links results."""
-    database = Links(
-        request.app.settings,
-        request.app.logger,
-        measurement_uuid,
-        agent_uuid,
-        near_or_far_addr=address,
-    )
+    wrapper = Links(database, measurement_uuid, agent_uuid, near_or_far_addr=address)
     return await get_results(
-        request, measurement_uuid, agent_uuid, offset, limit, user, database
+        request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
     )

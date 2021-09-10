@@ -1,4 +1,3 @@
-import logging
 from uuid import uuid4
 
 import pytest
@@ -9,9 +8,8 @@ from iris.commons.schemas.public import MeasurementAgentPostBody, MeasurementSta
 
 
 @pytest.mark.asyncio
-async def test_agents(common_settings, fake_agent):
-    db = Agents(common_settings, logging.getLogger(__name__))
-    assert await db.create_database() is None
+async def test_agents(database, agent):
+    db = Agents(database)
     assert await db.create_table(drop=True) is None
 
     measurement_agent = MeasurementAgentPostBody(
@@ -28,15 +26,13 @@ async def test_agents(common_settings, fake_agent):
         "target_file": measurement_agent.target_file,
         "probing_rate": measurement_agent.probing_rate,
         "probing_statistics": {},
-        "agent_parameters": fake_agent.parameters,
+        "agent_parameters": agent.parameters,
         "tool_parameters": measurement_agent.tool_parameters,
         "state": MeasurementState.Ongoing,
     }
 
     assert (
-        await db.register(
-            measurement_request, measurement_agent.uuid, fake_agent.parameters
-        )
+        await db.register(measurement_request, measurement_agent.uuid, agent.parameters)
         is None
     )
     assert await db.get(uuid4(), uuid4()) is None

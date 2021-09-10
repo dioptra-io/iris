@@ -1,18 +1,14 @@
 """API Entrypoint."""
 
-from datetime import datetime
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
 from iris.api import router
-from iris.api.settings import APISettings
-from iris.commons.database import Database, Measurements, Users
-from iris.commons.logger import create_logger
-from iris.commons.redis import Redis
-from iris.commons.storage import Storage
+from iris.api.dependencies import get_database, get_storage, settings
+from iris.commons.database import Measurements, Users
+from iris.commons.schemas import public
 
 app = FastAPI(
     title="Iris",
@@ -32,62 +28,46 @@ app.include_router(router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
-    # Get API settings & logger
-    app.settings = APISettings()
-
     # Add CORS whitelist
-    if app.settings.API_CORS_ALLOW_ORIGIN:
+    if settings.API_CORS_ALLOW_ORIGIN:
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=[app.settings.API_CORS_ALLOW_ORIGIN],
+            allow_origins=[settings.API_CORS_ALLOW_ORIGIN],
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
         )
 
-    app.logger = create_logger(app.settings)
-    app.storage = Storage(app.settings, app.logger)
-
-    # Connect into Redis
-    app.redis = Redis(await app.settings.redis_client(), app.settings, app.logger)
+    database = get_database()
+    storage = get_storage()
 
     # Create the database
-    await Database(app.settings, app.logger).create_database()
+    await database.create_database()
 
     # Create the measurement table
-    database = Measurements(app.settings, app.logger)
-    await database.create_table()
+    measurements = Measurements(database)
+    await measurements.create_table()
 
     # Create the users database on Clickhouse and admin user
-    database = Users(app.settings, app.logger)
-    await database.create_table()
-    admin_user = await database.get(app.settings.API_ADMIN_USERNAME)
+    users = Users(database)
+    await users.create_table()
+    admin_user = await users.get(settings.API_ADMIN_USERNAME)
     if admin_user is None:
-        await database.register(
-            {
-                "username": app.settings.API_ADMIN_USERNAME,
-                "email": app.settings.API_ADMIN_EMAIL,
-                "hashed_password": app.settings.API_ADMIN_HASHED_PASSWORD,
-                "is_active": True,
-                "is_admin": True,
-                "quota": app.settings.API_ADMIN_QUOTA,
-                "register_date": datetime.now(),
-            }
+        profile = public.Profile(
+            username=settings.API_ADMIN_USERNAME,
+            email=settings.API_ADMIN_EMAIL,
+            is_active=True,
+            is_admin=True,
+            quota=settings.API_ADMIN_QUOTA,
         )
+        profile._hashed_password = settings.API_ADMIN_HASHED_PASSWORD
+        await users.register(profile)
 
     # Create `targets` bucket in AWS S3 for admin user
-    await app.storage.create_bucket(
-        app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + app.settings.API_ADMIN_USERNAME
+    await storage.create_bucket(
+        settings.AWS_S3_TARGETS_BUCKET_PREFIX + settings.API_ADMIN_USERNAME
     )
     # Create `archive` bucket in AWS S3 for admin user
-    await app.storage.create_bucket(
-        app.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + app.settings.API_ADMIN_USERNAME
+    await storage.create_bucket(
+        settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + settings.API_ADMIN_USERNAME
     )
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    try:
-        await app.redis.disconnect()
-    except Exception:
-        pass

@@ -1,4 +1,3 @@
-import logging
 import uuid
 
 import pytest
@@ -9,9 +8,8 @@ from iris.commons.schemas.public import MeasurementState
 
 
 @pytest.mark.asyncio
-async def test_measurements(common_settings):
-    db = Measurements(common_settings, logging.getLogger(__name__))
-    assert await db.create_database() is None
+async def test_measurements(database):
+    db = Measurements(database)
     assert await db.create_table(drop=True) is None
 
     data = [

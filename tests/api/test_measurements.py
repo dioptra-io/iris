@@ -3,29 +3,39 @@ from datetime import datetime
 
 import pytest
 
-import iris.commons.database.agents
-import iris.commons.database.measurements
-import iris.commons.database.results
+from iris.api.dependencies import get_redis, get_storage
 from iris.api.measurements import verify_quota
 from iris.api.security import get_current_active_user
+from iris.commons.database import Agents, Measurements, Replies
+from iris.commons.schemas.public import MeasurementState, Tool
+from tests.helpers import async_mock, fake_redis_factory, fake_storage_factory, override
 
-from ..conftest import override_get_current_active_user
+
+class FakeSend(object):
+    def send(*args, **kwargs):
+        pass
+
+
+target23 = {
+    "key": "test.csv",
+    "size": 42,
+    "content": "8.8.8.0/23,icmp,2,32",
+    "last_modified": "test",
+}
+
+target25 = {
+    "key": "test.csv",
+    "size": 42,
+    "content": "8.8.8.0/25,icmp,2,32",
+    "last_modified": "test",
+}
 
 # --- GET /api/measurements ---
 
 
 def test_get_measurements_empty(api_client_sync, monkeypatch):
-    async def all(self, user, offset, limit, tag=None):
-        return []
-
-    async def all_count(self, *args, **kwargs):
-        return 0
-
-    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "all", all)
-    monkeypatch.setattr(
-        iris.commons.database.measurements.Measurements, "all_count", all_count
-    )
-
+    monkeypatch.setattr(Measurements, "all", async_mock([]))
+    monkeypatch.setattr(Measurements, "all_count", async_mock(0))
     response = api_client_sync.get("/api/measurements")
     assert response.json() == {
         "count": 0,
@@ -39,7 +49,7 @@ def test_get_measurements(api_client_sync, monkeypatch):
     measurements = [
         {
             "uuid": str(uuid.uuid4()),
-            "state": "unknown",
+            "state": "finished",
             "tool": "diamond-miner",
             "tags": [],
             "start_time": datetime.now().isoformat(),
@@ -47,7 +57,7 @@ def test_get_measurements(api_client_sync, monkeypatch):
         },
         {
             "uuid": str(uuid.uuid4()),
-            "state": "unknown",
+            "state": "finished",
             "tool": "diamond-miner",
             "tags": [],
             "start_time": datetime.now().isoformat(),
@@ -55,7 +65,7 @@ def test_get_measurements(api_client_sync, monkeypatch):
         },
         {
             "uuid": str(uuid.uuid4()),
-            "state": "unknown",
+            "state": "finished",
             "tool": "diamond-miner",
             "tags": ["test"],
             "start_time": datetime.now().isoformat(),
@@ -68,13 +78,13 @@ def test_get_measurements(api_client_sync, monkeypatch):
     async def all(self, user, offset, limit, tag=None):
         return measurements[offset : offset + limit]  # noqa : E203
 
-    async def all_count(self, *args, **kwargs):
-        return 3
-
-    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "all", all)
-    monkeypatch.setattr(
-        iris.commons.database.measurements.Measurements, "all_count", all_count
+    override(
+        api_client_sync,
+        get_redis,
+        fake_redis_factory(measurement_state=MeasurementState.Finished),
     )
+    monkeypatch.setattr(Measurements, "all", all)
+    monkeypatch.setattr(Measurements, "all_count", async_mock(3))
 
     # No (offset, limit)
     response = api_client_sync.get("/api/measurements")
@@ -133,106 +143,55 @@ async def test_verify_quota():
     assert await verify_quota("ping", "8.8.8.0/24", 255) is False
 
 
-def test_post_measurement_diamond_miner(api_client_sync, fake_agent, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
+def test_post_measurement(api_client_sync, agent, monkeypatch):
+    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
+    override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
-    response = api_client_sync.post(
-        "/api/measurements/",
-        json={
-            "tool": "diamond-miner",
-            "agents": [
-                {
-                    "uuid": str(fake_agent.uuid),
-                    "target_file": "test.csv",
-                }
-            ],
-        },
-    )
-    assert response.status_code == 201
+    for tool in Tool:
+        response = api_client_sync.post(
+            "/api/measurements/",
+            json={
+                "tool": tool,
+                "agents": [
+                    {
+                        "uuid": str(agent.uuid),
+                        "target_file": "test.csv",
+                    }
+                ],
+            },
+        )
+        assert response.status_code == 201
 
 
-def test_post_measurement_diamond_miner_quota_exceeded(
-    api_client_sync, fake_agent, monkeypatch
-):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.dependency_overrides[get_current_active_user] = lambda: {
-        "uuid": "test",
-        "username": "test",
-        "email": "test@test",
-        "is_active": True,
-        "is_admin": False,
-        "quota": 0,
-        "register_date": "date",
-        "ripe_account": None,
-        "ripe_key": None,
-    }
-
-    api_client_sync.app.storage = FakeStorage()
+def test_post_measurement_quota_exceeded(api_client_sync, agent, user, monkeypatch):
+    user = user.copy(update={"is_admin": False, "quota": 0})
+    override(api_client_sync, get_current_active_user, lambda: user)
+    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
+    override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
-    response = api_client_sync.post(
-        "/api/measurements/",
-        json={
-            "tool": "diamond-miner",
-            "agents": [
-                {
-                    "uuid": str(fake_agent.uuid),
-                    "target_file": "test.csv",
-                }
-            ],
-        },
-    )
-    assert response.status_code == 403
-
-    # Reset back the override
-    api_client_sync.app.dependency_overrides[
-        get_current_active_user
-    ] = override_get_current_active_user
+    for tool in Tool:
+        response = api_client_sync.post(
+            "/api/measurements/",
+            json={
+                "tool": tool,
+                "agents": [
+                    {
+                        "uuid": str(agent.uuid),
+                        "target_file": "test.csv",
+                    }
+                ],
+            },
+        )
+        assert response.status_code == 403
 
 
 def test_post_measurement_diamond_miner_invalid_prefix_length(
-    api_client_sync, fake_agent, monkeypatch
+    api_client_sync, agent, monkeypatch
 ):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/25,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
+    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
+    override(api_client_sync, get_storage, fake_storage_factory([target25]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = api_client_sync.post(
@@ -241,7 +200,7 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(
             "tool": "diamond-miner",
             "agents": [
                 {
-                    "uuid": str(fake_agent.uuid),
+                    "uuid": str(agent.uuid),
                     "target_file": "test.csv",
                 }
             ],
@@ -250,217 +209,9 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(
     assert response.status_code == 403
 
 
-def test_post_measurement_yarrp(api_client_sync, fake_agent, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-
-    response = api_client_sync.post(
-        "/api/measurements/",
-        json={
-            "tool": "yarrp",
-            "agents": [
-                {
-                    "uuid": str(fake_agent.uuid),
-                    "target_file": "test.csv",
-                }
-            ],
-        },
-    )
-    assert response.status_code == 201
-
-
-def test_post_measurement_yarrp_quota_exceeded(
-    api_client_sync, fake_agent, monkeypatch
-):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.dependency_overrides[get_current_active_user] = lambda: {
-        "uuid": "test",
-        "username": "test",
-        "email": "test@test",
-        "is_active": True,
-        "is_admin": False,
-        "quota": 0,
-        "register_date": "date",
-        "ripe_account": None,
-        "ripe_key": None,
-    }
-
-    api_client_sync.app.storage = FakeStorage()
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-
-    response = api_client_sync.post(
-        "/api/measurements/",
-        json={
-            "tool": "yarrp",
-            "agents": [
-                {
-                    "uuid": str(fake_agent.uuid),
-                    "target_file": "test.csv",
-                }
-            ],
-        },
-    )
-    assert response.status_code == 403
-
-    # Reset back the override
-    api_client_sync.app.dependency_overrides[
-        get_current_active_user
-    ] = override_get_current_active_user
-
-
-def test_post_measurement_ping(api_client_sync, fake_agent, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.8,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-
-    response = api_client_sync.post(
-        "/api/measurements/",
-        json={
-            "tool": "ping",
-            "agents": [
-                {
-                    "uuid": str(fake_agent.uuid),
-                    "target_file": "test.csv",
-                }
-            ],
-        },
-    )
-    assert response.status_code == 201
-
-
-def test_post_measurement_ping_udp(api_client_sync, fake_agent, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,udp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-
-    response = api_client_sync.post(
-        "/api/measurements/",
-        json={
-            "tool": "ping",
-            "agents": [
-                {
-                    "uuid": str(fake_agent.uuid),
-                    "target_file": "test.csv",
-                }
-            ],
-        },
-    )
-    assert response.status_code == 403
-
-
-def test_post_measurement_ping_quota_exceeded(api_client_sync, fake_agent, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/24,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.dependency_overrides[get_current_active_user] = lambda: {
-        "uuid": "test",
-        "username": "test",
-        "email": "test@test",
-        "is_active": True,
-        "is_admin": False,
-        "quota": 0,
-        "register_date": "date",
-        "ripe_account": None,
-        "ripe_key": None,
-    }
-
-    api_client_sync.app.storage = FakeStorage()
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-
-    response = api_client_sync.post(
-        "/api/measurements/",
-        json={
-            "tool": "diamond-miner",
-            "agents": [
-                {
-                    "uuid": str(fake_agent.uuid),
-                    "target_file": "test.csv",
-                }
-            ],
-        },
-    )
-    assert response.status_code == 403
-
-    # Reset back the override
-    api_client_sync.app.dependency_overrides[
-        get_current_active_user
-    ] = override_get_current_active_user
-
-
-def test_post_measurement_agent_tag(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
+def test_post_measurement_agent_tag(api_client_sync, agent, monkeypatch):
+    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
+    override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = api_client_sync.post(
@@ -479,20 +230,7 @@ def test_post_measurement_agent_tag(api_client_sync, monkeypatch):
 
 
 def test_post_measurement_no_uuid_or_tag(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
+    override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = api_client_sync.post(
@@ -514,20 +252,7 @@ def test_post_measurement_no_uuid_or_tag(api_client_sync, monkeypatch):
 
 
 def test_post_measurement_tag_and_uuid(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
+    override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = api_client_sync.post(
@@ -552,20 +277,7 @@ def test_post_measurement_tag_and_uuid(api_client_sync, monkeypatch):
 
 
 def test_post_measurement_with_agent_not_found(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
+    override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = api_client_sync.post(
@@ -587,20 +299,7 @@ def test_post_measurement_with_agent_not_found(api_client_sync, monkeypatch):
 
 
 def test_post_measurement_tag_not_found(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
+    override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = api_client_sync.post(
@@ -620,22 +319,10 @@ def test_post_measurement_tag_not_found(api_client_sync, monkeypatch):
 
 
 def test_post_measurement_agent_multiple_definition(
-    api_client_sync, fake_agent, monkeypatch
+    api_client_sync, agent, monkeypatch
 ):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test.csv",
-                "size": 42,
-                "content": "8.8.8.0/23,icmp,2,32",
-                "last_modified": "test",
-            }
-
-    class FakeSend(object):
-        def send(*args, **kwargs):
-            pass
-
-    api_client_sync.app.storage = FakeStorage()
+    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
+    override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = api_client_sync.post(
@@ -648,27 +335,19 @@ def test_post_measurement_agent_multiple_definition(
                     "target_file": "test.csv",
                 },
                 {
-                    "uuid": str(fake_agent.uuid),
+                    "uuid": str(agent.uuid),
                     "target_file": "test.csv",
                 },
             ],
         },
     )
     assert response.status_code == 400
-    assert response.json() == {
-        "detail": f"Multiple definition of agent `{fake_agent.uuid}`"
-    }
+    assert response.json() == {"detail": f"Multiple definition of agent `{agent.uuid}`"}
 
 
-def test_post_measurement_target_file_not_found(
-    api_client_sync, fake_agent, monkeypatch
-):
-    class FakeStorage(object):
-        async def get_file(*args, **kwargs):
-            raise Exception
-
-    api_client_sync.app.storage = FakeStorage()
-    monkeypatch.setattr("iris.api.measurements.hook", lambda x, y: None)
+def test_post_measurement_target_file_not_found(api_client_sync, agent, monkeypatch):
+    override(api_client_sync, get_storage, fake_storage_factory([]))
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
 
     response = api_client_sync.post(
         "/api/measurements/",
@@ -676,7 +355,7 @@ def test_post_measurement_target_file_not_found(
             "tool": "diamond-miner",
             "agents": [
                 {
-                    "uuid": str(fake_agent.uuid),
+                    "uuid": str(agent.uuid),
                     "target_file": "test.csv",
                 }
             ],
@@ -689,8 +368,10 @@ def test_post_measurement_target_file_not_found(
 
 
 def test_get_measurement_by_uuid(api_client_sync, monkeypatch):
-    measurement_uuid = str(uuid.uuid4())
     user = "test"
+    measurement_uuid = str(uuid.uuid4())
+    start_time = datetime.now().isoformat()
+    end_time = datetime.now().isoformat()
     agent = {
         "uuid": str(uuid.uuid4()),
         "target_file": "test.csv",
@@ -730,44 +411,28 @@ def test_get_measurement_by_uuid(api_client_sync, monkeypatch):
         },
         "state": "finished",
     }
-
-    start_time = datetime.now().isoformat()
-    end_time = datetime.now().isoformat()
-
-    async def all_agents(self, measurement_uuid):
-        return [agent]
-
-    async def get_measurements(self, username, measurement_uuid):
-        return {
-            "uuid": measurement_uuid,
-            "user": user,
-            "tool": "diamond-miner",
-            "tags": ["test"],
-            "state": "finished",
-            "start_time": start_time,
-            "end_time": end_time,
+    measurement = {
+        "uuid": measurement_uuid,
+        "user": user,
+        "tool": "diamond-miner",
+        "tags": ["test"],
+        "state": "finished",
+        "start_time": start_time,
+        "end_time": end_time,
+    }
+    files = [
+        {
+            "key": "test",
+            "size": 42,
+            "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
+            "last_modified": "test",
+            "metadata": None,
         }
+    ]
 
-    monkeypatch.setattr(
-        iris.commons.database.agents.Agents,
-        "all",
-        all_agents,
-    )
-    monkeypatch.setattr(
-        iris.commons.database.measurements.Measurements, "get", get_measurements
-    )
-
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test",
-                "size": 42,
-                "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
-                "last_modified": "test",
-                "metadata": None,
-            }
-
-    api_client_sync.app.storage = FakeStorage()
+    monkeypatch.setattr(Agents, "all", async_mock([agent]))
+    monkeypatch.setattr(Measurements, "get", async_mock(measurement))
+    override(api_client_sync, get_storage, fake_storage_factory(files))
 
     response = api_client_sync.get(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {
@@ -831,6 +496,8 @@ def test_get_measurement_by_uuid(api_client_sync, monkeypatch):
 
 def test_get_measurement_by_uuid_waiting(api_client_sync, monkeypatch):
     measurement_uuid = str(uuid.uuid4())
+    start_time = datetime.now().isoformat()
+    end_time = datetime.now().isoformat()
     user = "test"
     agent = {
         "uuid": str(uuid.uuid4()),
@@ -871,55 +538,33 @@ def test_get_measurement_by_uuid_waiting(api_client_sync, monkeypatch):
         },
         "state": "finished",
     }
-
-    start_time = datetime.now().isoformat()
-    end_time = datetime.now().isoformat()
-
-    async def all_agents(self, measurement_uuid):
-        return [agent]
-
-    async def get_measurements(self, username, measurement_uuid):
-        return {
-            "uuid": measurement_uuid,
-            "user": user,
-            "tool": "diamond-miner",
-            "tags": ["test"],
-            "start_time": start_time,
-            "end_time": end_time,
+    measurement = {
+        "uuid": measurement_uuid,
+        "user": user,
+        "tool": "diamond-miner",
+        "tags": ["test"],
+        "state": None,
+        "start_time": start_time,
+        "end_time": end_time,
+    }
+    files = [
+        {
+            "key": "test",
+            "size": 42,
+            "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
+            "last_modified": "test",
+            "metadata": None,
         }
+    ]
 
-    async def get_agents(self, uuid, user="all"):
-        return {
-            "uuid": agent["uuid"],
-            "last_used": datetime.now().isoformat(),
-        }
-
-    class FakeRedis(object):
-        async def get_measurement_state(*args, **kwargs):
-            return "waiting"
-
-    api_client_sync.app.redis = FakeRedis()
-
-    monkeypatch.setattr(
-        iris.commons.database.agents.Agents,
-        "all",
-        all_agents,
+    override(
+        api_client_sync,
+        get_redis,
+        fake_redis_factory(measurement_state=MeasurementState.Waiting),
     )
-    monkeypatch.setattr(
-        iris.commons.database.measurements.Measurements, "get", get_measurements
-    )
-
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test",
-                "size": 42,
-                "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
-                "last_modified": "test",
-                "metadata": None,
-            }
-
-    api_client_sync.app.storage = FakeStorage()
+    override(api_client_sync, get_storage, fake_storage_factory(files))
+    monkeypatch.setattr(Agents, "all", async_mock([agent]))
+    monkeypatch.setattr(Measurements, "get", async_mock(measurement))
 
     response = api_client_sync.get(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {
@@ -982,13 +627,8 @@ def test_get_measurement_by_uuid_waiting(api_client_sync, monkeypatch):
 
 
 def test_get_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
+    monkeypatch.setattr(Measurements, "get", async_mock(None))
     measurement_uuid = str(uuid.uuid4())
-
-    async def get(self, username, measurement_uuid):
-        return None
-
-    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
-
     response = api_client_sync.get(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
@@ -1003,51 +643,29 @@ def test_get_measurement_by_uuid_invalid_input(api_client_sync):
 
 
 def test_delete_measurement_by_uuid(api_client_sync, monkeypatch):
+    override(
+        api_client_sync,
+        get_redis,
+        fake_redis_factory(measurement_state=MeasurementState.Ongoing),
+    )
+    monkeypatch.setattr(Measurements, "get", async_mock({"uuid": "uuid"}))
     measurement_uuid = str(uuid.uuid4())
-
-    class FakeRedis(object):
-        async def get_measurement_state(*args, **kwargs):
-            return "ongoing"
-
-        async def set_measurement_state(*args, **kwargs):
-            pass
-
-    async def get(self, username, measurement_uuid):
-        return {"uuid": "uuid"}
-
-    api_client_sync.app.redis = FakeRedis()
-    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
-
     response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {"uuid": measurement_uuid, "action": "canceled"}
 
 
 def test_delete_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
+    monkeypatch.setattr(Measurements, "get", async_mock(None))
     measurement_uuid = str(uuid.uuid4())
-
-    async def get(self, username, measurement_uuid):
-        return None
-
-    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
-
     response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
 
 
 def test_delete_measurement_by_uuid_already_finished(api_client_sync, monkeypatch):
+    override(api_client_sync, get_redis, fake_redis_factory())
+    monkeypatch.setattr(Measurements, "get", async_mock({"uuid": "uuid"}))
     measurement_uuid = str(uuid.uuid4())
-
-    class FakeRedis(object):
-        async def get_measurement_state(*args, **kwargs):
-            return None
-
-    async def get(self, username, measurement_uuid):
-        return {"uuid": "uuid"}
-
-    api_client_sync.app.redis = FakeRedis()
-    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
-
     response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement already finished"}
@@ -1059,7 +677,14 @@ def test_delete_measurement_by_uuid_already_finished(api_client_sync, monkeypatc
 def test_get_measurement_results(api_client_sync, monkeypatch):
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
-
+    measurement = {
+        "uuid": measurement_uuid,
+        "user": "test",
+        "tool": "diamond-miner",
+        "tags": ["test"],
+        "start_time": datetime.now().isoformat(),
+        "end_time": datetime.now().isoformat(),
+    }
     results = [
         {
             "probe_protocol": "icmp",
@@ -1081,51 +706,11 @@ def test_get_measurement_results(api_client_sync, monkeypatch):
         }
     ]
 
-    async def get_measurements(self, username, measurement_uuid):
-        return {
-            "uuid": measurement_uuid,
-            "user": "test",
-            "tool": "diamond-miner",
-            "tags": ["test"],
-            "start_time": datetime.now().isoformat(),
-            "end_time": datetime.now().isoformat(),
-        }
-
-    async def get_agents_results(self, measurement_uuid, agent_uuid):
-        return {"state": "finished"}
-
-    async def all_measurement_results(self, offset, limit):
-        return results
-
-    async def all_measurement_results_count(self):
-        return 1
-
-    async def measurement_results_exists(self):
-        return 1
-
-    monkeypatch.setattr(
-        iris.commons.database.measurements.Measurements, "get", get_measurements
-    )
-    monkeypatch.setattr(
-        iris.commons.database.agents.Agents,
-        "get",
-        get_agents_results,
-    )
-    monkeypatch.setattr(
-        iris.commons.database.results.Replies,
-        "exists",
-        measurement_results_exists,
-    )
-    monkeypatch.setattr(
-        iris.commons.database.results.Replies,
-        "all",
-        all_measurement_results,
-    )
-    monkeypatch.setattr(
-        iris.commons.database.results.Replies,
-        "all_count",
-        all_measurement_results_count,
-    )
+    monkeypatch.setattr(Measurements, "get", async_mock(measurement))
+    monkeypatch.setattr(Agents, "get", async_mock({"state": "finished"}))
+    monkeypatch.setattr(Replies, "exists", async_mock(True))
+    monkeypatch.setattr(Replies, "all", async_mock(results))
+    monkeypatch.setattr(Replies, "all_count", async_mock(1))
 
     response = api_client_sync.get(
         f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
@@ -1141,36 +726,18 @@ def test_get_measurement_results(api_client_sync, monkeypatch):
 def test_get_measurement_results_table_not_exists(api_client_sync, monkeypatch):
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
+    measurement = {
+        "uuid": measurement_uuid,
+        "user": "test",
+        "tool": "diamond-miner",
+        "tags": ["test"],
+        "start_time": datetime.now().isoformat(),
+        "end_time": datetime.now().isoformat(),
+    }
 
-    async def get_measurements(self, username, measurement_uuid):
-        return {
-            "uuid": measurement_uuid,
-            "user": "test",
-            "tool": "diamond-miner",
-            "tags": ["test"],
-            "start_time": datetime.now().isoformat(),
-            "end_time": datetime.now().isoformat(),
-        }
-
-    async def get_agents_results(self, measurement_uuid, agent_uuid):
-        return {"state": "finished"}
-
-    async def measurement_results_exists(self):
-        return 0
-
-    monkeypatch.setattr(
-        iris.commons.database.measurements.Measurements, "get", get_measurements
-    )
-    monkeypatch.setattr(
-        iris.commons.database.agents.Agents,
-        "get",
-        get_agents_results,
-    )
-    monkeypatch.setattr(
-        iris.commons.database.results.Replies,
-        "exists",
-        measurement_results_exists,
-    )
+    monkeypatch.setattr(Measurements, "get", async_mock(measurement))
+    monkeypatch.setattr(Agents, "get", async_mock({"state": "finished"}))
+    monkeypatch.setattr(Replies, "exists", async_mock(0))
 
     response = api_client_sync.get(
         f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
@@ -1186,28 +753,17 @@ def test_get_measurement_results_table_not_exists(api_client_sync, monkeypatch):
 def test_get_measurement_results_not_finished(api_client_sync, monkeypatch):
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
+    measurement = {
+        "uuid": measurement_uuid,
+        "user": "test",
+        "tool": "diamond-miner",
+        "tags": ["test"],
+        "start_time": datetime.now().isoformat(),
+        "end_time": datetime.now().isoformat(),
+    }
 
-    async def get_measurements(self, username, measurement_uuid):
-        return {
-            "uuid": measurement_uuid,
-            "user": "test",
-            "tool": "diamond-miner",
-            "tags": ["test"],
-            "start_time": datetime.now().isoformat(),
-            "end_time": datetime.now().isoformat(),
-        }
-
-    async def get_agents_results(self, measurement_uuid, agent_uuid):
-        return {"state": "ongoing"}
-
-    monkeypatch.setattr(
-        iris.commons.database.measurements.Measurements, "get", get_measurements
-    )
-    monkeypatch.setattr(
-        iris.commons.database.agents.Agents,
-        "get",
-        get_agents_results,
-    )
+    monkeypatch.setattr(Measurements, "get", async_mock(measurement))
+    monkeypatch.setattr(Agents, "get", async_mock({"state": "ongoing"}))
 
     response = api_client_sync.get(
         f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
@@ -1218,28 +774,17 @@ def test_get_measurement_results_not_finished(api_client_sync, monkeypatch):
 def test_get_measurement_results_no_agent(api_client_sync, monkeypatch):
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
+    measurement = {
+        "uuid": measurement_uuid,
+        "user": "test",
+        "tool": "diamond-miner",
+        "tags": ["test"],
+        "start_time": datetime.now().isoformat(),
+        "end_time": datetime.now().isoformat(),
+    }
 
-    async def get_measurements(self, username, measurement_uuid):
-        return {
-            "uuid": measurement_uuid,
-            "user": "test",
-            "tool": "diamond-miner",
-            "tags": ["test"],
-            "start_time": datetime.now().isoformat(),
-            "end_time": datetime.now().isoformat(),
-        }
-
-    async def get_agents_results(self, measurement_uuid, agent_uuid):
-        return None
-
-    monkeypatch.setattr(
-        iris.commons.database.measurements.Measurements, "get", get_measurements
-    )
-    monkeypatch.setattr(
-        iris.commons.database.agents.Agents,
-        "get",
-        get_agents_results,
-    )
+    monkeypatch.setattr(Measurements, "get", async_mock(measurement))
+    monkeypatch.setattr(Agents, "get", async_mock(None))
 
     response = api_client_sync.get(
         f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
@@ -1256,12 +801,7 @@ def test_get_measurement_results_no_agent(api_client_sync, monkeypatch):
 def test_get_measurement_result_not_found(api_client_sync, monkeypatch):
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
-
-    async def get(self, username, measurement_uuid):
-        return None
-
-    monkeypatch.setattr(iris.commons.database.measurements.Measurements, "get", get)
-
+    monkeypatch.setattr(Measurements, "get", async_mock(None))
     response = api_client_sync.get(
         f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
     )

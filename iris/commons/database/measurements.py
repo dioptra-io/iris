@@ -8,19 +8,21 @@ from iris.commons.schemas import private, public
 
 
 @dataclass(frozen=True)
-class Measurements(Database):
+class Measurements:
     """Interface that handle measurements history."""
+
+    database: Database
 
     @property
     def table(self) -> str:
-        return self.settings.TABLE_NAME_MEASUREMENTS
+        return self.database.settings.TABLE_NAME_MEASUREMENTS
 
     async def create_table(self, drop: bool = False) -> None:
         """Create the table with all registered measurements."""
         if drop:
-            await self.call(f"DROP TABLE IF EXISTS {self.table}")
+            await self.database.call(f"DROP TABLE IF EXISTS {self.table}")
 
-        await self.call(
+        await self.database.call(
             f"""
             CREATE TABLE IF NOT EXISTS {self.table}
             (
@@ -42,7 +44,7 @@ class Measurements(Database):
         where_clause = "WHERE user=%(user)s "
         if tag:
             where_clause += f"AND has(tags, '{tag}') "
-        response = await self.call(
+        response = await self.database.call(
             f"SELECT Count() FROM {self.table} {where_clause}",
             {"user": user},
         )
@@ -55,7 +57,7 @@ class Measurements(Database):
         where_clause = "WHERE user=%(user)s "
         if tag:
             where_clause += f"AND has(tags, '{tag}') "
-        responses = await self.call(
+        responses = await self.database.call(
             f"SELECT * FROM {self.table} "
             f"{where_clause}"
             "ORDER BY start_time DESC "
@@ -66,7 +68,7 @@ class Measurements(Database):
 
     async def get(self, user: str, uuid: UUID) -> Optional[dict]:
         """Get all measurement information."""
-        responses = await self.call(
+        responses = await self.database.call(
             f"SELECT * FROM {self.table} WHERE user=%(user)s AND uuid=%(uuid)s",
             {"user": user, "uuid": uuid},
         )
@@ -76,7 +78,7 @@ class Measurements(Database):
 
     async def register(self, measurement_request: private.MeasurementRequest) -> None:
         """Register a measurement."""
-        await self.call(
+        await self.database.call(
             f"INSERT INTO {self.table} VALUES",
             [
                 {
@@ -92,7 +94,7 @@ class Measurements(Database):
         )
 
     async def stamp_finished(self, user: str, uuid: UUID) -> None:
-        await self.call(
+        await self.database.call(
             f"""
             ALTER TABLE {self.table}
             UPDATE state=%(state)s
@@ -107,7 +109,7 @@ class Measurements(Database):
         )
 
     async def stamp_canceled(self, user: str, uuid: UUID) -> None:
-        await self.call(
+        await self.database.call(
             f"""
             ALTER TABLE {self.table}
             UPDATE state=%(state)s
@@ -123,7 +125,7 @@ class Measurements(Database):
 
     async def stamp_end_time(self, user: str, uuid: UUID) -> None:
         """Stamp the end time for a measurement."""
-        await self.call(
+        await self.database.call(
             f"""
             ALTER TABLE {self.table}
             UPDATE end_time=toDateTime(%(end_time)s)

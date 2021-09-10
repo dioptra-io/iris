@@ -25,7 +25,6 @@ from iris.commons.schemas.public.measurements import (
     Tool,
     ToolParameters,
 )
-from iris.commons.settings import CommonSettings
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 from iris.standalone.storage import LocalStorage
 from iris.worker.pipeline import default_pipeline
@@ -33,42 +32,34 @@ from iris.worker.settings import WorkerSettings
 
 
 async def register_measurement(
-    measurement_request: MeasurementRequest,
-    settings: CommonSettings,
-    logger: logging.Logger,
+    database: Database, measurement_request: MeasurementRequest
 ) -> None:
-    database_measurements = Measurements(settings, logger)
+    database_measurements = Measurements(database)
     await database_measurements.create_table()
     await database_measurements.register(measurement_request)
 
 
 async def register_agent(
+    database: Database,
     measurement_request: MeasurementRequest,
     agent_uuid: uuid.UUID,
     agent_parameters: AgentParameters,
-    settings: CommonSettings,
-    logger: logging.Logger,
 ) -> None:
-    database_agents = Agents(settings, logger)
+    database_agents = Agents(database)
     await database_agents.create_table()
     await database_agents.register(measurement_request, agent_uuid, agent_parameters)
 
 
-async def stamp_measurement(
-    user: str, uuid: uuid.UUID, settings: CommonSettings, logger: logging.Logger
-) -> None:
-    database_measurements = Measurements(settings, logger)
+async def stamp_measurement(database: Database, user: str, uuid: uuid.UUID) -> None:
+    database_measurements = Measurements(database)
     await database_measurements.stamp_finished(user, uuid)
     await database_measurements.stamp_end_time(user, uuid)
 
 
 async def stamp_agent(
-    measurement_uuid: uuid.UUID,
-    agent_uuid: uuid.UUID,
-    settings: CommonSettings,
-    logger: logging.Logger,
+    database: Database, measurement_uuid: uuid.UUID, agent_uuid: uuid.UUID
 ) -> None:
-    database_agents = Agents(settings, logger)
+    database_agents = Agents(database)
     await database_agents.stamp_finished(measurement_uuid, agent_uuid)
 
 
@@ -127,7 +118,8 @@ async def pipeline(
     await redis.set_measurement_state(measurement_uuid, MeasurementState.Ongoing)
 
     # Create the database if not exists
-    await Database(agent_settings, logger).create_database()
+    database = Database(agent_settings, logger)
+    await database.create_database()
 
     # Create a target file
     target_file: Path = (
@@ -173,13 +165,9 @@ async def pipeline(
         # If it's the first round,
         # register the measurement and the agent to the database
         if round_.number == 1:
-            await register_measurement(request, worker_settings, logger)
+            await register_measurement(database, request)
             await register_agent(
-                request,
-                agent_settings.AGENT_UUID,
-                agent_parameters,
-                worker_settings,
-                logger,
+                database, request, agent_settings.AGENT_UUID, agent_parameters
             )
 
         # Perform the measurement
@@ -223,12 +211,10 @@ async def pipeline(
             break
 
     # Stamp the agent
-    await stamp_agent(
-        measurement_uuid, agent_settings.AGENT_UUID, agent_settings, logger
-    )
+    await stamp_agent(database, measurement_uuid, agent_settings.AGENT_UUID)
 
     # Stamp the measurement
-    await stamp_measurement(username, measurement_uuid, worker_settings, logger)
+    await stamp_measurement(database, username, measurement_uuid)
 
     # Compute distinct nodes/links
     measurement_id = f"{measurement_uuid}__{agent_settings.AGENT_UUID}"

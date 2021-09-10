@@ -15,7 +15,7 @@ from diamond_miner.defaults import (
 from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
-from iris.commons.database import Agents, InsertResults
+from iris.commons.database import Agents, Database, InsertResults
 from iris.commons.redis import Redis
 from iris.commons.round import Round
 from iris.commons.schemas.private import MeasurementRequest
@@ -38,6 +38,10 @@ async def default_pipeline(
     assert agent.uuid
     logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
     logger.info(f"{logger_prefix} New measurement file detected")
+
+    database = Database(settings, logger)
+    database_agents = Agents(database)
+    database_results = InsertResults(database, measurement_request.uuid, agent.uuid)
 
     logger.info(f"{logger_prefix} Get agent information")
     agent_parameters = await redis.get_agent_parameters(agent.uuid)
@@ -64,24 +68,21 @@ async def default_pipeline(
         )
 
     logger.info(f"{logger_prefix} Store probing statistics")
-    database_agents = Agents(settings, logger)
     await database_agents.store_probing_statistics(
         measurement_request.uuid, agent.uuid, round_.encode(), statistics
     )
 
-    database = InsertResults(settings, logger, measurement_request.uuid, agent.uuid)
-
     logger.info(f"{logger_prefix} Create results tables")
-    await database.create_table()
+    await database_results.create_table()
 
     logger.info(f"{logger_prefix} Insert CSV file into results table")
-    await database.insert_csv(results_filepath)
+    await database_results.insert_csv(results_filepath)
 
     logger.info(f"{logger_prefix} Insert prefixes")
-    await database.insert_prefixes()
+    await database_results.insert_prefixes()
 
     logger.info(f"{logger_prefix} Insert links")
-    await database.insert_links()
+    await database_results.insert_links()
 
     if not settings.WORKER_DEBUG_MODE:
         logger.info(f"{logger_prefix} Remove local results file")

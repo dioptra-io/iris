@@ -9,20 +9,22 @@ from iris.commons.schemas import private, public
 
 
 @dataclass(frozen=True)
-class Agents(Database):
+class Agents:
     """
     The Agents database stores the status of each agents and their measurements.
     """
 
+    database: Database
+
     @property
     def table(self) -> str:
-        return self.settings.TABLE_NAME_AGENTS
+        return self.database.settings.TABLE_NAME_AGENTS
 
     async def create_table(self, drop: bool = False) -> None:
         if drop:
-            await self.call(f"DROP TABLE IF EXISTS {self.table}")
+            await self.database.call(f"DROP TABLE IF EXISTS {self.table}")
 
-        await self.call(
+        await self.database.call(
             f"""
             CREATE TABLE IF NOT EXISTS {self.table}
             (
@@ -43,7 +45,7 @@ class Agents(Database):
 
     async def all(self, measurement_uuid: UUID) -> List[dict]:
         """Get all measurement information."""
-        responses = await self.call(
+        responses = await self.database.call(
             f"SELECT * FROM {self.table} WHERE measurement_uuid=%(uuid)s",
             {"uuid": measurement_uuid},
         )
@@ -51,7 +53,7 @@ class Agents(Database):
 
     async def get(self, measurement_uuid: UUID, agent_uuid: UUID) -> Optional[dict]:
         """Get measurement information about a agent."""
-        responses = await self.call(
+        responses = await self.database.call(
             f"SELECT * FROM {self.table} "
             "WHERE measurement_uuid=%(measurement_uuid)s "
             "AND agent_uuid=%(agent_uuid)s",
@@ -68,7 +70,7 @@ class Agents(Database):
         agent_parameters: public.AgentParameters,
     ) -> None:
         agent = measurement_request.agent(agent_uuid)
-        await self.call(
+        await self.database.call(
             f"INSERT INTO {self.table} VALUES",
             [
                 {
@@ -101,7 +103,7 @@ class Agents(Database):
         current_probing_statistics[round_number] = probing_statistics
 
         # Store the updated statistics on the database
-        await self.call(
+        await self.database.call(
             f"""
             ALTER TABLE {self.table}
             UPDATE probing_statistics=%(probing_statistics)s
@@ -117,7 +119,7 @@ class Agents(Database):
         )
 
     async def stamp_finished(self, measurement_uuid: UUID, agent_uuid: UUID) -> None:
-        await self.call(
+        await self.database.call(
             f"""
             ALTER TABLE {self.table}
             UPDATE state=%(state)s
@@ -133,7 +135,7 @@ class Agents(Database):
         )
 
     async def stamp_canceled(self, measurement_uuid: UUID, agent_uuid: UUID) -> None:
-        await self.call(
+        await self.database.call(
             f"""
             ALTER TABLE {self.table}
             UPDATE state=%(state)s

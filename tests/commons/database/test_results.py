@@ -1,4 +1,3 @@
-import logging
 import uuid
 from subprocess import run
 
@@ -11,11 +10,8 @@ settings = CommonSettings(DATABASE_HOST="localhost")
 
 
 @pytest.mark.asyncio
-async def test_measurement_results(common_settings, tmp_path):
-    db = InsertResults(
-        common_settings, logging.getLogger(__name__), uuid.uuid4(), uuid.uuid4()
-    )
-    assert await db.create_database() is None
+async def test_measurement_results(database, tmp_path):
+    db = InsertResults(database, uuid.uuid4(), uuid.uuid4())
 
     results_file = tmp_path / "results.csv"
     results_file.write_text(
@@ -29,9 +25,7 @@ async def test_measurement_results(common_settings, tmp_path):
     assert await db.insert_prefixes() is None
     assert await db.insert_links() is None
 
-    db = Replies(
-        common_settings, logging.getLogger(__name__), db.measurement_uuid, db.agent_uuid
-    )
+    db = Replies(database, db.measurement_uuid, db.agent_uuid)
     assert await db.exists()
     assert await db.all_count() == 2
     assert await db.all(0, 10) == [
@@ -74,9 +68,7 @@ async def test_measurement_results(common_settings, tmp_path):
     ]
     assert await db.all(2, 10) == []
 
-    db = Interfaces(
-        common_settings, logging.getLogger(__name__), db.measurement_uuid, db.agent_uuid
-    )
+    db = Interfaces(database, db.measurement_uuid, db.agent_uuid)
     assert await db.exists()
     assert await db.all_count() == 2
     assert await db.all(0, 10) == [
@@ -85,9 +77,7 @@ async def test_measurement_results(common_settings, tmp_path):
     ]
     assert await db.all(2, 10) == []
 
-    db = Links(
-        common_settings, logging.getLogger(__name__), db.measurement_uuid, db.agent_uuid
-    )
+    db = Links(database, db.measurement_uuid, db.agent_uuid)
     assert await db.exists()
     assert await db.all_count() == 1
     assert await db.all(0, 10) == [
@@ -100,9 +90,7 @@ async def test_measurement_results(common_settings, tmp_path):
     ]
     assert await db.all(1, 10) == []
 
-    db = Prefixes(
-        common_settings, logging.getLogger(__name__), db.measurement_uuid, db.agent_uuid
-    )
+    db = Prefixes(database, db.measurement_uuid, db.agent_uuid)
     assert await db.exists()
     assert await db.all_count() == 1
     assert await db.all(0, 10) == [

@@ -1,48 +1,36 @@
-import logging
-from datetime import datetime
-
 import pytest
 
 from iris.commons.database import Users
+from iris.commons.schemas.public import Profile, RIPEAccount
 
 
 @pytest.mark.asyncio
-async def test_users(common_settings):
-    db = Users(common_settings, logging.getLogger(__name__))
-    assert await db.create_database() is None
-    assert await db.create_table(drop=True) is None
+async def test_users(database):
+    db = Users(database)
+    await db.create_table(drop=True)
 
-    data = {
-        "username": "foo",
-        "email": "foo.bar@mail.com",
-        "hashed_password": "abcdef",
-        "is_active": True,
-        "is_admin": False,
-        "quota": 100,
-        "register_date": datetime(2021, 2, 1, 12, 50, 30),
-    }
+    user = Profile(
+        username="foo",
+        email="foo.bar@mail.com",
+        is_active=True,
+        is_admin=True,
+        quota=100,
+    )
+    user._hashed_password = "abcdef"
+    user.register_date = user.register_date.replace(microsecond=0)
 
-    assert await db.register(data) is None
-    assert await db.get("unknown") is None
+    await db.register(user)
+    assert not await db.get("unknown")
 
+    res = await db.get(user.username)
+    assert res == user
+
+    ripe_account = RIPEAccount(account="ripe-account", key="ripe-key")
+
+    await db.register_ripe(user.username, ripe_account)
     res = await db.get("foo")
-    assert res["uuid"] is not None
-    assert res["username"] == data["username"]
-    assert res["email"] == data["email"]
-    assert res["hashed_password"] == data["hashed_password"]
-    assert res["is_active"] == data["is_active"]
-    assert res["is_admin"] == data["is_admin"]
-    assert res["quota"] == data["quota"]
-    assert res["register_date"] == data["register_date"].isoformat()
-    assert res["ripe_account"] is None
-    assert res["ripe_key"] is None
+    assert res.ripe == ripe_account
 
-    assert await db.register_ripe("foo", "ripe-account", "ripe-key") is None
+    await db.deregister_ripe(user.username)
     res = await db.get("foo")
-    assert res["ripe_account"] == "ripe-account"
-    assert res["ripe_key"] == "ripe-key"
-
-    assert await db.register_ripe("foo", None, None) is None
-    res = await db.get("foo")
-    assert res["ripe_account"] is None
-    assert res["ripe_key"] is None
+    assert not res.ripe

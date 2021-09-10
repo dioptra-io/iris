@@ -47,9 +47,10 @@ def addr_to_string(addr: IPv6Address) -> str:
 
 
 @dataclass(frozen=True)
-class InsertResults(Database):
+class InsertResults:
     """Database interface to handle measurement results."""
 
+    database: Database
     measurement_uuid: Union[str, UUID]
     agent_uuid: Union[str, UUID]
 
@@ -57,11 +58,20 @@ class InsertResults(Database):
     def measurement_id(self) -> str:
         return f"{self.measurement_uuid}__{self.agent_uuid}"
 
+    def fault_tolerant(func):
+        async def wrapper(*args, **kwargs):
+            retryer = args[0].database.settings.database_retryer(
+                args[0].database.logger
+            )
+            return await retryer(func)(*args, **kwargs)
+
+        return wrapper
+
     async def create_table(self, drop: bool = False) -> None:
         """Create the results table."""
         if drop:
-            await self.execute(DropTables(), self.measurement_id)
-        await self.execute(CreateTables(), self.measurement_id)
+            await self.database.execute(DropTables(), self.measurement_id)
+        await self.database.execute(CreateTables(), self.measurement_id)
 
     async def insert_csv(self, csv_filepath: Path) -> None:
         """Insert CSV file into table."""
@@ -72,20 +82,20 @@ class InsertResults(Database):
 
         await start_stream_subprocess(
             f"""
-            {self.settings.ZSTD_CMD}  --decompress --stdout {csv_filepath} | \
-            {self.settings.SPLIT_CMD} --lines={self.settings.DATABASE_PARALLEL_CSV_MAX_LINE}
+            {self.database.settings.ZSTD_CMD}  --decompress --stdout {csv_filepath} | \
+            {self.database.settings.SPLIT_CMD} --lines={self.database.settings.DATABASE_PARALLEL_CSV_MAX_LINE}
             """,
-            stdout=self.logger.info,
-            stderr=self.logger.error,
+            stdout=self.database.logger.info,
+            stderr=self.database.logger.error,
             cwd=split_dir,
         )
 
         files = list(split_dir.glob("*"))
-        self.logger.info(f"{logger_prefix} Number of chunks: {len(files)}")
+        self.database.logger.info(f"{logger_prefix} Number of chunks: {len(files)}")
 
         concurrency = (os.cpu_count() or 2) // 2
         semaphore = Semaphore(concurrency)
-        self.logger.info(
+        self.database.logger.info(
             f"{logger_prefix} Number of concurrent processes: {concurrency}"
         )
 
@@ -93,49 +103,49 @@ class InsertResults(Database):
             async with semaphore:
                 await start_stream_subprocess(
                     f"""
-                    {self.settings.CLICKHOUSE_CMD} \
-                    --database={self.settings.DATABASE_NAME} \
-                    --host={self.settings.DATABASE_HOST} \
+                    {self.database.settings.CLICKHOUSE_CMD} \
+                    --database={self.database.settings.DATABASE_NAME} \
+                    --host={self.database.settings.DATABASE_HOST} \
                     --query='INSERT INTO {results_table(self.measurement_id)} FORMAT CSV' \
                     < {file}
                     """,
-                    stdout=self.logger.info,
-                    stderr=self.logger.error,
+                    stdout=self.database.logger.info,
+                    stderr=self.database.logger.error,
                 )
                 await aiofiles.os.remove(file)
 
         await asyncio.gather(*[insert(file) for file in files])
         await aiofiles.os.rmdir(split_dir)
 
-    @Database.fault_tolerant
+    @fault_tolerant
     async def insert_links(self) -> None:
         """Insert the links in the links table from the flow view."""
-        await self.call(f"TRUNCATE {links_table(self.measurement_id)}")
+        await self.database.call(f"TRUNCATE {links_table(self.measurement_id)}")
         query = InsertLinks()
         subsets = await subsets_for(
-            query, self.settings.database_url(), self.measurement_id
+            query, self.database.settings.database_url(), self.measurement_id
         )
         # We limit the number of concurrent requests since this query
         # uses a lot of memory (aggregation of the flows table).
         await query.execute_concurrent(
-            self.settings.database_url(),
+            self.database.settings.database_url(),
             self.measurement_id,
             subsets,
             concurrent_requests=8,
         )
 
-    @Database.fault_tolerant
+    @fault_tolerant
     async def insert_prefixes(self) -> None:
         """Insert the invalid prefixes in the prefix table."""
-        await self.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
+        await self.database.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
         query = InsertPrefixes()
         subsets = await subsets_for(
-            query, self.settings.database_url(), self.measurement_id
+            query, self.database.settings.database_url(), self.measurement_id
         )
         # We limit the number of concurrent requests since this query
         # uses a lot of memory.
         await query.execute_concurrent(
-            self.settings.database_url(),
+            self.database.settings.database_url(),
             self.measurement_id,
             subsets,
             concurrent_requests=8,
@@ -143,7 +153,8 @@ class InsertResults(Database):
 
 
 @dataclass(frozen=True)
-class QueryWrapper(Database, Generic[T]):
+class QueryWrapper(Generic[T]):
+    database: Database
     measurement_uuid: Union[str, UUID]
     agent_uuid: Union[str, UUID]
     subset: IPNetwork = UNIVERSE_SUBSET
@@ -162,7 +173,7 @@ class QueryWrapper(Database, Generic[T]):
         return f"{self.measurement_uuid}__{self.agent_uuid}"
 
     async def all(self, offset: int, limit: int) -> List[T]:
-        response = await self.execute(
+        response = await self.database.execute(
             self.query(),
             self.measurement_id,
             subsets=(self.subset,),
@@ -171,13 +182,13 @@ class QueryWrapper(Database, Generic[T]):
         return [self.formatter(row) for row in response]
 
     async def all_count(self) -> int:
-        response = await self.execute(
+        response = await self.database.execute(
             Count(query=self.query()), self.measurement_id, subsets=(self.subset,)
         )
         return response[0][0]
 
     async def exists(self) -> bool:
-        response = await self.call(f"EXISTS TABLE {self.table()}")
+        response = await self.database.call(f"EXISTS TABLE {self.table()}")
         return bool(response[0][0])
 
 

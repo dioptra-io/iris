@@ -9,7 +9,7 @@ from uuid import UUID
 import dramatiq
 from aiofiles import os as aios
 
-from iris.commons.database import Agents, Measurements
+from iris.commons.database import Agents, Database, Measurements
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
 from iris.commons.round import Round
@@ -74,7 +74,8 @@ async def watch(
     agent = measurement_request.agent(agent_uuid)
     assert agent.uuid
     logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
-    database_agents = Agents(settings, logger)
+    database = Database(settings, logger)
+    database_agents = Agents(database)
 
     while True:
         if settings.WORKER_SANITY_CHECK_ENABLE:
@@ -156,8 +157,9 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
     logger_prefix = f"{measurement_request.uuid} ::"
     logger.info(f"{logger_prefix} New measurement received")
 
-    database_measurements = Measurements(settings, logger)
-    database_agents = Agents(settings, logger)
+    database = Database(settings, logger)
+    database_agents = Agents(database)
+    database_measurements = Measurements(database)
     redis = Redis(await settings.redis_client(), settings, logger)
     storage = Storage(settings, logger)
 

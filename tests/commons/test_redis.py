@@ -9,10 +9,10 @@ from iris.commons.schemas.public import AgentState, MeasurementState
 
 
 @pytest.mark.asyncio
-async def test_redis_get_agents(common_settings, fake_agent, redis_client):
+async def test_redis_get_agents(common_settings, agent, redis_client):
     redis = Redis(redis_client, common_settings, logging.getLogger(__name__))
     agent_redis_1 = AgentRedis(
-        redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
+        redis_client, common_settings, logging.getLogger(__name__), agent.uuid
     )
     agent_redis_2 = AgentRedis(
         redis_client, common_settings, logging.getLogger(__name__), uuid4()
@@ -42,10 +42,10 @@ async def test_redis_get_agents(common_settings, fake_agent, redis_client):
 
 
 @pytest.mark.asyncio
-async def test_redis_check_agent(common_settings, fake_agent, redis_client):
+async def test_redis_check_agent(common_settings, agent, redis_client):
     redis = Redis(redis_client, common_settings, logging.getLogger(__name__))
     agent_redis = AgentRedis(
-        redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
+        redis_client, common_settings, logging.getLogger(__name__), agent.uuid
     )
 
     # Not registered
@@ -53,46 +53,46 @@ async def test_redis_check_agent(common_settings, fake_agent, redis_client):
     await agent_redis.register(5)
 
     # Fully registered
-    await agent_redis.set_agent_parameters(fake_agent.parameters)
+    await agent_redis.set_agent_parameters(agent.parameters)
     await agent_redis.set_agent_state(AgentState.Working)
-    assert redis.check_agent(fake_agent.uuid)
+    assert redis.check_agent(agent.uuid)
 
     # Missing state
-    await agent_redis.set_agent_parameters(fake_agent.parameters)
+    await agent_redis.set_agent_parameters(agent.parameters)
     await agent_redis.delete_agent_state()
-    assert not await redis.check_agent(fake_agent.uuid)
+    assert not await redis.check_agent(agent.uuid)
 
     # Missing parameters
     await agent_redis.delete_agent_parameters()
     await agent_redis.set_agent_state(AgentState.Working)
-    assert not await redis.check_agent(fake_agent.uuid)
+    assert not await redis.check_agent(agent.uuid)
 
 
 @pytest.mark.asyncio
-async def test_redis_agent_state(common_settings, fake_agent, redis_client):
+async def test_redis_agent_state(common_settings, agent, redis_client):
     redis = Redis(redis_client, common_settings, logging.getLogger(__name__))
     agent_redis = AgentRedis(
-        redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
+        redis_client, common_settings, logging.getLogger(__name__), agent.uuid
     )
 
     await agent_redis.set_agent_state(AgentState.Working)
-    assert await redis.get_agent_state(fake_agent.uuid) == AgentState.Working
+    assert await redis.get_agent_state(agent.uuid) == AgentState.Working
     await agent_redis.delete_agent_state()
-    assert await redis.get_agent_state(fake_agent.uuid) == AgentState.Unknown
+    assert await redis.get_agent_state(agent.uuid) == AgentState.Unknown
 
 
 @pytest.mark.asyncio
-async def test_redis_agent_parameters(common_settings, fake_agent, redis_client):
+async def test_redis_agent_parameters(common_settings, agent, redis_client):
     redis = Redis(redis_client, common_settings, logging.getLogger(__name__))
     agent_redis = AgentRedis(
-        redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
+        redis_client, common_settings, logging.getLogger(__name__), agent.uuid
     )
 
-    assert await redis.get_agent_parameters(fake_agent.uuid) is None
-    await agent_redis.set_agent_parameters(fake_agent.parameters)
-    assert await redis.get_agent_parameters(fake_agent.uuid) == fake_agent.parameters
+    assert await redis.get_agent_parameters(agent.uuid) is None
+    await agent_redis.set_agent_parameters(agent.parameters)
+    assert await redis.get_agent_parameters(agent.uuid) == agent.parameters
     await agent_redis.delete_agent_parameters()
-    assert await redis.get_agent_parameters(fake_agent.uuid) is None
+    assert await redis.get_agent_parameters(agent.uuid) is None
 
 
 @pytest.mark.asyncio
@@ -113,25 +113,25 @@ async def test_redis_measurement_state(common_settings, redis_client):
 
 
 @pytest.mark.asyncio
-async def test_redis_measurement_stats(common_settings, fake_agent, redis_client):
+async def test_redis_measurement_stats(common_settings, agent, redis_client):
     measurement_uuid = uuid4()
     redis = Redis(redis_client, common_settings, logging.getLogger(__name__))
-    assert await redis.get_measurement_stats(measurement_uuid, fake_agent.uuid) == {}
-    await redis.set_measurement_stats(measurement_uuid, fake_agent.uuid, {"foo": "bar"})
-    assert await redis.get_measurement_stats(measurement_uuid, fake_agent.uuid) == {
+    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) == {}
+    await redis.set_measurement_stats(measurement_uuid, agent.uuid, {"foo": "bar"})
+    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) == {
         "foo": "bar"
     }
-    await redis.delete_measurement_stats(measurement_uuid, fake_agent.uuid)
-    assert await redis.get_measurement_stats(measurement_uuid, fake_agent.uuid) == {}
+    await redis.delete_measurement_stats(measurement_uuid, agent.uuid)
+    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) == {}
 
 
 # @pytest.mark.asyncio
 # async def test_redis_pubsub(common_settings, redis_client):
-#     fake_agent.uuid = uuid4()
+#     agent.uuid = uuid4()
 #
 #     redis = Redis(redis_client, common_settings, logging.getLogger(__name__))
 #     agent_redis = AgentRedis(
-#         redis_client, common_settings, logging.getLogger(__name__), fake_agent.uuid
+#         redis_client, common_settings, logging.getLogger(__name__), agent.uuid
 #     )
 #
 #     await redis.publish(f"{agent_redis.KEY_AGENT_LISTEN}:all", {"foo": "bar"})

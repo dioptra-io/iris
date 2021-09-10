@@ -1,16 +1,18 @@
 """Measurements operations."""
 
-from typing import Dict, List, Set
+from typing import List, Set
 from uuid import UUID
 
 from diamond_miner.generators import count_prefixes
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
+from iris.api.dependencies import get_database, get_redis, get_storage, settings
 from iris.api.pagination import DatabasePagination
 from iris.api.security import get_current_active_user
-from iris.commons.database import Agents, Measurements
+from iris.commons.database import Agents, Database, Measurements
 from iris.commons.redis import Redis
 from iris.commons.schemas import private, public
+from iris.commons.storage import Storage
 from iris.worker.hook import hook
 
 router = APIRouter()
@@ -26,14 +28,13 @@ async def get_measurements(
     tag: str = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
+    redis: Redis = Depends(get_redis),
 ):
     """Get all measurements."""
-    redis: Redis = request.app.redis
-    database = Measurements(request.app.settings, request.app.logger)
-
-    querier = DatabasePagination(database, request, offset, limit)
-    output = await querier.query(user=user["username"], tag=tag)
+    querier = DatabasePagination(Measurements(database), request, offset, limit)
+    output = await querier.query(user=user.username, tag=tag)
 
     measurements = []
     for measurement in output["results"]:
@@ -70,14 +71,20 @@ async def verify_quota(tool, content, user_quota):
     return n_prefixes <= user_quota
 
 
-async def target_file_validator(request, tool, user, target_file):
+async def target_file_validator(
+    request,
+    storage: Storage,
+    tool: public.Tool,
+    user: public.Profile,
+    target_filename: str,
+):
     """Validate the target file input."""
 
     # Verify that the target file exists on AWS S3
     try:
-        target_file = await request.app.storage.get_file_no_retry(
-            request.app.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user["username"],
-            target_file,
+        target_file = await storage.get_file_no_retry(
+            settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username,
+            target_filename,
         )
     except Exception:
         raise HTTPException(
@@ -96,7 +103,7 @@ async def target_file_validator(request, tool, user, target_file):
     # Check if the user respects his quota
     try:
         is_quota_respected = await verify_quota(
-            tool, target_file["content"], user["quota"]
+            tool, target_file["content"], user.quota
         )
     except ValueError:
         raise HTTPException(
@@ -147,11 +154,13 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    redis: Redis = Depends(get_redis),
+    storage: Storage = Depends(get_storage),
 ):
     """Request a measurement."""
-    redis: Redis = request.app.redis
     active_agents = await redis.get_agents_by_uuid()
+    print(user)
 
     # Update the list of requested agents to include agents selected by tag.
     agents: List[public.MeasurementAgentPostBody] = []
@@ -197,7 +206,7 @@ async def post_measurement(
 
         # Check agent target file
         global_min_ttl, global_max_ttl = await target_file_validator(
-            request, measurement.tool, user, agent.target_file
+            request, storage, measurement.tool, user, agent.target_file
         )
         agent.tool_parameters.global_min_ttl = global_min_ttl
         agent.tool_parameters.global_max_ttl = global_max_ttl
@@ -212,7 +221,7 @@ async def post_measurement(
 
     # Update the agents list and set private metadata.
     measurement_request = private.MeasurementRequest(
-        **measurement.dict(exclude={"agents"}), agents=agents, username=user["username"]
+        **measurement.dict(exclude={"agents"}), agents=agents, username=user.username
     )
 
     # Launch a measurement procedure on the worker.
@@ -230,25 +239,23 @@ async def post_measurement(
 async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: UUID,
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
+    redis: Redis = Depends(get_redis),
+    storage: Storage = Depends(get_storage),
 ):
     """Get measurement information by uuid."""
-    redis: Redis = request.app.redis
-
-    measurement = await Measurements(request.app.settings, request.app.logger).get(
-        user["username"], measurement_uuid
-    )
+    measurement = await Measurements(database).get(user.username, measurement_uuid)
     if measurement is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
     state = await redis.get_measurement_state(measurement_uuid)
-    measurement["state"] = state if state is not None else measurement["state"]
+    if state and state != public.MeasurementState.Unknown:
+        measurement["state"] = state
 
-    agents_info = await Agents(request.app.settings, request.app.logger).all(
-        measurement["uuid"]
-    )
+    agents_info = await Agents(database).all(measurement["uuid"])
 
     agents = []
     for agent_info in agents_info:
@@ -256,8 +263,8 @@ async def get_measurement_by_uuid(
             agent_info["state"] = "waiting"
 
         try:
-            target_file = await request.app.storage.get_file_no_retry(
-                request.app.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user["username"],
+            target_file = await storage.get_file_no_retry(
+                settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user.username,
                 f"targets__{measurement['uuid']}__{agent_info['uuid']}.csv",
             )
             target_file_content = [c.strip() for c in target_file["content"].split()]
@@ -301,14 +308,12 @@ async def get_measurement_by_uuid(
 async def delete_measurement(
     request: Request,
     measurement_uuid: UUID,
-    user: Dict = Depends(get_current_active_user),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
+    redis: Redis = Depends(get_redis),
 ):
     """Cancel a measurement."""
-    redis: Redis = request.app.redis
-
-    measurement_info = await Measurements(request.app.settings, request.app.logger).get(
-        user["username"], measurement_uuid
-    )
+    measurement_info = await Measurements(database).get(user.username, measurement_uuid)
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"

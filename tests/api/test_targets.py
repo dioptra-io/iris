@@ -2,85 +2,64 @@ import tempfile
 
 import pytest
 
+from iris.api.dependencies import get_storage
 from iris.api.targets import verify_target_file
+from iris.commons.schemas.public import Paginated, Target, TargetSummary
+from tests.helpers import fake_storage_factory, override
+
+target1 = {
+    "key": "test",
+    "size": 42,
+    "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
+    "last_modified": "test",
+    "metadata": None,
+}
 
 # --- GET /api/targets ---
 
 
-def test_get_targets(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_all_files_no_retry(*args, **kwargs):
-            return [
-                {
-                    "key": "test",
-                    "size": 42,
-                    "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
-                    "last_modified": "test",
-                    "metadata": None,
-                }
-            ]
-
-    api_client_sync.app.storage = FakeStorage()
-
-    response = api_client_sync.get("/api/targets")
-    assert response.json() == {
-        "count": 1,
-        "next": None,
-        "previous": None,
-        "results": [{"key": "test", "last_modified": "test"}],
-    }
+@pytest.mark.asyncio
+async def test_get_targets(api_client):
+    override(api_client, get_storage, fake_storage_factory([target1]))
+    async with api_client as c:
+        response = await c.get("/api/targets")
+        assert Paginated[TargetSummary](**response.json()) == Paginated(
+            count=1, results=[TargetSummary(key="test", last_modified="test")]
+        )
 
 
-def test_get_targets_empty(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_all_files_no_retry(*args, **kwargs):
-            return []
-
-    api_client_sync.app.storage = FakeStorage()
-
-    response = api_client_sync.get("/api/targets")
-    assert response.json() == {
-        "count": 0,
-        "next": None,
-        "previous": None,
-        "results": [],
-    }
+@pytest.mark.asyncio
+async def test_get_targets_empty(api_client):
+    override(api_client, get_storage, fake_storage_factory([]))
+    async with api_client as c:
+        response = await c.get("/api/targets")
+        assert Paginated[TargetSummary](**response.json()) == Paginated(
+            count=0, results=[]
+        )
 
 
 # --- GET /api/targets/{key} ---
 
 
-def test_get_targets_by_key(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            return {
-                "key": "test",
-                "size": 42,
-                "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
-                "last_modified": "test",
-                "metadata": None,
-            }
-
-    api_client_sync.app.storage = FakeStorage()
-
-    response = api_client_sync.get("/api/targets/test")
-    assert response.json() == {
-        "key": "test",
-        "size": 42,
-        "content": ["1.1.1.0/24,icmp,2,32", "2.2.2.0/24,udp,5,20"],
-        "last_modified": "test",
-    }
+@pytest.mark.asyncio
+async def test_get_targets_by_key(api_client):
+    override(api_client, get_storage, fake_storage_factory([target1]))
+    async with api_client as c:
+        response = await c.get("/api/targets/test")
+        assert Target(**response.json()) == Target(
+            key="test",
+            size=42,
+            content=["1.1.1.0/24,icmp,2,32", "2.2.2.0/24,udp,5,20"],
+            last_modified="test",
+        )
 
 
-def test_get_targets_by_key_not_found(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def get_file_no_retry(*args, **kwargs):
-            raise Exception
-
-    api_client_sync.app.storage = FakeStorage()
-
-    response = api_client_sync.get("/api/targets/test")
-    assert response.status_code == 404
+@pytest.mark.asyncio
+async def test_get_targets_by_key_not_found(api_client):
+    override(api_client, get_storage, fake_storage_factory([]))
+    async with api_client as c:
+        response = await c.get("/api/targets/test")
+        assert response.status_code == 404
 
 
 # --- POST /api/targets ---
@@ -88,7 +67,7 @@ def test_get_targets_by_key_not_found(api_client_sync, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_verify_prefixes_list_file():
-    class FileContainer(object):
+    class FileContainer:
         def __init__(self):
             self.file = tempfile.SpooledTemporaryFile()
 
@@ -101,6 +80,7 @@ async def test_verify_prefixes_list_file():
 
     # Test with empty file
     file_container.register(b"")
+
     assert await verify_target_file(file_container) is False
 
     # Test with adhequate file
@@ -147,34 +127,29 @@ async def test_verify_prefixes_list_file():
 # --- DELETE /api/targets/{key} ---
 
 
-def test_delete_targets_by_key(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def delete_file_check_no_retry(*args, **kwargs):
-            return {"ResponseMetadata": {"HTTPStatusCode": 204}}
-
-    api_client_sync.app.storage = FakeStorage()
-
-    response = api_client_sync.delete("/api/targets/test")
-    assert response.json() == {"key": "test", "action": "delete"}
+@pytest.mark.asyncio
+async def test_delete_targets_by_key(api_client):
+    override(api_client, get_storage, fake_storage_factory([target1]))
+    async with api_client as c:
+        response = await c.delete("/api/targets/test")
+        assert response.json() == {"key": "test", "action": "delete"}
 
 
-def test_delete_targets_by_key_not_found(api_client_sync, monkeypatch):
-    class FakeStorage(object):
-        async def delete_file_check_no_retry(*args, **kwargs):
-            raise Exception
-
-    api_client_sync.app.storage = FakeStorage()
-
-    response = api_client_sync.delete("/api/targets/test")
-    assert response.status_code == 404
+@pytest.mark.asyncio
+async def test_delete_targets_by_key_not_found(api_client):
+    override(api_client, get_storage, fake_storage_factory([]))
+    async with api_client as c:
+        response = await c.delete("/api/targets/test")
+        assert response.status_code == 404
 
 
-def test_delete_targets_internal_error(api_client_sync, monkeypatch):
-    class FakeStorage(object):
+@pytest.mark.asyncio
+async def test_delete_targets_internal_error(api_client):
+    class FakeStorage:
         async def delete_file_check_no_retry(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 500}}
 
-    api_client_sync.app.storage = FakeStorage()
-
-    response = api_client_sync.delete("/api/targets/test")
-    assert response.status_code == 500
+    override(api_client, get_storage, lambda: FakeStorage())
+    async with api_client as c:
+        response = await c.delete("/api/targets/test")
+        assert response.status_code == 500
