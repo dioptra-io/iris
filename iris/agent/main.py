@@ -24,16 +24,9 @@ async def producer(redis: AgentRedis, queue: asyncio.Queue, logger: Logger) -> N
     """Consume tasks from a Redis channel and put them on a queue."""
     while True:
         logger.info(f"{redis.uuid} :: Waiting for requests...")
+        logger.info(f"{redis.uuid} :: Measurements in queue: {queue.qsize()}")
         request = await redis.subscribe()
-
-        logger.info(
-            f"{redis.uuid} :: Queuing request {request.measurement.uuid} for {request.round}..."
-        )
         await queue.put(request)
-
-        logger.info(
-            f"{redis.uuid} :: Measurements currently in the queue: {queue.qsize()}"
-        )
 
 
 async def consumer(
@@ -43,7 +36,7 @@ async def consumer(
     queue: asyncio.Queue,
     logger: Logger,
 ) -> None:
-    """Consume tasks from the queue."""
+    """Consume tasks from the queue and run measurements."""
     while True:
         request = await queue.get()
         logger_prefix = f"{request.measurement.uuid} :: {redis.uuid} ::"
