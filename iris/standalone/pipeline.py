@@ -127,7 +127,9 @@ async def pipeline(
             await fd.write(prefix)
 
     # Copy the target file to the local storage
-    storage = LocalStorage(agent_settings.AGENT_TARGETS_DIR_PATH / "local_storage")
+    storage = LocalStorage(
+        agent_settings, agent_settings.AGENT_TARGETS_DIR_PATH / "local_storage"
+    )
     await storage.upload_file(
         agent_settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + username,
         target_file.name,

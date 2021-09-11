@@ -147,9 +147,8 @@ async def post_target(
             detail="Bad target file structure",
         )
 
-    target_bucket = settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username
     await storage.upload_file_no_retry(
-        target_bucket, target_file.filename, target_file.file
+        storage.targets_bucket(user.username), target_file.filename, target_file.file
     )
     return {"key": target_file.filename, "action": "upload"}
 

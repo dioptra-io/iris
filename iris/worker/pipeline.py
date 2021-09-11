@@ -45,14 +45,15 @@ async def default_pipeline(
 
     logger.info(f"{logger_prefix} {round_}")
     logger.info(f"{logger_prefix} Download results file")
-    results_filepath = measurement_results_path / results_filename
-    await storage.download_file(
-        str(measurement_request.uuid), results_filename, results_filepath
+    results_filepath = await storage.download_file_to(
+        storage.measurement_bucket(measurement_request.uuid),
+        results_filename,
+        measurement_results_path,
     )
 
     logger.info(f"{logger_prefix} Delete results file from AWS S3")
     is_deleted = await storage.delete_file_no_check(
-        str(measurement_request.uuid), results_filename
+        storage.measurement_bucket(measurement_request.uuid), results_filename
     )
     if not is_deleted:
         logger.error(
@@ -122,7 +123,7 @@ async def default_pipeline(
 
             logger.info(f"{logger_prefix} Uploading next round CSV prefix file")
             await storage.upload_file(
-                str(measurement_request.uuid),
+                storage.measurement_bucket(measurement_request.uuid),
                 next_round_csv_filename,
                 next_round_csv_filepath,
             )
@@ -174,7 +175,7 @@ async def default_pipeline(
         logger.info(f"{logger_prefix} Probes to send: {n_probes_to_send}")
         logger.info(f"{logger_prefix} Uploading next round CSV probe file")
         await storage.upload_file(
-            str(measurement_request.uuid),
+            storage.measurement_bucket(measurement_request.uuid),
             next_round_csv_filename,
             next_round_csv_filepath,
         )

@@ -13,7 +13,7 @@ from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
 from iris.commons.schemas.private import MeasurementRoundRequest
 from iris.commons.schemas.public import ProbingStatistics, Round, Tool, ToolParameters
-from iris.commons.storage import Storage
+from iris.commons.storage import Storage, targets_key
 
 
 def build_probe_generator_parameters(
@@ -122,24 +122,25 @@ async def measurement(
     is_custom_probes_file = agent.target_file.endswith(".probes")
 
     if request.round.number == 1 and not is_custom_probes_file:
+        assert agent.uuid
+        assert request.probes
         # Round = 1
         # No custom probe file uploaded in advance
         logger.info(f"{logger_prefix} Download target file locally")
-        target_filename = f"targets__{measurement_request.uuid}__{agent.uuid}.csv"
-        target_filepath = str(settings.AGENT_TARGETS_DIR_PATH / target_filename)
-        await storage.download_file(
-            settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + measurement_request.username,
-            target_filename,
-            target_filepath,
+        target_filepath = await storage.download_file_to(
+            storage.archive_bucket(measurement_request.username),
+            targets_key(measurement_request.uuid, agent.uuid),
+            settings.AGENT_TARGETS_DIR_PATH,
         )
 
         prefix_filename = request.probes  # we use the same key as probe file
         prefix_filepath = None
         if prefix_filename:
             logger.info(f"{logger_prefix} Download CSV prefix file locally")
-            prefix_filepath = str(settings.AGENT_TARGETS_DIR_PATH / prefix_filename)
-            await storage.download_file(
-                str(measurement_request.uuid), prefix_filename, prefix_filepath
+            prefix_filepath = await storage.download_file_to(
+                storage.measurement_bucket(measurement_request.uuid),
+                request.probes,
+                settings.AGENT_TARGETS_DIR_PATH,
             )
 
         logger.info(f"{logger_prefix} Build probe generator parameters")
@@ -157,20 +158,20 @@ async def measurement(
         # Custom probe file uploaded in advance
         logger.info(f"{logger_prefix} Download custom CSV probe file locally")
         probes_filename = agent.target_file
-        probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
-        await storage.download_file(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + measurement_request.username,
-            probes_filename,
-            probes_filepath,
+        probes_filepath = await storage.download_file_to(
+            storage.targets_bucket(measurement_request.username),
+            agent.target_file,
+            settings.AGENT_TARGETS_DIR_PATH,
         )
 
     elif request.probes:
         # Round > 1
         logger.info(f"{logger_prefix} Download CSV probe file locally")
         probes_filename = request.probes
-        probes_filepath = str(settings.AGENT_TARGETS_DIR_PATH / probes_filename)
-        await storage.download_file(
-            str(measurement_request.uuid), probes_filename, probes_filepath
+        probes_filepath = await storage.download_file_to(
+            storage.measurement_bucket(measurement_request.uuid),
+            request.probes,
+            settings.AGENT_TARGETS_DIR_PATH,
         )
 
     logger.info(f"{logger_prefix} Username : {measurement_request.username}")
@@ -220,7 +221,9 @@ async def measurement(
     if is_not_canceled:
         logger.info(f"{logger_prefix} Upload results file into AWS S3")
         await storage.upload_file(
-            str(measurement_request.uuid), results_filename, results_filepath
+            storage.measurement_bucket(measurement_request.uuid),
+            results_filename,
+            results_filepath,
         )
 
     if not settings.AGENT_DEBUG_MODE:

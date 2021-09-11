@@ -2,11 +2,25 @@ import json
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import UUID
+
+from iris.commons.settings import CommonSettings
 
 
 @dataclass(frozen=True)
 class LocalStorage:
+    settings: CommonSettings
     s3_dir: Path
+
+    def archive_bucket(self, username: str) -> str:
+        return self.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + username
+
+    def targets_bucket(self, username: str) -> str:
+        return self.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+
+    @staticmethod
+    def measurement_bucket(uuid: UUID) -> str:
+        return str(uuid)
 
     async def delete_file_no_check(self, bucket, filename):
         self.__file_path(bucket, filename).unlink(missing_ok=True)

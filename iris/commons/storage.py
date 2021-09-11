@@ -4,12 +4,22 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Union
+from uuid import UUID
 
 import aioboto3
 import boto3
 from botocore.exceptions import ClientError
 
+from iris.commons.schemas.public import Round
 from iris.commons.settings import CommonSettings, fault_tolerant
+
+
+def results_key(agent_uuid: UUID, round_: Round) -> str:
+    return f"{agent_uuid}_results_{round_.encode()}.csv.zst"
+
+
+def targets_key(measurement_uuid: UUID, agent_uuid: UUID) -> str:
+    return f"targets__{measurement_uuid}__{agent_uuid}.csv"
 
 
 @dataclass(frozen=True)
@@ -27,6 +37,16 @@ class Storage:
             "endpoint_url": self.settings.AWS_S3_HOST,
             "region_name": self.settings.AWS_REGION_NAME,
         }
+
+    def archive_bucket(self, username: str) -> str:
+        return self.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + username
+
+    def targets_bucket(self, username: str) -> str:
+        return self.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+
+    @staticmethod
+    def measurement_bucket(uuid: UUID) -> str:
+        return str(uuid)
 
     @fault_tolerant(CommonSettings.storage_retry)
     async def get_measurement_buckets(self) -> List[str]:
@@ -179,6 +199,11 @@ class Storage:
             filename,
             output_path,
         )
+
+    async def download_file_to(self, bucket: str, filename: str, output_dir: Path):
+        output_path = output_dir / filename
+        await self.download_file(bucket, filename, output_path)
+        return output_path
 
     async def delete_file_check_no_retry(self, bucket: str, filename: str) -> Dict:
         """Delete a file with a check that it exists."""
