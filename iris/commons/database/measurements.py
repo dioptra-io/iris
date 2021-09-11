@@ -52,7 +52,7 @@ class Measurements:
 
     async def all(
         self, user: str, offset: int, limit: int, tag: Optional[str] = None
-    ) -> List[dict]:
+    ) -> List[public.Measurement]:
         """Get all measurements uuid for a given user."""
         where_clause = "WHERE user=%(user)s "
         if tag:
@@ -66,7 +66,7 @@ class Measurements:
         )
         return [self.formatter(response) for response in responses]
 
-    async def get(self, user: str, uuid: UUID) -> Optional[dict]:
+    async def get(self, user: str, uuid: UUID) -> Optional[public.Measurement]:
         """Get all measurement information."""
         responses = await self.database.call(
             f"SELECT * FROM {self.table} WHERE user=%(user)s AND uuid=%(uuid)s",
@@ -136,14 +136,15 @@ class Measurements:
         )
 
     @staticmethod
-    def formatter(row: tuple) -> dict:
+    def formatter(row: tuple) -> public.Measurement:
         """Database row -> response formater."""
-        return {
-            "uuid": str(row[0]),
-            "user": row[1],
-            "tool": row[2],
-            "tags": row[3],
-            "state": public.MeasurementState(row[4]),
-            "start_time": row[5].isoformat(),
-            "end_time": row[6].isoformat() if row[6] is not None else None,
-        }
+        return public.Measurement(
+            uuid=row[0],
+            username=row[1],
+            tool=public.Tool(row[2]),
+            tags=row[3],
+            state=public.MeasurementState(row[4]),
+            start_time=row[5],
+            end_time=row[6],
+            agents=[],
+        )

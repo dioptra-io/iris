@@ -4,6 +4,7 @@ from subprocess import run
 import pytest
 
 from iris.commons.database import InsertResults, Interfaces, Links, Prefixes, Replies
+from iris.commons.schemas.public import Interface, Link, Prefix, Reply
 from iris.commons.settings import CommonSettings
 
 settings = CommonSettings(DATABASE_HOST="localhost")
@@ -29,42 +30,42 @@ async def test_measurement_results(database, tmp_path):
     assert await db.exists()
     assert await db.all_count() == 2
     assert await db.all(0, 10) == [
-        {
-            "probe_protocol": "icmp",
-            "probe_src_addr": "10.31.46.69",
-            "probe_dst_addr": "8.8.8.8",
-            "probe_src_port": 24000,
-            "probe_dst_port": 0,
-            "probe_ttl": 4,
-            "quoted_ttl": 1,
-            "reply_src_addr": "20.20.20.1",
-            "reply_protocol": "icmp",
-            "reply_icmp_type": 11,
-            "reply_icmp_code": 0,
-            "reply_ttl": 252,
-            "reply_size": 62,
-            "reply_mpls_labels": [],
-            "rtt": 90,
-            "round": 1,
-        },
-        {
-            "probe_protocol": "icmp",
-            "probe_src_addr": "10.31.46.69",
-            "probe_dst_addr": "8.8.8.8",
-            "probe_src_port": 24000,
-            "probe_dst_port": 0,
-            "probe_ttl": 5,
-            "quoted_ttl": 1,
-            "reply_src_addr": "20.20.20.2",
-            "reply_protocol": "icmp",
-            "reply_icmp_type": 11,
-            "reply_icmp_code": 0,
-            "reply_ttl": 252,
-            "reply_size": 62,
-            "reply_mpls_labels": [],
-            "rtt": 90,
-            "round": 1,
-        },
+        Reply(
+            probe_protocol="icmp",
+            probe_src_addr="10.31.46.69",
+            probe_dst_addr="8.8.8.8",
+            probe_src_port=24000,
+            probe_dst_port=0,
+            probe_ttl=4,
+            quoted_ttl=1,
+            reply_src_addr="20.20.20.1",
+            reply_protocol="icmp",
+            reply_icmp_type=11,
+            reply_icmp_code=0,
+            reply_ttl=252,
+            reply_size=62,
+            reply_mpls_labels=[],
+            rtt=90,
+            round=1,
+        ),
+        Reply(
+            probe_protocol="icmp",
+            probe_src_addr="10.31.46.69",
+            probe_dst_addr="8.8.8.8",
+            probe_src_port=24000,
+            probe_dst_port=0,
+            probe_ttl=5,
+            quoted_ttl=1,
+            reply_src_addr="20.20.20.2",
+            reply_protocol="icmp",
+            reply_icmp_type=11,
+            reply_icmp_code=0,
+            reply_ttl=252,
+            reply_size=62,
+            reply_mpls_labels=[],
+            rtt=90,
+            round=1,
+        ),
     ]
     assert await db.all(2, 10) == []
 
@@ -72,8 +73,8 @@ async def test_measurement_results(database, tmp_path):
     assert await db.exists()
     assert await db.all_count() == 2
     assert await db.all(0, 10) == [
-        {"ttl": 4, "addr": "20.20.20.1"},
-        {"ttl": 5, "addr": "20.20.20.2"},
+        Interface(ttl=4, addr="20.20.20.1"),
+        Interface(ttl=5, addr="20.20.20.2"),
     ]
     assert await db.all(2, 10) == []
 
@@ -81,12 +82,7 @@ async def test_measurement_results(database, tmp_path):
     assert await db.exists()
     assert await db.all_count() == 1
     assert await db.all(0, 10) == [
-        {
-            "near_ttl": 4,
-            "far_ttl": 5,
-            "near_addr": "20.20.20.1",
-            "far_addr": "20.20.20.2",
-        }
+        Link(near_ttl=4, far_ttl=5, near_addr="20.20.20.1", far_addr="20.20.20.2")
     ]
     assert await db.all(1, 10) == []
 
@@ -94,6 +90,6 @@ async def test_measurement_results(database, tmp_path):
     assert await db.exists()
     assert await db.all_count() == 1
     assert await db.all(0, 10) == [
-        {"prefix": "8.8.8.0", "has_amplification": False, "has_loops": False}
+        Prefix(prefix="8.8.8.0", has_amplification=False, has_loops=False)
     ]
     assert await db.all(1, 10) == []

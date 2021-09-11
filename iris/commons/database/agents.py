@@ -43,7 +43,7 @@ class Agents:
             """,
         )
 
-    async def all(self, measurement_uuid: UUID) -> List[dict]:
+    async def all(self, measurement_uuid: UUID) -> List[public.MeasurementAgent]:
         """Get all measurement information."""
         responses = await self.database.call(
             f"SELECT * FROM {self.table} WHERE measurement_uuid=%(uuid)s",
@@ -51,7 +51,9 @@ class Agents:
         )
         return [self.formatter(response) for response in responses]
 
-    async def get(self, measurement_uuid: UUID, agent_uuid: UUID) -> Optional[dict]:
+    async def get(
+        self, measurement_uuid: UUID, agent_uuid: UUID
+    ) -> Optional[public.MeasurementAgent]:
         """Get measurement information about a agent."""
         responses = await self.database.call(
             f"SELECT * FROM {self.table} "
@@ -95,9 +97,11 @@ class Agents:
         probing_statistics: dict,
     ) -> None:
         # Get the probing statistics already stored
-        current_probing_statistics = (await self.get(measurement_uuid, agent_uuid))[
-            "probing_statistics"
-        ]
+        measurement = await self.get(measurement_uuid, agent_uuid)
+        assert measurement
+        current_probing_statistics = {
+            x.round: x.statistics for x in measurement.probing_statistics
+        }
 
         # Update the probing statistics
         current_probing_statistics[round_number] = probing_statistics
@@ -151,13 +155,19 @@ class Agents:
         )
 
     @staticmethod
-    def formatter(row: tuple) -> dict:
-        return {
-            "uuid": str(row[1]),
-            "target_file": row[2],
-            "probing_rate": row[3],
-            "probing_statistics": json.loads(row[4]),
-            "agent_parameters": json.loads(row[5]),
-            "tool_parameters": json.loads(row[6]),
-            "state": public.MeasurementState(row[7]),
-        }
+    def formatter(row: tuple) -> public.MeasurementAgent:
+        return public.MeasurementAgent(
+            uuid=row[1],
+            state=public.MeasurementState(row[7]),
+            specific=public.MeasurementAgentSpecific(
+                target_file=row[2],
+                target_file_content=[],
+                probing_rate=row[3],
+                tool_parameters=public.ToolParameters.parse_raw(row[6]),
+            ),
+            parameters=public.AgentParameters.parse_raw(row[5]),
+            probing_statistics=[
+                public.ProbingStatistics(round=round_, statistics=statistics)
+                for round_, statistics in json.loads(row[4]).items()
+            ],
+        )

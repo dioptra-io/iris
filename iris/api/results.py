@@ -52,7 +52,7 @@ async def get_results(
             ),
         )
 
-    if agent_info["state"] != "finished":
+    if agent_info.state != public.MeasurementState.Finished:
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail=(

@@ -36,21 +36,25 @@ async def get_measurements(
     querier = DatabasePagination(Measurements(database), request, offset, limit)
     output = await querier.query(user=user.username, tag=tag)
 
-    measurements = []
-    for measurement in output["results"]:
-        state = await redis.get_measurement_state(measurement["uuid"])
-        measurements.append(
-            {
-                "uuid": measurement["uuid"],
-                "state": measurement["state"] if state is None else state,
-                "tool": measurement["tool"],
-                "tags": measurement["tags"],
-                "start_time": measurement["start_time"],
-                "end_time": measurement["end_time"],
-            }
+    measurements: List[public.Measurement] = output["results"]
+    summaries: List[public.MeasurementSummary] = []
+
+    for measurement in measurements:
+        state = await redis.get_measurement_state(measurement.uuid)
+        if not state or state == public.MeasurementState.Unknown:
+            state = measurement.state
+        summaries.append(
+            public.MeasurementSummary(
+                uuid=measurement.uuid,
+                state=state,
+                tool=measurement.tool,
+                tags=measurement.tags,
+                start_time=measurement.start_time,
+                end_time=measurement.end_time,
+            )
         )
 
-    output["results"] = measurements
+    output["results"] = summaries
 
     return output
 
@@ -253,48 +257,25 @@ async def get_measurement_by_uuid(
 
     state = await redis.get_measurement_state(measurement_uuid)
     if state and state != public.MeasurementState.Unknown:
-        measurement["state"] = state
+        measurement.state = state
 
-    agents_info = await Agents(database).all(measurement["uuid"])
-
-    agents = []
+    agents_info = await Agents(database).all(measurement.uuid)
     for agent_info in agents_info:
-        if measurement["state"] == "waiting":
-            agent_info["state"] = "waiting"
-
+        if measurement.state == public.MeasurementState.Waiting:
+            agent_info.state = public.MeasurementState.Waiting
         try:
             target_file = await storage.get_file_no_retry(
                 settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user.username,
-                f"targets__{measurement['uuid']}__{agent_info['uuid']}.csv",
+                f"targets__{measurement.uuid}__{agent_info.uuid}.csv",
             )
             target_file_content = [c.strip() for c in target_file["content"].split()]
-            if len(target_file_content) > 100:
-                # NOTE: Don't display the measurement if the file is too big
-                # to avoid to slow down the API
-                target_file_content = []
+            # NOTE: Don't display the measurement if the file is too big
+            # to avoid to slow down the API.
+            if len(target_file_content) <= 100:
+                agent_info.specific.target_file_content = target_file_content
         except Exception:
-            target_file_content = []
-
-        agents.append(
-            {
-                "uuid": agent_info["uuid"],
-                "state": agent_info["state"],
-                "specific": {
-                    "target_file": agent_info["target_file"],
-                    "target_file_content": target_file_content,
-                    "probing_rate": agent_info["probing_rate"],
-                    "tool_parameters": agent_info["tool_parameters"],
-                },
-                "parameters": agent_info["agent_parameters"],
-                "probing_statistics": [
-                    {"round": round_number, "statistics": statistics}
-                    for round_number, statistics in agent_info[
-                        "probing_statistics"
-                    ].items()
-                ],
-            }
-        )
-    measurement["agents"] = agents
+            pass
+        measurement.agents.append(agent_info)
 
     return measurement
 

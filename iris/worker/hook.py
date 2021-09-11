@@ -237,7 +237,9 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         # We are in this state when the worker has failed and replays the measurement
         # So we skip off the agents those which are finished
         agent_info = await database_agents.all(measurement_request.uuid)
-        finished_agents = [a["uuid"] for a in agent_info if a["state"] == "finished"]
+        finished_agents = [
+            a.uuid for a in agent_info if a.state == MeasurementState.Finished
+        ]
         filtered_agents = []
         for agent in measurement_request.agents:
             if agent.uuid not in finished_agents:

@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -60,8 +61,8 @@ class MeasurementSummary(BaseModel):
     state: MeasurementState
     tool: Tool
     tags: List[str]
-    start_time: str
-    end_time: Optional[str]
+    start_time: datetime
+    end_time: Optional[datetime]
 
 
 class MeasurementAgentSpecific(BaseModel):
@@ -87,12 +88,13 @@ class Measurement(BaseModel):
     """Information about a measurement (Response)."""
 
     uuid: UUID
+    username: str
     state: MeasurementState
     tool: Tool
     agents: List[MeasurementAgent]
     tags: List[str]
-    start_time: str
-    end_time: Optional[str]
+    start_time: datetime
+    end_time: Optional[datetime]
 
 
 class MeasurementAgentPostBody(BaseModel):
