@@ -58,6 +58,8 @@ class FlowMapper(str, Enum):
 
 class ProbingStatistics(BaseModel):
     round: Round
+    start_time: datetime
+    end_time: datetime
     filtered_low_ttl: int
     filtered_high_ttl: int
     filtered_prefix_excl: int
@@ -67,6 +69,9 @@ class ProbingStatistics(BaseModel):
     packets_failed: int
     packets_received: int
     packets_received_invalid: int
+    pcap_received: int
+    pcap_dropped: int
+    pcap_interface_dropped: int
 
 
 class Tool(str, Enum):

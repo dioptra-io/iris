@@ -1,5 +1,6 @@
 import logging
 import subprocess
+from datetime import datetime
 from uuid import uuid4
 
 import fakeredis.aioredis
@@ -59,15 +60,20 @@ def user():
 def statistics():
     return ProbingStatistics(
         round=Round(number=1, limit=10, offset=0),
-        filtered_low_ttl=1,
-        filtered_high_ttl=2,
-        filtered_prefix_excl=3,
-        filtered_prefix_not_incl=4,
-        probes_read=5,
-        packets_sent=6,
-        packets_failed=7,
-        packets_received=8,
-        packets_received_invalid=9,
+        start_time=datetime.now(),
+        end_time=datetime.now(),
+        filtered_low_ttl=0,
+        filtered_high_ttl=0,
+        filtered_prefix_excl=0,
+        filtered_prefix_not_incl=0,
+        probes_read=240,
+        packets_sent=240,
+        packets_failed=0,
+        packets_received=72,
+        packets_received_invalid=0,
+        pcap_received=240,
+        pcap_dropped=0,
+        pcap_interface_dropped=0,
     )
 
 

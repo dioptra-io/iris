@@ -42,7 +42,6 @@ def probe(
     round_number: int,
     probing_rate: int,
     prober_statistics: Dict,
-    sniffer_statistics: Dict,
     gen_parameters: Optional[Dict] = None,
     probes_filepath: Optional[str] = None,
 ) -> None:
@@ -98,10 +97,10 @@ def probe(
         )
 
         # Use the prober generator
-        prober_stats, sniffer_stats = prober.probe(config, gen)
+        prober_stats, sniffer_stats, pcap_stats = prober.probe(config, gen)
     else:
         # In case of round > 1, use a probes file
-        prober_stats, sniffer_stats = prober.probe(config, probes_filepath)
+        prober_stats, sniffer_stats, pcap_stats = prober.probe(config, probes_filepath)
 
     # Populate the statistics
     prober_statistics["probes_read"] = prober_stats.read
@@ -114,7 +113,8 @@ def probe(
         "filtered_prefix_not_incl"
     ] = prober_stats.filtered_prefix_not_incl
 
-    sniffer_statistics["packets_received"] = sniffer_stats.received_count
-    sniffer_statistics[
-        "packets_received_invalid"
-    ] = sniffer_stats.received_invalid_count
+    prober_statistics["packets_received"] = sniffer_stats.received_count
+    prober_statistics["packets_received_invalid"] = sniffer_stats.received_invalid_count
+    prober_statistics["pcap_received"] = pcap_stats.received
+    prober_statistics["pcap_dropped"] = pcap_stats.dropped
+    prober_statistics["pcap_interface_dropped"] = pcap_stats.interface_dropped

@@ -30,7 +30,7 @@ dramatiq = {extras = ["redis", "watch"], optional = true, version = "^1.9.0"}
 fakeredis = "^1.6.1"
 fastapi = {optional = true, version = "^0.68.1"}
 passlib = {extras = ["bcrypt"], optional = true, version = "^1.7.4"}
-pycaracal = {optional = true, version = "^0.4.25"}
+pycaracal = {optional = true, version = "^0.5.0"}
 pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], optional = true, version = "^3.3.0"}
 python-multipart = {optional = true, version = "^0.0.5"}

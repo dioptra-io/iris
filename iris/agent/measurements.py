@@ -1,4 +1,5 @@
 """Measurement interface."""
+from datetime import datetime
 from logging import Logger
 from multiprocessing import Manager, Process
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -123,7 +124,6 @@ async def measurement(
 
     if request.round.number == 1 and not is_custom_probes_file:
         assert agent.uuid
-        assert request.probes
         # Round = 1
         # No custom probe file uploaded in advance
         logger.info(f"{logger_prefix} Download target file locally")
@@ -139,7 +139,7 @@ async def measurement(
             logger.info(f"{logger_prefix} Download CSV prefix file locally")
             prefix_filepath = await storage.download_file_to(
                 storage.measurement_bucket(measurement_request.uuid),
-                request.probes,
+                prefix_filename,
                 settings.AGENT_TARGETS_DIR_PATH,
             )
 
@@ -181,9 +181,9 @@ async def measurement(
     logger.info(f"{logger_prefix} Tool Parameters : {agent.tool_parameters}")
     logger.info(f"{logger_prefix} Max Probing Rate : {agent.probing_rate}")
 
+    probing_start_time = datetime.now()
     with Manager() as manager:
         prober_statistics = manager.dict()  # type: ignore
-        sniffer_statistics = manager.dict()  # type: ignore
 
         prober_process = Process(
             target=probe,
@@ -193,7 +193,6 @@ async def measurement(
                 request.round.number,
                 agent.probing_rate,
                 prober_statistics,
-                sniffer_statistics,
                 gen_parameters,
                 probes_filepath,
             ),
@@ -210,11 +209,13 @@ async def measurement(
         )
 
         prober_statistics = dict(prober_statistics)
-        sniffer_statistics = dict(sniffer_statistics)
 
     logger.info("Upload probing statistics in Redis")
     statistics = ProbingStatistics(
-        round=request.round, **prober_statistics, **sniffer_statistics
+        round=request.round,
+        start_time=probing_start_time,
+        end_time=datetime.now(),
+        **prober_statistics,
     )
     await redis.set_measurement_stats(measurement_request.uuid, agent.uuid, statistics)
 

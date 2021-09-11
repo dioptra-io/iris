@@ -18,9 +18,7 @@ from iris.commons.schemas.public import (
     MeasurementState,
     MeasurementSummary,
     Paginated,
-    ProbingStatistics,
     Reply,
-    Round,
     Tool,
     ToolParameters,
 )
@@ -62,7 +60,7 @@ def measurement1():
 
 
 @pytest.fixture(scope="function")
-def measurement_agent1():
+def measurement_agent1(statistics):
     return MeasurementAgent(
         uuid=uuid.uuid4(),
         state=MeasurementState.Unknown,
@@ -90,20 +88,7 @@ def measurement_agent1():
             max_probing_rate=200,
             agent_tags=["all"],
         ),
-        probing_statistics=[
-            ProbingStatistics(
-                round=Round(number=1, limit=10, offset=0),
-                filtered_low_ttl=0,
-                filtered_high_ttl=0,
-                filtered_prefix_excl=0,
-                filtered_prefix_not_incl=0,
-                probes_read=240,
-                packets_sent=240,
-                packets_failed=0,
-                packets_received=72,
-                packets_received_invalid=0,
-            )
-        ],
+        probing_statistics=[statistics],
     )
 
 

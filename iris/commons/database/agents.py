@@ -131,7 +131,7 @@ async def store_probing_statistics(
         """,
         {
             "probing_statistics": json.dumps(
-                [x.dict() for x in current_probing_statistics.values()]
+                [json.loads(x.json()) for x in current_probing_statistics.values()]
             ),
             "measurement_uuid": measurement_uuid,
             "agent_uuid": agent_uuid,
