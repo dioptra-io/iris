@@ -194,8 +194,8 @@ class Storage:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
                 await stream.read()
-
-            return await s3.delete_object(Bucket=bucket, Key=filename)
+            res: Dict = await s3.delete_object(Bucket=bucket, Key=filename)
+            return res
 
     @fault_tolerant
     async def delete_file_no_check(self, bucket: str, filename: str) -> bool:

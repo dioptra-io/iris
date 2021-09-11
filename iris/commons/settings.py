@@ -3,7 +3,7 @@ import platform
 
 import aioredis
 from pydantic import BaseSettings
-from tenacity import (
+from tenacity import (  # type: ignore
     before_sleep_log,
     retry,
     stop_after_delay,

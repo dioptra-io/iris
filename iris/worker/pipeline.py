@@ -13,7 +13,7 @@ from iris.commons.redis import Redis
 from iris.commons.schemas.private import MeasurementRequest
 from iris.commons.schemas.public import ProbingStatistics, Round, Tool
 from iris.commons.storage import Storage
-from iris.worker import WorkerSettings
+from iris.worker.settings import WorkerSettings
 
 
 async def default_pipeline(
