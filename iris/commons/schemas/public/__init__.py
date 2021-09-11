@@ -13,6 +13,7 @@ from .measurements import (
     MeasurementState,
     MeasurementSummary,
     ProbingStatistics,
+    Round,
     Tool,
     ToolParameters,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "Profile",
     "Reply",
     "RIPEAccount",
+    "Round",
     "Target",
     "TargetDeleteResponse",
     "TargetPostResponse",

@@ -1,6 +1,6 @@
 from iris.agent.measurements import build_probe_generator_parameters
-from iris.commons.round import Round
 from iris.commons.schemas import public
+from iris.commons.schemas.public import Round
 
 
 def unordered_eq(a, b):
@@ -22,7 +22,7 @@ def test_build_probe_generator_parameters_diamond_miner():
     # D-Miner: Base case
     target_list = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
     p = build_probe_generator_parameters(
-        2, Round(1, 0, 0), tool, tool_parameters, target_list, None
+        2, Round(number=1, limit=0, offset=0), tool, tool_parameters, target_list, None
     )
     unordered_eq(
         p["prefixes"],
@@ -36,7 +36,7 @@ def test_build_probe_generator_parameters_diamond_miner():
     # D-Miner: Different agent min ttl
     target_list = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
     p = build_probe_generator_parameters(
-        6, Round(1, 0, 0), tool, tool_parameters, target_list, None
+        6, Round(number=1, limit=0, offset=0), tool, tool_parameters, target_list, None
     )
     unordered_eq(
         p["prefixes"],
@@ -46,7 +46,7 @@ def test_build_probe_generator_parameters_diamond_miner():
     # D-Miner: Same prefix twice
     target_list = ["8.8.8.0/24,icmp,2,32", "8.8.8.0/24,icmp,2,20"]
     p = build_probe_generator_parameters(
-        6, Round(1, 0, 0), tool, tool_parameters, target_list, None
+        6, Round(number=1, limit=0, offset=0), tool, tool_parameters, target_list, None
     )
     unordered_eq(
         p["prefixes"],
@@ -57,7 +57,12 @@ def test_build_probe_generator_parameters_diamond_miner():
     target_list = ["8.8.4.0/24,icmp,2,32", "8.8.8.0/24,icmp,2,20"]
     prefix_list = ["8.8.4.0/24", "8.8.8.0/24"]
     p = build_probe_generator_parameters(
-        6, Round(1, 0, 0), tool, tool_parameters, target_list, prefix_list
+        6,
+        Round(number=1, limit=0, offset=0),
+        tool,
+        tool_parameters,
+        target_list,
+        prefix_list,
     )
     unordered_eq(
         p["prefixes"],
@@ -67,14 +72,24 @@ def test_build_probe_generator_parameters_diamond_miner():
     target_list = ["8.8.4.0/24,icmp,2,32", "8.8.8.0/24,icmp,2,20"]
     prefix_list = ["8.8.4.0/24"]
     p = build_probe_generator_parameters(
-        6, Round(1, 0, 0), tool, tool_parameters, target_list, prefix_list
+        6,
+        Round(number=1, limit=0, offset=0),
+        tool,
+        tool_parameters,
+        target_list,
+        prefix_list,
     )
     unordered_eq(p["prefixes"], [("8.8.4.0/24", "icmp", range(6, 33))])
 
     target_list = ["8.8.4.0/22,icmp,2,32"]
     prefix_list = ["8.8.4.0/24"]
     p = build_probe_generator_parameters(
-        6, Round(1, 0, 0), tool, tool_parameters, target_list, prefix_list
+        6,
+        Round(number=1, limit=0, offset=0),
+        tool,
+        tool_parameters,
+        target_list,
+        prefix_list,
     )
     unordered_eq(p["prefixes"], [("8.8.4.0/24", "icmp", range(6, 33))])
 
@@ -92,7 +107,7 @@ def test_build_probe_generator_parameters_yarrp():
 
     target_list = ["8.8.8.0/24,icmp,2,32", "8.8.4.0/24,icmp,2,32"]
     p = build_probe_generator_parameters(
-        2, Round(1, 0, 0), tool, tool_parameters, target_list, None
+        2, Round(number=1, limit=0, offset=0), tool, tool_parameters, target_list, None
     )
 
     unordered_eq(
@@ -120,7 +135,7 @@ def test_build_probe_generator_parameters_ping():
 
     target_list = ["8.8.8.8,icmp,2,32", "8.8.4.4,icmp,2,32"]
     p = build_probe_generator_parameters(
-        2, Round(1, 0, 0), tool, tool_parameters, target_list, None
+        2, Round(number=1, limit=0, offset=0), tool, tool_parameters, target_list, None
     )
 
     unordered_eq(

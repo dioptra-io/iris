@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,45 @@ from iris.commons.schemas.base import BaseModel
 from iris.commons.schemas.public.agents import AgentParameters
 
 
+class Round(BaseModel):
+    number: int = Field(ge=1)
+    limit: int = Field(ge=0)
+    offset: int = Field(ge=0)
+
+    def encode(self) -> str:
+        return f"{self.number}:{self.limit}:{self.offset}"
+
+    @classmethod
+    def decode(cls, encoded: str):
+        if m := re.match(r".*?(\d+):(\d+):(\d+).*", encoded):
+            number, limit, offset = m.groups()
+            return cls(number=int(number), limit=int(limit), offset=int(offset))
+        raise ValueError(f"cannot decode {encoded}")
+
+    @property
+    def min_ttl(self):
+        return (self.limit * self.offset) + 1
+
+    @property
+    def max_ttl(self):
+        if self.limit == 0:
+            return 255
+        return self.limit * (self.offset + 1)
+
+    def next_round(self, global_max_ttl=0):
+        new_round = Round(number=self.number + 1, limit=0, offset=0)
+        if self.number > 1:
+            # We are not in round 1
+            return new_round
+        if self.limit == 0:
+            # The round 1 has no limit
+            return new_round
+        if self.limit * (self.offset + 1) >= global_max_ttl:
+            # The round 1 has reached the global max ttl
+            return new_round
+        return Round(number=self.number, limit=self.limit, offset=self.offset + 1)
+
+
 class FlowMapper(str, Enum):
     SequentialFlowMapper = "SequentialFlowMapper"
     IntervalFlowMapper = "IntervalFlowMapper"
@@ -17,8 +57,16 @@ class FlowMapper(str, Enum):
 
 
 class ProbingStatistics(BaseModel):
-    round: str
-    statistics: Dict[str, Any]
+    round: Round
+    filtered_low_ttl: int
+    filtered_high_ttl: int
+    filtered_prefix_excl: int
+    filtered_prefix_not_incl: int
+    probes_read: int
+    packets_sent: int
+    packets_failed: int
+    packets_received: int
+    packets_received_invalid: int
 
 
 class Tool(str, Enum):

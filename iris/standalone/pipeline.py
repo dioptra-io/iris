@@ -16,12 +16,12 @@ from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
 from iris.commons.database import Agents, Database, Measurements
 from iris.commons.redis import AgentRedis
-from iris.commons.round import Round
 from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
 from iris.commons.schemas.public import AgentParameters, AgentState
 from iris.commons.schemas.public.measurements import (
     MeasurementAgentPostBody,
     MeasurementState,
+    Round,
     Tool,
     ToolParameters,
 )
@@ -142,7 +142,9 @@ async def pipeline(
 
     statistics = {}
 
-    round_ = Round(1, worker_settings.WORKER_ROUND_1_SLIDING_WINDOW, 0)
+    round_ = Round(
+        number=1, limit=worker_settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0
+    )
     n_rounds = 0
     while round_.number <= tool_parameters.max_round:
         n_rounds = round_.number

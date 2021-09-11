@@ -9,14 +9,18 @@ from iris.commons.schemas.public import (
     MeasurementAgentPostBody,
     MeasurementAgentSpecific,
     MeasurementState,
-    ProbingStatistics,
+    Round,
 )
 
 
 @pytest.mark.asyncio
-async def test_agents(database, agent):
+async def test_agents(database, agent, statistics):
     db = Agents(database)
     assert await db.create_table(drop=True) is None
+
+    statistics2 = statistics.copy(
+        update={"round": Round(number=2, limit=0, offset=0), "packets_sent": 30}
+    )
 
     measurement_agent = MeasurementAgentPostBody(
         uuid=uuid4(),
@@ -55,10 +59,7 @@ async def test_agents(database, agent):
 
     assert (
         await db.store_probing_statistics(
-            measurement_request.uuid,
-            measurement_agent.uuid,
-            "1:0:0",
-            {"packets_sent": 10},
+            measurement_request.uuid, measurement_agent.uuid, statistics
         )
         is None
     )
@@ -67,16 +68,11 @@ async def test_agents(database, agent):
         await db.get(
             measurement_uuid=measurement_request.uuid, agent_uuid=measurement_agent.uuid
         )
-    ).probing_statistics == [
-        ProbingStatistics(round="1:0:0", statistics={"packets_sent": 10})
-    ]
+    ).probing_statistics == [statistics]
 
     assert (
         await db.store_probing_statistics(
-            measurement_request.uuid,
-            measurement_agent.uuid,
-            "2:0:0",
-            {"packets_sent": 30},
+            measurement_request.uuid, measurement_agent.uuid, statistics2
         )
         is None
     )
@@ -85,10 +81,7 @@ async def test_agents(database, agent):
         await db.get(
             measurement_uuid=measurement_request.uuid, agent_uuid=measurement_agent.uuid
         )
-    ).probing_statistics == [
-        ProbingStatistics(round="1:0:0", statistics={"packets_sent": 10}),
-        ProbingStatistics(round="2:0:0", statistics={"packets_sent": 30}),
-    ]
+    ).probing_statistics == [statistics, statistics2]
 
     assert (
         await db.stamp_canceled(

@@ -113,16 +113,16 @@ async def test_redis_measurement_state(common_settings, redis_client):
 
 
 @pytest.mark.asyncio
-async def test_redis_measurement_stats(common_settings, agent, redis_client):
+async def test_redis_measurement_stats(
+    common_settings, agent, statistics, redis_client
+):
     measurement_uuid = uuid4()
     redis = Redis(redis_client, common_settings, logging.getLogger(__name__))
-    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) == {}
-    await redis.set_measurement_stats(measurement_uuid, agent.uuid, {"foo": "bar"})
-    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) == {
-        "foo": "bar"
-    }
+    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) is None
+    await redis.set_measurement_stats(measurement_uuid, agent.uuid, statistics)
+    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) == statistics
     await redis.delete_measurement_stats(measurement_uuid, agent.uuid)
-    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) == {}
+    assert await redis.get_measurement_stats(measurement_uuid, agent.uuid) is None
 
 
 # @pytest.mark.asyncio

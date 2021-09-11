@@ -1,4 +1,4 @@
-from iris.commons.round import Round
+from iris.commons.schemas.public import Round
 
 
 def test_round():
@@ -15,21 +15,19 @@ def test_round():
 
 
 def test_round_from_filename():
-    round = Round.decode_from_filename(
+    round = Round.decode(
         "81484af7-6776-42a7-80fd-cb23b73855f8_results_1:0:0.csv.zst_00"
     )
     assert round.number == 1
     assert round.limit == 0
     assert round.offset == 0
 
-    round = Round.decode_from_filename(
-        "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47_results_2:6:8.csv"
-    )
+    round = Round.decode("ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47_results_2:6:8.csv")
     assert round.number == 2
     assert round.limit == 6
     assert round.offset == 8
 
-    round = Round.decode_from_filename(
+    round = Round.decode(
         "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47_next_round_csv_4:3:5.csv"
     )
     assert round.number == 4
@@ -39,19 +37,19 @@ def test_round_from_filename():
 
 def test_next_round():
     # Round 1
-    round = Round(1, 10, 0)
-    round.next_round() == Round(2, 0, 0)
-    round.next_round(30) == Round(1, 10, 1)
+    round = Round(number=1, limit=10, offset=0)
+    assert round.next_round() == Round(number=2, limit=0, offset=0)
+    assert round.next_round(30) == Round(number=1, limit=10, offset=1)
 
     # [1..10], [11..20], ...
-    round.next_round(9) == Round(2, 0, 0)
-    round.next_round(10) == Round(2, 0, 0)
-    round.next_round(11) == Round(1, 10, 1)
+    assert round.next_round(9) == Round(number=2, limit=0, offset=0)
+    assert round.next_round(10) == Round(number=2, limit=0, offset=0)
+    assert round.next_round(11) == Round(number=1, limit=10, offset=1)
 
     # Round 1 no sliding window
-    round = Round(1, 0, 0)
-    round.next_round() == Round(2, 0, 0)
+    round = Round(number=1, limit=0, offset=0)
+    assert round.next_round() == Round(number=2, limit=0, offset=0)
 
     # Round > 1
-    round = Round(2, 0, 0)
-    round.next_round(30) == Round(3, 0, 0)
+    round = Round(number=2, limit=0, offset=0)
+    assert round.next_round(30) == Round(number=3, limit=0, offset=0)

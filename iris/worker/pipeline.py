@@ -1,6 +1,5 @@
 """Measurement pipeline."""
 from logging import Logger
-from typing import Dict
 from uuid import UUID
 
 import aiofiles
@@ -11,9 +10,8 @@ from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
 from iris.commons.database import Agents, Database, InsertResults
 from iris.commons.redis import Redis
-from iris.commons.round import Round
 from iris.commons.schemas.private import MeasurementRequest
-from iris.commons.schemas.public import Tool
+from iris.commons.schemas.public import ProbingStatistics, Round, Tool
 from iris.commons.storage import Storage
 from iris.worker import WorkerSettings
 
@@ -23,7 +21,7 @@ async def default_pipeline(
     measurement_request: MeasurementRequest,
     agent_uuid: UUID,
     results_filename: str,
-    statistics: Dict,
+    statistics: ProbingStatistics,
     logger: Logger,
     redis: Redis,
     storage: Storage,
@@ -41,7 +39,7 @@ async def default_pipeline(
     logger.info(f"{logger_prefix} Get agent information")
     agent_parameters = await redis.get_agent_parameters(agent.uuid)
 
-    round_ = Round.decode_from_filename(results_filename)
+    round_ = Round.decode(results_filename)
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / str(
         measurement_request.uuid
     )
@@ -64,7 +62,7 @@ async def default_pipeline(
 
     logger.info(f"{logger_prefix} Store probing statistics")
     await database_agents.store_probing_statistics(
-        measurement_request.uuid, agent.uuid, round_.encode(), statistics
+        measurement_request.uuid, agent.uuid, statistics
     )
 
     logger.info(f"{logger_prefix} Create results tables")
@@ -137,7 +135,7 @@ async def default_pipeline(
         else:
             # If there is no prefixes to probe left, skip the last sub-rounds
             # and directly go to round 2
-            next_round = Round(2, 0, 0)
+            next_round = Round(number=2, limit=0, offset=0)
             next_round_csv_filename = (
                 f"{agent.uuid}_next_round_csv_{next_round.encode()}.csv.zst"
             )

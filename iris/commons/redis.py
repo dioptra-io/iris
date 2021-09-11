@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -14,6 +13,7 @@ from iris.commons.schemas.public import (
     AgentParameters,
     AgentState,
     MeasurementState,
+    ProbingStatistics,
 )
 from iris.commons.settings import CommonSettings
 
@@ -128,20 +128,21 @@ class Redis:
     @fault_tolerant
     async def get_measurement_stats(
         self, measurement_uuid: UUID, agent_uuid: UUID
-    ) -> Dict:
+    ) -> Optional[ProbingStatistics]:
         """Get measurement statistics."""
-        state = await self.client.get(
+        if state := await self.client.get(
             measurement_stats_key(measurement_uuid, agent_uuid)
-        )
-        return json.loads(state or "{}")
+        ):
+            return ProbingStatistics.parse_raw(state)
+        return None
 
     @fault_tolerant
     async def set_measurement_stats(
-        self, measurement_uuid: UUID, agent_uuid: UUID, stats: Dict
+        self, measurement_uuid: UUID, agent_uuid: UUID, stats: ProbingStatistics
     ) -> None:
         """Set measurement statistics."""
         await self.client.set(
-            measurement_stats_key(measurement_uuid, agent_uuid), json.dumps(stats)
+            measurement_stats_key(measurement_uuid, agent_uuid), stats.json()
         )
 
     @fault_tolerant

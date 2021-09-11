@@ -12,9 +12,8 @@ from aiofiles import os as aios
 from iris.commons.database import Agents, Database, Measurements
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
-from iris.commons.round import Round
 from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
-from iris.commons.schemas.public import MeasurementState
+from iris.commons.schemas.public import MeasurementState, Round
 from iris.commons.storage import Storage
 from iris.worker.pipeline import default_pipeline
 from iris.worker.settings import WorkerSettings
@@ -123,6 +122,7 @@ async def watch(
         statistics = await redis.get_measurement_stats(
             measurement_request.uuid, agent.uuid
         )
+        assert statistics
 
         next_round, shuffled_next_round_csv_filename = await default_pipeline(
             settings,
@@ -226,7 +226,9 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         request = MeasurementRoundRequest(
             measurement=measurement_request,
             probes=None,
-            round=Round(1, settings.WORKER_ROUND_1_SLIDING_WINDOW, 0),
+            round=Round(
+                number=1, limit=settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0
+            ),
         )
 
         for agent in measurement_request.agents:

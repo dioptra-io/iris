@@ -80,7 +80,7 @@ class Agents:
                     "agent_uuid": agent.uuid,
                     "target_file": agent.target_file,
                     "probing_rate": agent.probing_rate,
-                    "probing_statistics": json.dumps({}),
+                    "probing_statistics": json.dumps([]),
                     "agent_parameters": agent_parameters.json(),
                     "tool_parameters": agent.tool_parameters.json(),
                     "state": public.MeasurementState.Ongoing.value,
@@ -93,18 +93,19 @@ class Agents:
         self,
         measurement_uuid: UUID,
         agent_uuid: UUID,
-        round_number: str,
-        probing_statistics: dict,
+        probing_statistics: public.ProbingStatistics,
     ) -> None:
         # Get the probing statistics already stored
         measurement = await self.get(measurement_uuid, agent_uuid)
         assert measurement
-        current_probing_statistics = {
-            x.round: x.statistics for x in measurement.probing_statistics
-        }
 
         # Update the probing statistics
-        current_probing_statistics[round_number] = probing_statistics
+        current_probing_statistics = {
+            x.round.encode(): x for x in measurement.probing_statistics
+        }
+        current_probing_statistics[
+            probing_statistics.round.encode()
+        ] = probing_statistics
 
         # Store the updated statistics on the database
         await self.database.call(
@@ -116,7 +117,9 @@ class Agents:
             SETTINGS mutations_sync=1
             """,
             {
-                "probing_statistics": json.dumps(current_probing_statistics),
+                "probing_statistics": json.dumps(
+                    [x.dict() for x in current_probing_statistics.values()]
+                ),
                 "measurement_uuid": measurement_uuid,
                 "agent_uuid": agent_uuid,
             },
@@ -167,7 +170,6 @@ class Agents:
             ),
             parameters=public.AgentParameters.parse_raw(row[5]),
             probing_statistics=[
-                public.ProbingStatistics(round=round_, statistics=statistics)
-                for round_, statistics in json.loads(row[4]).items()
+                public.ProbingStatistics(**x) for x in json.loads(row[4])
             ],
         )

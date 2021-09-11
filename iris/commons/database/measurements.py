@@ -48,7 +48,7 @@ class Measurements:
             f"SELECT Count() FROM {self.table} {where_clause}",
             {"user": user},
         )
-        return response[0][0]
+        return int(response[0][0])
 
     async def all(
         self, user: str, offset: int, limit: int, tag: Optional[str] = None

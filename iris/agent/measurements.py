@@ -11,9 +11,8 @@ from pytricia import PyTricia
 from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
-from iris.commons.round import Round
 from iris.commons.schemas.private import MeasurementRoundRequest
-from iris.commons.schemas.public import Tool, ToolParameters
+from iris.commons.schemas.public import ProbingStatistics, Round, Tool, ToolParameters
 from iris.commons.storage import Storage
 
 
@@ -99,7 +98,7 @@ async def measurement(
     logger: Logger,
     redis: AgentRedis,
     storage: Storage,
-) -> Tuple[str, Dict]:
+) -> Tuple[str, ProbingStatistics]:
     """Conduct a measurement."""
     measurement_request = request.measurement
     agent = measurement_request.agent(settings.AGENT_UUID)
@@ -212,8 +211,10 @@ async def measurement(
         prober_statistics = dict(prober_statistics)
         sniffer_statistics = dict(sniffer_statistics)
 
-    statistics = {**prober_statistics, **sniffer_statistics}
     logger.info("Upload probing statistics in Redis")
+    statistics = ProbingStatistics(
+        round=request.round, **prober_statistics, **sniffer_statistics
+    )
     await redis.set_measurement_stats(measurement_request.uuid, agent.uuid, statistics)
 
     if is_not_canceled:

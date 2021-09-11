@@ -12,7 +12,14 @@ from iris.api.main import app
 from iris.api.security import get_current_active_user
 from iris.commons.database import Database
 from iris.commons.redis import AgentRedis, Redis
-from iris.commons.schemas.public import Agent, AgentParameters, AgentState, Profile
+from iris.commons.schemas.public import (
+    Agent,
+    AgentParameters,
+    AgentState,
+    ProbingStatistics,
+    Profile,
+    Round,
+)
 from iris.commons.settings import CommonSettings
 
 
@@ -46,6 +53,22 @@ def user():
         "$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve"
     )
     return user
+
+
+@pytest.fixture
+def statistics():
+    return ProbingStatistics(
+        round=Round(number=1, limit=10, offset=0),
+        filtered_low_ttl=1,
+        filtered_high_ttl=2,
+        filtered_prefix_excl=3,
+        filtered_prefix_not_incl=4,
+        probes_read=5,
+        packets_sent=6,
+        packets_failed=7,
+        packets_received=8,
+        packets_received_invalid=9,
+    )
 
 
 @pytest.fixture(scope="session")

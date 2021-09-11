@@ -203,7 +203,8 @@ class Storage:
         session = aioboto3.Session()
         async with session.client("s3", **self.aws_settings) as s3:
             response = await s3.delete_object(Bucket=bucket, Key=filename)
-        return response["ResponseMetadata"]["HTTPStatusCode"] == 204
+        status_code: int = response["ResponseMetadata"]["HTTPStatusCode"]
+        return status_code == 204
 
     @fault_tolerant
     async def delete_all_files_from_bucket(self, bucket: str) -> None:

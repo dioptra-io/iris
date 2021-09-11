@@ -185,7 +185,7 @@ class QueryWrapper(Generic[T]):
         response = await self.database.execute(
             Count(query=self.query()), self.measurement_id, subsets=(self.subset,)
         )
-        return response[0][0]
+        return int(response[0][0])
 
     async def exists(self) -> bool:
         response = await self.database.call(f"EXISTS TABLE {self.table()}")

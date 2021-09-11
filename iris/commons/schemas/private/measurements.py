@@ -4,7 +4,6 @@ from uuid import UUID, uuid4
 
 from pydantic import Field
 
-from iris.commons.round import Round
 from iris.commons.schemas import public
 from iris.commons.schemas.base import BaseModel
 
@@ -26,4 +25,4 @@ class MeasurementRequest(public.MeasurementPostBody):
 class MeasurementRoundRequest(BaseModel):
     measurement: MeasurementRequest
     probes: Optional[str]
-    round: Round
+    round: public.Round

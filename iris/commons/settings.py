@@ -72,7 +72,10 @@ class CommonSettings(BaseSettings):
         return url
 
     async def redis_client(self) -> aioredis.Redis:
-        return await aioredis.from_url(self.REDIS_URL, decode_responses=True)
+        redis: aioredis.Redis = await aioredis.from_url(
+            self.REDIS_URL, decode_responses=True
+        )
+        return redis
 
     def database_retryer(self, logger):
         return retry(
