@@ -181,8 +181,8 @@ async def measurement(
     logger.info(f"{logger_prefix} Max Probing Rate : {agent.probing_rate}")
 
     with Manager() as manager:
-        prober_statistics = manager.dict()
-        sniffer_statistics = manager.dict()
+        prober_statistics = manager.dict()  # type: ignore
+        sniffer_statistics = manager.dict()  # type: ignore
 
         prober_process = Process(
             target=probe,
