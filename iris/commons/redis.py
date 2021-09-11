@@ -15,7 +15,7 @@ from iris.commons.schemas.public import (
     MeasurementState,
     ProbingStatistics,
 )
-from iris.commons.settings import CommonSettings
+from iris.commons.settings import CommonSettings, fault_tolerant
 
 
 def agent_heartbeat_key(uuid: Optional[UUID]) -> str:
@@ -48,28 +48,21 @@ class Redis:
     settings: CommonSettings
     logger: logging.Logger
 
-    def fault_tolerant(func):
-        async def wrapper(*args, **kwargs):
-            retryer = args[0].settings.redis_retryer(args[0].logger)
-            return await retryer(func)(*args, **kwargs)
-
-        return wrapper
-
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def get_agent_state(self, uuid: UUID) -> AgentState:
         """Get agent state."""
         if state := await self.client.get(agent_state_key(uuid)):
             return AgentState(state)
         return AgentState.Unknown
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def get_agent_parameters(self, uuid: UUID) -> Optional[AgentParameters]:
         """Get agent parameters."""
         if parameters := await self.client.get(agent_parameters_key(uuid)):
             return AgentParameters.parse_raw(parameters)
         return None
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def get_agents(self) -> List[Agent]:
         """Get agents UUID along with their state."""
         # TODO: Use SCAN instead of KEYS for better scaling?
@@ -97,7 +90,7 @@ class Redis:
             )
         return None
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def check_agent(self, uuid: UUID) -> bool:
         """Check the conformity of an agent."""
         if not await self.client.exists(agent_heartbeat_key(uuid)):
@@ -108,24 +101,24 @@ class Redis:
             return False
         return True
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def get_measurement_state(self, uuid: UUID) -> MeasurementState:
         """Get measurement state."""
         if state := await self.client.get(measurement_state_key(uuid)):
             return MeasurementState(state)
         return MeasurementState.Unknown
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def set_measurement_state(self, uuid: UUID, state: MeasurementState):
         """Set measurement state."""
         await self.client.set(measurement_state_key(uuid), state)
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def delete_measurement_state(self, uuid: UUID) -> None:
         """Delete measurement state."""
         await self.client.delete(measurement_state_key(uuid))
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def get_measurement_stats(
         self, measurement_uuid: UUID, agent_uuid: UUID
     ) -> Optional[ProbingStatistics]:
@@ -136,7 +129,7 @@ class Redis:
             return ProbingStatistics.parse_raw(state)
         return None
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def set_measurement_stats(
         self, measurement_uuid: UUID, agent_uuid: UUID, stats: ProbingStatistics
     ) -> None:
@@ -145,19 +138,19 @@ class Redis:
             measurement_stats_key(measurement_uuid, agent_uuid), stats.json()
         )
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def delete_measurement_stats(
         self, measurement_uuid: UUID, agent_uuid: UUID
     ) -> None:
         """Delete measurement statistics."""
         await self.client.delete(measurement_stats_key(measurement_uuid, agent_uuid))
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def publish(self, uuid: UUID, request: MeasurementRoundRequest) -> None:
         """Publish a message via into a channel."""
         await self.client.publish(agent_listen_key(uuid), request.json())
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def disconnect(self) -> None:
         """Close the connection."""
         await self.client.close()
@@ -167,42 +160,35 @@ class Redis:
 class AgentRedis(Redis):
     uuid: UUID
 
-    def fault_tolerant(func):
-        async def wrapper(*args, **kwargs):
-            retryer = args[0].settings.redis_retryer(args[0].logger)
-            return await retryer(func)(*args, **kwargs)
-
-        return wrapper
-
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def register(self, ttl_seconds: int) -> None:
         await self.client.set(agent_heartbeat_key(self.uuid), "alive", ex=ttl_seconds)
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def deregister(self) -> None:
         await self.client.delete(agent_heartbeat_key(self.uuid))
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def set_agent_state(self, state: AgentState) -> None:
         """Set agent state."""
         await self.client.set(agent_state_key(self.uuid), state)
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def delete_agent_state(self) -> None:
         """Delete agent state."""
         await self.client.delete(agent_state_key(self.uuid))
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def set_agent_parameters(self, parameters: AgentParameters) -> None:
         """Set agent parameters."""
         await self.client.set(agent_parameters_key(self.uuid), parameters.json())
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def delete_agent_parameters(self) -> None:
         """Delete agent state."""
         await self.client.delete(agent_parameters_key(self.uuid))
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.redis_retry)
     async def subscribe(self) -> MeasurementRoundRequest:
         """Subscribe to agent channels (all, specific) and wait for a response"""
         psub = self.client.pubsub()

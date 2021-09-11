@@ -1,5 +1,6 @@
 import logging
 import platform
+from functools import wraps
 
 import aioredis
 from pydantic import BaseSettings
@@ -10,6 +11,24 @@ from tenacity import (  # type: ignore
     wait_exponential,
     wait_random,
 )
+
+
+def fault_tolerant(retry_):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            # Retrieve logger and settings objects from
+            # the instance to which the function belongs.
+            parent = self
+            if hasattr(parent, "database"):
+                parent = parent.database
+            return await retry_(parent.settings, parent.logger)(func)(
+                self, *args, **kwargs
+            )
+
+        return wrapper
+
+    return decorator
 
 
 class CommonSettings(BaseSettings):
@@ -77,7 +96,7 @@ class CommonSettings(BaseSettings):
         )
         return redis
 
-    def database_retryer(self, logger):
+    def database_retry(self, logger):
         return retry(
             stop=stop_after_delay(self.DATABASE_TIMEOUT),
             wait=wait_exponential(
@@ -92,7 +111,7 @@ class CommonSettings(BaseSettings):
             before_sleep=(before_sleep_log(logger, logging.ERROR)),
         )
 
-    def redis_retryer(self, logger):
+    def redis_retry(self, logger):
         return retry(
             stop=stop_after_delay(self.REDIS_TIMEOUT),
             wait=wait_exponential(
@@ -107,7 +126,7 @@ class CommonSettings(BaseSettings):
             before_sleep=(before_sleep_log(logger, logging.ERROR)),
         )
 
-    def storage_retryer(self, logger):
+    def storage_retry(self, logger):
         return retry(
             stop=stop_after_delay(self.AWS_TIMEOUT),
             wait=wait_exponential(

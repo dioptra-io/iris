@@ -30,6 +30,7 @@ from pydantic import IPvAnyAddress
 
 from iris.commons.database.database import Database
 from iris.commons.schemas import public
+from iris.commons.settings import CommonSettings, fault_tolerant
 from iris.commons.subprocess import start_stream_subprocess
 
 T = TypeVar("T")
@@ -57,15 +58,6 @@ class InsertResults:
     @property
     def measurement_id(self) -> str:
         return f"{self.measurement_uuid}__{self.agent_uuid}"
-
-    def fault_tolerant(func):
-        async def wrapper(*args, **kwargs):
-            retryer = args[0].database.settings.database_retryer(
-                args[0].database.logger
-            )
-            return await retryer(func)(*args, **kwargs)
-
-        return wrapper
 
     async def create_table(self, drop: bool = False) -> None:
         """Create the results table."""
@@ -117,7 +109,7 @@ class InsertResults:
         await asyncio.gather(*[insert(file) for file in files])
         await aiofiles.os.rmdir(split_dir)
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.database_retry)
     async def insert_links(self) -> None:
         """Insert the links in the links table from the flow view."""
         await self.database.call(f"TRUNCATE {links_table(self.measurement_id)}")
@@ -134,7 +126,7 @@ class InsertResults:
             concurrent_requests=8,
         )
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.database_retry)
     async def insert_prefixes(self) -> None:
         """Insert the invalid prefixes in the prefix table."""
         await self.database.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")

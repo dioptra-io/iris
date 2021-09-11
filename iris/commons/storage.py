@@ -9,7 +9,7 @@ import aioboto3
 import boto3
 from botocore.exceptions import ClientError
 
-from iris.commons.settings import CommonSettings
+from iris.commons.settings import CommonSettings, fault_tolerant
 
 
 @dataclass(frozen=True)
@@ -28,14 +28,7 @@ class Storage:
             "region_name": self.settings.AWS_REGION_NAME,
         }
 
-    def fault_tolerant(func):
-        async def wrapper(*args, **kwargs):
-            retryer = args[0].settings.storage_retryer(args[0].logger)
-            return await retryer(func)(*args, **kwargs)
-
-        return wrapper
-
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def get_measurement_buckets(self) -> List[str]:
         """Get bucket list that is not infrastructure."""
         infrastructure_buckets = ["targets"]
@@ -50,7 +43,7 @@ class Storage:
             buckets.append(bucket["Name"])
         return buckets
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def create_bucket(self, bucket: str) -> None:
         """Create a bucket."""
         session = aioboto3.Session()
@@ -60,7 +53,7 @@ class Storage:
             except s3.exceptions.BucketAlreadyOwnedByYou:
                 pass
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def delete_bucket(self, bucket: str) -> None:
         """Delete a bucket."""
         session = aioboto3.Session()
@@ -94,7 +87,7 @@ class Storage:
                         raise
         return targets
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def get_all_files(self, bucket: str) -> List[Dict]:
         """Get all files inside a bucket."""
         return await self.get_all_files_no_retry(bucket)
@@ -119,7 +112,7 @@ class Storage:
             ],
         }
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def get_file(self, bucket: str, filename: str) -> Dict:
         """Get file information from a bucket."""
         return await self.get_file_no_retry(bucket, filename)
@@ -137,7 +130,7 @@ class Storage:
             extraargs = {"Metadata": metadata} if metadata else None
             s3.upload_fileobj(fd, bucket, filename, ExtraArgs=extraargs)
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def upload_file(
         self,
         bucket: str,
@@ -173,7 +166,7 @@ class Storage:
             s3 = boto3.client("s3", **self.aws_settings)
             s3.download_fileobj(bucket, filename, fd)
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def download_file(
         self, bucket: str, filename: str, output_path: Union[Path, str]
     ) -> None:
@@ -197,7 +190,7 @@ class Storage:
             res: Dict = await s3.delete_object(Bucket=bucket, Key=filename)
             return res
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def delete_file_no_check(self, bucket: str, filename: str) -> bool:
         """Delete a file with no check that it exists."""
         session = aioboto3.Session()
@@ -206,7 +199,7 @@ class Storage:
         status_code: int = response["ResponseMetadata"]["HTTPStatusCode"]
         return status_code == 204
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def delete_all_files_from_bucket(self, bucket: str) -> None:
         """Delete all files from a bucket."""
         session = aioboto3.Session()
@@ -214,7 +207,7 @@ class Storage:
             b = await s3.Bucket(bucket)
             await b.objects.all().delete()
 
-    @fault_tolerant
+    @fault_tolerant(CommonSettings.storage_retry)
     async def copy_file_to_bucket(
         self, bucket_src: str, bucket_dest: str, filename_src: str, filename_dst: str
     ) -> None:
