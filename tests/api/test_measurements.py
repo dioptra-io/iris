@@ -6,7 +6,7 @@ import pytest
 from iris.api.dependencies import get_redis, get_storage
 from iris.api.measurements import verify_quota
 from iris.api.security import get_current_active_user
-from iris.commons.database import Agents, Measurements, Replies
+from iris.commons.database import Replies, agents, measurements
 from iris.commons.schemas.public import (
     AgentParameters,
     FlowMapper,
@@ -111,8 +111,8 @@ def measurement_agent1():
 
 
 def test_get_measurements_empty(api_client_sync, monkeypatch):
-    monkeypatch.setattr(Measurements, "all", async_mock([]))
-    monkeypatch.setattr(Measurements, "all_count", async_mock(0))
+    monkeypatch.setattr(measurements, "all", async_mock([]))
+    monkeypatch.setattr(measurements, "all_count", async_mock(0))
     response = api_client_sync.get("/api/measurements")
     assert Paginated[MeasurementSummary](**response.json()) == Paginated(
         count=0, results=[]
@@ -120,7 +120,7 @@ def test_get_measurements_empty(api_client_sync, monkeypatch):
 
 
 def test_get_measurements(api_client_sync, monkeypatch):
-    measurements = [
+    measurements_ = [
         Measurement(
             uuid=uuid.uuid4(),
             username="test",
@@ -153,22 +153,22 @@ def test_get_measurements(api_client_sync, monkeypatch):
         ),
     ]
 
-    measurements = sorted(measurements, key=lambda x: x.start_time, reverse=True)
+    measurements_ = sorted(measurements_, key=lambda x: x.start_time, reverse=True)
     summaries = [
         MeasurementSummary(**x.dict(exclude={"agents", "username"}))
-        for x in measurements
+        for x in measurements_
     ]
 
     async def all(self, user, offset, limit, tag=None):
-        return measurements[offset : offset + limit]  # noqa : E203
+        return measurements_[offset : offset + limit]  # noqa : E203
 
     override(
         api_client_sync,
         get_redis,
         fake_redis_factory(measurement_state=MeasurementState.Finished),
     )
-    monkeypatch.setattr(Measurements, "all", all)
-    monkeypatch.setattr(Measurements, "all_count", async_mock(3))
+    monkeypatch.setattr(measurements, "all", all)
+    monkeypatch.setattr(measurements, "all_count", async_mock(3))
 
     # No (offset, limit)
     response = api_client_sync.get("/api/measurements")
@@ -349,8 +349,8 @@ def test_get_measurement_by_uuid(
     api_client_sync, measurement1, measurement_agent1, monkeypatch
 ):
     override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr(Agents, "all", async_mock([measurement_agent1]))
-    monkeypatch.setattr(Measurements, "get", async_mock(measurement1))
+    monkeypatch.setattr(agents, "all", async_mock([measurement_agent1]))
+    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
     expected = measurement1.copy(update={"agents": [measurement_agent1]})
     response = api_client_sync.get(f"/api/measurements/{measurement1.uuid}")
     assert Measurement(**response.json()) == expected
@@ -365,8 +365,8 @@ def test_get_measurement_by_uuid_waiting(
         fake_redis_factory(measurement_state=MeasurementState.Waiting),
     )
     override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr(Agents, "all", async_mock([measurement_agent1]))
-    monkeypatch.setattr(Measurements, "get", async_mock(measurement1))
+    monkeypatch.setattr(agents, "all", async_mock([measurement_agent1]))
+    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
     expected = measurement1.copy(
         update={
             "state": MeasurementState.Waiting,
@@ -380,7 +380,7 @@ def test_get_measurement_by_uuid_waiting(
 
 
 def test_get_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
-    monkeypatch.setattr(Measurements, "get", async_mock(None))
+    monkeypatch.setattr(measurements, "get", async_mock(None))
     measurement_uuid = str(uuid.uuid4())
     response = api_client_sync.get(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
@@ -401,14 +401,14 @@ def test_delete_measurement_by_uuid(api_client_sync, monkeypatch):
         get_redis,
         fake_redis_factory(measurement_state=MeasurementState.Ongoing),
     )
-    monkeypatch.setattr(Measurements, "get", async_mock({"uuid": "uuid"}))
+    monkeypatch.setattr(measurements, "get", async_mock({"uuid": "uuid"}))
     measurement_uuid = str(uuid.uuid4())
     response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
     assert response.json() == {"uuid": measurement_uuid, "action": "canceled"}
 
 
 def test_delete_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
-    monkeypatch.setattr(Measurements, "get", async_mock(None))
+    monkeypatch.setattr(measurements, "get", async_mock(None))
     measurement_uuid = str(uuid.uuid4())
     response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
@@ -417,7 +417,7 @@ def test_delete_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
 
 def test_delete_measurement_by_uuid_already_finished(api_client_sync, monkeypatch):
     override(api_client_sync, get_redis, fake_redis_factory())
-    monkeypatch.setattr(Measurements, "get", async_mock({"uuid": "uuid"}))
+    monkeypatch.setattr(measurements, "get", async_mock({"uuid": "uuid"}))
     measurement_uuid = str(uuid.uuid4())
     response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
     assert response.status_code == 404
@@ -453,9 +453,9 @@ def test_get_measurement_results(
         }
     ]
 
-    monkeypatch.setattr(Measurements, "get", async_mock(measurement1))
+    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
     monkeypatch.setattr(
-        Agents,
+        agents,
         "get",
         async_mock(
             measurement_agent1.copy(update={"state": MeasurementState.Finished})
@@ -474,9 +474,9 @@ def test_get_measurement_results(
 def test_get_measurement_results_table_not_exists(
     api_client_sync, measurement1, measurement_agent1, monkeypatch
 ):
-    monkeypatch.setattr(Measurements, "get", async_mock(measurement1))
+    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
     monkeypatch.setattr(
-        Agents,
+        agents,
         "get",
         async_mock(
             measurement_agent1.copy(update={"state": MeasurementState.Finished})
@@ -492,9 +492,9 @@ def test_get_measurement_results_table_not_exists(
 def test_get_measurement_results_not_finished(
     api_client_sync, measurement1, measurement_agent1, monkeypatch
 ):
-    monkeypatch.setattr(Measurements, "get", async_mock(measurement1))
+    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
     monkeypatch.setattr(
-        Agents,
+        agents,
         "get",
         async_mock(measurement_agent1.copy(update={"state": MeasurementState.Ongoing})),
     )
@@ -507,8 +507,8 @@ def test_get_measurement_results_not_finished(
 def test_get_measurement_results_no_agent(
     api_client_sync, measurement1, measurement_agent1, monkeypatch
 ):
-    monkeypatch.setattr(Measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(Agents, "get", async_mock(None))
+    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
+    monkeypatch.setattr(agents, "get", async_mock(None))
 
     response = api_client_sync.get(
         f"/api/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
@@ -523,7 +523,7 @@ def test_get_measurement_results_no_agent(
 
 
 def test_get_measurement_result_not_found(api_client_sync, monkeypatch):
-    monkeypatch.setattr(Measurements, "get", async_mock(None))
+    monkeypatch.setattr(measurements, "get", async_mock(None))
     response = api_client_sync.get(
         f"/api/results/{uuid.uuid4()}/{uuid.uuid4()}/replies/0.0.0.0"
     )

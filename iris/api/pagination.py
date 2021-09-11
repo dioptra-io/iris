@@ -79,16 +79,18 @@ class DatabasePagination(Pagination):
     Only `.all()` and `.all_count()` methods must be implemented."
     """
 
-    def __init__(self, database, *args, **kwargs):
+    def __init__(self, database, all, all_count, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.database = database
+        self.all = all
+        self.all_count = all_count
 
     async def get_count(self, *args, **kwargs):
         """Database count."""
-        return await self.database.all_count(*args, **kwargs)
+        return await self.all_count(self.database, *args, **kwargs)
 
     async def get_results(self, *args, **kwargs):
         """Database results."""
-        return await self.database.all(
-            *args, offset=self.offset, limit=self.limit, **kwargs
+        return await self.all(
+            self.database, *args, offset=self.offset, limit=self.limit, **kwargs
         )

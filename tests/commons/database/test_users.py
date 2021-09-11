@@ -1,13 +1,12 @@
 import pytest
 
-from iris.commons.database import Users
+from iris.commons.database import users
 from iris.commons.schemas.public import Profile, RIPEAccount
 
 
 @pytest.mark.asyncio
 async def test_users(database):
-    db = Users(database)
-    await db.create_table(drop=True)
+    await users.create_table(database, drop=True)
 
     user = Profile(
         username="foo",
@@ -18,18 +17,18 @@ async def test_users(database):
     )
     user._hashed_password = "abcdef"
 
-    await db.register(user)
-    assert not await db.get("unknown")
+    await users.register(database, user)
+    assert not await users.get(database, "unknown")
 
-    res = await db.get(user.username)
+    res = await users.get(database, user.username)
     assert res == user
 
     ripe_account = RIPEAccount(account="ripe-account", key="ripe-key")
 
-    await db.register_ripe(user.username, ripe_account)
-    res = await db.get("foo")
+    await users.register_ripe(database, user.username, ripe_account)
+    res = await users.get(database, "foo")
     assert res.ripe == ripe_account
 
-    await db.deregister_ripe(user.username)
-    res = await db.get("foo")
+    await users.deregister_ripe(database, user.username)
+    res = await users.get(database, "foo")
     assert not res.ripe

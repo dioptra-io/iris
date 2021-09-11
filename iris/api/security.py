@@ -9,7 +9,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from iris.api.dependencies import get_database, settings
-from iris.commons.database import Database, Users
+from iris.commons.database import Database, users
 from iris.commons.schemas import public
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -40,7 +40,7 @@ def create_access_token(
 async def get_user(
     request: Request, database: Database, username: str
 ) -> Optional[public.Profile]:
-    return await Users(database).get(username)
+    return await users.get(database, username)
 
 
 async def authenticate_user(

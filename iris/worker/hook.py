@@ -9,7 +9,7 @@ from uuid import UUID
 import dramatiq
 from aiofiles import os as aios
 
-from iris.commons.database import Agents, Database, Measurements
+from iris.commons.database import Database, agents, measurements
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
 from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
@@ -74,7 +74,6 @@ async def watch(
     assert agent.uuid
     logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
     database = Database(settings, logger)
-    database_agents = Agents(database)
 
     while True:
         if settings.WORKER_SANITY_CHECK_ENABLE:
@@ -84,8 +83,8 @@ async def watch(
             )
             if not is_agent_alive:
                 logger.warning(f"{logger_prefix} Stop watching agent")
-                await database_agents.stamp_finished(
-                    measurement_request.uuid, agent.uuid
+                await agents.stamp_finished(
+                    database, measurement_request.uuid, agent.uuid
                 )
                 break
             # Check if the measurement has been canceled
@@ -97,8 +96,8 @@ async def watch(
                 MeasurementState.Unknown,
             ]:
                 logger.warning(f"{logger_prefix} Measurement canceled")
-                await database_agents.stamp_canceled(
-                    measurement_request.uuid, agent.uuid
+                await agents.stamp_canceled(
+                    database, measurement_request.uuid, agent.uuid
                 )
                 break
 
@@ -140,7 +139,7 @@ async def watch(
 
         if next_round is None:
             logger.info(f"{logger_prefix} Measurement done for this agent")
-            await database_agents.stamp_finished(measurement_request.uuid, agent.uuid)
+            await agents.stamp_finished(database, measurement_request.uuid, agent.uuid)
             break
         else:
             logger.info(f"{logger_prefix} Publish next measurement")
@@ -158,8 +157,6 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
     logger.info(f"{logger_prefix} New measurement received")
 
     database = Database(settings, logger)
-    database_agents = Agents(database)
-    database_measurements = Measurements(database)
     redis = Redis(await settings.redis_client(), settings, logger)
     storage = Storage(settings, logger)
 
@@ -184,18 +181,18 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
             logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
         logger.info(f"{logger_prefix} Register measurement into database")
-        await database_measurements.create_table()
-        await database_measurements.register(measurement_request)
+        await measurements.create_table(database)
+        await measurements.register(database, measurement_request)
 
         logger.info(f"{logger_prefix} Register agents into database")
-        await database_agents.create_table()
+        await agents.create_table(database)
         for agent in measurement_request.agents:
             # Register agent in this measurement
             assert agent.uuid
             agent_parameters = await redis.get_agent_parameters(agent.uuid)
             if agent_parameters:
-                await database_agents.register(
-                    measurement_request, agent.uuid, agent_parameters
+                await agents.register(
+                    database, measurement_request, agent.uuid, agent_parameters
                 )
 
         logger.info(f"{logger_prefix} Archive target files")
@@ -233,12 +230,12 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
 
         for agent in measurement_request.agents:
             await redis.publish(agent.uuid, request)
-        agents = measurement_request.agents
+        agents_ = measurement_request.agents
 
     else:
         # We are in this state when the worker has failed and replays the measurement
         # So we skip off the agents those which are finished
-        agent_info = await database_agents.all(measurement_request.uuid)
+        agent_info = await agents.all(database, measurement_request.uuid)
         finished_agents = [
             a.uuid for a in agent_info if a.state == MeasurementState.Finished
         ]
@@ -246,13 +243,13 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         for agent in measurement_request.agents:
             if agent.uuid not in finished_agents:
                 filtered_agents.append(agent)
-        agents = filtered_agents
+        agents_ = filtered_agents
 
     logger.info(f"{logger_prefix} Watching ...")
     await asyncio.gather(
         *[
             watch(measurement_request, agent.uuid, logger, redis, storage)  # type: ignore
-            for agent in agents
+            for agent in agents_
         ]
     )
 
@@ -278,17 +275,17 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         await redis.get_measurement_state(measurement_request.uuid)
         == MeasurementState.Canceled
     ):
-        await database_measurements.stamp_canceled(
-            measurement_request.username, measurement_request.uuid
+        await measurements.stamp_canceled(
+            database, measurement_request.username, measurement_request.uuid
         )
     else:
-        await database_measurements.stamp_finished(
-            measurement_request.username, measurement_request.uuid
+        await measurements.stamp_finished(
+            database, measurement_request.username, measurement_request.uuid
         )
 
     logger.info(f"{logger_prefix} Stamp measurement end time")
-    await database_measurements.stamp_end_time(
-        measurement_request.username, measurement_request.uuid
+    await measurements.stamp_end_time(
+        database, measurement_request.username, measurement_request.uuid
     )
 
     logger.info(f"{logger_prefix} Measurement done")

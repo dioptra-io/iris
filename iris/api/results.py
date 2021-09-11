@@ -10,13 +10,13 @@ from iris.api.dependencies import get_database
 from iris.api.pagination import DatabasePagination
 from iris.api.security import get_current_active_user
 from iris.commons.database import (
-    Agents,
     Database,
     Interfaces,
     Links,
-    Measurements,
     Prefixes,
     Replies,
+    agents,
+    measurements,
 )
 from iris.commons.database.results import QueryWrapper
 from iris.commons.schemas import public
@@ -33,15 +33,15 @@ async def get_results(
     user: public.Profile,
     wrapper: QueryWrapper,
 ):
-    measurement_info = await Measurements(wrapper.database).get(
-        user.username, measurement_uuid
+    measurement_info = await measurements.get(
+        wrapper.database, user.username, measurement_uuid
     )
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
 
-    agent_info = await Agents(wrapper.database).get(measurement_uuid, agent_uuid)
+    agent_info = await agents.get(wrapper.database, measurement_uuid, agent_uuid)
 
     if agent_info is None:
         raise HTTPException(
@@ -65,7 +65,14 @@ async def get_results(
     if not is_table_exists:
         return {"count": 0, "next": None, "previous": None, "results": []}
 
-    querier = DatabasePagination(wrapper, request, offset, limit)
+    querier = DatabasePagination(
+        wrapper,
+        wrapper.__class__.all,
+        wrapper.__class__.all_count,
+        request,
+        offset,
+        limit,
+    )
     return await querier.query()
 
 

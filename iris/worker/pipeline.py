@@ -8,7 +8,7 @@ from diamond_miner import mappers
 from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
-from iris.commons.database import Agents, Database, InsertResults
+from iris.commons.database import Database, InsertResults, agents
 from iris.commons.redis import Redis
 from iris.commons.schemas.private import MeasurementRequest
 from iris.commons.schemas.public import ProbingStatistics, Round, Tool
@@ -33,7 +33,6 @@ async def default_pipeline(
     logger.info(f"{logger_prefix} New measurement file detected")
 
     database = Database(settings, logger)
-    database_agents = Agents(database)
     database_results = InsertResults(database, measurement_request.uuid, agent.uuid)
 
     logger.info(f"{logger_prefix} Get agent information")
@@ -61,8 +60,8 @@ async def default_pipeline(
         )
 
     logger.info(f"{logger_prefix} Store probing statistics")
-    await database_agents.store_probing_statistics(
-        measurement_request.uuid, agent.uuid, statistics
+    await agents.store_probing_statistics(
+        database, measurement_request.uuid, agent.uuid, statistics
     )
 
     logger.info(f"{logger_prefix} Create results tables")

@@ -12,7 +12,7 @@ from iris.api.security import (
     create_access_token,
     get_current_active_user,
 )
-from iris.commons.database import Database, Users
+from iris.commons.database import Database, users
 from iris.commons.schemas import public
 
 router = APIRouter()
@@ -75,7 +75,7 @@ async def put_ripe_profile(
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
-    await Users(database).register_ripe(user.username, ripe_info)
+    await users.register_ripe(database, user.username, ripe_info)
     return ripe_info
 
 
@@ -87,4 +87,4 @@ async def delete_ripe_profile(
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
-    await Users(database).deregister_ripe(user.username)
+    await users.deregister_ripe(database, user.username)

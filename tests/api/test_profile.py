@@ -1,6 +1,7 @@
 import pytest
 
-import iris.commons.database.users
+import iris.api.security
+from iris.commons.database import users
 from iris.commons.schemas.public import Profile, RIPEAccount
 
 
@@ -83,7 +84,7 @@ async def test_get_profile_ripe(api_client_factory, user):
 
 @pytest.mark.asyncio
 async def test_put_profile_ripe(api_client, monkeypatch):
-    monkeypatch.setattr(iris.commons.database.users.Users, "register_ripe", dummy)
+    monkeypatch.setattr(users, "register_ripe", dummy)
     ripe = RIPEAccount(account="ripe-account", key="ripe-key")
     async with api_client as c:
         response = await c.put("/api/profile/ripe", json=ripe.dict())
@@ -92,7 +93,7 @@ async def test_put_profile_ripe(api_client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_put_profile_ripe_clear(api_client, monkeypatch):
-    monkeypatch.setattr(iris.commons.database.users.Users, "deregister_ripe", dummy)
+    monkeypatch.setattr(users, "deregister_ripe", dummy)
     async with api_client as c:
         response = await c.delete("/api/profile/ripe")
         assert response.status_code == 200

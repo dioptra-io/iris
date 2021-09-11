@@ -9,7 +9,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, sta
 from iris.api.dependencies import get_database, get_redis, get_storage, settings
 from iris.api.pagination import DatabasePagination
 from iris.api.security import get_current_active_user
-from iris.commons.database import Agents, Database, Measurements
+from iris.commons.database import Database, agents, measurements
 from iris.commons.redis import Redis
 from iris.commons.schemas import private, public
 from iris.commons.storage import Storage
@@ -33,13 +33,15 @@ async def get_measurements(
     redis: Redis = Depends(get_redis),
 ):
     """Get all measurements."""
-    querier = DatabasePagination(Measurements(database), request, offset, limit)
+    querier = DatabasePagination(
+        database, measurements.all, measurements.all_count, request, offset, limit
+    )
     output = await querier.query(user=user.username, tag=tag)
 
-    measurements: List[public.Measurement] = output["results"]
+    measurements_: List[public.Measurement] = output["results"]
     summaries: List[public.MeasurementSummary] = []
 
-    for measurement in measurements:
+    for measurement in measurements_:
         state = await redis.get_measurement_state(measurement.uuid)
         if not state or state == public.MeasurementState.Unknown:
             state = measurement.state
@@ -256,7 +258,7 @@ async def get_measurement_by_uuid(
     storage: Storage = Depends(get_storage),
 ):
     """Get measurement information by uuid."""
-    measurement = await Measurements(database).get(user.username, measurement_uuid)
+    measurement = await measurements.get(database, user.username, measurement_uuid)
     if measurement is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -267,7 +269,7 @@ async def get_measurement_by_uuid(
         measurement = measurement.copy(update={"state": state})
 
     measurement_agents = []
-    agents_info = await Agents(database).all(measurement.uuid)
+    agents_info = await agents.all(database, measurement.uuid)
 
     for agent_info in agents_info:
         if measurement.state == public.MeasurementState.Waiting:
@@ -309,7 +311,7 @@ async def delete_measurement(
     redis: Redis = Depends(get_redis),
 ):
     """Cancel a measurement."""
-    measurement_info = await Measurements(database).get(user.username, measurement_uuid)
+    measurement_info = await measurements.get(database, user.username, measurement_uuid)
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"

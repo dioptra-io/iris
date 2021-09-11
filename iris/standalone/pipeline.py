@@ -14,7 +14,7 @@ from iris import __version__
 from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
-from iris.commons.database import Agents, Database, Measurements
+from iris.commons.database import Database, agents, measurements
 from iris.commons.redis import AgentRedis
 from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
 from iris.commons.schemas.public import AgentParameters, AgentState
@@ -34,9 +34,8 @@ from iris.worker.settings import WorkerSettings
 async def register_measurement(
     database: Database, measurement_request: MeasurementRequest
 ) -> None:
-    database_measurements = Measurements(database)
-    await database_measurements.create_table()
-    await database_measurements.register(measurement_request)
+    await measurements.create_table(database)
+    await measurements.register(database, measurement_request)
 
 
 async def register_agent(
@@ -45,22 +44,19 @@ async def register_agent(
     agent_uuid: UUID,
     agent_parameters: AgentParameters,
 ) -> None:
-    database_agents = Agents(database)
-    await database_agents.create_table()
-    await database_agents.register(measurement_request, agent_uuid, agent_parameters)
+    await agents.create_table(database)
+    await agents.register(database, measurement_request, agent_uuid, agent_parameters)
 
 
 async def stamp_measurement(database: Database, user: str, uuid: UUID) -> None:
-    database_measurements = Measurements(database)
-    await database_measurements.stamp_finished(user, uuid)
-    await database_measurements.stamp_end_time(user, uuid)
+    await measurements.stamp_finished(database, user, uuid)
+    await measurements.stamp_end_time(database, user, uuid)
 
 
 async def stamp_agent(
     database: Database, measurement_uuid: UUID, agent_uuid: UUID
 ) -> None:
-    database_agents = Agents(database)
-    await database_agents.stamp_finished(measurement_uuid, agent_uuid)
+    await agents.stamp_finished(database, measurement_uuid, agent_uuid)
 
 
 async def pipeline(

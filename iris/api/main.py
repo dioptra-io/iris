@@ -7,7 +7,7 @@ from starlette_exporter import PrometheusMiddleware, handle_metrics
 from iris import __version__
 from iris.api import router
 from iris.api.dependencies import get_database, get_storage, settings
-from iris.commons.database import Measurements, Users
+from iris.commons.database import measurements, users
 from iris.commons.schemas import public
 
 app = FastAPI(
@@ -45,13 +45,11 @@ async def startup_event():
     await database.create_database()
 
     # Create the measurement table
-    measurements = Measurements(database)
-    await measurements.create_table()
+    await measurements.create_table(database)
 
     # Create the users database on Clickhouse and admin user
-    users = Users(database)
-    await users.create_table()
-    admin_user = await users.get(settings.API_ADMIN_USERNAME)
+    await users.create_table(database)
+    admin_user = await users.get(database, settings.API_ADMIN_USERNAME)
     if admin_user is None:
         profile = public.Profile(
             username=settings.API_ADMIN_USERNAME,
@@ -61,7 +59,7 @@ async def startup_event():
             quota=settings.API_ADMIN_QUOTA,
         )
         profile._hashed_password = settings.API_ADMIN_HASHED_PASSWORD
-        await users.register(profile)
+        await users.register(database, profile)
 
     # Create `targets` bucket in AWS S3 for admin user
     await storage.create_bucket(
