@@ -59,28 +59,28 @@ async def get_measurements(
     return output
 
 
-async def verify_quota(tool, content, user_quota):
+async def verify_quota(
+    content: str,
+    prefix_len_v4: int,
+    prefix_len_v6: int,
+    user_quota: int,
+) -> bool:
     """Verify that the quota is not exceeded."""
-    targets = [p.strip() for p in content.split()]
-    if tool in [public.Tool.DiamondMiner, public.Tool.Yarrp]:
-        n_prefixes = count_prefixes([target.split(",")[0] for target in targets])
-    elif tool == public.Tool.Ping:
-        n_prefixes = count_prefixes(
-            [target.split(",")[0] for target in targets],
-            prefix_len_v4=32,
-            prefix_len_v6=128,
-        )
-    else:
-        raise ValueError("Unrecognized tool")
+    n_prefixes = count_prefixes(
+        (p.split(",")[0].strip() for p in content.split()),
+        prefix_len_v4=prefix_len_v4,
+        prefix_len_v6=prefix_len_v6,
+    )
     return n_prefixes <= user_quota
 
 
 async def target_file_validator(
-    request,
     storage: Storage,
     tool: public.Tool,
     user: public.Profile,
     target_filename: str,
+    prefix_len_v4: int,
+    prefix_len_v6: int,
 ):
     """Validate the target file input."""
 
@@ -107,7 +107,7 @@ async def target_file_validator(
     # Check if the user respects his quota
     try:
         is_quota_respected = await verify_quota(
-            tool, target_file["content"], user.quota
+            target_file["content"], prefix_len_v4, prefix_len_v6, user.quota
         )
     except ValueError:
         raise HTTPException(
@@ -210,18 +210,15 @@ async def post_measurement(
 
         # Check agent target file
         global_min_ttl, global_max_ttl = await target_file_validator(
-            request, storage, measurement.tool, user, agent.target_file
+            storage,
+            measurement.tool,
+            user,
+            agent.target_file,
+            agent.tool_parameters.prefix_len_v4,
+            agent.tool_parameters.prefix_len_v6,
         )
         agent.tool_parameters.global_min_ttl = global_min_ttl
         agent.tool_parameters.global_max_ttl = global_max_ttl
-
-        # Enforce some tool specific parameters
-        # TODO: Can we do this with pydantic?
-        if measurement.tool == public.Tool.DiamondMiner:
-            agent.tool_parameters.n_flow_ids = 6
-        if measurement.tool in (public.Tool.Ping, public.Tool.Yarrp):
-            agent.tool_parameters.n_flow_ids = 1
-            agent.tool_parameters.max_round = 1
 
     # Update the agents list and set private metadata.
     measurement_request = private.MeasurementRequest(

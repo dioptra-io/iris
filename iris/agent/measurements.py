@@ -6,7 +6,6 @@ from typing import Dict, Iterable, List, Optional, Tuple
 import aiofiles
 import aiofiles.os
 from diamond_miner import mappers
-from diamond_miner.defaults import DEFAULT_PREFIX_LEN_V4, DEFAULT_PREFIX_LEN_V6
 from pytricia import PyTricia
 
 from iris.agent.prober import probe, watcher
@@ -34,20 +33,14 @@ def build_probe_generator_parameters(
         * an address: 8.8.8.8, 2001:4860:4860::8888
     Addresses are interpreted as /32 or /128 networks.
     """
-    # Diamond-Miner and Yarrp target prefixes (with more than 1 addresses)
-    prefix_len_v4, prefix_len_v6 = DEFAULT_PREFIX_LEN_V4, DEFAULT_PREFIX_LEN_V6
-    # Ping targets single addresses
-    if tool == Tool.Ping:
-        prefix_len_v4, prefix_len_v6 = 32, 128
-
     # 1. Instantiate the flow mappers
     flow_mapper_cls = getattr(mappers, tool_parameters.flow_mapper)
     flow_mapper_kwargs = tool_parameters.flow_mapper_kwargs or {}
     flow_mapper_v4 = flow_mapper_cls(
-        **{"prefix_size": 2 ** (32 - prefix_len_v4), **flow_mapper_kwargs}
+        **{"prefix_size": tool_parameters.prefix_size_v4, **flow_mapper_kwargs}
     )
     flow_mapper_v6 = flow_mapper_cls(
-        **{"prefix_size": 2 ** (128 - prefix_len_v6), **flow_mapper_kwargs}
+        **{"prefix_size": tool_parameters.prefix_size_v6, **flow_mapper_kwargs}
     )
 
     prefixes: List[Tuple[str, str, Iterable[int]]] = []
@@ -91,8 +84,8 @@ def build_probe_generator_parameters(
 
     return {
         "prefixes": prefixes,
-        "prefix_len_v4": prefix_len_v4,
-        "prefix_len_v6": prefix_len_v6,
+        "prefix_len_v4": tool_parameters.prefix_len_v4,
+        "prefix_len_v6": tool_parameters.prefix_len_v6,
         "flow_ids": range(tool_parameters.n_flow_ids),
         "probe_dst_port": tool_parameters.destination_port,
         "mapper_v4": flow_mapper_v4,

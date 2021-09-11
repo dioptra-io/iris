@@ -114,6 +114,8 @@ def test_build_probe_generator_parameters_ping():
         n_flow_ids=1,
         flow_mapper=public.FlowMapper.SequentialFlowMapper,
         flow_mapper_kwargs=None,
+        prefix_len_v4=32,
+        prefix_len_v6=128,
     )
 
     target_list = ["8.8.8.8,icmp,2,32", "8.8.4.4,icmp,2,32"]

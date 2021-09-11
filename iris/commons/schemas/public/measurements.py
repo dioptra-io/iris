@@ -38,12 +38,22 @@ class ToolParameters(BaseModel):
     flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(
         {"seed": 42}, title="Optional keyword arguments for the flow mapper"
     )
+    prefix_len_v4: int = Field(24, ge=0, le=32, title="Target prefix length")
+    prefix_len_v6: int = Field(64, ge=0, le=128, title="Target prefix length")
     global_min_ttl: int = Field(
         0, ge=0, le=255, title="Do not set. Overridden by the API."
     )
     global_max_ttl: int = Field(
         255, ge=0, le=255, title="Do not set. Overridden by the API."
     )
+
+    @property
+    def prefix_size_v4(self):
+        return 2 ** (32 - self.prefix_len_v4)
+
+    @property
+    def prefix_size_v6(self):
+        return 2 ** (128 - self.prefix_len_v6)
 
 
 class MeasurementState(str, Enum):
@@ -124,6 +134,35 @@ class MeasurementPostBody(BaseModel):
         description="Optional agent parameters can also be set",
     )
     tags: List[str] = Field([], title="Tags")
+
+    @root_validator
+    def check_tool_parameters(cls, values):
+        agents: List[MeasurementAgentPostBody] = values.get("agents")
+        tool: Tool = values.get("tool")
+        for agent in agents:
+            if tool == Tool.DiamondMiner:
+                if agent.tool_parameters.n_flow_ids != 6:
+                    raise ValueError("`n_flow_ids` must be 6 for diamond-miner")
+                # NOTE: We could use other values, but this would require to change
+                # the Diamond-Miner results schema which has a materialized column
+                # for the destination prefix which assumes /24 and /64 prefixes.
+                if agent.tool_parameters.prefix_len_v4 != 24:
+                    raise ValueError("`prefix_len_v4` must be 24 for diamond-miner")
+                if agent.tool_parameters.prefix_len_v6 != 64:
+                    raise ValueError("`prefix_len_v6` must be 64 for diamond-miner")
+            if tool == Tool.Ping:
+                # NOTE: Technically we could use a larger prefix length to allow
+                # the flow mapper to choose a random IP address inside the prefix,
+                # but users probably expect ping to target a specific IP address.
+                if agent.tool_parameters.prefix_len_v4 != 32:
+                    raise ValueError("`prefix_len_v4` must be 32 for ping")
+                if agent.tool_parameters.prefix_len_v6 != 128:
+                    raise ValueError("`prefix_len_v6` must be 128 for ping")
+            if tool in [tool.Ping, tool.Yarrp]:
+                # NOTE: We could allow Yarrp to perform multiple flows.
+                if agent.tool_parameters.n_flow_ids != 1:
+                    raise ValueError("`n_flow_ids` must be 1 for ping and yarrp")
+        return values
 
 
 class MeasurementPostResponse(BaseModel):

@@ -6,12 +6,6 @@ from uuid import UUID
 import aiofiles
 from aiofiles import os as aios
 from diamond_miner import mappers
-from diamond_miner.defaults import (
-    DEFAULT_PREFIX_LEN_V4,
-    DEFAULT_PREFIX_LEN_V6,
-    DEFAULT_PREFIX_SIZE_V4,
-    DEFAULT_PREFIX_SIZE_V6,
-)
 from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.rounds.mda_parallel import mda_probes_parallel
 
@@ -19,6 +13,7 @@ from iris.commons.database import Agents, Database, InsertResults
 from iris.commons.redis import Redis
 from iris.commons.round import Round
 from iris.commons.schemas.private import MeasurementRequest
+from iris.commons.schemas.public import Tool
 from iris.commons.storage import Storage
 from iris.worker import WorkerSettings
 
@@ -117,11 +112,10 @@ async def default_pipeline(
         ).execute_iter_async(
             settings.database_url(), f"{measurement_request.uuid}__{agent.uuid}"
         ):
-            # TODO: Should we store the prefix length information in the database?
             if addr_v4 := addr_v6.ipv4_mapped:
-                prefix = f"{addr_v4}/{DEFAULT_PREFIX_LEN_V4}"
+                prefix = f"{addr_v4}/{agent.tool_parameters.prefix_len_v4}"
             else:
-                prefix = f"{addr_v6}/{DEFAULT_PREFIX_LEN_V6}"
+                prefix = f"{addr_v6}/{agent.tool_parameters.prefix_len_v6}"
             prefixes_to_probe.append(prefix)
 
         if prefixes_to_probe:
@@ -149,6 +143,10 @@ async def default_pipeline(
             )
             next_round_csv_filepath = measurement_results_path / next_round_csv_filename
 
+    if measurement_request.tool != Tool.DiamondMiner:
+        logger.info(f"{logger_prefix} Tool does not support rounds > 1. Stopping.")
+        return None, None
+
     if next_round.number > agent.tool_parameters.max_round:
         logger.info(f"{logger_prefix} Maximum round reached. Stopping.")
         return None, None
@@ -157,10 +155,10 @@ async def default_pipeline(
     flow_mapper_cls = getattr(mappers, agent.tool_parameters.flow_mapper)
     flow_mapper_kwargs = agent.tool_parameters.flow_mapper_kwargs or {}
     flow_mapper_v4 = flow_mapper_cls(
-        **{"prefix_size": DEFAULT_PREFIX_SIZE_V4, **flow_mapper_kwargs}
+        **{"prefix_size": agent.tool_parameters.prefix_size_v4, **flow_mapper_kwargs}
     )
     flow_mapper_v6 = flow_mapper_cls(
-        **{"prefix_size": DEFAULT_PREFIX_SIZE_V6, **flow_mapper_kwargs}
+        **{"prefix_size": agent.tool_parameters.prefix_size_v6, **flow_mapper_kwargs}
     )
     n_probes_to_send = await mda_probes_parallel(
         filepath=next_round_csv_filepath,

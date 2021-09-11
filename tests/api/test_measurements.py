@@ -214,10 +214,10 @@ def test_get_measurements(api_client_sync, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_verify_quota():
-    assert await verify_quota("diamond-miner", "8.8.8.0/23,icmp,2,32", 2) is True
-    assert await verify_quota("diamond-miner", "8.8.8.0/23,icmp,2,32", 1) is False
-    assert await verify_quota("ping", "8.8.8.0/24", 256) is True
-    assert await verify_quota("ping", "8.8.8.0/24", 255) is False
+    assert await verify_quota("8.8.8.0/23,icmp,2,32", 24, 64, 2) is True
+    assert await verify_quota("8.8.8.0/23,icmp,2,32", 24, 64, 1) is False
+    assert await verify_quota("8.8.8.0/24", 32, 128, 256) is True
+    assert await verify_quota("8.8.8.0/24", 32, 128, 255) is False
 
 
 def test_post_measurement(api_client_sync, agent, monkeypatch):
@@ -227,7 +227,17 @@ def test_post_measurement(api_client_sync, agent, monkeypatch):
     for tool in Tool:
         body = MeasurementPostBody(
             tool=Tool(tool),
-            agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
+            agents=[
+                MeasurementAgentPostBody(
+                    uuid=agent.uuid,
+                    target_file="test.csv",
+                    tool_parameters=ToolParameters(
+                        n_flow_ids=6 if tool == Tool.DiamondMiner else 1,
+                        prefix_len_v4=32 if tool == Tool.Ping else 24,
+                        prefix_len_v6=128 if tool == Tool.Ping else 64,
+                    ),
+                )
+            ],
         )
         response = api_client_sync.post("/api/measurements/", data=body.json())
         assert response.status_code == 201
@@ -239,13 +249,12 @@ def test_post_measurement_quota_exceeded(api_client_sync, agent, user, monkeypat
     override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
     override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    for tool in Tool:
-        body = MeasurementPostBody(
-            tool=Tool(tool),
-            agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
-        )
-        response = api_client_sync.post("/api/measurements/", data=body.json())
-        assert response.status_code == 403
+    body = MeasurementPostBody(
+        tool=Tool.DiamondMiner,
+        agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
+    )
+    response = api_client_sync.post("/api/measurements/", data=body.json())
+    assert response.status_code == 403
 
 
 def test_post_measurement_diamond_miner_invalid_prefix_length(
