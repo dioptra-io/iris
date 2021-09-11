@@ -189,12 +189,12 @@ async def measurement(
             target=probe,
             args=(
                 settings,
-                results_filepath,
+                str(results_filepath),
                 request.round.number,
                 agent.probing_rate,
                 prober_statistics,
                 gen_parameters,
-                probes_filepath,
+                str(probes_filepath),
             ),
         )
 
