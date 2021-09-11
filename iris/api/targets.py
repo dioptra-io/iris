@@ -43,7 +43,11 @@ async def get_targets(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
         )
-    querier = ListPagination(targets, request, offset, limit)
+    summaries = [
+        public.TargetSummary(key=target["key"], last_modified=target["last_modified"])
+        for target in targets
+    ]
+    querier = ListPagination(summaries, request, offset, limit)
     return await querier.query()
 
 
@@ -69,9 +73,12 @@ async def get_target_by_key(
             status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
         )
 
-    target_file["content"] = [c.strip() for c in target_file["content"].split()]
-
-    return target_file
+    return public.Target(
+        key=target_file["key"],
+        size=target_file["size"],
+        content=[c.strip() for c in target_file["content"].split()],
+        last_modified=target_file["last_modified"],
+    )
 
 
 async def verify_target_file(target_file):

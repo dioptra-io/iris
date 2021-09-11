@@ -32,7 +32,8 @@ class LocalStorage:
             metadata = json.loads(metadata_path.read_text())
         return {"key": filename, "metadata": metadata}
 
-    def __ensure_dir(self, output_path):
+    @staticmethod
+    def __ensure_dir(output_path):
         Path(output_path).parent.mkdir(exist_ok=True, parents=True)
 
     def __bucket_path(self, bucket):

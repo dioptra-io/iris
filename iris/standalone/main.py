@@ -46,11 +46,9 @@ async def diamond_miner(
 
     tool: Tool = Tool.DiamondMiner
     tool_parameters = ToolParameters(
-        **{
-            "initial_source_port": initial_source_port,
-            "destination_port": destination_port,
-            "max_round": max_round,
-        }
+        initial_source_port=initial_source_port,
+        destination_port=destination_port,
+        max_round=max_round,
     )
 
     # Create logger
@@ -84,11 +82,9 @@ async def yarrp(
 
     tool: Tool = Tool.Yarrp
     tool_parameters = ToolParameters(
-        **{
-            "initial_source_port": initial_source_port,
-            "destination_port": destination_port,
-            "max_round": 1,
-        }
+        initial_source_port=initial_source_port,
+        destination_port=destination_port,
+        n_flow_ids=1,
     )
 
     # Create logger
@@ -122,11 +118,11 @@ async def ping(
 
     tool = Tool.Ping
     tool_parameters = ToolParameters(
-        **{
-            "initial_source_port": initial_source_port,
-            "destination_port": destination_port,
-            "max_round": 1,
-        }
+        initial_source_port=initial_source_port,
+        destination_port=destination_port,
+        prefix_len_v4=32,
+        prefix_len_v6=128,
+        n_flow_ids=1,
     )
 
     # Create logger

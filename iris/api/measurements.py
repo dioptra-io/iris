@@ -1,6 +1,6 @@
 """Measurements operations."""
 
-from typing import List, Set
+from typing import Dict, List
 from uuid import UUID
 
 from diamond_miner.generators import count_prefixes
@@ -190,7 +190,7 @@ async def post_measurement(
 
     # Keep track of the registered agents to make sure that an agent is not
     # registered twice. e.g. with two overlapping agent tags.
-    registered_agents: Set[UUID] = set()
+    registered_agents: Dict[UUID, public.MeasurementAgentPostBody] = {}
 
     for agent in agents:
         # Ensure that the agent exists
@@ -206,7 +206,6 @@ async def post_measurement(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Multiple definition of agent `{agent.uuid}`",
             )
-        registered_agents.add(agent.uuid)
 
         # Check agent target file
         global_min_ttl, global_max_ttl = await target_file_validator(
@@ -217,12 +216,23 @@ async def post_measurement(
             agent.tool_parameters.prefix_len_v4,
             agent.tool_parameters.prefix_len_v6,
         )
-        agent.tool_parameters.global_min_ttl = global_min_ttl
-        agent.tool_parameters.global_max_ttl = global_max_ttl
+
+        registered_agents[agent.uuid] = agent.copy(
+            update={
+                "tool_parameters": agent.tool_parameters.copy(
+                    update={
+                        "global_min_ttl": global_min_ttl,
+                        "global_max_ttl": global_max_ttl,
+                    }
+                )
+            }
+        )
 
     # Update the agents list and set private metadata.
     measurement_request = private.MeasurementRequest(
-        **measurement.dict(exclude={"agents"}), agents=agents, username=user.username
+        **measurement.dict(exclude={"agents"}),
+        agents=list(registered_agents.values()),
+        username=user.username,
     )
 
     # Launch a measurement procedure on the worker.
@@ -254,12 +264,14 @@ async def get_measurement_by_uuid(
 
     state = await redis.get_measurement_state(measurement_uuid)
     if state and state != public.MeasurementState.Unknown:
-        measurement.state = state
+        measurement = measurement.copy(update={"state": state})
 
+    measurement_agents = []
     agents_info = await Agents(database).all(measurement.uuid)
+
     for agent_info in agents_info:
         if measurement.state == public.MeasurementState.Waiting:
-            agent_info.state = public.MeasurementState.Waiting
+            agent_info = agent_info.copy(update={"state": measurement.state})
         try:
             target_file = await storage.get_file_no_retry(
                 settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user.username,
@@ -269,12 +281,18 @@ async def get_measurement_by_uuid(
             # NOTE: Don't display the measurement if the file is too big
             # to avoid to slow down the API.
             if len(target_file_content) <= 100:
-                agent_info.specific.target_file_content = target_file_content
+                agent_info = agent_info.copy(
+                    update={
+                        "specific": agent_info.specific.copy(
+                            update={"target_file_content": target_file_content}
+                        )
+                    }
+                )
         except Exception:
             pass
-        measurement.agents.append(agent_info)
+        measurement_agents.append(agent_info)
 
-    return measurement
+    return measurement.copy(update={"agents": measurement_agents})
 
 
 @router.delete(

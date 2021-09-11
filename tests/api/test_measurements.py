@@ -68,7 +68,7 @@ def measurement_agent1():
         state=MeasurementState.Unknown,
         specific=MeasurementAgentSpecific(
             target_file="test.csv",
-            target_file_content=[],
+            target_file_content=["8.8.8.0/23,icmp,2,32"],
             probing_rate=None,
             tool_parameters=ToolParameters(
                 initial_source_port=24000,

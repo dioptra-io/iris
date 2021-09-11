@@ -17,7 +17,6 @@ async def test_users(database):
         quota=100,
     )
     user._hashed_password = "abcdef"
-    user.register_date = user.register_date.replace(microsecond=0)
 
     await db.register(user)
     assert not await db.get("unknown")

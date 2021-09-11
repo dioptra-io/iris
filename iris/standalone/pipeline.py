@@ -1,10 +1,10 @@
 import logging
 import socket
-import uuid
 import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+from uuid import UUID, uuid4
 
 import aiofiles
 from diamond_miner.queries import Count, GetLinks, GetNodes, results_table
@@ -42,7 +42,7 @@ async def register_measurement(
 async def register_agent(
     database: Database,
     measurement_request: MeasurementRequest,
-    agent_uuid: uuid.UUID,
+    agent_uuid: UUID,
     agent_parameters: AgentParameters,
 ) -> None:
     database_agents = Agents(database)
@@ -50,14 +50,14 @@ async def register_agent(
     await database_agents.register(measurement_request, agent_uuid, agent_parameters)
 
 
-async def stamp_measurement(database: Database, user: str, uuid: uuid.UUID) -> None:
+async def stamp_measurement(database: Database, user: str, uuid: UUID) -> None:
     database_measurements = Measurements(database)
     await database_measurements.stamp_finished(user, uuid)
     await database_measurements.stamp_end_time(user, uuid)
 
 
 async def stamp_agent(
-    database: Database, measurement_uuid: uuid.UUID, agent_uuid: uuid.UUID
+    database: Database, measurement_uuid: UUID, agent_uuid: UUID
 ) -> None:
     database_agents = Agents(database)
     await database_agents.stamp_finished(measurement_uuid, agent_uuid)
@@ -77,9 +77,9 @@ async def pipeline(
     warnings.filterwarnings("ignore", category=UserWarning, module="tzlocal")
 
     # Enforce tool parameters
-    tool_parameters.n_flow_ids = 6 if tool == Tool.DiamondMiner else 1
-    tool_parameters.global_min_ttl = 1
-    tool_parameters.global_max_ttl = 32
+    tool_parameters = tool_parameters.copy(
+        update={"global_min_ttl": 1, "global_max_ttl": 32}
+    )
 
     # Get all settings
     agent_settings = AgentSettings()
@@ -87,7 +87,7 @@ async def pipeline(
         agent_settings.AGENT_CARACAL_LOGGING_LEVEL = logging.WARNING
     worker_settings = WorkerSettings()
 
-    measurement_uuid = uuid.uuid4()
+    measurement_uuid = uuid4()
     start_time = datetime.now()
 
     # Find min TTL automatically
