@@ -210,16 +210,18 @@ async def measurement(
 
         prober_statistics = dict(prober_statistics)
 
-    logger.info("Upload probing statistics in Redis")
-    statistics = ProbingStatistics(
-        round=request.round,
-        start_time=probing_start_time,
-        end_time=datetime.now(),
-        **prober_statistics,
-    )
-    await redis.set_measurement_stats(measurement_request.uuid, agent.uuid, statistics)
-
     if is_not_canceled:
+        logger.info("Upload probing statistics in Redis")
+        statistics = ProbingStatistics(
+            round=request.round,
+            start_time=probing_start_time,
+            end_time=datetime.now(),
+            **prober_statistics,
+        )
+        await redis.set_measurement_stats(
+            measurement_request.uuid, agent.uuid, statistics
+        )
+
         logger.info(f"{logger_prefix} Upload results file into AWS S3")
         await storage.upload_file(
             storage.measurement_bucket(measurement_request.uuid),
