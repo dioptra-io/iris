@@ -17,6 +17,11 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
     docs_url="/api/docs",
     redoc_url=None,
+    contact={
+        "name": "Dioptra",
+        "url": "https://dioptra.io",
+        "email": "contact@dioptra.io",
+    },
 )
 
 

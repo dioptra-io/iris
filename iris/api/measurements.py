@@ -169,11 +169,11 @@ async def post_measurement(
     print(user)
 
     # Update the list of requested agents to include agents selected by tag.
-    agents: List[public.MeasurementAgentPostBody] = []
+    agents_: List[public.MeasurementAgentPostBody] = []
 
     for agent in measurement.agents:
         if agent.uuid:
-            agents.append(agent)
+            agents_.append(agent)
         else:
             at_least_one = False
             for uuid, active_agent in active_agents.items():
@@ -182,7 +182,7 @@ async def post_measurement(
                     and agent.tag in active_agent.parameters.agent_tags
                 ):
                     # Matching agent for tag found, replace tag field with uuid field
-                    agents.append(agent.copy(exclude={"tag"}, update={"uuid": uuid}))
+                    agents_.append(agent.copy(exclude={"tag"}, update={"uuid": uuid}))
                     at_least_one = True
             if not at_least_one:
                 raise HTTPException(
@@ -194,7 +194,7 @@ async def post_measurement(
     # registered twice. e.g. with two overlapping agent tags.
     registered_agents: Dict[UUID, public.MeasurementAgentPostBody] = {}
 
-    for agent in agents:
+    for agent in agents_:
         # Ensure that the agent exists
         if agent.uuid not in active_agents:
             raise HTTPException(

@@ -1,6 +1,7 @@
 import logging
 import subprocess
 from datetime import datetime
+from ipaddress import IPv4Address, IPv6Address
 from uuid import uuid4
 
 import fakeredis.aioredis
@@ -31,8 +32,8 @@ def agent():
         parameters=AgentParameters(
             version="0.1.0",
             hostname="localhost",
-            ipv4_address="127.0.0.1",
-            ipv6_address="::1",
+            ipv4_address=IPv4Address("127.0.0.1"),
+            ipv6_address=IPv6Address("::1"),
             min_ttl=1,
             max_probing_rate=1000,
             agent_tags=["test"],
@@ -45,7 +46,7 @@ def agent():
 def user():
     user = Profile(
         username="test",
-        email="test@test",
+        email="foo.bar@mail.com",
         is_active=True,
         is_admin=True,
         quota=1000,

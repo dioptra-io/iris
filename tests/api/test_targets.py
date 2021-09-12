@@ -1,4 +1,5 @@
 import tempfile
+from datetime import datetime, timezone
 
 import pytest
 
@@ -11,7 +12,7 @@ target1 = {
     "key": "test",
     "size": 42,
     "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
-    "last_modified": "test",
+    "last_modified": "2021-06-04 13:51:08.000000+00:00",
     "metadata": None,
 }
 
@@ -24,7 +25,13 @@ async def test_get_targets(api_client):
     async with api_client as c:
         response = await c.get("/api/targets")
         assert Paginated[TargetSummary](**response.json()) == Paginated(
-            count=1, results=[TargetSummary(key="test", last_modified="test")]
+            count=1,
+            results=[
+                TargetSummary(
+                    key="test",
+                    last_modified=datetime(2021, 6, 4, 13, 51, 8, tzinfo=timezone.utc),
+                )
+            ],
         )
 
 
@@ -50,7 +57,7 @@ async def test_get_targets_by_key(api_client):
             key="test",
             size=42,
             content=["1.1.1.0/24,icmp,2,32", "2.2.2.0/24,udp,5,20"],
-            last_modified="test",
+            last_modified=datetime(2021, 6, 4, 13, 51, 8, tzinfo=timezone.utc),
         )
 
 

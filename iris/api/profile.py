@@ -67,7 +67,7 @@ async def get_profile(
     "/ripe",
     status_code=status.HTTP_201_CREATED,
     response_model=public.RIPEAccount,
-    summary="Add RIPE account information to the current user.",
+    summary="Add RIPE Atlas account information to the current user.",
 )
 async def put_ripe_profile(
     request: Request,
@@ -80,7 +80,7 @@ async def put_ripe_profile(
 
 
 @router.delete(
-    "/ripe", summary="Remove RIPE account information from the current user."
+    "/ripe", summary="Remove RIPE Atlas account information from the current user."
 )
 async def delete_ripe_profile(
     request: Request,

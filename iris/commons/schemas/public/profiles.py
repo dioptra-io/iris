@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from pydantic import Field, PrivateAttr
+from pydantic import EmailStr, Field, NonNegativeInt, PrivateAttr
 
 from iris.commons.schemas.base import BaseModel
 
@@ -20,10 +20,10 @@ class Profile(BaseModel):
         default_factory=lambda: datetime.now().replace(microsecond=0)
     )
     username: str
-    email: str
+    email: EmailStr
     is_active: bool
     is_admin: bool
-    quota: int
+    quota: NonNegativeInt
     ripe: Optional[RIPEAccount]
 
     # Fields not exposed in the API

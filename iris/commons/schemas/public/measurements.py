@@ -4,16 +4,16 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import Field, root_validator
+from pydantic import Field, NonNegativeInt, PositiveInt, root_validator
 
 from iris.commons.schemas.base import BaseModel
 from iris.commons.schemas.public.agents import AgentParameters
 
 
 class Round(BaseModel):
-    number: int = Field(ge=1)
-    limit: int = Field(ge=0)
-    offset: int = Field(ge=0)
+    number: PositiveInt
+    limit: NonNegativeInt
+    offset: NonNegativeInt
 
     def encode(self) -> str:
         return f"{self.number}:{self.limit}:{self.offset}"
@@ -60,18 +60,18 @@ class ProbingStatistics(BaseModel):
     round: Round
     start_time: datetime
     end_time: datetime
-    filtered_low_ttl: int
-    filtered_high_ttl: int
-    filtered_prefix_excl: int
-    filtered_prefix_not_incl: int
-    probes_read: int
-    packets_sent: int
-    packets_failed: int
-    packets_received: int
-    packets_received_invalid: int
-    pcap_received: int
-    pcap_dropped: int
-    pcap_interface_dropped: int
+    filtered_low_ttl: NonNegativeInt
+    filtered_high_ttl: NonNegativeInt
+    filtered_prefix_excl: NonNegativeInt
+    filtered_prefix_not_incl: NonNegativeInt
+    probes_read: NonNegativeInt
+    packets_sent: NonNegativeInt
+    packets_failed: NonNegativeInt
+    packets_received: NonNegativeInt
+    packets_received_invalid: NonNegativeInt
+    pcap_received: NonNegativeInt
+    pcap_dropped: NonNegativeInt
+    pcap_interface_dropped: NonNegativeInt
 
 
 class Tool(str, Enum):

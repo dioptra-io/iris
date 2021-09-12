@@ -1,4 +1,5 @@
 import socket
+from ipaddress import IPv4Address, IPv6Address
 
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 
@@ -22,7 +23,7 @@ def test_get_ipv4_address(monkeypatch):
             pass
 
     monkeypatch.setattr(socket, "socket", Socket)
-    assert get_ipv4_address() == "1.2.3.4"
+    assert get_ipv4_address() == IPv4Address("1.2.3.4")
 
 
 def test_get_ipv4_address_error(monkeypatch):
@@ -42,7 +43,7 @@ def test_get_ipv4_address_error(monkeypatch):
             pass
 
     monkeypatch.setattr(socket, "socket", Socket)
-    assert get_ipv4_address() == "127.0.0.1"
+    assert get_ipv4_address() == IPv4Address("127.0.0.1")
 
 
 # IPv6
@@ -65,7 +66,7 @@ def test_get_ipv6_address(monkeypatch):
             pass
 
     monkeypatch.setattr(socket, "socket", Socket)
-    assert get_ipv6_address() == "::1234"
+    assert get_ipv6_address() == IPv6Address("::1234")
 
 
 def test_get_ipv6_address_error(monkeypatch):
@@ -85,4 +86,4 @@ def test_get_ipv6_address_error(monkeypatch):
             pass
 
     monkeypatch.setattr(socket, "socket", Socket)
-    assert get_ipv6_address() == "::1"
+    assert get_ipv6_address() == IPv6Address("::1")

@@ -1,6 +1,9 @@
 from enum import Enum
+from ipaddress import IPv4Address, IPv6Address
 from typing import List, Optional
 from uuid import UUID
+
+from pydantic import NonNegativeInt
 
 from iris.commons.schemas.base import BaseModel
 
@@ -10,10 +13,10 @@ class AgentParameters(BaseModel):
 
     version: str
     hostname: str
-    ipv4_address: str
-    ipv6_address: str
-    min_ttl: int
-    max_probing_rate: int
+    ipv4_address: Optional[IPv4Address]
+    ipv6_address: Optional[IPv6Address]
+    min_ttl: NonNegativeInt
+    max_probing_rate: NonNegativeInt
     agent_tags: List[str]
 
 

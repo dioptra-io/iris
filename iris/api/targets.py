@@ -1,6 +1,7 @@
 """Targets operations."""
 
 import ipaddress
+from datetime import datetime
 
 from fastapi import (
     APIRouter,
@@ -44,7 +45,10 @@ async def get_targets(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
         )
     summaries = [
-        public.TargetSummary(key=target["key"], last_modified=target["last_modified"])
+        public.TargetSummary(
+            key=target["key"],
+            last_modified=datetime.fromisoformat(target["last_modified"]),
+        )
         for target in targets
     ]
     querier = ListPagination(summaries, request, offset, limit)
@@ -77,7 +81,7 @@ async def get_target_by_key(
         key=target_file["key"],
         size=target_file["size"],
         content=[c.strip() for c in target_file["content"].split()],
-        last_modified=target_file["last_modified"],
+        last_modified=datetime.fromisoformat(target_file["last_modified"]),
     )
 
 

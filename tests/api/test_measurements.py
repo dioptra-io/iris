@@ -8,7 +8,6 @@ from iris.api.measurements import verify_quota
 from iris.api.security import get_current_active_user
 from iris.commons.database import Replies, agents, measurements
 from iris.commons.schemas.public import (
-    AgentParameters,
     FlowMapper,
     Measurement,
     MeasurementAgent,
@@ -60,9 +59,9 @@ def measurement1():
 
 
 @pytest.fixture(scope="function")
-def measurement_agent1(statistics):
+def measurement_agent1(agent, statistics):
     return MeasurementAgent(
-        uuid=uuid.uuid4(),
+        uuid=agent.uuid,
         state=MeasurementState.Unknown,
         specific=MeasurementAgentSpecific(
             target_file="test.csv",
@@ -79,15 +78,7 @@ def measurement_agent1(statistics):
                 global_max_ttl=255,
             ),
         ),
-        parameters=AgentParameters(
-            version="0.0.0",
-            hostname="test",
-            ipv4_address="1.2.3.4",
-            ipv6_address="::1234",
-            min_ttl=1,
-            max_probing_rate=200,
-            agent_tags=["all"],
-        ),
+        parameters=agent.parameters,
         probing_statistics=[statistics],
     )
 
