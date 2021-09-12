@@ -12,7 +12,7 @@ settings = CommonSettings(DATABASE_HOST="localhost")
 
 @pytest.mark.asyncio
 async def test_measurement_results(database, tmp_path):
-    db = InsertResults(database, uuid.uuid4(), uuid.uuid4())
+    db = InsertResults(database, uuid.uuid4(), uuid.uuid4(), 24, 64)
 
     results_file = tmp_path / "results.csv"
     results_file.write_text(

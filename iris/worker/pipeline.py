@@ -33,7 +33,13 @@ async def default_pipeline(
     logger.info(f"{logger_prefix} New measurement file detected")
 
     database = Database(settings, logger)
-    database_results = InsertResults(database, measurement_request.uuid, agent.uuid)
+    database_results = InsertResults(
+        database,
+        measurement_request.uuid,
+        agent.uuid,
+        agent.tool_parameters.prefix_len_v4,
+        agent.tool_parameters.prefix_len_v6,
+    )
 
     logger.info(f"{logger_prefix} Get agent information")
     agent_parameters = await redis.get_agent_parameters(agent.uuid)

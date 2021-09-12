@@ -54,6 +54,8 @@ class InsertResults:
     database: Database
     measurement_uuid: Union[str, UUID]
     agent_uuid: Union[str, UUID]
+    prefix_len_v4: int
+    prefix_len_v6: int
 
     @property
     def measurement_id(self) -> str:
@@ -63,7 +65,12 @@ class InsertResults:
         """Create the results table."""
         if drop:
             await self.database.execute(DropTables(), self.measurement_id)
-        await self.database.execute(CreateTables(), self.measurement_id)
+        await self.database.execute(
+            CreateTables(
+                prefix_len_v4=self.prefix_len_v4, prefix_len_v6=self.prefix_len_v6
+            ),
+            self.measurement_id,
+        )
 
     async def insert_csv(self, csv_filepath: Path) -> None:
         """Insert CSV file into table."""
