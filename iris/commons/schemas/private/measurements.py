@@ -24,5 +24,6 @@ class MeasurementRequest(public.MeasurementPostBody):
 
 class MeasurementRoundRequest(BaseModel):
     measurement: MeasurementRequest
-    probes: Optional[str]
+    prefix_filename: Optional[str]
+    probe_filename: Optional[str]
     round: public.Round

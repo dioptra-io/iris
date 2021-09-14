@@ -1,5 +1,7 @@
 """Measurement pipeline."""
+from dataclasses import dataclass
 from logging import Logger
+from typing import Optional
 from uuid import UUID
 
 import aiofiles
@@ -12,8 +14,15 @@ from iris.commons.database import Database, InsertResults, agents
 from iris.commons.redis import Redis
 from iris.commons.schemas.private import MeasurementRequest
 from iris.commons.schemas.public import ProbingStatistics, Round, Tool
-from iris.commons.storage import Storage
+from iris.commons.storage import Storage, next_round_key, prefixes_key
 from iris.worker.settings import WorkerSettings
+
+
+@dataclass(frozen=True)
+class PipelineResult:
+    round_: Optional[Round]
+    prefix_filename: Optional[str]
+    probe_filename: Optional[str]
 
 
 async def default_pipeline(
@@ -25,7 +34,7 @@ async def default_pipeline(
     logger: Logger,
     redis: Redis,
     storage: Storage,
-):
+) -> PipelineResult:
     """Process results and eventually request a new round."""
     agent = measurement_request.agent(agent_uuid)
     assert agent.uuid
@@ -57,14 +66,10 @@ async def default_pipeline(
         measurement_results_path,
     )
 
-    logger.info(f"{logger_prefix} Delete results file from AWS S3")
-    is_deleted = await storage.delete_file_no_check(
+    logger.info(f"{logger_prefix} Delete results file from S3")
+    await storage.soft_delete(
         storage.measurement_bucket(measurement_request.uuid), results_filename
     )
-    if not is_deleted:
-        logger.error(
-            f"{logger_prefix} Impossible to remove results file `{results_filename}`"
-        )
 
     logger.info(f"{logger_prefix} Store probing statistics")
     await agents.store_probing_statistics(
@@ -89,15 +94,9 @@ async def default_pipeline(
 
     next_round = round_.next_round(agent.tool_parameters.global_max_ttl)
 
-    next_round_csv_filename = (
-        f"{agent.uuid}_next_round_csv_{next_round.encode()}.csv.zst"
-    )
-    next_round_csv_filepath = measurement_results_path / next_round_csv_filename
-
     if next_round.number == 1:
         # We are in a sub-round 1
         # Compute the list of the prefixes need to be probed in the next ttl window
-
         if round_.max_ttl < max(
             agent_parameters.min_ttl, agent.tool_parameters.global_min_ttl
         ):
@@ -105,7 +104,9 @@ async def default_pipeline(
             # and the measuremnt's min TTL.
             # So there is no response for this round
             # and we don't want to compute and send a prefix list to probe
-            return next_round, None
+            return PipelineResult(
+                round_=next_round, prefix_filename=None, probe_filename=None
+            )
 
         prefixes_to_probe = []
         # TODO: Fault-tolerency
@@ -124,38 +125,44 @@ async def default_pipeline(
 
         if prefixes_to_probe:
             # Write the prefix to be probed in a next round file
-            async with aiofiles.open(next_round_csv_filepath, "w") as fd:
+            prefixes_filepath = measurement_results_path / prefixes_key(
+                agent.uuid, next_round
+            )
+            async with aiofiles.open(prefixes_filepath, "w") as fd:
                 await fd.writelines(prefix + "\n" for prefix in prefixes_to_probe)
 
-            logger.info(f"{logger_prefix} Uploading next round CSV prefix file")
+            logger.info(f"{logger_prefix} Upload next round prefix file")
             await storage.upload_file(
                 storage.measurement_bucket(measurement_request.uuid),
-                next_round_csv_filename,
-                next_round_csv_filepath,
+                prefixes_key(agent.uuid, next_round),
+                prefixes_filepath,
             )
 
             if not settings.WORKER_DEBUG_MODE:
-                logger.info(f"{logger_prefix} Remove local next round CSV prefix file")
-                await aios.remove(next_round_csv_filepath)
-            return next_round, next_round_csv_filename
+                logger.info(f"{logger_prefix} Remove local next round prefix file")
+                await aios.remove(prefixes_filepath)
+            return PipelineResult(
+                round_=next_round,
+                prefix_filename=prefixes_key(agent.uuid, next_round),
+                probe_filename=None,
+            )
         else:
             # If there is no prefixes to probe left, skip the last sub-rounds
             # and directly go to round 2
             next_round = Round(number=2, limit=0, offset=0)
-            next_round_csv_filename = (
-                f"{agent.uuid}_next_round_csv_{next_round.encode()}.csv.zst"
-            )
-            next_round_csv_filepath = measurement_results_path / next_round_csv_filename
 
     if measurement_request.tool != Tool.DiamondMiner:
         logger.info(f"{logger_prefix} Tool does not support rounds > 1. Stopping.")
-        return None, None
+        return PipelineResult(round_=None, prefix_filename=None, probe_filename=None)
 
     if next_round.number > agent.tool_parameters.max_round:
         logger.info(f"{logger_prefix} Maximum round reached. Stopping.")
-        return None, None
+        return PipelineResult(round_=None, prefix_filename=None, probe_filename=None)
 
     logger.info(f"{logger_prefix} Compute the next round CSV probe file")
+    next_round_csv_filepath = measurement_results_path / next_round_key(
+        agent.uuid, next_round
+    )
     flow_mapper_cls = getattr(mappers, agent.tool_parameters.flow_mapper)
     flow_mapper_kwargs = agent.tool_parameters.flow_mapper_kwargs or {}
     flow_mapper_v4 = flow_mapper_cls(
@@ -182,14 +189,18 @@ async def default_pipeline(
         logger.info(f"{logger_prefix} Uploading next round CSV probe file")
         await storage.upload_file(
             storage.measurement_bucket(measurement_request.uuid),
-            next_round_csv_filename,
+            next_round_key(agent.uuid, round_),
             next_round_csv_filepath,
         )
 
         if not settings.WORKER_DEBUG_MODE:
             logger.info(f"{logger_prefix} Remove local next round CSV probe file")
             await aios.remove(next_round_csv_filepath)
-        return next_round, next_round_csv_filename
+        return PipelineResult(
+            round_=next_round,
+            prefix_filename=None,
+            probe_filename=next_round_key(agent.uuid, round_),
+        )
 
     else:
         logger.info(f"{logger_prefix} Next round is not required")
@@ -199,4 +210,4 @@ async def default_pipeline(
                 await aios.remove(next_round_csv_filepath)
             except FileNotFoundError:
                 pass
-        return None, None
+        return PipelineResult(round_=None, prefix_filename=None, probe_filename=None)

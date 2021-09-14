@@ -14,17 +14,29 @@ from iris.commons.schemas.public import Round
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 
+def next_round_key(agent_uuid: UUID, round_: Round) -> str:
+    """The name of the file containing the probes to send at the next round."""
+    return f"{agent_uuid}_next_round_{round_.encode()}.csv.zst"
+
+
 def results_key(agent_uuid: UUID, round_: Round) -> str:
+    """The name of the file containing the results of the probing round."""
     return f"{agent_uuid}_results_{round_.encode()}.csv.zst"
 
 
+def prefixes_key(agent_uuid: UUID, round_: Round) -> str:
+    """The name of the file containing a list of allowed prefixes."""
+    return f"{agent_uuid}_prefixes_{round_.encode()}.csv.zst"
+
+
 def targets_key(measurement_uuid: UUID, agent_uuid: UUID) -> str:
+    """The name of the file containing the targets to probe."""
     return f"targets__{measurement_uuid}__{agent_uuid}.csv"
 
 
 @dataclass(frozen=True)
 class Storage:
-    """AWS S3 object storage interface."""
+    """S3 object storage interface."""
 
     settings: CommonSettings
     logger: logging.Logger
@@ -231,6 +243,11 @@ class Storage:
         async with session.resource("s3", **self.aws_settings) as s3:
             b = await s3.Bucket(bucket)
             await b.objects.all().delete()
+
+    async def soft_delete(self, bucket: str, filename: str) -> None:
+        is_deleted = await self.delete_file_no_check(bucket, filename)
+        if not is_deleted:
+            self.logger.error(f"Impossible to remove file `{filename}` from S3")
 
     @fault_tolerant(CommonSettings.storage_retry)
     async def copy_file_to_bucket(

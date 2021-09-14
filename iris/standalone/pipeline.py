@@ -3,10 +3,10 @@ import socket
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 from uuid import UUID, uuid4
 
-import aiofiles
+import aiofiles.os
 from diamond_miner.queries import Count, GetLinks, GetNodes, results_table
 from fakeredis.aioredis import FakeRedis
 
@@ -25,6 +25,7 @@ from iris.commons.schemas.public.measurements import (
     Tool,
     ToolParameters,
 )
+from iris.commons.storage import results_key
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 from iris.standalone.storage import LocalStorage
 from iris.worker.pipeline import default_pipeline
@@ -136,14 +137,14 @@ async def pipeline(
         target_file,
     )
 
-    shuffled_next_round_csv_filepath: Optional[str] = None
-
     statistics = {}
-
     round_ = Round(
         number=1, limit=worker_settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0
     )
     n_rounds = 0
+    prefix_filename = None
+    probe_filename = None
+
     while round_.number <= tool_parameters.max_round:
         n_rounds = round_.number
         request = MeasurementRequest(
@@ -171,11 +172,12 @@ async def pipeline(
             )
 
         # Perform the measurement
-        results_filename, round_statistics = await measurement(
+        await measurement(
             agent_settings,
             MeasurementRoundRequest(
                 measurement=request,
-                probes=shuffled_next_round_csv_filepath,
+                prefix_filename=prefix_filename,
+                probe_filename=probe_filename,
                 round=round_,
             ),
             logger,
@@ -184,14 +186,17 @@ async def pipeline(
         )
 
         # Store the probing statistics of the round
+        round_statistics = await redis.get_measurement_stats(
+            measurement_uuid, agent_settings.AGENT_UUID
+        )
         statistics[round_.encode()] = round_statistics
 
         # Compute the next round
-        round_, shuffled_next_round_csv_filepath = await default_pipeline(
+        pipeline_result = await default_pipeline(
             worker_settings,
             request,
             agent_settings.AGENT_UUID,
-            results_filename,
+            results_key(agent_settings.AGENT_UUID, round_),
             round_statistics,
             logger,
             redis,
@@ -199,7 +204,7 @@ async def pipeline(
         )
 
         # If the measurement is finished, clean the local files
-        if round_ is None:
+        if pipeline_result.round_ is None:
             if not worker_settings.WORKER_DEBUG_MODE:
                 logger.info("Removing local measurement directory")
                 try:
@@ -209,6 +214,10 @@ async def pipeline(
                 except OSError:
                     logger.error("Impossible to remove local measurement directory")
             break
+
+        round_ = pipeline_result.round_
+        prefix_filename = pipeline_result.prefix_filename
+        probe_filename = pipeline_result.probe_filename
 
     # Stamp the agent
     await stamp_agent(database, measurement_uuid, agent_settings.AGENT_UUID)

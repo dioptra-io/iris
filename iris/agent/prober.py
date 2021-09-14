@@ -1,8 +1,8 @@
 """Prober executor."""
 
 import asyncio
-from logging import Logger
 from multiprocessing import Process
+from pathlib import Path
 from typing import Dict, Optional
 from uuid import UUID
 
@@ -15,12 +15,7 @@ from iris.commons.schemas.public import MeasurementState
 
 
 async def watcher(
-    process: Process,
-    settings: AgentSettings,
-    measurement_uuid: UUID,
-    redis: AgentRedis,
-    logger: Logger,
-    logger_prefix: str = "",
+    process: Process, settings: AgentSettings, measurement_uuid: UUID, redis: AgentRedis
 ) -> bool:
     """Watch the prober execution and stop it according to the measurement state."""
     while process.is_alive():
@@ -30,7 +25,6 @@ async def watcher(
             MeasurementState.Unknown,
         ]:
             process.kill()
-            logger.warning(logger_prefix + "Measurement canceled")
             return False
         await asyncio.sleep(settings.AGENT_STOPPER_REFRESH)
     return True
@@ -38,12 +32,12 @@ async def watcher(
 
 def probe(
     settings: AgentSettings,
-    results_filepath: str,
+    results_filepath: Path,
     round_number: int,
     probing_rate: int,
     prober_statistics: Dict,
     gen_parameters: Optional[Dict] = None,
-    probes_filepath: Optional[str] = None,
+    probes_filepath: Optional[Path] = None,
 ) -> None:
     """Probing interface."""
 
@@ -67,7 +61,7 @@ def probe(
 
     # Prober configuration
     config = prober.Config()
-    config.set_output_file_csv(results_filepath)
+    config.set_output_file_csv(str(results_filepath))
 
     config.set_probing_rate(measurement_probing_rate)
     config.set_rate_limiting_method(settings.AGENT_CARACAL_RATE_LIMITING_METHOD.value)
@@ -100,7 +94,9 @@ def probe(
         prober_stats, sniffer_stats, pcap_stats = prober.probe(config, gen)
     else:
         # In case of round > 1, use a probes file
-        prober_stats, sniffer_stats, pcap_stats = prober.probe(config, probes_filepath)
+        prober_stats, sniffer_stats, pcap_stats = prober.probe(
+            config, str(probes_filepath)
+        )
 
     # Populate the statistics
     prober_statistics["probes_read"] = prober_stats.read
