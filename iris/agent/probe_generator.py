@@ -35,7 +35,7 @@ def build_probe_generator_parameters(
     prefixes: List[Tuple[str, str, Iterable[int]]] = []
     if tool in [Tool.DiamondMiner, Tool.Yarrp]:
         # 2. Build a radix tree that maps prefix -> [(min_ttl...max_ttl), ...]
-        targets = PyTricia(128)
+        targets: PyTricia[str, List[Tuple[str, range]]] = PyTricia(128)
         for line in target_list:
             prefix, protocol, min_ttl, max_ttl = line.split(",")
             ttls = range(
