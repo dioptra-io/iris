@@ -1,1 +1,5 @@
-volumes
+*
+!iris/
+!statics/
+!poetry.lock
+!pyproject.toml
