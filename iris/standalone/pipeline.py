@@ -67,6 +67,7 @@ async def pipeline(
     probing_rate: int,
     tool_parameters: ToolParameters,
     tags: List[str],
+    s3_dir: str,
     logger,
 ) -> Dict:
     """Measurement pipeline."""
@@ -128,9 +129,7 @@ async def pipeline(
             await fd.write(prefix)
 
     # Copy the target file to the local storage
-    storage = LocalStorage(
-        agent_settings, agent_settings.AGENT_TARGETS_DIR_PATH / "local_storage"
-    )
+    storage = LocalStorage(agent_settings, s3_dir)
     await storage.upload_file(
         agent_settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + username,
         target_file.name,

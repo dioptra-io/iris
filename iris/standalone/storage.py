@@ -31,6 +31,11 @@ class LocalStorage:
         self.__ensure_dir(output_path)
         shutil.copyfile(input_path, output_path)
 
+    async def download_file_to(self, bucket: str, filename: str, output_dir: Path):
+        output_path = output_dir / filename
+        await self.download_file(bucket, filename, output_path)
+        return output_path
+
     async def upload_file(self, bucket, filename, input_path, metadata=None):
         output_path = self.__file_path(bucket, filename)
         metadata_path = self.__meta_path(bucket, filename)
@@ -45,6 +50,11 @@ class LocalStorage:
         if metadata_path.exists():
             metadata = json.loads(metadata_path.read_text())
         return {"key": filename, "metadata": metadata}
+
+    async def soft_delete(self, bucket: str, filename: str) -> None:
+        is_deleted = await self.delete_file_no_check(bucket, filename)
+        if not is_deleted:
+            print(f"Impossible to remove file `{filename}` from S3")
 
     @staticmethod
     def __ensure_dir(output_path):

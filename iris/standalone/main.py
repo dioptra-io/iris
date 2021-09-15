@@ -36,6 +36,7 @@ async def diamond_miner(
     destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
     max_round: Optional[int] = typer.Option(default_parameters.max_round),
     tag: List[str] = typer.Option(["standalone"]),
+    s3_dir: Path = typer.Option("/app/s3"),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """Diamond-miner command."""
@@ -56,7 +57,7 @@ async def diamond_miner(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag, logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag, s3_dir, logger
     )
     display_results(pipeline_info)
 
@@ -72,6 +73,7 @@ async def yarrp(
     ),
     destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
     tag: Optional[List[str]] = typer.Option(["standalone"]),
+    s3_dir: Path = typer.Option("/app/s3"),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """YARRP command."""
@@ -92,7 +94,7 @@ async def yarrp(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag or [], logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag or [], s3_dir, logger
     )
     display_results(pipeline_info)
 
@@ -108,6 +110,7 @@ async def ping(
     ),
     destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
     tag: Optional[List[str]] = typer.Option(["standalone"]),
+    s3_dir: Path = typer.Option("/app/s3"),
     verbose: bool = typer.Option(False, "--verbose"),
 ):
     """Ping command."""
@@ -130,7 +133,7 @@ async def ping(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag or [], logger
+        tool, prefixes, user, probing_rate, tool_parameters, tag or [], s3_dir, logger
     )
     display_results(pipeline_info)
 

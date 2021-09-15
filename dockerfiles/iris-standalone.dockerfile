@@ -33,6 +33,7 @@ RUN [ $(arch) = "aarch64" ] && exit 0 \
 
 WORKDIR /app
 
+RUN mkdir s3
 RUN mkdir targets
 RUN mkdir results
 
