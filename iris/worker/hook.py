@@ -24,17 +24,17 @@ settings = WorkerSettings()
 async def sanity_clean(
     measurement_uuid: UUID, agent_uuid: UUID, logger: Logger, storage: Storage
 ):
-    """Clean AWS S3 if the sanity check don't pass."""
-    remote_files = await storage.get_all_files(str(measurement_uuid))
+    """Clean S3 if the sanity check don't pass."""
+    remote_files = await storage.get_all_files(
+        storage.measurement_bucket(measurement_uuid)
+    )
     for remote_file in remote_files:
         remote_filename = remote_file["key"]
         if remote_filename.startswith(str(agent_uuid)):
-            logger.warning(f"Sanity remove `{remote_filename}` from AWS S3")
-            is_deleted = await storage.delete_file_no_check(
-                str(measurement_uuid), remote_filename
+            logger.warning(f"Sanity remove `{remote_filename}` from S3")
+            await storage.soft_delete(
+                storage.measurement_bucket(measurement_uuid), remote_filename
             )
-            if not is_deleted:
-                logger.error(f"Impossible to remove `{remote_filename}`")
 
 
 async def sanity_check(
@@ -56,7 +56,7 @@ async def sanity_check(
             settings.WORKER_SANITY_CHECK_REFRESH_MAX,
         )
         await asyncio.sleep(refresh_time)
-    if False in checks:
+    if not all(checks):
         await sanity_clean(measurement_uuid, agent_uuid, logger, storage)
         return False
     return True
@@ -123,7 +123,7 @@ async def watch(
         )
         assert statistics
 
-        next_round, shuffled_next_round_csv_filename = await default_pipeline(
+        pipeline_result = await default_pipeline(
             settings,
             measurement_request,
             agent.uuid,
@@ -137,7 +137,7 @@ async def watch(
         # Remove the statistics from Redis
         await redis.delete_measurement_stats(measurement_request.uuid, agent.uuid)
 
-        if next_round is None:
+        if pipeline_result.round_ is None:
             logger.info(f"{logger_prefix} Measurement done for this agent")
             await agents.stamp_finished(database, measurement_request.uuid, agent.uuid)
             break
@@ -145,8 +145,9 @@ async def watch(
             logger.info(f"{logger_prefix} Publish next measurement")
             request = MeasurementRoundRequest(
                 measurement=measurement_request,
-                probes=shuffled_next_round_csv_filename,
-                round=next_round,
+                prefix_filename=pipeline_result.prefix_filename,
+                probe_filename=pipeline_result.probe_filename,
+                round=pipeline_result.round_,
             )
             await redis.publish(agent.uuid, request)
 
@@ -211,7 +212,7 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
                 logger.error(f"{logger_prefix} Impossible to archive target files")
                 return
 
-        logger.info(f"{logger_prefix} Create bucket in AWS S3")
+        logger.info(f"{logger_prefix} Create bucket in S3")
         # noinspection PyBroadException
         try:
             await storage.create_bucket(bucket=str(measurement_request.uuid))
@@ -222,7 +223,6 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         logger.info(f"{logger_prefix} Publish measurement to agents")
         request = MeasurementRoundRequest(
             measurement=measurement_request,
-            probes=None,
             round=Round(
                 number=1, limit=settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0
             ),

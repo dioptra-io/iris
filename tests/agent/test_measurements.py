@@ -1,4 +1,4 @@
-from iris.agent.measurements import build_probe_generator_parameters
+from iris.agent.probe_generator import build_probe_generator_parameters
 from iris.commons.schemas import public
 from iris.commons.schemas.public import Round
 

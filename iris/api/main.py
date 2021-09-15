@@ -66,11 +66,11 @@ async def startup_event():
         profile._hashed_password = settings.API_ADMIN_HASHED_PASSWORD
         await users.register(database, profile)
 
-    # Create `targets` bucket in AWS S3 for admin user
+    # Create `targets` bucket in S3 for admin user
     await storage.create_bucket(
         settings.AWS_S3_TARGETS_BUCKET_PREFIX + settings.API_ADMIN_USERNAME
     )
-    # Create `archive` bucket in AWS S3 for admin user
+    # Create `archive` bucket in S3 for admin user
     await storage.create_bucket(
         settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + settings.API_ADMIN_USERNAME
     )

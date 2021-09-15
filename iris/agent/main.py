@@ -15,6 +15,7 @@ from iris.commons.utils import get_ipv4_address, get_ipv6_address
 
 
 async def heartbeat(redis: AgentRedis) -> None:
+    """Periodically register the agent."""
     while True:
         await redis.register(15)
         await asyncio.sleep(5)
