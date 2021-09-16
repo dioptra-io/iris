@@ -4,6 +4,7 @@ from datetime import datetime
 
 from diamond_miner.queries import results_table
 
+from iris.commons.schemas.public import ProbingStatistics, Round
 from iris.standalone.display import display_results
 
 
@@ -26,28 +27,40 @@ def test_display_results():
         "n_nodes": 10,
         "n_links": 20,
         "probing_statistics": {
-            "1:10:0": {
-                "probes_read": 30,
-                "packets_sent": 30,
-                "packets_failed": 0,
-                "filtered_low_ttl": 0,
-                "filtered_high_ttl": 0,
-                "filtered_prefix_excl": 0,
-                "filtered_prefix_not_incl": 0,
-                "packets_received": 30,
-                "packets_received_invalid": 0,
-            },
-            "1:10:1": {
-                "probes_read": 60,
-                "packets_sent": 60,
-                "packets_failed": 0,
-                "filtered_low_ttl": 0,
-                "filtered_high_ttl": 0,
-                "filtered_prefix_excl": 0,
-                "filtered_prefix_not_incl": 0,
-                "packets_received": 12,
-                "packets_received_invalid": 0,
-            },
+            "1:10:0": ProbingStatistics(
+                round=Round(number=1, limit=10, offset=0),
+                start_time=datetime.now(),
+                end_time=datetime.now(),
+                pcap_received=30,
+                pcap_dropped=0,
+                pcap_interface_dropped=0,
+                probes_read=30,
+                packets_sent=30,
+                packets_failed=0,
+                filtered_low_ttl=0,
+                filtered_high_ttl=0,
+                filtered_prefix_excl=0,
+                filtered_prefix_not_incl=0,
+                packets_received=30,
+                packets_received_invalid=0,
+            ),
+            "1:10:1": ProbingStatistics(
+                round=Round(number=1, limit=10, offset=1),
+                start_time=datetime.now(),
+                end_time=datetime.now(),
+                pcap_received=30,
+                pcap_dropped=0,
+                pcap_interface_dropped=0,
+                probes_read=30,
+                packets_sent=30,
+                packets_failed=0,
+                filtered_low_ttl=0,
+                filtered_high_ttl=0,
+                filtered_prefix_excl=0,
+                filtered_prefix_not_incl=0,
+                packets_received=30,
+                packets_received_invalid=0,
+            ),
         },
     }
 
