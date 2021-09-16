@@ -67,7 +67,7 @@ async def pipeline(
     probing_rate: int,
     tool_parameters: ToolParameters,
     tags: List[str],
-    s3_dir: str,
+    s3_dir: Path,
     logger,
 ) -> Dict:
     """Measurement pipeline."""
