@@ -55,7 +55,7 @@ async def test_redis_check_agent(common_settings, agent, redis_client):
     # Fully registered
     await agent_redis.set_agent_parameters(agent.parameters)
     await agent_redis.set_agent_state(AgentState.Working)
-    assert redis.check_agent(agent.uuid)
+    assert await redis.check_agent(agent.uuid)
 
     # Missing state
     await agent_redis.set_agent_parameters(agent.parameters)

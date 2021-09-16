@@ -34,9 +34,8 @@ async def test_files(common_settings, tmp_path):
     tmp_file.write_text(content)
 
     # Upload
-    await storage.upload_file_no_retry(
-        "bucket1", "1.txt", tmp_file.open("rb"), metadata
-    )
+    with tmp_file.open("rb") as f:
+        await storage.upload_file_no_retry("bucket1", "1.txt", f, metadata)
     await storage.upload_file("bucket1", "2.txt", tmp_file, metadata)
 
     # List
