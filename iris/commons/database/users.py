@@ -11,9 +11,6 @@ def table(database: Database) -> str:
 
 def formatter(row: tuple) -> public.Profile:
     """Database row -> response formater."""
-    ripe = None
-    if row[8] and row[9]:
-        ripe = public.RIPEAccount(account=row[8], key=row[9])
     profile = public.Profile(
         uuid=row[0],
         username=row[1],
@@ -22,7 +19,6 @@ def formatter(row: tuple) -> public.Profile:
         is_admin=bool(row[5]),
         quota=row[6],
         register_date=row[7],
-        ripe=ripe,
     )
     profile._hashed_password = row[3]
     return profile
@@ -44,9 +40,7 @@ async def create_table(database: Database, drop: bool = False) -> None:
             is_active       UInt8,
             is_admin        UInt8,
             quota           UInt32,
-            register_date   DateTime,
-            ripe_account    Nullable(String),
-            ripe_key        Nullable(String)
+            register_date   DateTime
         )
         ENGINE = MergeTree
         ORDER BY (uuid)
@@ -82,38 +76,6 @@ async def register(database: Database, profile: public.Profile) -> None:
                 "is_admin": int(profile.is_admin),
                 "quota": profile.quota,
                 "register_date": profile.register_date,
-                "ripe_account": profile.ripe.account if profile.ripe else None,
-                "ripe_key": profile.ripe.key if profile.ripe else None,
             }
         ],
-    )
-
-
-async def register_ripe(
-    database: Database, username: str, ripe_account: public.RIPEAccount
-) -> None:
-    await database.call(
-        f"""
-        ALTER TABLE {table(database)}
-        UPDATE ripe_account=%(ripe_account)s, ripe_key=%(ripe_key)s
-        WHERE username=%(username)s
-        SETTINGS mutations_sync=1
-        """,
-        {
-            "ripe_account": ripe_account.account,
-            "ripe_key": ripe_account.key,
-            "username": username,
-        },
-    )
-
-
-async def deregister_ripe(database: Database, username: str):
-    await database.call(
-        f"""
-        ALTER TABLE {table(database)}
-        UPDATE ripe_account=NULL, ripe_key=NULL
-        WHERE username=%(username)s
-        SETTINGS mutations_sync=1
-        """,
-        {"username": username},
     )

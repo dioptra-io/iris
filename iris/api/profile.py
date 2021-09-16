@@ -12,7 +12,7 @@ from iris.api.security import (
     create_access_token,
     get_current_active_user,
 )
-from iris.commons.database import Database, users
+from iris.commons.database import Database
 from iris.commons.schemas import public
 
 router = APIRouter()
@@ -61,30 +61,3 @@ async def get_profile(
     user: public.Profile = Depends(get_current_active_user),
 ):
     return user
-
-
-@router.put(
-    "/ripe",
-    status_code=status.HTTP_201_CREATED,
-    response_model=public.RIPEAccount,
-    summary="Add RIPE Atlas account information to the current user.",
-)
-async def put_ripe_profile(
-    request: Request,
-    ripe_info: public.RIPEAccount,
-    user: public.Profile = Depends(get_current_active_user),
-    database: Database = Depends(get_database),
-):
-    await users.register_ripe(database, user.username, ripe_info)
-    return ripe_info
-
-
-@router.delete(
-    "/ripe", summary="Remove RIPE Atlas account information from the current user."
-)
-async def delete_ripe_profile(
-    request: Request,
-    user: public.Profile = Depends(get_current_active_user),
-    database: Database = Depends(get_database),
-):
-    await users.deregister_ripe(database, user.username)

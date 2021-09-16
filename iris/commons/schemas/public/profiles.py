@@ -1,15 +1,9 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import EmailStr, Field, NonNegativeInt, PrivateAttr
 
 from iris.commons.schemas.base import BaseModel
-
-
-class RIPEAccount(BaseModel):
-    account: str
-    key: str
 
 
 class Profile(BaseModel):
@@ -24,7 +18,6 @@ class Profile(BaseModel):
     is_active: bool
     is_admin: bool
     quota: NonNegativeInt
-    ripe: Optional[RIPEAccount]
 
     # Fields not exposed in the API
     _hashed_password: str = PrivateAttr()

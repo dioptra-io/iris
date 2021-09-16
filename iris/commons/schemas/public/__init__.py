@@ -18,7 +18,7 @@ from .measurements import (
     ToolParameters,
 )
 from .paging import Paginated
-from .profiles import Profile, RIPEAccount
+from .profiles import Profile
 from .results import Interface, Link, Prefix, Reply
 from .targets import Target, TargetDeleteResponse, TargetPostResponse, TargetSummary
 
@@ -44,7 +44,6 @@ __all__ = [
     "ProbingStatistics",
     "Profile",
     "Reply",
-    "RIPEAccount",
     "Round",
     "Target",
     "TargetDeleteResponse",
