@@ -127,11 +127,13 @@ async def measurement(
         logger.warning(f"{logger_prefix} Measurement canceled")
 
     if not settings.AGENT_DEBUG_MODE:
-        logger.info(f"{logger_prefix} Removing local results directory")
+        logger.info(f"{logger_prefix} Empty local results directory")
         shutil.rmtree(settings.AGENT_RESULTS_DIR_PATH)
+        settings.AGENT_RESULTS_DIR_PATH.mkdir()
 
-        logger.info(f"{logger_prefix} Removing local targets directory")
+        logger.info(f"{logger_prefix} Empty local targets directory")
         shutil.rmtree(settings.AGENT_TARGETS_DIR_PATH)
+        settings.AGENT_TARGETS_DIR_PATH.mkdir()
 
         if request.prefix_filename:
             logger.info(f"{logger_prefix} Remove probe file from S3")
