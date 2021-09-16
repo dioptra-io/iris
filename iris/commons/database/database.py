@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from logging import Logger
 from typing import Any
@@ -13,11 +14,18 @@ class Database:
     settings: CommonSettings
     logger: Logger
 
+    @asynccontextmanager
+    async def client(self, default: bool):
+        client = Client.from_url(self.settings.database_url(default))
+        try:
+            yield client
+        finally:
+            await client.disconnect()
+
     @fault_tolerant(CommonSettings.database_retry)
     async def call(self, *args: Any, default: bool = False, **kwargs: Any):
-        return await Client.from_url(self.settings.database_url(default)).execute(
-            *args, **kwargs
-        )
+        async with self.client(default) as c:
+            return await c.execute(*args, **kwargs)
 
     @fault_tolerant(CommonSettings.database_retry)
     async def execute(self, query: Query, measurement_id: str, **kwargs: Any):

@@ -88,8 +88,10 @@ def s3_server():
         stderr=subprocess.PIPE,
     )
     p.stderr.readline()  # Wait for moto_server to start
-    yield "http://127.0.0.1:3000"
-    p.terminate()
+    try:
+        yield "http://127.0.0.1:3000"
+    finally:
+        p.terminate()
 
 
 @pytest.fixture(scope="function")
