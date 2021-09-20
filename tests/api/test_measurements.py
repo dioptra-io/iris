@@ -33,14 +33,24 @@ target23 = {
     "key": "test.csv",
     "size": 42,
     "content": "8.8.8.0/23,icmp,2,32",
-    "last_modified": "test",
+    "last_modified": "Mon, 20 Sep 2021 13:20:26 GMT",
+    "metadata": None,
 }
 
 target25 = {
     "key": "test.csv",
     "size": 42,
     "content": "8.8.8.0/25,icmp,2,32",
-    "last_modified": "test",
+    "last_modified": "Mon, 20 Sep 2021 13:20:26 GMT",
+    "metadata": None,
+}
+
+target_probes = {
+    "key": "probes.csv",
+    "size": 42,
+    "content": "8.8.8.8,24000,33434,32,icmp",
+    "last_modified": "Mon, 20 Sep 2021 13:20:26 GMT",
+    "metadata": {"is_probes_file": "True"},
 }
 
 
@@ -200,6 +210,8 @@ def test_post_measurement(api_client_sync, agent, monkeypatch):
     override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
     for tool in Tool:
+        if tool == Tool.Probes:
+            continue
         body = MeasurementPostBody(
             tool=Tool(tool),
             agents=[
@@ -216,6 +228,29 @@ def test_post_measurement(api_client_sync, agent, monkeypatch):
         )
         response = api_client_sync.post("/api/measurements/", data=body.json())
         assert response.status_code == 201
+
+
+def test_post_measurement_probes(api_client_sync, agent, monkeypatch):
+    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
+    override(api_client_sync, get_storage, fake_storage_factory([target_probes]))
+    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
+    body = MeasurementPostBody(
+        tool=Tool.Probes,
+        agents=[
+            MeasurementAgentPostBody(
+                uuid=agent.uuid,
+                target_file="test.csv",
+                tool_parameters=ToolParameters(
+                    n_flow_ids=1,
+                    prefix_len_v4=32,
+                    prefix_len_v6=128,
+                ),
+            )
+        ],
+    )
+    response = api_client_sync.post("/api/measurements/", data=body.json())
+    assert response.status_code == 201
 
 
 def test_post_measurement_quota_exceeded(api_client_sync, agent, user, monkeypatch):

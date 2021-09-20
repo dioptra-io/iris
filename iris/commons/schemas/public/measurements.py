@@ -78,6 +78,7 @@ class Tool(str, Enum):
     DiamondMiner = "diamond-miner"
     Yarrp = "yarrp"
     Ping = "ping"
+    Probes = "probes"
 
 
 class ToolParameters(BaseModel):
@@ -203,18 +204,20 @@ class MeasurementPostBody(BaseModel):
                     raise ValueError("`prefix_len_v4` must be 24 for diamond-miner")
                 if agent.tool_parameters.prefix_len_v6 != 64:
                     raise ValueError("`prefix_len_v6` must be 64 for diamond-miner")
-            if tool == Tool.Ping:
+            if tool in [tool.Ping, tool.Probes]:
                 # NOTE: Technically we could use a larger prefix length to allow
                 # the flow mapper to choose a random IP address inside the prefix,
                 # but users probably expect ping to target a specific IP address.
                 if agent.tool_parameters.prefix_len_v4 != 32:
-                    raise ValueError("`prefix_len_v4` must be 32 for ping")
+                    raise ValueError("`prefix_len_v4` must be 32 for ping and probes")
                 if agent.tool_parameters.prefix_len_v6 != 128:
-                    raise ValueError("`prefix_len_v6` must be 128 for ping")
-            if tool in [tool.Ping, tool.Yarrp]:
+                    raise ValueError("`prefix_len_v6` must be 128 for ping and probes")
+            if tool in [tool.Ping, tool.Yarrp, tool.Probes]:
                 # NOTE: We could allow Yarrp to perform multiple flows.
                 if agent.tool_parameters.n_flow_ids != 1:
-                    raise ValueError("`n_flow_ids` must be 1 for ping and yarrp")
+                    raise ValueError(
+                        "`n_flow_ids` must be 1 for ping, yarrp and probes"
+                    )
         return values
 
 

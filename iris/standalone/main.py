@@ -41,9 +41,9 @@ async def diamond_miner(
 ):
     """Diamond-miner command."""
     if prefix_list:
-        prefixes = prefix_list.read_text().splitlines()
+        targets = prefix_list.read_text().splitlines()
     else:
-        prefixes = sys.stdin.readlines()
+        targets = sys.stdin.readlines()
 
     tool: Tool = Tool.DiamondMiner
     tool_parameters = ToolParameters(
@@ -57,7 +57,7 @@ async def diamond_miner(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag, s3_dir, logger
+        tool, targets, user, probing_rate, tool_parameters, tag, s3_dir, logger
     )
     display_results(pipeline_info)
 
@@ -78,9 +78,9 @@ async def yarrp(
 ):
     """YARRP command."""
     if prefix_list:
-        prefixes = prefix_list.read_text().splitlines()
+        targets = prefix_list.read_text().splitlines()
     else:
-        prefixes = sys.stdin.readlines()
+        targets = sys.stdin.readlines()
 
     tool: Tool = Tool.Yarrp
     tool_parameters = ToolParameters(
@@ -94,7 +94,7 @@ async def yarrp(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag or [], s3_dir, logger
+        tool, targets, user, probing_rate, tool_parameters, tag or [], s3_dir, logger
     )
     display_results(pipeline_info)
 
@@ -115,9 +115,9 @@ async def ping(
 ):
     """Ping command."""
     if prefix_list:
-        prefixes = prefix_list.read_text().splitlines()
+        targets = prefix_list.read_text().splitlines()
     else:
-        prefixes = sys.stdin.readlines()
+        targets = sys.stdin.readlines()
 
     tool = Tool.Ping
     tool_parameters = ToolParameters(
@@ -133,7 +133,46 @@ async def ping(
 
     # Launch pipeline
     pipeline_info = await pipeline(
-        tool, prefixes, user, probing_rate, tool_parameters, tag or [], s3_dir, logger
+        tool, targets, user, probing_rate, tool_parameters, tag or [], s3_dir, logger
+    )
+    display_results(pipeline_info)
+
+
+@app.command()
+@coroutine
+async def probes(
+    user: str = typer.Option("standalone"),
+    prefix_list: Optional[Path] = typer.Option(None),
+    probing_rate: int = typer.Argument(1000),
+    initial_source_port: Optional[int] = typer.Option(
+        default_parameters.initial_source_port
+    ),
+    destination_port: Optional[int] = typer.Option(default_parameters.destination_port),
+    tag: Optional[List[str]] = typer.Option(["standalone"]),
+    s3_dir: Path = typer.Option("/app/s3"),
+    verbose: bool = typer.Option(False, "--verbose"),
+):
+    """Probes command."""
+    if prefix_list:
+        targets = prefix_list.read_text().splitlines()
+    else:
+        targets = sys.stdin.readlines()
+
+    tool = Tool.Probes
+    tool_parameters = ToolParameters(
+        initial_source_port=initial_source_port,
+        destination_port=destination_port,
+        prefix_len_v4=32,
+        prefix_len_v6=128,
+        n_flow_ids=1,
+    )
+
+    # Create logger
+    logger = create_logger(logging.DEBUG if verbose else logging.ERROR)
+
+    # Launch pipeline
+    pipeline_info = await pipeline(
+        tool, targets, user, probing_rate, tool_parameters, tag or [], s3_dir, logger
     )
     display_results(pipeline_info)
 

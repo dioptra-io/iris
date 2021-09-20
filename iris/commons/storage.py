@@ -124,20 +124,26 @@ class Storage:
         """Get all files inside a bucket."""
         return await self.get_all_files_no_retry(bucket)
 
-    async def get_file_no_retry(self, bucket: str, filename: str) -> Dict:
+    async def get_file_no_retry(
+        self, bucket: str, filename: str, retrieve_content: bool = True
+    ) -> Dict:
         """Get file information from a bucket."""
         session = aioboto3.Session()
         async with session.client("s3", **self.aws_settings) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
-            async with file_object["Body"] as stream:
-                content = await stream.read()
+
+            content = None
+            if retrieve_content:
+                async with file_object["Body"] as stream:
+                    content = await stream.read()
+                content = content.decode("utf-8")
 
         return {
             "key": filename,
             "size": int(
                 file_object["ResponseMetadata"]["HTTPHeaders"]["content-length"]
             ),
-            "content": content.decode("utf-8"),
+            "content": content,
             "metadata": file_object["Metadata"],
             "last_modified": file_object["ResponseMetadata"]["HTTPHeaders"][
                 "last-modified"
@@ -145,9 +151,13 @@ class Storage:
         }
 
     @fault_tolerant(CommonSettings.storage_retry)
-    async def get_file(self, bucket: str, filename: str) -> Dict:
+    async def get_file(
+        self, bucket: str, filename: str, retrieve_content: bool = True
+    ) -> Dict:
         """Get file information from a bucket."""
-        return await self.get_file_no_retry(bucket, filename)
+        return await self.get_file_no_retry(
+            bucket, filename, retrieve_content=retrieve_content
+        )
 
     def _upload_sync_file(
         self,

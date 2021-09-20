@@ -85,6 +85,37 @@ async def target_file_validator(
     prefix_len_v6: int,
 ):
     """Validate the target file input."""
+    # Check validation for "Probe" tool
+    # The user must be admin and the target file must have the proper metadata
+    if tool == public.Tool.Probes:
+        # Verify that the target file exists on S3
+        try:
+            target_file = await storage.get_file_no_retry(
+                settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username,
+                target_filename,
+                retrieve_content=False,
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Probe file not found"
+            )
+
+        # Check if the user is admin
+        if not user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin priviledges required",
+            )
+
+        # Check if the metadata is correct
+        if not target_file["metadata"] or not (
+            target_file["metadata"].get("is_probes_file")
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Target file specified is not a probe file",
+            )
+        return 0, 255
 
     # Verify that the target file exists on S3
     try:
@@ -157,7 +188,6 @@ async def post_measurement(
 ):
     """Request a measurement."""
     active_agents = await redis.get_agents_by_uuid()
-    print(user)
 
     # Update the list of requested agents to include agents selected by tag.
     agents_: List[public.MeasurementAgentPostBody] = []
@@ -200,7 +230,7 @@ async def post_measurement(
                 detail=f"Multiple definition of agent `{agent.uuid}`",
             )
 
-        # Check agent target file
+        # Check agent target file is compatible with the measurement's parameters
         global_min_ttl, global_max_ttl = await target_file_validator(
             storage,
             measurement.tool,

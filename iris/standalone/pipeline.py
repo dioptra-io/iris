@@ -62,7 +62,7 @@ async def stamp_agent(
 
 async def pipeline(
     tool: Tool,
-    prefixes: list,
+    targets: list,
     username: str,
     probing_rate: int,
     tool_parameters: ToolParameters,
@@ -125,8 +125,8 @@ async def pipeline(
         / f"targets__{measurement_uuid}__{agent_settings.AGENT_UUID}.csv"
     )
     async with aiofiles.open(target_file, mode="w") as fd:
-        for prefix in prefixes:
-            await fd.write(prefix)
+        for target in targets:
+            await fd.write(target)
 
     # Copy the target file to the local storage
     storage = LocalStorage(agent_settings, s3_dir)

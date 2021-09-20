@@ -9,7 +9,7 @@ from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
 from iris.commons.schemas.private import MeasurementRoundRequest
-from iris.commons.schemas.public import ProbingStatistics
+from iris.commons.schemas.public import ProbingStatistics, Tool
 from iris.commons.storage import Storage, results_key, targets_key
 
 
@@ -43,6 +43,16 @@ async def measurement(
         probes_filepath = await storage.download_file_to(
             storage.measurement_bucket(measurement_request.uuid),
             request.probe_filename,
+            settings.AGENT_TARGETS_DIR_PATH,
+        )
+
+    # HACK: A') The tool is "Probes".
+    # We directly pass it to caracal.
+    if measurement_request.tool == Tool.Probes:
+        logger.info(f"{logger_prefix} Download CSV probe file locally")
+        probes_filepath = await storage.download_file_to(
+            storage.archive_bucket(measurement_request.username),
+            targets_key(measurement_request.uuid, agent.uuid),
             settings.AGENT_TARGETS_DIR_PATH,
         )
 

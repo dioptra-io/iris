@@ -43,7 +43,8 @@ def build_probe_generator_parameters(
                 # - the agent minimum TTL
                 # - the round minimum TTL
                 max(agent_min_ttl, int(min_ttl), round_.min_ttl),
-                # Ensure that the prefix maximum TTL is inferior to the round maximum TTL
+                # Ensure that the prefix maximum TTL
+                # is inferior to the round maximum TTL
                 min(int(max_ttl), round_.max_ttl) + 1,
             )
             if todo := targets.get(prefix):
@@ -51,8 +52,9 @@ def build_probe_generator_parameters(
             else:
                 targets[prefix] = [(protocol, ttls)]
 
-        # 3. If a specific list of prefixes to probe is specified, generate a new list of prefixes
-        # that includes the TTL ranges previously loaded.
+        # 3. If a specific list of prefixes to probe is specified,
+        # generate a new list of prefixes that includes
+        # the TTL ranges previously loaded.
         if prefix_list is not None:
             for line in prefix_list:
                 prefix = line.strip()
