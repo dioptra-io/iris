@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -106,7 +107,11 @@ class Storage:
                             "key": obj_summary.key,
                             "size": await obj_summary.size,
                             "metadata": await obj.metadata,
-                            "last_modified": str(await obj_summary.last_modified),
+                            "last_modified": datetime.datetime.fromisoformat(
+                                str(await obj_summary.last_modified)
+                            )
+                            .replace(microsecond=0)
+                            .replace(tzinfo=datetime.timezone.utc),
                         }
                     )
                 except ClientError as e:
@@ -145,9 +150,10 @@ class Storage:
             ),
             "content": content,
             "metadata": file_object["Metadata"],
-            "last_modified": file_object["ResponseMetadata"]["HTTPHeaders"][
-                "last-modified"
-            ],
+            "last_modified": datetime.datetime.strptime(
+                file_object["ResponseMetadata"]["HTTPHeaders"]["last-modified"],
+                "%a, %d %b %Y %H:%M:%S %Z",
+            ).replace(tzinfo=datetime.timezone.utc),
         }
 
     @fault_tolerant(CommonSettings.storage_retry)

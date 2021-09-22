@@ -1,7 +1,6 @@
 """Targets operations."""
 
 import ipaddress
-from datetime import datetime
 
 from fastapi import (
     APIRouter,
@@ -47,9 +46,7 @@ async def get_targets(
     summaries = [
         public.TargetSummary(
             key=target["key"],
-            last_modified=datetime.strptime(
-                target["last_modified"], "%a, %d %b %Y %H:%M:%S %Z"
-            ),
+            last_modified=target["last_modified"],
         )
         for target in targets
     ]
@@ -83,9 +80,7 @@ async def get_target_by_key(
         key=target_file["key"],
         size=target_file["size"],
         content=[c.strip() for c in target_file["content"].split()],
-        last_modified=datetime.strptime(
-            target_file["last_modified"], "%a, %d %b %Y %H:%M:%S %Z"
-        ),
+        last_modified=target_file["last_modified"],
     )
 
 

@@ -33,7 +33,7 @@ target23 = {
     "key": "test.csv",
     "size": 42,
     "content": "8.8.8.0/23,icmp,2,32",
-    "last_modified": "Mon, 20 Sep 2021 13:20:26 GMT",
+    "last_modified": datetime(2021, 9, 20, 13, 20, 26),
     "metadata": None,
 }
 
@@ -41,7 +41,7 @@ target25 = {
     "key": "test.csv",
     "size": 42,
     "content": "8.8.8.0/25,icmp,2,32",
-    "last_modified": "Mon, 20 Sep 2021 13:20:26 GMT",
+    "last_modified": datetime(2021, 9, 20, 13, 20, 26),
     "metadata": None,
 }
 
@@ -49,7 +49,7 @@ target_probes = {
     "key": "probes.csv",
     "size": 42,
     "content": "8.8.8.8,24000,33434,32,icmp",
-    "last_modified": "Mon, 20 Sep 2021 13:20:26 GMT",
+    "last_modified": datetime(2021, 9, 20, 13, 20, 26),
     "metadata": {"is_probes_file": "True"},
 }
 
