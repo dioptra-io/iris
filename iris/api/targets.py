@@ -173,11 +173,11 @@ async def verify_probe_target_file(target_file):
             ipaddress.ip_address(line_split[0])
 
             # Check the source port
-            if not (0 < int(line_split[1]) <= 65535):
+            if not (0 <= int(line_split[1]) <= 65535):
                 return False
 
             # Check the destination port
-            if not (0 < int(line_split[2]) <= 65535):
+            if not (0 <= int(line_split[2]) <= 65535):
                 return False
 
             # Check the TTL

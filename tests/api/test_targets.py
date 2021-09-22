@@ -194,12 +194,12 @@ async def test_verify_probes_list_file():
     )
     assert await verify_probe_target_file(file_container) is True
 
+    # Test with a value of 0 for port
+    file_container.register(b"8.8.8.8,24000,0,32,icmp")
+    assert await verify_probe_target_file(file_container) is True
+
     # Test with invalid destination address
     file_container.register(b"8.8.453.8,24000,33434,32,icmp")
-    assert await verify_probe_target_file(file_container) is False
-
-    # Test with invalid port
-    file_container.register(b"8.8.8.8,24000,0,32,icmp")
     assert await verify_probe_target_file(file_container) is False
 
     # Test with invalid protocol
