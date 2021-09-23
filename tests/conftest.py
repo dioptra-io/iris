@@ -50,9 +50,7 @@ def user():
         is_active=True,
         is_admin=True,
         quota=1000,
-    )
-    user._hashed_password = (
-        "$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve"
+        hashed_password="$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve",
     )
     return user
 

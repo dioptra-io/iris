@@ -2,13 +2,14 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlmodel import Session, SQLModel, select
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
 from iris.api import router
 from iris.api.dependencies import get_database, get_storage, settings
-from iris.commons.database import measurements, users
-from iris.commons.schemas import public
+from iris.commons.database import measurements
+from iris.commons.schemas.public import Profile
 
 app = FastAPI(
     title="Iris",
@@ -46,25 +47,32 @@ async def startup_event():
     database = get_database()
     storage = get_storage()
 
+    # Create the SQLModel database
+    SQLModel.metadata.create_all(settings.sqlmodel_engine())
+
     # Create the database
     await database.create_database()
 
     # Create the measurement table
     await measurements.create_table(database)
 
-    # Create the users database on Clickhouse and admin user
-    await users.create_table(database)
-    admin_user = await users.get(database, settings.API_ADMIN_USERNAME)
-    if admin_user is None:
-        profile = public.Profile(
-            username=settings.API_ADMIN_USERNAME,
-            email=settings.API_ADMIN_EMAIL,
-            is_active=True,
-            is_admin=True,
-            quota=settings.API_ADMIN_QUOTA,
+    # Create the admin user if it doesn't exists
+    with Session(settings.sqlmodel_engine()) as session:
+        results = session.exec(
+            select(Profile).where(Profile.username == settings.API_ADMIN_USERNAME)
         )
-        profile._hashed_password = settings.API_ADMIN_HASHED_PASSWORD
-        await users.register(database, profile)
+        if not results.one_or_none():
+            session.add(
+                Profile(
+                    username=settings.API_ADMIN_USERNAME,
+                    email=settings.API_ADMIN_EMAIL,
+                    is_active=True,
+                    is_admin=True,
+                    quota=settings.API_ADMIN_QUOTA,
+                    hashed_password=settings.API_ADMIN_HASHED_PASSWORD,
+                )
+            )
+            session.commit()
 
     # Create `targets` bucket in S3 for admin user
     await storage.create_bucket(

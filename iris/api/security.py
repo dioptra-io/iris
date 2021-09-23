@@ -3,14 +3,14 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlmodel import Session, select
 
-from iris.api.dependencies import get_database, settings
-from iris.commons.database import Database, users
-from iris.commons.schemas import public
+from iris.api.dependencies import get_session, settings
+from iris.commons.schemas.public import Profile
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="profile/token")
@@ -20,9 +20,7 @@ def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(
-    request: Request, data: dict, expires_delta: Optional[timedelta] = None
-):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -37,30 +35,29 @@ def create_access_token(
     return encoded_jwt
 
 
-async def get_user(
-    request: Request, database: Database, username: str
-) -> Optional[public.Profile]:
-    return await users.get(database, username)
+async def get_user(session: Session, username: str) -> Optional[Profile]:
+    return session.exec(
+        select(Profile).where(Profile.username == username)
+    ).one_or_none()
 
 
 async def authenticate_user(
-    request: Request, database: Database, username: str, password: str
-) -> Optional[public.Profile]:
-    user = await get_user(request, database, username)
+    session: Session, username: str, password: str
+) -> Optional[Profile]:
+    user = await get_user(session, username)
     if not user:
         return None
     if not user.is_active:
         return None
-    if not verify_password(password, user._hashed_password):
+    if not verify_password(password, user.hashed_password):
         return None
     return user
 
 
 async def get_current_user(
-    request: Request,
-    database: Database = Depends(get_database),
+    session: Session = Depends(get_session),
     token: str = Depends(oauth2_scheme),
-) -> public.Profile:
+) -> Profile:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -77,14 +74,14 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = await get_user(request, database, username=username)
+    user = await get_user(session, username)
     if not user:
         raise credentials_exception
     return user
 
 
 async def get_current_active_user(
-    current_user: public.Profile = Depends(get_current_user),
+    current_user: Profile = Depends(get_current_user),
 ):
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")

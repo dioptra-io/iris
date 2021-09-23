@@ -5,14 +5,14 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
+from sqlmodel import Session
 
-from iris.api.dependencies import get_database, settings
+from iris.api.dependencies import get_session, settings
 from iris.api.security import (
     authenticate_user,
     create_access_token,
     get_current_active_user,
 )
-from iris.commons.database import Database
 from iris.commons.schemas import public
 
 router = APIRouter()
@@ -31,11 +31,9 @@ class Token(BaseModel):
 async def get_token(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    database: Database = Depends(get_database),
+    session: Session = Depends(get_session),
 ):
-    user = await authenticate_user(
-        request, database, form_data.username, form_data.password
-    )
+    user = await authenticate_user(session, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -45,7 +43,7 @@ async def get_token(
 
     access_token_expires = timedelta(days=settings.API_TOKEN_EXPIRATION_TIME)
     access_token = create_access_token(
-        request, data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user.username}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}

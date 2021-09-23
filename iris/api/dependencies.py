@@ -1,3 +1,5 @@
+from sqlmodel import Session
+
 from iris.api.settings import APISettings
 from iris.commons.database import Database
 from iris.commons.logger import create_logger
@@ -18,6 +20,11 @@ async def get_redis():
         yield Redis(client, settings, logger)
     finally:
         await client.close()
+
+
+def get_session():
+    with Session(settings.sqlmodel_engine()) as session:
+        yield session
 
 
 def get_storage():
