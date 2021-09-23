@@ -1,44 +1,42 @@
 version: "3"
 
 services:
+  # Web Entrypoint
   traefik:
-    image: "traefik:latest"
+    image: traefik:2.5
     command:
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.redis.address=:6379"
       - "--api=true"
       - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.redis.address=:6379"
       - "--providers.docker"
+      - "--providers.docker.exposedbydefault=false"
     ports:
       - "80:80"
-      - "8080:8080"
       - "6379:6379"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       default:
         aliases:
-          - "iris.docker.localhost"
           - "cadvisor.docker.localhost"
           - "grafana.docker.localhost"
+          - "iris.docker.localhost"
           - "loki.docker.localhost"
           - "minio.docker.localhost"
           - "prometheus.docker.localhost"
 
+  # Control-Plane & Data-Plane
   clickhouse:
-    image: "yandex/clickhouse-server:latest"
-    labels:
-      - "traefik.enable=false"
-    volumes:
-      - "./volumes/clickhouse:/var/lib/clickhouse"
+    image: ${CLICKHOUSE_IMAGE:-yandex/clickhouse-server:21}
     ports:
       - "9000:9000"
+    volumes:
+      - "./volumes/clickhouse:/var/lib/clickhouse"
 
   redis:
-    image: "redis:latest"
+    image: redis:6
     command: "redis-server --requirepass redispass"
-    expose:
-      - "6379"
     labels:
       - "traefik.enable=true"
       - "traefik.tcp.routers.redis.entrypoints=redis"
@@ -47,7 +45,7 @@ services:
       - "./volumes/redis:/data"
 
   minio:
-    image: "minio/minio:latest"
+    image: minio/minio:latest
     command: "server /data"
     environment:
       MINIO_ACCESS_KEY: "minioadmin"
@@ -59,91 +57,24 @@ services:
     volumes:
       - "./volumes/minio:/data"
 
-  api:
-    build:
-      context: .
-      dockerfile: "./dockerfiles/iris-api.dockerfile"
-    environment:
-      API_CORS_ALLOW_ORIGIN: "http://localhost:8081"
-      API_ADMIN_USERNAME: "admin"
-      API_ADMIN_EMAIL: "admin@iris.docker.localhost"
-      API_ADMIN_HASHED_PASSWORD: "$$2b$$12$$DOA6t1HC4zlT/AqFgQcrzuxwcTVAV2HuyZrzxORdBDxhctmMfIbUi"
-      REDIS_URL: "redis://default:redispass@redis"
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
-      GUNICORN_CMD_ARGS: "--workers 1"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`) && PathPrefix(`/api`)"
-    volumes:
-      - "./iris:/app/iris"
-    depends_on:
-    - clickhouse
-    - loki
-    - minio
-    - redis
-
-  worker:
-    build:
-      context: .
-      dockerfile: "./dockerfiles/iris-worker.dockerfile"
-    environment:
-      REDIS_URL: "redis://default:redispass@redis"
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
-      WORKER_DEBUG_MODE: "true"
-    labels:
-      - "traefik.enable=false"
-    volumes:
-      - "./iris:/app/iris"
-    depends_on:
-      - clickhouse
-      - loki
-      - minio
-      - redis
-
-  agent:
-    build:
-      context: .
-      dockerfile: "./dockerfiles/iris-agent.dockerfile"
-    environment:
-      REDIS_URL: "redis://default:redispass@redis"
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
-      AGENT_MAX_PROBING_RATE: "100"
-      AGENT_DEBUG_MODE: "true"
-      AGENT_CARACAL_INTEGRITY_CHECK: "false" # In order to test from Docker for Mac
-    cap_add:
-      - SYS_PTRACE
-    labels:
-      - "traefik.enable=false"
-    volumes:
-      - "./iris:/app/iris"
-    depends_on:
-      - loki
-      - minio
-      - redis
-
+  # Monitoring
   cadvisor:
-    image: "gcr.io/google-containers/cadvisor:latest"
+    image: gcr.io/google-containers/cadvisor:latest
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.cadvisor.entrypoints=web"
       - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.docker.localhost`)"
     volumes:
       - "/:/rootfs:ro"
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "/sys:/sys:ro"
       - "/var/lib/docker/:/var/lib/docker:ro"
-      - "/dev/mapper:/dev/mapper:ro"
-    privileged: true
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  node-exporter:
+    image: prom/node-exporter:latest
 
   prometheus:
-    image: "prom/prometheus:latest"
+    image: prom/prometheus:latest
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -153,24 +84,11 @@ services:
       - "traefik.http.routers.prometheus.entrypoints=web"
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.docker.localhost`)"
     volumes:
-      - "./volumes/prometheus:/prometheus"
       - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
-
-  loki:
-    image: "grafana/loki:latest"
-    command: "-config.file=/etc/loki/loki.yaml"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.loki.entrypoints=web"
-      - "traefik.http.routers.loki.rule=Host(`loki.docker.localhost`)"
-      - "traefik.http.routers.loki.middlewares=loki@docker"
-      - "traefik.http.middlewares.loki.basicauth.users=admin:$$2y$$05$$oi6zVY1Gm57OPyPn3QdzdODPbaTeAEc12bWaa.GD.Biuno49bAg26"
-    volumes:
-      - "./volumes/loki:/loki"
-      - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
+      - "./volumes/prometheus:/prometheus"
 
   grafana:
-    image: "grafana/grafana:latest"
+    image: grafana/grafana:latest
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.entrypoints=web"
@@ -179,7 +97,78 @@ services:
     volumes:
       - "./volumes/grafana:/var/lib/grafana"
 
-  node-exporter:
-    image: "prom/node-exporter:latest"
+  loki:
+    image: grafana/loki:latest
+    command: "-config.file=/etc/loki/loki.yaml"
     labels:
-      - "traefik.enable=false"
+      - "traefik.enable=true"
+      - "traefik.http.routers.loki.entrypoints=web"
+      - "traefik.http.routers.loki.rule=Host(`loki.docker.localhost`)"
+      - "traefik.http.routers.loki.middlewares=loki@docker"
+      - "traefik.http.middlewares.loki.basicauth.users=admin:$$2y$$05$$oi6zVY1Gm57OPyPn3QdzdODPbaTeAEc12bWaa.GD.Biuno49bAg26"
+    volumes:
+      - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
+      - "./volumes/loki:/loki"
+
+  # Iris
+  agent:
+    build:
+      context: .
+      dockerfile: "./dockerfiles/iris-agent.dockerfile"
+    environment:
+      AGENT_CARACAL_INTEGRITY_CHECK: "false" # In order to test from Docker for Mac
+      AGENT_DEBUG_MODE: "true"
+      AGENT_MAX_PROBING_RATE: "100"
+      AWS_S3_HOST: "http://minio.docker.localhost"
+      AWS_ACCESS_KEY_ID: "minioadmin"
+      AWS_SECRET_ACCESS_KEY: "minioadmin"
+      REDIS_URL: "redis://default:redispass@redis"
+    volumes:
+      - "./iris:/app/iris"
+    depends_on:
+      - minio
+      - redis
+
+  api:
+    build:
+      context: .
+      dockerfile: "./dockerfiles/iris-api.dockerfile"
+    environment:
+      API_CORS_ALLOW_ORIGIN: "http://localhost:8081"
+      API_ADMIN_USERNAME: "admin"
+      API_ADMIN_EMAIL: "admin@iris.docker.localhost"
+      API_ADMIN_HASHED_PASSWORD: "$$2b$$12$$DOA6t1HC4zlT/AqFgQcrzuxwcTVAV2HuyZrzxORdBDxhctmMfIbUi"
+      AWS_S3_HOST: "http://minio.docker.localhost"
+      AWS_ACCESS_KEY_ID: "minioadmin"
+      AWS_SECRET_ACCESS_KEY: "minioadmin"
+      GUNICORN_CMD_ARGS: "--workers 1"
+      REDIS_URL: "redis://default:redispass@redis"
+      SQLMODEL_DATABASE_URL: "sqlite:////db/iris.sqlite3"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`) && PathPrefix(`/api`)"
+    volumes:
+      - "./iris:/app/iris"
+      - "./volumes/iris:/db"
+    depends_on:
+    - clickhouse
+    - minio
+    - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: "./dockerfiles/iris-worker.dockerfile"
+    environment:
+      AWS_S3_HOST: "http://minio.docker.localhost"
+      AWS_ACCESS_KEY_ID: "minioadmin"
+      AWS_SECRET_ACCESS_KEY: "minioadmin"
+      REDIS_URL: "redis://default:redispass@redis"
+      WORKER_DEBUG_MODE: "true"
+    volumes:
+      - "./iris:/app/iris"
+    depends_on:
+      - clickhouse
+      - minio
+      - redis
