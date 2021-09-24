@@ -1,50 +1,47 @@
-FROM ubuntu:20.04
-LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
+FROM docker.io/library/ubuntu:20.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
-# TODO: Remove build-essential and python3-dev once
-# we can push binary wheels on PyPI for diamond-miner.
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
-        apt-transport-https \
         build-essential \
-        ca-certificates \
-        curl \
-        dirmngr \
-        gnupg2 \
         python3-dev \
         python3-pip \
-        tzdata \
-        zstd \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN [ $(arch) = "x86_64" ] && exit 0 \
-    || curl --location --output /usr/bin/clickhouse \
-        https://builds.clickhouse.tech/master/aarch64/clickhouse \
-    && chmod +x /usr/bin/clickhouse
-
-RUN [ $(arch) = "aarch64" ] && exit 0 \
-    || apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
-    && echo "deb https://repo.clickhouse.tech/deb/stable/ main/" > \
-        /etc/apt/sources.list.d/clickhouse.list \
-    && apt-get update \
-    && apt-get install -y -q --no-install-recommends \
-        clickhouse-client \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-RUN mkdir results
-
-RUN pip3 install --no-cache-dir uvicorn poetry==1.1.7
-RUN poetry config virtualenvs.create false
+RUN pip3 install --no-cache-dir poetry
+RUN poetry config virtualenvs.in-project true
 
 COPY pyproject.toml pyproject.toml
-#COPY poetry.lock poetry.lock
+COPY poetry.lock poetry.lock
 
 RUN poetry install --no-root --no-dev --extras worker \
     && rm -rf /root/.cache/*
 
-COPY iris iris
+FROM docker.io/library/ubuntu:20.04
+LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
+ENV DEBIAN_FRONTEND=noninteractive
 
-CMD ["dramatiq", "iris.worker.hook"]
+RUN apt-get update \
+    && apt-get install --no-install-recommends --yes \
+        binutils \
+        ca-certificates \
+        curl \
+        python3 \
+        tzdata \
+        zstd \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl --location --output /usr/bin/clickhouse \
+        "https://builds.clickhouse.tech/master/$(arch | sed s/x86_64/amd64/)/clickhouse" \
+    && strip /usr/bin/clickhouse \
+    && chmod +x /usr/bin/clickhouse
+
+WORKDIR /app
+COPY iris iris
+COPY --from=builder /app/.venv .venv
+
+RUN mkdir results
+
+CMD ["/app/.venv/bin/dramatiq", "iris.worker.hook"]

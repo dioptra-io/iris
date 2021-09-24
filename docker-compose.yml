@@ -3,7 +3,7 @@ version: "3"
 services:
   # Web Entrypoint
   traefik:
-    image: traefik:2.5
+    image: docker.io/library/traefik:2.5
     command:
       - "--api=true"
       - "--api.insecure=true"
@@ -28,14 +28,14 @@ services:
 
   # Control-Plane & Data-Plane
   clickhouse:
-    image: ${CLICKHOUSE_IMAGE:-yandex/clickhouse-server:21}
+    image: ${CLICKHOUSE_IMAGE:-docker.io/yandex/clickhouse-server:21}
     ports:
       - "9000:9000"
     volumes:
       - "./volumes/clickhouse:/var/lib/clickhouse"
 
   redis:
-    image: redis:6
+    image: docker.io/library/redis:6
     command: "redis-server --requirepass redispass"
     labels:
       - "traefik.enable=true"
@@ -45,7 +45,7 @@ services:
       - "./volumes/redis:/data"
 
   minio:
-    image: minio/minio:latest
+    image: docker.io/minio/minio:latest
     command: "server /data"
     environment:
       MINIO_ACCESS_KEY: "minioadmin"
@@ -71,10 +71,10 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: docker.io/prom/node-exporter:latest
 
   prometheus:
-    image: prom/prometheus:latest
+    image: docker.io/prom/prometheus:latest
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -88,7 +88,7 @@ services:
       - "./volumes/prometheus:/prometheus"
 
   grafana:
-    image: grafana/grafana:latest
+    image: docker.io/grafana/grafana:latest
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.entrypoints=web"
@@ -98,7 +98,7 @@ services:
       - "./volumes/grafana:/var/lib/grafana"
 
   loki:
-    image: grafana/loki:latest
+    image: docker.io/grafana/loki:latest
     command: "-config.file=/etc/loki/loki.yaml"
     labels:
       - "traefik.enable=true"

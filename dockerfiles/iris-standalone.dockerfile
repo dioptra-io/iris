@@ -1,10 +1,11 @@
-FROM ubuntu:20.04
+FROM docker.io/library/ubuntu:20.04
 LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         apt-transport-https \
+        binutils \
         build-essential \
         ca-certificates \
         curl \
@@ -20,6 +21,7 @@ RUN apt-get update \
 RUN [ $(arch) = "x86_64" ] && exit 0 \
     || curl --location --output /usr/bin/clickhouse \
         https://builds.clickhouse.tech/master/aarch64/clickhouse \
+    && strip /usr/bin/clickhouse \
     && chmod +x /usr/bin/clickhouse
 
 RUN [ $(arch) = "aarch64" ] && exit 0 \
@@ -37,11 +39,11 @@ RUN mkdir s3
 RUN mkdir targets
 RUN mkdir results
 
-RUN pip3 install --no-cache-dir uvicorn poetry==1.1.7
-RUN poetry config virtualenvs.create false
+RUN pip3 install --no-cache-dir poetry
+RUN poetry config virtualenvs.in-project true
 
 COPY pyproject.toml pyproject.toml
-#COPY poetry.lock poetry.lock
+COPY poetry.lock poetry.lock
 
 RUN poetry install --no-dev --extras "agent api standalone worker" \
     && rm -rf /root/.cache/*
@@ -50,5 +52,5 @@ COPY iris iris
 COPY statics/excluded_prefixes statics/excluded_prefixes
 RUN mv iris/standalone/main.py main.py
 
-ENTRYPOINT ["python3", "main.py"]
+ENTRYPOINT ["/app/.venv/bin/python3", "main.py"]
 CMD ["--help"]
