@@ -48,7 +48,7 @@ async def measurement(
 
     # HACK: A') The tool is "Probes".
     # We directly pass it to caracal.
-    if measurement_request.tool == Tool.Probes:
+    elif measurement_request.tool == Tool.Probes:
         logger.info(f"{logger_prefix} Download CSV probe file locally")
         probes_filepath = await storage.download_file_to(
             storage.archive_bucket(measurement_request.username),
