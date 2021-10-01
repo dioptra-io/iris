@@ -47,7 +47,7 @@ uvicorn = {optional = true, version = "^0.15.0"}
 
 [tool.poetry.dev-dependencies]
 black = {version = "^21.9b0", allow-prereleases = true}
-boto3-stubs = "^1.18.42"
+boto3-stubs = "^1.18.52"
 bumpversion = "^0.6.0"
 coverage = "^5.2.1"
 flake8 = "^3.8.3"
