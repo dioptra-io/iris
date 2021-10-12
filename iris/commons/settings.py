@@ -67,7 +67,7 @@ class CommonSettings(BaseSettings):
     DATABASE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
     DATABASE_STORAGE_POLICY: str = "default"
     DATABASE_ARCHIVE_VOLUME: str = "default"
-    DATABASE_ARCHIVE_INTERVAL: timedelta = timedelta(days=30)
+    DATABASE_ARCHIVE_INTERVAL: timedelta = timedelta(days=15)
 
     TABLE_NAME_USERS: str = "users"
     TABLE_NAME_MEASUREMENTS: str = "measurements"
