@@ -1,5 +1,6 @@
 import logging
 import platform
+from datetime import timedelta
 from functools import wraps
 from typing import Optional
 
@@ -64,6 +65,9 @@ class CommonSettings(BaseSettings):
     DATABASE_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     DATABASE_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
     DATABASE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
+    DATABASE_STORAGE_POLICY: str = "default"
+    DATABASE_ARCHIVE_VOLUME: str = "default"
+    DATABASE_ARCHIVE_INTERVAL: timedelta = timedelta(days=30)
 
     TABLE_NAME_USERS: str = "users"
     TABLE_NAME_MEASUREMENTS: str = "measurements"

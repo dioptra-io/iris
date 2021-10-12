@@ -2,6 +2,7 @@ import asyncio
 import os
 from asyncio import Semaphore
 from dataclasses import dataclass
+from datetime import datetime
 from ipaddress import IPv6Address
 from pathlib import Path
 from typing import Generic, List, Optional, TypeVar, Union
@@ -20,6 +21,7 @@ from diamond_miner.queries import (
     InsertLinks,
     InsertPrefixes,
     Query,
+    StoragePolicy,
     links_table,
     prefixes_table,
     results_table,
@@ -67,7 +69,14 @@ class InsertResults:
             await self.database.execute(DropTables(), self.measurement_id)
         await self.database.execute(
             CreateTables(
-                prefix_len_v4=self.prefix_len_v4, prefix_len_v6=self.prefix_len_v6
+                prefix_len_v4=self.prefix_len_v4,
+                prefix_len_v6=self.prefix_len_v6,
+                storage_policy=StoragePolicy(
+                    name=self.database.settings.DATABASE_STORAGE_POLICY,
+                    archive_to=self.database.settings.DATABASE_ARCHIVE_VOLUME,
+                    archive_on=datetime.now()
+                    + self.database.settings.DATABASE_ARCHIVE_INTERVAL,
+                ),
             ),
             self.measurement_id,
         )
