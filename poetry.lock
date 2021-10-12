@@ -1931,7 +1931,7 @@ worker = ["dramatiq"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "9a43d6322b6c1dd56114ece236dda4d3d8a9f1dd8aa712b42f064182ab122a81"
+content-hash = "160ec47df21dc3248f03b9f1be6e2bf05340f58ad40d8ea09d1562370d6fd416"
 
 [metadata.files]
 aioboto3 = [
