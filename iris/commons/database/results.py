@@ -269,6 +269,9 @@ class Interfaces(QueryWrapper[public.Interface]):
 class Links(QueryWrapper[public.Link]):
     """Get measurement links."""
 
+    filter_inter_round: bool = False
+    filter_partial: bool = False
+    filter_virtual: bool = False
     near_or_far_addr: Optional[IPvAnyAddress] = None
 
     def formatter(self, row: tuple):
@@ -283,7 +286,13 @@ class Links(QueryWrapper[public.Link]):
         near_or_far_addr = None
         if self.near_or_far_addr:
             near_or_far_addr = str(self.near_or_far_addr)
-        return GetLinks(include_metadata=True, near_or_far_addr=near_or_far_addr)
+        return GetLinks(
+            include_metadata=True,
+            filter_inter_round=self.filter_inter_round,
+            filter_partial=self.filter_partial,
+            filter_virtual=self.filter_virtual,
+            near_or_far_addr=near_or_far_addr,
+        )
 
     def table(self):
         return links_table(self.measurement_id)

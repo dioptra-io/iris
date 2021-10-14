@@ -160,13 +160,24 @@ async def get_links_results_by_prefix(
     measurement_uuid: UUID,
     agent_uuid: UUID,
     prefix: IPvAnyAddress,
+    filter_inter_round: bool = False,
+    filter_partial: bool = False,
+    filter_virtual: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
     """Get links results."""
-    wrapper = Links(database, measurement_uuid, agent_uuid, subset=ip_network(prefix))
+    wrapper = Links(
+        database,
+        measurement_uuid,
+        agent_uuid,
+        filter_inter_round=filter_inter_round,
+        filter_partial=filter_partial,
+        filter_virtual=filter_virtual,
+        subset=ip_network(prefix),
+    )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
     )
@@ -183,13 +194,24 @@ async def get_links_results_by_adjacency(
     measurement_uuid: UUID,
     agent_uuid: UUID,
     address: IPvAnyAddress,
+    filter_inter_round: bool = False,
+    filter_partial: bool = False,
+    filter_virtual: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
     """Get links results."""
-    wrapper = Links(database, measurement_uuid, agent_uuid, near_or_far_addr=address)
+    wrapper = Links(
+        database,
+        measurement_uuid,
+        agent_uuid,
+        filter_inter_round=filter_inter_round,
+        filter_partial=filter_partial,
+        filter_virtual=filter_virtual,
+        near_or_far_addr=address,
+    )
     return await get_results(
         request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
     )
