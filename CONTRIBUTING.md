@@ -9,7 +9,9 @@ Thanks for contributing ! Here is some guidelines to make your life easier durin
 For development purposes, you can setup a new local infrastructure like this.
 
 ```
-make run-dev
+docker-compose up -d --build
+...
+docker-compose down
 ```
 
 ## Syntax checking
@@ -17,7 +19,7 @@ make run-dev
 You can check the syntax using flake8.
 
 ```
-make lint
+flake8 --ignore=E501,W503 iris
 ```
 
 ## Type checking
@@ -25,7 +27,7 @@ make lint
 If you used annotations to do static Python type checking with mypy.
 
 ```
-make type
+mypy iris
 ```
 
 ## Test coverage
@@ -33,7 +35,10 @@ make type
 You can run the coverage using pytest.
 
 ```
-make test
+docker run -d --name clickhouse -v $(pwd)/volumes/clickhouse:/var/lib/clickhouse -p 9000:9000 yandex/clickhouse-server:latest
+pytest
+...
+docker rm -f clickhouse
 ```
 
 
