@@ -77,7 +77,7 @@ def build_probe_generator_parameters(
         "prefixes": prefixes,
         "prefix_len_v4": tool_parameters.prefix_len_v4,
         "prefix_len_v6": tool_parameters.prefix_len_v6,
-        "flow_ids": range(tool_parameters.n_flow_ids),
+        "flow_ids": range(tool_parameters.n_initial_flows),
         "probe_dst_port": tool_parameters.destination_port,
         "mapper_v4": flow_mapper_v4,
         "mapper_v6": flow_mapper_v6,

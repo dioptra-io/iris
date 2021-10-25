@@ -181,6 +181,8 @@ async def default_pipeline(
         probe_src_port=agent.tool_parameters.initial_source_port,
         probe_dst_port=agent.tool_parameters.destination_port,
         adaptive_eps=True,
+        n_initial_flows=agent.tool_parameters.n_initial_flows,
+        target_epsilon=agent.tool_parameters.failure_rate,
     )
 
     if n_probes_to_send > 0:

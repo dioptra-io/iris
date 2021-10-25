@@ -86,7 +86,6 @@ async def yarrp(
     tool_parameters = ToolParameters(
         initial_source_port=initial_source_port,
         destination_port=destination_port,
-        n_flow_ids=1,
     )
 
     # Create logger
@@ -125,7 +124,6 @@ async def ping(
         destination_port=destination_port,
         prefix_len_v4=32,
         prefix_len_v6=128,
-        n_flow_ids=1,
     )
 
     # Create logger
@@ -164,7 +162,6 @@ async def probes(
         destination_port=destination_port,
         prefix_len_v4=32,
         prefix_len_v6=128,
-        n_flow_ids=1,
     )
 
     # Create logger
