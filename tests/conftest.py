@@ -145,7 +145,10 @@ def api_client_factory(common_settings, redis_client):
         if override_user:
             app.dependency_overrides[get_current_active_user] = lambda: override_user
 
-        client = klass(app=app, base_url="http://testserver")
+        kwargs = dict(app=app, base_url="http://testserver")
+        if klass == AsyncClient:
+            kwargs["follow_redirects"] = True
+        client = klass(**kwargs)
         return client
 
     return api_client
