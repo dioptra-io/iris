@@ -63,8 +63,8 @@ def measurement1():
         tool=Tool.DiamondMiner,
         agents=[],
         tags=["test"],
-        start_time=datetime.now(),
-        end_time=datetime.now(),
+        start_time=datetime.utcnow(),
+        end_time=datetime.utcnow(),
     )
 
 
@@ -114,8 +114,8 @@ def test_get_measurements(api_client_sync, monkeypatch):
             tool=Tool.DiamondMiner,
             agents=[],
             tags=[],
-            start_time=datetime.now(),
-            end_time=datetime.now(),
+            start_time=datetime.utcnow(),
+            end_time=datetime.utcnow(),
         ),
         Measurement(
             uuid=uuid.uuid4(),
@@ -124,8 +124,8 @@ def test_get_measurements(api_client_sync, monkeypatch):
             tool=Tool.DiamondMiner,
             agents=[],
             tags=[],
-            start_time=datetime.now(),
-            end_time=datetime.now(),
+            start_time=datetime.utcnow(),
+            end_time=datetime.utcnow(),
         ),
         Measurement(
             uuid=uuid.uuid4(),
@@ -134,8 +134,8 @@ def test_get_measurements(api_client_sync, monkeypatch):
             tool=Tool.DiamondMiner,
             agents=[],
             tags=[],
-            start_time=datetime.now(),
-            end_time=datetime.now(),
+            start_time=datetime.utcnow(),
+            end_time=datetime.utcnow(),
         ),
     ]
 

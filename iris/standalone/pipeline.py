@@ -86,7 +86,7 @@ async def pipeline(
     worker_settings = WorkerSettings()
 
     measurement_uuid = uuid4()
-    start_time = datetime.now()
+    start_time = datetime.utcnow()
 
     # Find min TTL automatically
     if agent_settings.AGENT_MIN_TTL < 0:
@@ -242,7 +242,7 @@ async def pipeline(
         "n_rounds": n_rounds,
         "min_ttl": agent_settings.AGENT_MIN_TTL,
         "start_time": start_time,
-        "end_time": datetime.now(),
+        "end_time": datetime.utcnow(),
         "n_nodes": n_nodes,
         "n_links": n_links,
         "probing_statistics": statistics,

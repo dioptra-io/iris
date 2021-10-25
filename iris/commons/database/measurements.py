@@ -151,5 +151,9 @@ async def stamp_end_time(database: Database, user: str, uuid: UUID) -> None:
         WHERE user=%(user)s AND uuid=%(uuid)s
         SETTINGS mutations_sync=1
         """,
-        {"end_time": datetime.now(), "user": user, "uuid": uuid},
+        {
+            "end_time": datetime.utcnow().replace(microsecond=0),
+            "user": user,
+            "uuid": uuid,
+        },
     )

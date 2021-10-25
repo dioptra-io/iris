@@ -98,7 +98,7 @@ async def register(
                 "agent_parameters": agent_parameters.json(),
                 "tool_parameters": agent.tool_parameters.json(),
                 "state": public.MeasurementState.Ongoing.value,
-                "timestamp": datetime.now(),
+                "timestamp": datetime.utcnow(),
             }
         ],
     )

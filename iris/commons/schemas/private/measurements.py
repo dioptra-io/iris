@@ -10,7 +10,7 @@ from iris.commons.schemas.base import BaseModel
 
 class MeasurementRequest(public.MeasurementPostBody):
     start_time: datetime = Field(
-        default_factory=lambda: datetime.now().replace(microsecond=0)
+        default_factory=lambda: datetime.utcnow().replace(microsecond=0)
     )
     uuid: UUID = Field(default_factory=uuid4)
     username: str

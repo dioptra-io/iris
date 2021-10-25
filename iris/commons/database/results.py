@@ -74,7 +74,7 @@ class InsertResults:
                 storage_policy=StoragePolicy(
                     name=self.database.settings.DATABASE_STORAGE_POLICY,
                     archive_to=self.database.settings.DATABASE_ARCHIVE_VOLUME,
-                    archive_on=datetime.now()
+                    archive_on=datetime.utcnow()
                     + self.database.settings.DATABASE_ARCHIVE_INTERVAL,
                 ),
             ),

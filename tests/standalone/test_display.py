@@ -12,8 +12,8 @@ def test_display_results():
     measurement_uuid = str(uuid.uuid4())
     agent_uuid = str(uuid.uuid4())
 
-    start_time = datetime.now()
-    end_time = datetime.now()
+    start_time = datetime.utcnow()
+    end_time = datetime.utcnow()
 
     results = {
         "measurement_uuid": measurement_uuid,
@@ -29,8 +29,8 @@ def test_display_results():
         "probing_statistics": {
             "1:10:0": ProbingStatistics(
                 round=Round(number=1, limit=10, offset=0),
-                start_time=datetime.now(),
-                end_time=datetime.now(),
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
                 pcap_received=30,
                 pcap_dropped=0,
                 pcap_interface_dropped=0,
@@ -46,8 +46,8 @@ def test_display_results():
             ),
             "1:10:1": ProbingStatistics(
                 round=Round(number=1, limit=10, offset=1),
-                start_time=datetime.now(),
-                end_time=datetime.now(),
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
                 pcap_received=30,
                 pcap_dropped=0,
                 pcap_interface_dropped=0,

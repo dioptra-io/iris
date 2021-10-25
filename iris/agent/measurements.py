@@ -92,7 +92,7 @@ async def measurement(
     logger.info(f"{logger_prefix} Tool Parameters : {agent.tool_parameters}")
     logger.info(f"{logger_prefix} Max Probing Rate : {agent.probing_rate}")
 
-    probing_start_time = datetime.now()
+    probing_start_time = datetime.utcnow()
     with Manager() as manager:
         prober_statistics = manager.dict()  # type: ignore
 
@@ -120,7 +120,7 @@ async def measurement(
         statistics = ProbingStatistics(
             round=request.round,
             start_time=probing_start_time,
-            end_time=datetime.now(),
+            end_time=datetime.utcnow(),
             **prober_statistics,
         )
         await redis.set_measurement_stats(

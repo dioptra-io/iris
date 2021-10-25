@@ -12,7 +12,7 @@ class Profile(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     register_date: datetime = Field(
-        default_factory=lambda: datetime.now().replace(microsecond=0)
+        default_factory=lambda: datetime.utcnow().replace(microsecond=0)
     )
     username: str
     email: EmailStr

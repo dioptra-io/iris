@@ -59,8 +59,8 @@ def user():
 def statistics():
     return ProbingStatistics(
         round=Round(number=1, limit=10, offset=0),
-        start_time=datetime.now(),
-        end_time=datetime.now(),
+        start_time=datetime.utcnow(),
+        end_time=datetime.utcnow(),
         filtered_low_ttl=0,
         filtered_high_ttl=0,
         filtered_prefix_excl=0,
