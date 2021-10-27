@@ -255,11 +255,15 @@ class Replies(QueryWrapper[public.Reply]):
 class Interfaces(QueryWrapper[public.Interface]):
     """Get measurement interfaces."""
 
+    filter_invalid_prefixes: bool = False
+
     def formatter(self, row: tuple):
         return public.Interface(ttl=row[0], addr=addr_to_string(row[1]))
 
     def query(self):
-        return GetNodes(include_probe_ttl=True)
+        return GetNodes(
+            include_probe_ttl=True, filter_invalid_prefixes=self.filter_invalid_prefixes
+        )
 
     def table(self):
         return results_table(self.measurement_id)
@@ -269,6 +273,7 @@ class Interfaces(QueryWrapper[public.Interface]):
 class Links(QueryWrapper[public.Link]):
     """Get measurement links."""
 
+    filter_invalid_prefixes: bool = False
     filter_inter_round: bool = False
     filter_partial: bool = False
     filter_virtual: bool = False
@@ -288,6 +293,7 @@ class Links(QueryWrapper[public.Link]):
             near_or_far_addr = str(self.near_or_far_addr)
         return GetLinks(
             include_metadata=True,
+            filter_invalid_prefixes=self.filter_invalid_prefixes,
             filter_inter_round=self.filter_inter_round,
             filter_partial=self.filter_partial,
             filter_virtual=self.filter_virtual,

@@ -88,7 +88,7 @@ async def get_prefixes_results(
     agent_uuid: UUID,
     contains_network: Optional[IPvAnyNetwork] = Query(None),
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=0, le=200),
+    limit: int = Query(100, ge=0, le=65536),
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
@@ -113,7 +113,7 @@ async def get_replies_results(
     agent_uuid: UUID,
     prefix: IPvAnyAddress,
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=0, le=200),
+    limit: int = Query(100, ge=0, le=65536),
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
@@ -125,7 +125,7 @@ async def get_replies_results(
 
 
 @router.get(
-    "/{measurement_uuid}/{agent_uuid}/interfaces/{prefix}",
+    "/{measurement_uuid}/{agent_uuid}/interfaces",
     response_model=public.Paginated[public.Interface],
     responses={404: {"model": public.GenericException}},
     summary="Get measurement interfaces.",
@@ -134,9 +134,37 @@ async def get_interfaces_results(
     request: Request,
     measurement_uuid: UUID,
     agent_uuid: UUID,
+    filter_invalid_prefixes: bool = False,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=0, le=65536),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
+):
+    """Get interfaces results."""
+    wrapper = Interfaces(
+        database,
+        measurement_uuid,
+        agent_uuid,
+        filter_invalid_prefixes=filter_invalid_prefixes,
+    )
+    return await get_results(
+        request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
+    )
+
+
+@router.get(
+    "/{measurement_uuid}/{agent_uuid}/interfaces/{prefix}",
+    response_model=public.Paginated[public.Interface],
+    responses={404: {"model": public.GenericException}},
+    summary="Get measurement interfaces for a specific prefix.",
+)
+async def get_interfaces_results_by_prefix(
+    request: Request,
+    measurement_uuid: UUID,
+    agent_uuid: UUID,
     prefix: IPvAnyAddress,
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=0, le=200),
+    limit: int = Query(100, ge=0, le=65536),
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
@@ -150,10 +178,43 @@ async def get_interfaces_results(
 
 
 @router.get(
-    "/{measurement_uuid}/{agent_uuid}/links/by-prefix/{prefix}",
+    "/{measurement_uuid}/{agent_uuid}/links",
     response_model=public.Paginated[public.Link],
     responses={404: {"model": public.GenericException}},
     summary="Get measurement links.",
+)
+async def get_links_results(
+    request: Request,
+    measurement_uuid: UUID,
+    agent_uuid: UUID,
+    filter_invalid_prefixes: bool = False,
+    filter_inter_round: bool = False,
+    filter_partial: bool = False,
+    filter_virtual: bool = False,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=0, le=65536),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
+):
+    wrapper = Links(
+        database,
+        measurement_uuid,
+        agent_uuid,
+        filter_invalid_prefixes=filter_invalid_prefixes,
+        filter_inter_round=filter_inter_round,
+        filter_partial=filter_partial,
+        filter_virtual=filter_virtual,
+    )
+    return await get_results(
+        request, measurement_uuid, agent_uuid, offset, limit, user, wrapper
+    )
+
+
+@router.get(
+    "/{measurement_uuid}/{agent_uuid}/links/by-prefix/{prefix}",
+    response_model=public.Paginated[public.Link],
+    responses={404: {"model": public.GenericException}},
+    summary="Get measurement links for a specific prefix.",
 )
 async def get_links_results_by_prefix(
     request: Request,
@@ -164,7 +225,7 @@ async def get_links_results_by_prefix(
     filter_partial: bool = False,
     filter_virtual: bool = False,
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=0, le=200),
+    limit: int = Query(100, ge=0, le=65536),
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
@@ -187,7 +248,7 @@ async def get_links_results_by_prefix(
     "/{measurement_uuid}/{agent_uuid}/links/by-adjacency/{address}",
     response_model=public.Paginated[public.Link],
     responses={404: {"model": public.GenericException}},
-    summary="Get measurement links.",
+    summary="Get measurement links adjacent to a specific node.",
 )
 async def get_links_results_by_adjacency(
     request: Request,
@@ -198,7 +259,7 @@ async def get_links_results_by_adjacency(
     filter_partial: bool = False,
     filter_virtual: bool = False,
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=0, le=200),
+    limit: int = Query(100, ge=0, le=65536),
     user: public.Profile = Depends(get_current_active_user),
     database: Database = Depends(get_database),
 ):
