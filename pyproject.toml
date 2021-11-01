@@ -59,7 +59,7 @@ moto = {version = "^2.2.8", extras = ["s3"]}
 mypy = "^0.910"
 pre-commit = "^2.15.0"
 pytest = "^6.2.5"
-pytest-asyncio = "^0.15"
+pytest-asyncio = "^0.16"
 pytest-cov = "^2.10.0"
 types-aiofiles = "^0.1.9"
 pytest-clarity = "^1.0.1"
