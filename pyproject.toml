@@ -40,7 +40,7 @@ pytricia = {optional = true, version = "^1.0.2"}
 rich = {optional = true, version = "^10.9.0"}
 SQLAlchemy-Utils = "^0.37.8"
 sqlmodel = "^0.0.4"
-starlette_exporter = {optional = true, version = "^0.10.0"}
+starlette_exporter = {optional = true, version = "^0.11.0"}
 tenacity = "^8.0.1"
 typer = {optional = true, version = "^0.4.0"}
 uvicorn = {optional = true, version = "^0.15.0"}
