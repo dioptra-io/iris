@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Dict, Optional
 from uuid import UUID
 
-from diamond_miner.generators import probe_generator_by_flow
 from pycaracal import cast_addr, make_probe, prober, set_log_level
 
 from iris.agent.settings import AgentSettings
@@ -36,17 +35,9 @@ def probe(
     round_number: int,
     probing_rate: int,
     prober_statistics: Dict,
-    gen_parameters: Optional[Dict] = None,
     probes_filepath: Optional[Path] = None,
 ) -> None:
     """Probing interface."""
-
-    # Check the input parameters
-    if gen_parameters is None and probes_filepath is None:
-        raise ValueError(
-            "Must have either `gen_parameters` or `probes_filepath` parameter"
-        )
-
     # Cap the probing rate if superior to the maximum probing rate
     measurement_probing_rate = (
         probing_rate
@@ -72,31 +63,7 @@ def probe(
     if settings.AGENT_CARACAL_EXCLUDE_PATH is not None:
         config.set_prefix_excl_file(str(settings.AGENT_CARACAL_EXCLUDE_PATH))
 
-    if gen_parameters:
-        # Map generator tuples to pycaracal Probes
-        # * protocol is "icmp", "icmp6", or "udp",
-        #   this is different from before where we only had "icmp" or "udp"!
-        # * cast_addr converts an IPv4/IPv6 object, or an IPv6 as an integer
-        #   to an in6_addr struct in C.
-        gen = probe_generator_by_flow(**gen_parameters)
-        gen = (
-            make_probe(
-                cast_addr(dst_addr),
-                src_port,
-                dst_port,
-                ttl,
-                protocol,
-            )
-            for dst_addr, src_port, dst_port, ttl, protocol in gen
-        )
-
-        # Use the prober generator
-        prober_stats, sniffer_stats, pcap_stats = prober.probe(config, gen)
-    else:
-        # In case of round > 1, use a probes file
-        prober_stats, sniffer_stats, pcap_stats = prober.probe(
-            config, str(probes_filepath)
-        )
+    prober_stats, sniffer_stats, pcap_stats = prober.probe(config, str(probes_filepath))
 
     # Populate the statistics
     prober_statistics["probes_read"] = prober_stats.read

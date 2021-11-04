@@ -220,14 +220,14 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
             logger.error(f"{logger_prefix} Impossible to create bucket")
             return
 
-        logger.info(f"{logger_prefix} Publish measurement to agents")
-        request = MeasurementRoundRequest(
-            measurement=measurement_request,
-            round=Round(
-                number=1, limit=settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0
-            ),
-        )
+        logger.info(f"Insert initial probes in the database")
+        round_ = Round(number=1, limit=settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0)
+        # NOTE: We insert the probes for all TTLs here, regardless of the "sliding prefixes" feature.
+        # TODO
+        # measurement_request.agents[0].target_file
 
+        logger.info(f"{logger_prefix} Publish measurement to agents")
+        request = MeasurementRoundRequest(measurement=measurement_request, round=round_)
         for agent in measurement_request.agents:
             await redis.publish(agent.uuid, request)
         agents_ = measurement_request.agents
