@@ -83,7 +83,6 @@ def measurement_agent1(agent, statistics):
                 flow_mapper=FlowMapper.IntervalFlowMapper,
                 flow_mapper_kwargs={},
                 max_round=5,
-                n_initial_flows=6,
                 global_min_ttl=0,
                 global_max_ttl=255,
             ),
@@ -219,7 +218,6 @@ def test_post_measurement(api_client_sync, agent, monkeypatch):
                     uuid=agent.uuid,
                     target_file="test.csv",
                     tool_parameters=ToolParameters(
-                        n_initial_flows=6 if tool == Tool.DiamondMiner else 1,
                         prefix_len_v4=32 if tool == Tool.Ping else 24,
                         prefix_len_v6=128 if tool == Tool.Ping else 64,
                     ),
