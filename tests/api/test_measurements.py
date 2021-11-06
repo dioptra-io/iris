@@ -32,7 +32,7 @@ class FakeSend(object):
 target23 = {
     "key": "test.csv",
     "size": 42,
-    "content": "8.8.8.0/23,icmp,2,32",
+    "content": "8.8.8.0/23,icmp,2,32,6",
     "last_modified": datetime(2021, 9, 20, 13, 20, 26),
     "metadata": None,
 }
@@ -40,7 +40,7 @@ target23 = {
 target25 = {
     "key": "test.csv",
     "size": 42,
-    "content": "8.8.8.0/25,icmp,2,32",
+    "content": "8.8.8.0/25,icmp,2,32,6",
     "last_modified": datetime(2021, 9, 20, 13, 20, 26),
     "metadata": None,
 }
@@ -75,7 +75,7 @@ def measurement_agent1(agent, statistics):
         state=MeasurementState.Unknown,
         specific=MeasurementAgentSpecific(
             target_file="test.csv",
-            target_file_content=["8.8.8.0/23,icmp,2,32"],
+            target_file_content=["8.8.8.0/23,icmp,2,32,6"],
             probing_rate=None,
             tool_parameters=ToolParameters(
                 initial_source_port=24000,
