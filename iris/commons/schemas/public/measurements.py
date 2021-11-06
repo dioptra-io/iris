@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from diamond_miner.rounds.stopping_point import stopping_point
+from diamond_miner.mda import stopping_point
 from pydantic import Field, NonNegativeInt, PositiveInt, root_validator
 
 from iris.commons.schemas.base import BaseModel
@@ -15,6 +15,9 @@ class Round(BaseModel):
     number: PositiveInt
     limit: NonNegativeInt
     offset: NonNegativeInt
+
+    def __str__(self):
+        return f"Round#{self.number}.{self.offset}"
 
     def encode(self) -> str:
         return f"{self.number}:{self.limit}:{self.offset}"

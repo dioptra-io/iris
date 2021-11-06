@@ -14,21 +14,20 @@ from iris import __version__
 from iris.agent.measurements import measurement
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
-from iris.commons.database import Database, agents, measurements
+from iris.commons.database import Database, InsertResults, agents, measurements
 from iris.commons.redis import AgentRedis
 from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
 from iris.commons.schemas.public import AgentParameters, AgentState
 from iris.commons.schemas.public.measurements import (
     MeasurementAgentPostBody,
     MeasurementState,
-    Round,
     Tool,
     ToolParameters,
 )
 from iris.commons.storage import results_key
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 from iris.standalone.storage import LocalStorage
-from iris.worker.pipeline import default_pipeline
+from iris.worker.outer_pipeline import outer_pipeline
 from iris.worker.settings import WorkerSettings
 
 
@@ -131,21 +130,56 @@ async def pipeline(
     # Copy the target file to the local storage
     storage = LocalStorage(agent_settings, s3_dir)
     await storage.upload_file(
-        agent_settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + username,
+        storage.targets_bucket(username),
+        target_file.name,
+        target_file,
+    )
+    await storage.upload_file(
+        storage.archive_bucket(username),
         target_file.name,
         target_file,
     )
 
     statistics = {}
-    round_ = Round(
-        number=1, limit=worker_settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0
+
+    # TODO: Do we really need all of this just to create the probes table?
+    insert_results = InsertResults(
+        database,
+        measurement_uuid,
+        agent_settings.AGENT_UUID,
+        tool_parameters.prefix_len_v4,
+        tool_parameters.prefix_len_v6,
     )
-    n_rounds = 0
-    prefix_filename = None
-    probe_filename = None
+    logger.info("Create measurement tables")
+    await insert_results.create_table()
+    # ----
+
+    # Round 1.0
+    pipeline_result = await outer_pipeline(
+        database=database,
+        storage=storage,
+        redis=redis,
+        logger=logger,
+        measurement_uuid=measurement_uuid,
+        agent_uuid=agent_settings.AGENT_UUID,
+        sliding_window_size=worker_settings.WORKER_ROUND_1_SLIDING_WINDOW,
+        sliding_window_stopping_condition=worker_settings.WORKER_ROUND_1_STOPPING,
+        tool=tool,
+        tool_parameters=tool_parameters,
+        working_directory=(
+            worker_settings.WORKER_RESULTS_DIR_PATH / str(measurement_uuid)
+        ),
+        targets_key=target_file.name,
+        results_key=None,
+        username=username,
+        debug_mode=worker_settings.WORKER_DEBUG_MODE,
+    )
+    assert pipeline_result
+
+    round_ = pipeline_result.next_round
+    probe_filename = pipeline_result.probes_key
 
     while round_.number <= tool_parameters.max_round:
-        n_rounds = round_.number
         request = MeasurementRequest(
             uuid=measurement_uuid,
             start_time=start_time,
@@ -175,7 +209,6 @@ async def pipeline(
             agent_settings,
             MeasurementRoundRequest(
                 measurement=request,
-                prefix_filename=prefix_filename,
                 probe_filename=probe_filename,
                 round=round_,
             ),
@@ -191,19 +224,28 @@ async def pipeline(
         statistics[round_.encode()] = round_statistics
 
         # Compute the next round
-        pipeline_result = await default_pipeline(
-            worker_settings,
-            request,
-            agent_settings.AGENT_UUID,
-            results_key(agent_settings.AGENT_UUID, round_),
-            round_statistics,
-            logger,
-            redis,
-            storage,
+        pipeline_result = await outer_pipeline(
+            database=database,
+            storage=storage,
+            redis=redis,
+            logger=logger,
+            measurement_uuid=measurement_uuid,
+            agent_uuid=agent_settings.AGENT_UUID,
+            sliding_window_size=worker_settings.WORKER_ROUND_1_SLIDING_WINDOW,
+            sliding_window_stopping_condition=worker_settings.WORKER_ROUND_1_STOPPING,
+            tool=tool,
+            tool_parameters=tool_parameters,
+            working_directory=(
+                worker_settings.WORKER_RESULTS_DIR_PATH / str(measurement_uuid)
+            ),
+            targets_key=target_file.name,
+            results_key=results_key(agent_settings.AGENT_UUID, round_),
+            username=username,
+            debug_mode=worker_settings.WORKER_DEBUG_MODE,
         )
 
         # If the measurement is finished, clean the local files
-        if pipeline_result.round_ is None:
+        if not pipeline_result:
             if not worker_settings.WORKER_DEBUG_MODE:
                 logger.info("Removing local measurement directory")
                 try:
@@ -214,9 +256,8 @@ async def pipeline(
                     logger.error("Impossible to remove local measurement directory")
             break
 
-        round_ = pipeline_result.round_
-        prefix_filename = pipeline_result.prefix_filename
-        probe_filename = pipeline_result.probe_filename
+        round_ = pipeline_result.next_round
+        probe_filename = pipeline_result.probes_key
 
     # Stamp the agent
     await stamp_agent(database, measurement_uuid, agent_settings.AGENT_UUID)
@@ -239,7 +280,7 @@ async def pipeline(
         "agent_uuid": agent_settings.AGENT_UUID,
         "database_name": agent_settings.DATABASE_NAME,
         "table_name": results_table(measurement_id),
-        "n_rounds": n_rounds,
+        "n_rounds": round_.number,
         "min_ttl": agent_settings.AGENT_MIN_TTL,
         "start_time": start_time,
         "end_time": datetime.utcnow(),

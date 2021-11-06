@@ -9,13 +9,13 @@ from uuid import UUID
 import dramatiq
 from aiofiles import os as aios
 
-from iris.commons.database import Database, agents, measurements
+from iris.commons.database import Database, InsertResults, agents, measurements
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
 from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
 from iris.commons.schemas.public import MeasurementState, Round
 from iris.commons.storage import Storage
-from iris.worker.pipeline import default_pipeline
+from iris.worker.outer_pipeline import outer_pipeline
 from iris.worker.settings import WorkerSettings
 
 settings = WorkerSettings()
@@ -117,45 +117,49 @@ async def watch(
             await asyncio.sleep(refresh_time)
             continue
 
-        # Get the statistics from Redis
-        statistics = await redis.get_measurement_stats(
-            measurement_request.uuid, agent.uuid
+        result = await outer_pipeline(
+            database=database,
+            storage=storage,
+            redis=redis,
+            logger=logger,
+            measurement_uuid=measurement_request.uuid,
+            agent_uuid=agent_uuid,
+            sliding_window_size=settings.WORKER_ROUND_1_SLIDING_WINDOW,
+            sliding_window_stopping_condition=settings.WORKER_ROUND_1_STOPPING,
+            tool=measurement_request.tool,
+            tool_parameters=agent.tool_parameters,
+            working_directory=(
+                settings.WORKER_RESULTS_DIR_PATH / str(measurement_request.uuid)
+            ),
+            targets_key=agent.target_file,
+            results_key=results_filename,
+            username=measurement_request.username,
+            debug_mode=settings.WORKER_DEBUG_MODE,
         )
-        assert statistics
 
-        pipeline_result = await default_pipeline(
-            settings,
-            measurement_request,
-            agent.uuid,
-            results_filename,
-            statistics,
-            logger,
-            redis,
-            storage,
-        )
-
-        # Remove the statistics from Redis
-        await redis.delete_measurement_stats(measurement_request.uuid, agent.uuid)
-
-        if pipeline_result.round_ is None:
+        if result:
+            logger.info(f"{logger_prefix} Publish next measurement")
+            await redis.publish(
+                agent.uuid,
+                MeasurementRoundRequest(
+                    measurement=measurement_request,
+                    probe_filename=result.probes_key,
+                    round=result.next_round,
+                ),
+            )
+        else:
             logger.info(f"{logger_prefix} Measurement done for this agent")
             await agents.stamp_finished(database, measurement_request.uuid, agent.uuid)
             break
-        else:
-            logger.info(f"{logger_prefix} Publish next measurement")
-            request = MeasurementRoundRequest(
-                measurement=measurement_request,
-                prefix_filename=pipeline_result.prefix_filename,
-                probe_filename=pipeline_result.probe_filename,
-                round=pipeline_result.round_,
-            )
-            await redis.publish(agent.uuid, request)
 
 
 async def callback(measurement_request: MeasurementRequest, logger: Logger):
     """Asynchronous callback."""
     logger_prefix = f"{measurement_request.uuid} ::"
     logger.info(f"{logger_prefix} New measurement received")
+
+    round_ = Round(number=1, limit=settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0)
+    logger.info(f"{logger_prefix} {round_}")
 
     database = Database(settings, logger)
     redis = Redis(await settings.redis_client(), settings, logger)
@@ -201,10 +205,8 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
             # noinspection PyBroadException
             try:
                 await storage.copy_file_to_bucket(
-                    settings.AWS_S3_TARGETS_BUCKET_PREFIX
-                    + measurement_request.username,
-                    settings.AWS_S3_ARCHIVE_BUCKET_PREFIX
-                    + measurement_request.username,
+                    storage.targets_bucket(measurement_request.username),
+                    storage.archive_bucket(measurement_request.username),
                     agent.target_file,
                     f"targets__{measurement_request.uuid}__{agent.uuid}.csv",
                 )
@@ -220,16 +222,55 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
             logger.error(f"{logger_prefix} Impossible to create bucket")
             return
 
-        logger.info(f"Insert initial probes in the database")
-        round_ = Round(number=1, limit=settings.WORKER_ROUND_1_SLIDING_WINDOW, offset=0)
-        # NOTE: We insert the probes for all TTLs here, regardless of the "sliding prefixes" feature.
-        # TODO
-        # measurement_request.agents[0].target_file
-
-        logger.info(f"{logger_prefix} Publish measurement to agents")
-        request = MeasurementRoundRequest(measurement=measurement_request, round=round_)
         for agent in measurement_request.agents:
-            await redis.publish(agent.uuid, request)
+            assert agent.uuid
+            # TODO: Do we really need all of this just to create the probes table?
+            insert_results = InsertResults(
+                database,
+                measurement_request.uuid,
+                agent.uuid,
+                agent.tool_parameters.prefix_len_v4,
+                agent.tool_parameters.prefix_len_v6,
+            )
+            logger.info(f"{logger_prefix} Create measurement tables")
+            await insert_results.create_table()
+            # ------
+            result = await outer_pipeline(
+                database=database,
+                storage=storage,
+                redis=redis,
+                logger=logger,
+                measurement_uuid=measurement_request.uuid,
+                agent_uuid=agent.uuid,
+                sliding_window_size=settings.WORKER_ROUND_1_SLIDING_WINDOW,
+                sliding_window_stopping_condition=settings.WORKER_ROUND_1_STOPPING,
+                tool=measurement_request.tool,
+                tool_parameters=agent.tool_parameters,
+                working_directory=(
+                    settings.WORKER_RESULTS_DIR_PATH / str(measurement_request.uuid)
+                ),
+                targets_key=agent.target_file,
+                results_key=None,
+                username=measurement_request.username,
+                debug_mode=settings.WORKER_DEBUG_MODE,
+            )
+
+            if result:
+                logger.info(f"{logger_prefix} Publish next measurement")
+                await redis.publish(
+                    agent.uuid,
+                    MeasurementRoundRequest(
+                        measurement=measurement_request,
+                        probe_filename=result.probes_key,
+                        round=result.next_round,
+                    ),
+                )
+            else:
+                logger.info(f"{logger_prefix} Measurement done for this agent")
+                await agents.stamp_finished(
+                    database, measurement_request.uuid, agent.uuid
+                )
+
         agents_ = measurement_request.agents
 
     else:

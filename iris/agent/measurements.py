@@ -113,13 +113,6 @@ async def measurement(
         shutil.rmtree(settings.AGENT_TARGETS_DIR_PATH)
         settings.AGENT_TARGETS_DIR_PATH.mkdir()
 
-        if request.prefix_filename:
-            logger.info(f"{logger_prefix} Remove probe file from S3")
-            await storage.soft_delete(
-                storage.measurement_bucket(measurement_request.uuid),
-                request.prefix_filename,
-            )
-
         if request.probe_filename:
             logger.info(f"{logger_prefix} Remove prefix file from S3")
             await storage.soft_delete(

@@ -118,7 +118,7 @@ services:
     environment:
       AGENT_CARACAL_INTEGRITY_CHECK: "false" # In order to test from Docker for Mac
       AGENT_DEBUG_MODE: "true"
-      AGENT_MAX_PROBING_RATE: "100"
+      AGENT_MAX_PROBING_RATE: ${AGENT_MAX_PROBING_RATE:-100}
       AWS_S3_HOST: "http://minio.docker.localhost"
       AWS_ACCESS_KEY_ID: "minioadmin"
       AWS_SECRET_ACCESS_KEY: "minioadmin"
