@@ -3,7 +3,7 @@
 from typing import Dict, List
 from uuid import UUID
 
-from diamond_miner.generators import count_prefixes
+from diamond_miner.generators.standalone import count_prefixes
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
 from iris.api.dependencies import get_database, get_redis, get_storage, settings
@@ -147,7 +147,7 @@ async def target_file_validator(
     global_min_ttl = 256
     global_max_ttl = 0
     for line in [p.strip() for p in target_file["content"].split()]:
-        _, protocol, min_ttl, max_ttl = line.split(",")
+        _, protocol, min_ttl, max_ttl, n_initial_flows = line.split(",")
         min_ttl, max_ttl = int(min_ttl), int(max_ttl)
         global_min_ttl = min(global_min_ttl, min_ttl)
         global_max_ttl = max(global_max_ttl, max_ttl)

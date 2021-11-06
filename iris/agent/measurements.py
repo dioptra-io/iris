@@ -4,7 +4,6 @@ from datetime import datetime
 from logging import Logger
 from multiprocessing import Manager, Process
 
-from iris.agent.probe_generator import build_probe_generator_parameters
 from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
@@ -32,7 +31,6 @@ async def measurement(
     )
     measurement_results_path.mkdir(exist_ok=True)
 
-    gen_parameters = None
     probes_filepath = None
     results_filepath = measurement_results_path / results_key(agent.uuid, request.round)
 
@@ -56,35 +54,6 @@ async def measurement(
             settings.AGENT_TARGETS_DIR_PATH,
         )
 
-    # B) No probe file is specified, generate probes.
-    # This is usually the case for for round = 1.
-    else:
-        logger.info(f"{logger_prefix} Download target file locally")
-        target_filepath = await storage.download_file_to(
-            storage.archive_bucket(measurement_request.username),
-            targets_key(measurement_request.uuid, agent.uuid),
-            settings.AGENT_TARGETS_DIR_PATH,
-        )
-
-        prefix_filepath = None
-        if request.prefix_filename:
-            logger.info(f"{logger_prefix} Download CSV prefix file locally")
-            prefix_filepath = await storage.download_file_to(
-                storage.measurement_bucket(measurement_request.uuid),
-                request.prefix_filename,
-                settings.AGENT_TARGETS_DIR_PATH,
-            )
-
-        logger.info(f"{logger_prefix} Build probe generator parameters")
-        gen_parameters = build_probe_generator_parameters(
-            settings.AGENT_MIN_TTL,
-            request.round,
-            measurement_request.tool,
-            agent.tool_parameters,
-            open(target_filepath),
-            open(prefix_filepath) if prefix_filepath else None,
-        )
-
     logger.info(f"{logger_prefix} Username : {measurement_request.username}")
     logger.info(f"{logger_prefix} Target File: {agent.target_file}")
     logger.info(f"{logger_prefix} {request.round}")
@@ -104,7 +73,6 @@ async def measurement(
                 request.round.number,
                 agent.probing_rate,
                 prober_statistics,
-                gen_parameters,
                 probes_filepath,
             ),
         )
@@ -144,13 +112,6 @@ async def measurement(
         logger.info(f"{logger_prefix} Empty local targets directory")
         shutil.rmtree(settings.AGENT_TARGETS_DIR_PATH)
         settings.AGENT_TARGETS_DIR_PATH.mkdir()
-
-        if request.prefix_filename:
-            logger.info(f"{logger_prefix} Remove probe file from S3")
-            await storage.soft_delete(
-                storage.measurement_bucket(measurement_request.uuid),
-                request.prefix_filename,
-            )
 
         if request.probe_filename:
             logger.info(f"{logger_prefix} Remove prefix file from S3")

@@ -6,9 +6,7 @@ import sqlmodel
 
 class BaseModel(pydantic.BaseModel):
     class Config:
-        # allow_mutation = False
-        # # NOTE: Deactivated because `ToolParameter` class
-        # need to assign `n_initial_flows`
+        allow_mutation = False
         extra = pydantic.Extra.forbid
         json_encoders = {UUID: lambda v: str(v)}
 

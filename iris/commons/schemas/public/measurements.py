@@ -4,7 +4,6 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from diamond_miner.rounds.stopping_point import stopping_point
 from pydantic import Field, NonNegativeInt, PositiveInt, root_validator
 
 from iris.commons.schemas.base import BaseModel
@@ -15,6 +14,9 @@ class Round(BaseModel):
     number: PositiveInt
     limit: NonNegativeInt
     offset: NonNegativeInt
+
+    def __str__(self):
+        return f"Round#{self.number}.{self.offset}"
 
     def encode(self) -> str:
         return f"{self.number}:{self.limit}:{self.offset}"
@@ -90,13 +92,6 @@ class ToolParameters(BaseModel):
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
     failure_rate: float = Field(
         0.05, title="Diamond-Miner failure rate. Ignored for other tools."
-    )
-    n_initial_flows: Optional[int] = Field(
-        None,
-        title="""
-        Diamond-Miner number of flow IDs to probe at round 1.
-        Ignored for other tools.
-        """,
     )
     flow_mapper: str = Field(FlowMapper.RandomFlowMapper, title="Flow mapper")
     flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(
@@ -205,13 +200,6 @@ class MeasurementPostBody(BaseModel):
         tool: Tool = values.get("tool")
         for agent in agents:
             if tool == Tool.DiamondMiner:
-                # If a `n_initial_flows` is set, it overrides the failure rate
-                if not agent.tool_parameters.n_initial_flows:
-                    # Else, we compute the required initial flows according to the
-                    # inputed failure rate
-                    agent.tool_parameters.n_initial_flows = stopping_point(
-                        2, agent.tool_parameters.failure_rate
-                    )
                 # NOTE: We could use other values, but this would require to change
                 # the Diamond-Miner results schema which has a materialized column
                 # for the destination prefix which assumes /24 and /64 prefixes.
@@ -227,9 +215,6 @@ class MeasurementPostBody(BaseModel):
                     raise ValueError("`prefix_len_v4` must be 32 for ping and probes")
                 if agent.tool_parameters.prefix_len_v6 != 128:
                     raise ValueError("`prefix_len_v6` must be 128 for ping and probes")
-            if tool in [tool.Ping, tool.Yarrp, tool.Probes]:
-                # NOTE: We could allow Yarrp to perform multiple flows.
-                agent.tool_parameters.n_initial_flows = 1
         return values
 
 
