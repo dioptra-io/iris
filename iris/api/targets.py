@@ -125,7 +125,7 @@ async def verify_target_file(target_file):
     response_model=public.TargetPostResponse,
     summary="Upload a target list.",
     description="""
-    Each line of the file must be like `target,protocol,min_ttl,max_ttl`
+    Each line of the file must be like `target,protocol,min_ttl,max_ttl,n_initial_flows`
     where the target is a IPv4/IPv6 prefix or IPv4/IPv6 address.
     The prococol can be `icmp`, `icmp6` or `udp`.
     """,
