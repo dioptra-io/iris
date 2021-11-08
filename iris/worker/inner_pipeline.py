@@ -132,6 +132,8 @@ async def default_inner_pipeline(
             prefix_len_v6=tool_parameters.prefix_len_v6,
         )
 
+        del prefixes, targets
+
     # Compute MDA probes for round > 1
     else:
         assert previous_round, "round > 1 must have a previous round"
