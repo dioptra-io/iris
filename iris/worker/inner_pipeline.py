@@ -72,14 +72,21 @@ async def default_inner_pipeline(
         log("Insert links")
         await insert_results.insert_links()
 
+    probe_ttl_geq = 0
+    probe_ttl_leq = 255
+
     # Compute the sub-rounds of round 1.
     if next_round.number == 1:
+        probe_ttl_geq = max(agent_min_ttl, next_round.min_ttl)
+        probe_ttl_leq = next_round.max_ttl
+        log(f"Next round window: TTL {probe_ttl_geq} to {probe_ttl_leq} (incl.)")
+
         log("Load targets")
         with targets_filepath.open() as f:
             targets = load_targets(
                 f,
-                clamp_ttl_min=max(agent_min_ttl, next_round.min_ttl),
-                clamp_ttl_max=next_round.max_ttl,
+                clamp_ttl_min=probe_ttl_geq,
+                clamp_ttl_max=probe_ttl_leq,
             )
 
         log("Compute the prefixes to probe")
@@ -147,6 +154,8 @@ async def default_inner_pipeline(
         mapper_v6=flow_mapper_v6,
         probe_src_port=tool_parameters.initial_source_port,
         probe_dst_port=tool_parameters.destination_port,
+        probe_ttl_geq=probe_ttl_geq,
+        probe_ttl_leq=probe_ttl_leq,
     )
 
 
