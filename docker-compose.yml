@@ -19,20 +19,16 @@ services:
     networks:
       default:
         aliases:
-          - "cadvisor.docker.localhost"
-          - "grafana.docker.localhost"
           - "iris.docker.localhost"
-          - "loki.docker.localhost"
           - "minio.docker.localhost"
-          - "prometheus.docker.localhost"
 
   # Control-Plane & Data-Plane
   clickhouse:
     image: ${CLICKHOUSE_IMAGE:-docker.io/yandex/clickhouse-server:21}
     ports:
       - "9000:9000"
-    volumes:
-      - "./volumes/clickhouse:/var/lib/clickhouse"
+    # volumes:
+    #   - "./volumes/clickhouse:/var/lib/clickhouse"
 
   redis:
     image: docker.io/library/redis:6
@@ -41,8 +37,8 @@ services:
       - "traefik.enable=true"
       - "traefik.tcp.routers.redis.entrypoints=redis"
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
-    volumes:
-      - "./volumes/redis:/data"
+    # volumes:
+    #   - "./volumes/redis:/data"
 
   minio:
     image: docker.io/minio/minio:latest
@@ -54,61 +50,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.minio.entrypoints=web"
       - "traefik.http.routers.minio.rule=Host(`minio.docker.localhost`)"
-    volumes:
-      - "./volumes/minio:/data"
-
-  # Monitoring
-  cadvisor:
-    image: gcr.io/google-containers/cadvisor:latest
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.cadvisor.entrypoints=web"
-      - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.docker.localhost`)"
-    volumes:
-      - "/:/rootfs:ro"
-      - "/sys:/sys:ro"
-      - "/var/lib/docker/:/var/lib/docker:ro"
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-
-  node-exporter:
-    image: docker.io/prom/node-exporter:latest
-
-  prometheus:
-    image: docker.io/prom/prometheus:latest
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=365d"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.entrypoints=web"
-      - "traefik.http.routers.prometheus.rule=Host(`prometheus.docker.localhost`)"
-    volumes:
-      - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
-      - "./volumes/prometheus:/prometheus"
-
-  grafana:
-    image: docker.io/grafana/grafana:latest
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.entrypoints=web"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.docker.localhost`)"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-    volumes:
-      - "./volumes/grafana:/var/lib/grafana"
-
-  loki:
-    image: docker.io/grafana/loki:latest
-    command: "-config.file=/etc/loki/loki.yaml"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.loki.entrypoints=web"
-      - "traefik.http.routers.loki.rule=Host(`loki.docker.localhost`)"
-      - "traefik.http.routers.loki.middlewares=loki@docker"
-      - "traefik.http.middlewares.loki.basicauth.users=admin:$$2y$$05$$oi6zVY1Gm57OPyPn3QdzdODPbaTeAEc12bWaa.GD.Biuno49bAg26"
-    volumes:
-      - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
-      - "./volumes/loki:/loki"
+    # volumes:
+    #   - "./volumes/minio:/data"
 
   # Iris
   agent:
@@ -124,7 +67,7 @@ services:
       AWS_SECRET_ACCESS_KEY: "minioadmin"
       REDIS_URL: "redis://default:redispass@redis"
     volumes:
-      - "./iris:/app/iris"
+      - "./iris:/app/iris:ro"
     depends_on:
       - minio
       - redis
@@ -143,14 +86,12 @@ services:
       AWS_SECRET_ACCESS_KEY: "minioadmin"
       GUNICORN_CMD_ARGS: "--workers 1"
       REDIS_URL: "redis://default:redispass@redis"
-      SQLMODEL_DATABASE_URL: "sqlite:////db/iris.sqlite3"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"
       - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`) && PathPrefix(`/api`)"
     volumes:
-      - "./iris:/app/iris"
-      - "./volumes/iris:/db"
+      - "./iris:/app/iris:ro"
     depends_on:
     - clickhouse
     - minio
@@ -167,7 +108,7 @@ services:
       REDIS_URL: "redis://default:redispass@redis"
       WORKER_DEBUG_MODE: "true"
     volumes:
-      - "./iris:/app/iris"
+      - "./iris:/app/iris:ro"
     depends_on:
       - clickhouse
       - minio
