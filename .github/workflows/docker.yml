@@ -2,11 +2,13 @@ name: Docker
 
 on:
   push:
-    tags: [ 'v*' ]
-# Build only on tags for now to reduce private GitHub CI credits usage.
-#    branches: [ 'main' ]
-#  pull_request:
-#    branches: [ 'main' ]
+    # Build only on main and production branch commits for now
+    # to reduce private GitHub CI credits usage.
+    branches:
+      - main
+      - production
+    # pull_request:
+    #   branches: [ 'main' ]
 
 jobs:
   build:
