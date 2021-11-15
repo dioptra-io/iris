@@ -41,12 +41,6 @@ async def measurement(
         settings.AGENT_TARGETS_DIR_PATH,
     )
 
-    print(
-        storage.measurement_bucket(measurement_request.uuid),
-        request.probe_filename,
-        settings.AGENT_TARGETS_DIR_PATH,
-    )
-
     logger.info(f"{logger_prefix} Username : {measurement_request.username}")
     logger.info(f"{logger_prefix} Probe File: {request.probe_filename}")
     logger.info(f"{logger_prefix} {request.round}")
