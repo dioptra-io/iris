@@ -244,5 +244,5 @@ def instantiate_flow_mappers(
     return flow_mapper_v4, flow_mapper_v6
 
 
-inner_pipeline_for_tool = defaultdict(default_inner_pipeline)
+inner_pipeline_for_tool = defaultdict(lambda: default_inner_pipeline)
 inner_pipeline_for_tool[Tool.Probes] = probes_inner_pipeline

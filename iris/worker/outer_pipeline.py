@@ -9,7 +9,7 @@ from iris.commons.database import Database, agents
 from iris.commons.redis import Redis
 from iris.commons.schemas.public import Round, Tool, ToolParameters
 from iris.commons.storage import Storage, next_round_key
-from iris.worker.inner_pipeline import default_inner_pipeline
+from iris.worker.inner_pipeline import inner_pipeline_for_tool
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,6 @@ async def outer_pipeline(
     results_key: Optional[str],
     username: str,
     debug_mode: bool = False,
-    inner_pipeline=default_inner_pipeline,
 ) -> Optional[OuterPipelineResult]:
     """
     Responsible to download/upload from object storage.
@@ -107,7 +106,7 @@ async def outer_pipeline(
         previous_round=previous_round,
         next_round=next_round,
     )
-    n_probes_to_send = await inner_pipeline(**inner_pipeline_kwargs)
+    n_probes_to_send = await inner_pipeline_for_tool[tool](**inner_pipeline_kwargs)
 
     if next_round.number > tool_parameters.max_round:
         # NOTE: We stop if we reached the maximum number of rounds.
@@ -123,7 +122,7 @@ async def outer_pipeline(
             **inner_pipeline_kwargs,
             "probes_filepath": probes_filepath,
         }
-        n_probes_to_send = await inner_pipeline(**inner_pipeline_kwargs)
+        n_probes_to_send = await inner_pipeline_for_tool[tool](**inner_pipeline_kwargs)
 
     log(f"Probes to send: {n_probes_to_send}")
     result = None
