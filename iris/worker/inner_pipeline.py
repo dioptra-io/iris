@@ -225,7 +225,7 @@ async def probes_inner_pipeline(
 
         # Count the number of probes (i.e., the number of line in the probe file)
         # in order to be compliant with the default inner pipeline
-        return int(subprocess.check_output(["wc", "-l", probes_filepath]).split()[0])
+        return int(subprocess.check_output(["wc", "-l", targets_filepath]).split()[0])
     else:
         return 0
 

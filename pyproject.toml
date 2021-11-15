@@ -63,6 +63,7 @@ pytest-asyncio = "^0.16.0"
 pytest-cov = "^3.0.0"
 types-aiofiles = "^0.1.9"
 pytest-clarity = "^1.0.1"
+isort = "^5.10.1"
 
 [tool.poetry.extras]
 agent = [
