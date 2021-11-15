@@ -35,6 +35,7 @@ async def outer_pipeline(
     results_key: Optional[str],
     username: str,
     debug_mode: bool = False,
+    inner_pipeline=default_inner_pipeline,
 ) -> Optional[OuterPipelineResult]:
     """
     Responsible to download/upload from object storage.
@@ -106,7 +107,13 @@ async def outer_pipeline(
         previous_round=previous_round,
         next_round=next_round,
     )
-    n_probes_to_send = await default_inner_pipeline(**inner_pipeline_kwargs)
+    n_probes_to_send = await inner_pipeline(**inner_pipeline_kwargs)
+
+    if next_round.number > tool_parameters.max_round:
+        # NOTE: We stop if we reached the maximum number of rounds.
+        # Here we could do refactor to stop before computing the next round.
+        log("Maximum number of rounds reached")
+        return None
 
     if next_round.number == 1 and n_probes_to_send == 0:
         log("No remaining prefixes to probe at round 1. Going to round 2.")
@@ -116,7 +123,7 @@ async def outer_pipeline(
             **inner_pipeline_kwargs,
             "probes_filepath": probes_filepath,
         }
-        n_probes_to_send = await default_inner_pipeline(**inner_pipeline_kwargs)
+        n_probes_to_send = await inner_pipeline(**inner_pipeline_kwargs)
 
     log(f"Probes to send: {n_probes_to_send}")
     result = None

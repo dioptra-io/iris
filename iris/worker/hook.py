@@ -15,6 +15,7 @@ from iris.commons.redis import Redis
 from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
 from iris.commons.schemas.public import MeasurementState, Round
 from iris.commons.storage import Storage
+from iris.worker.inner_pipeline import inner_pipeline_for_tool
 from iris.worker.outer_pipeline import outer_pipeline
 from iris.worker.settings import WorkerSettings
 
@@ -135,6 +136,7 @@ async def watch(
             results_key=results_filename,
             username=measurement_request.username,
             debug_mode=settings.WORKER_DEBUG_MODE,
+            inner_pipeline=inner_pipeline_for_tool[measurement_request.tool],
         )
 
         if result:
@@ -253,6 +255,7 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
                 results_key=None,
                 username=measurement_request.username,
                 debug_mode=settings.WORKER_DEBUG_MODE,
+                inner_pipeline=inner_pipeline_for_tool[measurement_request.tool],
             )
 
             if result:

@@ -8,8 +8,8 @@ from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
 from iris.commons.schemas.private import MeasurementRoundRequest
-from iris.commons.schemas.public import ProbingStatistics, Tool
-from iris.commons.storage import Storage, results_key, targets_key
+from iris.commons.schemas.public import ProbingStatistics
+from iris.commons.storage import Storage, results_key
 
 
 async def measurement(
@@ -34,28 +34,21 @@ async def measurement(
     probes_filepath = None
     results_filepath = measurement_results_path / results_key(agent.uuid, request.round)
 
-    # A) A probe file is specified, download it.
-    # This is usually the case for round > 1.
-    if request.probe_filename:
-        logger.info(f"{logger_prefix} Download CSV probe file locally")
-        probes_filepath = await storage.download_file_to(
-            storage.measurement_bucket(measurement_request.uuid),
-            request.probe_filename,
-            settings.AGENT_TARGETS_DIR_PATH,
-        )
+    logger.info(f"{logger_prefix} Download CSV probe file locally")
+    probes_filepath = await storage.download_file_to(
+        storage.measurement_bucket(measurement_request.uuid),
+        request.probe_filename,
+        settings.AGENT_TARGETS_DIR_PATH,
+    )
 
-    # HACK: A') The tool is "Probes".
-    # We directly pass it to caracal.
-    elif measurement_request.tool == Tool.Probes:
-        logger.info(f"{logger_prefix} Download CSV probe file locally")
-        probes_filepath = await storage.download_file_to(
-            storage.archive_bucket(measurement_request.username),
-            targets_key(measurement_request.uuid, agent.uuid),
-            settings.AGENT_TARGETS_DIR_PATH,
-        )
+    print(
+        storage.measurement_bucket(measurement_request.uuid),
+        request.probe_filename,
+        settings.AGENT_TARGETS_DIR_PATH,
+    )
 
     logger.info(f"{logger_prefix} Username : {measurement_request.username}")
-    logger.info(f"{logger_prefix} Target File: {agent.target_file}")
+    logger.info(f"{logger_prefix} Probe File: {request.probe_filename}")
     logger.info(f"{logger_prefix} {request.round}")
     logger.info(f"{logger_prefix} Tool : {measurement_request.tool}")
     logger.info(f"{logger_prefix} Tool Parameters : {agent.tool_parameters}")

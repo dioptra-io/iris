@@ -27,6 +27,7 @@ from iris.commons.schemas.public.measurements import (
 from iris.commons.storage import results_key
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 from iris.standalone.storage import LocalStorage
+from iris.worker.inner_pipeline import inner_pipeline_for_tool
 from iris.worker.outer_pipeline import outer_pipeline
 from iris.worker.settings import WorkerSettings
 
@@ -173,6 +174,7 @@ async def pipeline(
         results_key=None,
         username=username,
         debug_mode=worker_settings.WORKER_DEBUG_MODE,
+        inner_pipeline=inner_pipeline_for_tool[tool],
     )
     assert pipeline_result
 
@@ -242,6 +244,7 @@ async def pipeline(
             results_key=results_key(agent_settings.AGENT_UUID, round_),
             username=username,
             debug_mode=worker_settings.WORKER_DEBUG_MODE,
+            inner_pipeline=inner_pipeline_for_tool[tool],
         )
 
         # If the measurement is finished, clean the local files

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import Field
@@ -24,5 +23,5 @@ class MeasurementRequest(public.MeasurementPostBody):
 
 class MeasurementRoundRequest(BaseModel):
     measurement: MeasurementRequest
-    probe_filename: Optional[str]
+    probe_filename: str
     round: public.Round
