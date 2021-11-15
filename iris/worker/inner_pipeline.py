@@ -1,6 +1,5 @@
 import subprocess
 from collections import defaultdict
-from ipaddress import IPv4Network, ip_network
 from logging import Logger
 from pathlib import Path
 from typing import Optional, Tuple
@@ -98,14 +97,8 @@ async def default_inner_pipeline(
         if previous_round is None:
             log("Enumerate initial prefixes")
             for prefix in targets:
-                net = ip_network(prefix)
-                if isinstance(net, IPv4Network):
-                    subnets = net.subnets(new_prefix=tool_parameters.prefix_len_v4)
-                else:
-                    subnets = net.subnets(new_prefix=tool_parameters.prefix_len_v6)
                 for protocol, ttls, n_initial_flows in targets[prefix]:
-                    for subnet in subnets:
-                        prefixes.append((str(subnet), protocol, ttls, n_initial_flows))
+                    prefixes.append((prefix, protocol, ttls, n_initial_flows))
         else:
             log("Enumerate sliding prefixes")
             query = GetSlidingPrefixes(

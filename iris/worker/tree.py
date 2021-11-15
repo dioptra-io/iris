@@ -15,9 +15,9 @@ def load_targets(
         * an address: 8.8.8.8, 2001:4860:4860::8888
     Addresses are interpreted as /32 or /128 networks.
 
-    >>> tree = load_targets(["8.8.8.0/24,1,10,20,6"], clamp_ttl_min=12, clamp_ttl_max=14)
+    >>> tree = load_targets(["8.8.8.0/24,1,11,12,6", "8.8.8.0/24,1,14,20,6"], clamp_ttl_min=11, clamp_ttl_max=16)
     >>> tree["8.8.8.1"]
-    [('1', range(12, 15), 6)]
+    [('1', range(11, 13), 6), ('1', range(14, 17), 6)]
     >>> tree["8.8.4.0"]
     Traceback (most recent call last):
         ...
