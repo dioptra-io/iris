@@ -73,6 +73,7 @@ class CommonSettings(BaseSettings):
     TABLE_NAME_MEASUREMENTS: str = "measurements"
     TABLE_NAME_AGENTS: str = "agents"
 
+    REDIS_NAMESPACE: str = "iris"
     REDIS_URL: str = "redis://default:redispass@redis"
     REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
