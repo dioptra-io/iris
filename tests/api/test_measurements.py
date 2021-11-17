@@ -93,13 +93,13 @@ def measurement_agent1(agent, statistics):
     )
 
 
-# --- GET /api/measurements ---
+# --- GET /measurements ---
 
 
 def test_get_measurements_empty(api_client_sync, monkeypatch):
     monkeypatch.setattr(measurements, "all", async_mock([]))
     monkeypatch.setattr(measurements, "all_count", async_mock(0))
-    response = api_client_sync.get("/api/measurements")
+    response = api_client_sync.get("/measurements")
     assert Paginated[MeasurementSummary](**response.json()) == Paginated(
         count=0, results=[]
     )
@@ -157,44 +157,44 @@ def test_get_measurements(api_client_sync, monkeypatch):
     monkeypatch.setattr(measurements, "all_count", async_mock(3))
 
     # No (offset, limit)
-    response = api_client_sync.get("/api/measurements")
+    response = api_client_sync.get("/measurements")
     assert Paginated[MeasurementSummary](**response.json()) == Paginated(
         count=3, results=summaries
     )
 
     # All inclusive (0, 100)
-    response = api_client_sync.get("/api/measurements?offset=0&limit=100")
+    response = api_client_sync.get("/measurements?offset=0&limit=100")
     assert Paginated[MeasurementSummary](**response.json()) == Paginated(
         count=3, results=summaries
     )
 
     # First result (0, 1)
-    response = api_client_sync.get("/api/measurements?offset=0&limit=1")
+    response = api_client_sync.get("/measurements?offset=0&limit=1")
     assert Paginated[MeasurementSummary](**response.json()) == Paginated(
         count=3,
-        next="http://testserver/api/measurements/?limit=1&offset=1",
+        next="http://testserver/measurements/?limit=1&offset=1",
         results=summaries[:1],
     )
 
     # Middle result (1, 1)
-    response = api_client_sync.get("/api/measurements?offset=1&limit=1")
+    response = api_client_sync.get("/measurements?offset=1&limit=1")
     assert Paginated[MeasurementSummary](**response.json()) == Paginated(
         count=3,
-        next="http://testserver/api/measurements/?limit=1&offset=2",
-        previous="http://testserver/api/measurements/?limit=1",
+        next="http://testserver/measurements/?limit=1&offset=2",
+        previous="http://testserver/measurements/?limit=1",
         results=summaries[1:2],
     )
 
     # Last result (2, 1)
-    response = api_client_sync.get("/api/measurements?offset=2&limit=1")
+    response = api_client_sync.get("/measurements?offset=2&limit=1")
     assert Paginated[MeasurementSummary](**response.json()) == Paginated(
         count=3,
-        previous="http://testserver/api/measurements/?limit=1&offset=1",
+        previous="http://testserver/measurements/?limit=1&offset=1",
         results=summaries[2:3],
     )
 
 
-# --- POST /api/measurements/ ---
+# --- POST /measurements/ ---
 
 
 @pytest.mark.asyncio
@@ -226,7 +226,7 @@ def test_post_measurement(api_client_sync, agent, monkeypatch):
                 )
             ],
         )
-        response = api_client_sync.post("/api/measurements/", data=body.json())
+        response = api_client_sync.post("/measurements/", data=body.json())
         assert response.status_code == 201
 
 
@@ -249,7 +249,7 @@ def test_post_measurement_probes(api_client_sync, agent, monkeypatch):
             )
         ],
     )
-    response = api_client_sync.post("/api/measurements/", data=body.json())
+    response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 201
 
 
@@ -263,7 +263,7 @@ def test_post_measurement_quota_exceeded(api_client_sync, agent, user, monkeypat
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
     )
-    response = api_client_sync.post("/api/measurements/", data=body.json())
+    response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 403
 
 
@@ -277,7 +277,7 @@ def test_post_measurement_diamond_miner_invalid_prefix_length(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
     )
-    response = api_client_sync.post("/api/measurements/", data=body.json())
+    response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 403
 
 
@@ -289,7 +289,7 @@ def test_post_measurement_agent_tag(api_client_sync, agent, monkeypatch):
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentPostBody(tag="test", target_file="test.csv")],
     )
-    response = api_client_sync.post("/api/measurements/", data=body.json())
+    response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 201
 
 
@@ -305,7 +305,7 @@ def test_post_measurement_with_agent_not_found(api_client_sync, monkeypatch):
             )
         ],
     )
-    response = api_client_sync.post("/api/measurements/", data=body.json())
+    response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 404
     assert response.json() == {
         "detail": "No agent associated with UUID 6f4ed428-8de6-460e-9e19-6e6173776550"
@@ -319,7 +319,7 @@ def test_post_measurement_tag_not_found(api_client_sync, monkeypatch):
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentPostBody(tag="toto", target_file="test.csv")],
     )
-    response = api_client_sync.post("/api/measurements/", data=body.json())
+    response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 404
     assert response.json() == {"detail": "No agent associated with tag toto"}
 
@@ -337,7 +337,7 @@ def test_post_measurement_agent_multiple_definition(
             MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv"),
         ],
     )
-    response = api_client_sync.post("/api/measurements/", data=body.json())
+    response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 400
     assert response.json() == {"detail": f"Multiple definition of agent `{agent.uuid}`"}
 
@@ -349,11 +349,11 @@ def test_post_measurement_target_file_not_found(api_client_sync, agent, monkeypa
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
     )
-    response = api_client_sync.post("/api/measurements/", data=body.json())
+    response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 404
 
 
-# --- GET /api/measurements/{measurement_uuid} ---
+# --- GET /measurements/{measurement_uuid} ---
 
 
 def test_get_measurement_by_uuid(
@@ -363,7 +363,7 @@ def test_get_measurement_by_uuid(
     monkeypatch.setattr(agents, "all", async_mock([measurement_agent1]))
     monkeypatch.setattr(measurements, "get", async_mock(measurement1))
     expected = measurement1.copy(update={"agents": [measurement_agent1]})
-    response = api_client_sync.get(f"/api/measurements/{measurement1.uuid}")
+    response = api_client_sync.get(f"/measurements/{measurement1.uuid}")
     assert Measurement(**response.json()) == expected
 
 
@@ -386,24 +386,24 @@ def test_get_measurement_by_uuid_waiting(
             ],
         }
     )
-    response = api_client_sync.get(f"/api/measurements/{measurement1.uuid}")
+    response = api_client_sync.get(f"/measurements/{measurement1.uuid}")
     assert Measurement(**response.json()).dict() == expected.dict()
 
 
 def test_get_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
     monkeypatch.setattr(measurements, "get", async_mock(None))
     measurement_uuid = str(uuid.uuid4())
-    response = api_client_sync.get(f"/api/measurements/{measurement_uuid}")
+    response = api_client_sync.get(f"/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
 
 
 def test_get_measurement_by_uuid_invalid_input(api_client_sync):
-    response = api_client_sync.get("/api/measurements/test")
+    response = api_client_sync.get("/measurements/test")
     assert response.status_code == 422
 
 
-# -- DELETE /api/measurements/{measurement_uuid}/{agent_uuid} ---
+# -- DELETE /measurements/{measurement_uuid}/{agent_uuid} ---
 
 
 def test_delete_measurement_by_uuid(api_client_sync, monkeypatch):
@@ -414,14 +414,14 @@ def test_delete_measurement_by_uuid(api_client_sync, monkeypatch):
     )
     monkeypatch.setattr(measurements, "get", async_mock({"uuid": "uuid"}))
     measurement_uuid = str(uuid.uuid4())
-    response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
+    response = api_client_sync.delete(f"/measurements/{measurement_uuid}")
     assert response.json() == {"uuid": measurement_uuid, "action": "canceled"}
 
 
 def test_delete_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
     monkeypatch.setattr(measurements, "get", async_mock(None))
     measurement_uuid = str(uuid.uuid4())
-    response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
+    response = api_client_sync.delete(f"/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
 
@@ -430,12 +430,12 @@ def test_delete_measurement_by_uuid_already_finished(api_client_sync, monkeypatc
     override(api_client_sync, get_redis, fake_redis_factory())
     monkeypatch.setattr(measurements, "get", async_mock({"uuid": "uuid"}))
     measurement_uuid = str(uuid.uuid4())
-    response = api_client_sync.delete(f"/api/measurements/{measurement_uuid}")
+    response = api_client_sync.delete(f"/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement already finished"}
 
 
-# --- GET /api/measurements/{measurement_uuid}/{agent_uuid} ---
+# --- GET /measurements/{measurement_uuid}/{agent_uuid} ---
 
 
 def test_get_measurement_results(
@@ -477,7 +477,7 @@ def test_get_measurement_results(
     monkeypatch.setattr(Replies, "all_count", async_mock(1))
 
     response = api_client_sync.get(
-        f"/api/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
+        f"/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
     )
     assert Paginated[Reply](**response.json()) == Paginated(count=1, results=results)
 
@@ -495,7 +495,7 @@ def test_get_measurement_results_table_not_exists(
     )
     monkeypatch.setattr(Replies, "exists", async_mock(0))
     response = api_client_sync.get(
-        f"/api/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
+        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
     )
     assert Paginated[Reply](**response.json()) == Paginated(count=0, results=[])
 
@@ -510,7 +510,7 @@ def test_get_measurement_results_not_finished(
         async_mock(measurement_agent1.copy(update={"state": MeasurementState.Ongoing})),
     )
     response = api_client_sync.get(
-        f"/api/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
+        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
     )
     assert response.status_code == 412
 
@@ -522,7 +522,7 @@ def test_get_measurement_results_no_agent(
     monkeypatch.setattr(agents, "get", async_mock(None))
 
     response = api_client_sync.get(
-        f"/api/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
+        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
     )
     assert response.status_code == 404
     assert response.json() == {
@@ -536,7 +536,7 @@ def test_get_measurement_results_no_agent(
 def test_get_measurement_result_not_found(api_client_sync, monkeypatch):
     monkeypatch.setattr(measurements, "get", async_mock(None))
     response = api_client_sync.get(
-        f"/api/results/{uuid.uuid4()}/{uuid.uuid4()}/replies/0.0.0.0"
+        f"/results/{uuid.uuid4()}/{uuid.uuid4()}/replies/0.0.0.0"
     )
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement not found"}
@@ -544,13 +544,13 @@ def test_get_measurement_result_not_found(api_client_sync, monkeypatch):
 
 def test_get_measurement_results_invalid_measurement_uuid(api_client_sync):
     response = api_client_sync.get(
-        f"/api/results/invalid_uuid/{uuid.uuid4()}/replies/0.0.0.0"
+        f"/results/invalid_uuid/{uuid.uuid4()}/replies/0.0.0.0"
     )
     assert response.status_code == 422
 
 
 def test_get_measurement_results_invalid_agent_uuid(api_client_sync):
     response = api_client_sync.get(
-        f"/api/results/{uuid.uuid4()}/invalid_uuid/replies/0.0.0.0"
+        f"/results/{uuid.uuid4()}/invalid_uuid/replies/0.0.0.0"
     )
     assert response.status_code == 422

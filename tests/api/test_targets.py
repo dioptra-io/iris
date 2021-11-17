@@ -17,14 +17,14 @@ target1 = {
 }
 
 
-# --- GET /api/targets ---
+# --- GET /targets ---
 
 
 @pytest.mark.asyncio
 async def test_get_targets(api_client):
     override(api_client, get_storage, fake_storage_factory([target1]))
     async with api_client as c:
-        response = await c.get("/api/targets")
+        response = await c.get("/targets")
         assert Paginated[TargetSummary](**response.json()) == Paginated(
             count=1,
             results=[
@@ -42,13 +42,13 @@ async def test_get_targets(api_client):
 async def test_get_targets_empty(api_client):
     override(api_client, get_storage, fake_storage_factory([]))
     async with api_client as c:
-        response = await c.get("/api/targets")
+        response = await c.get("/targets")
         assert Paginated[TargetSummary](**response.json()) == Paginated(
             count=0, results=[]
         )
 
 
-# --- GET /api/targets/{key} ---
+# --- GET /targets/{key} ---
 
 
 target_prefix = {
@@ -66,7 +66,7 @@ target_prefix = {
 async def test_get_targets_by_key(api_client):
     override(api_client, get_storage, fake_storage_factory([target_prefix]))
     async with api_client as c:
-        response = await c.get("/api/targets/test")
+        response = await c.get("/targets/test")
         assert Target(**response.json()) == Target(
             key="test",
             size=42,
@@ -92,7 +92,7 @@ target_probes = {
 async def test_get_probes_targets_by_key(api_client):
     override(api_client, get_storage, fake_storage_factory([target_probes]))
     async with api_client as c:
-        response = await c.get("/api/targets/test")
+        response = await c.get("/targets/test")
         assert Target(**response.json()) == Target(
             key="probes.csv",
             size=42,
@@ -107,11 +107,11 @@ async def test_get_probes_targets_by_key(api_client):
 async def test_get_targets_by_key_not_found(api_client):
     override(api_client, get_storage, fake_storage_factory([]))
     async with api_client as c:
-        response = await c.get("/api/targets/test")
+        response = await c.get("/targets/test")
         assert response.status_code == 404
 
 
-# --- POST /api/targets ---
+# --- POST /targets ---
 
 
 @pytest.mark.asyncio
@@ -172,7 +172,7 @@ async def test_verify_prefixes_list_file():
     assert await verify_target_file(file_container) is False
 
 
-# -- POST /api/targets/probes
+# -- POST /targets/probes
 
 
 @pytest.mark.asyncio
@@ -207,14 +207,14 @@ async def test_verify_probes_list_file():
     assert await verify_probe_target_file(file_container) is False
 
 
-# --- DELETE /api/targets/{key} ---
+# --- DELETE /targets/{key} ---
 
 
 @pytest.mark.asyncio
 async def test_delete_targets_by_key(api_client):
     override(api_client, get_storage, fake_storage_factory([target1]))
     async with api_client as c:
-        response = await c.delete("/api/targets/test")
+        response = await c.delete("/targets/test")
         assert response.json() == {"key": "test", "action": "delete"}
 
 
@@ -222,7 +222,7 @@ async def test_delete_targets_by_key(api_client):
 async def test_delete_targets_by_key_not_found(api_client):
     override(api_client, get_storage, fake_storage_factory([]))
     async with api_client as c:
-        response = await c.delete("/api/targets/test")
+        response = await c.delete("/targets/test")
         assert response.status_code == 404
 
 
@@ -234,5 +234,5 @@ async def test_delete_targets_internal_error(api_client):
 
     override(api_client, get_storage, lambda: FakeStorage())
     async with api_client as c:
-        response = await c.delete("/api/targets/test")
+        response = await c.delete("/targets/test")
         assert response.status_code == 500
