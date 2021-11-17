@@ -95,7 +95,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`)"
     volumes:
       - "./iris:/app/iris:ro"
     depends_on:

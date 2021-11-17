@@ -50,7 +50,7 @@ Then, simply run the stack with docker-compose:
 docker-compose up -d --build
 ```
 
-With the configuration provided, the API is reachable via this link : [http://iris.docker.localhost/api/docs/](http://iris.docker.localhost/api/docs/). The API default credentials are `admin:admin`.
+With the configuration provided, the API is reachable via this link : [http://iris.docker.localhost/docs/](http://iris.docker.localhost/docs/). The API default credentials are `admin:admin`.
 
 ## Publications
 

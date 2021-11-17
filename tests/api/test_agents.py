@@ -12,13 +12,13 @@ async def test_get_agents(api_client, agent_redis, agent):
     await agent_redis.set_agent_state(agent.state)
 
     async with api_client as c:
-        response = await c.get("/api/agents")
+        response = await c.get("/agents")
         assert Paginated[Agent](**response.json()) == Paginated(
             count=1, results=[agent]
         )
 
-        response = await c.get(f"/api/agents/{agent.uuid}")
+        response = await c.get(f"/agents/{agent.uuid}")
         assert Agent(**response.json()) == agent
 
-        response = await c.get(f"/api/agents/{uuid4()}")
+        response = await c.get(f"/agents/{uuid4()}")
         assert response.status_code == 404
