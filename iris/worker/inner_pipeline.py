@@ -69,6 +69,8 @@ async def default_inner_pipeline(
         log("Create results tables")
         await insert_results.create_table()
 
+        # NOTE: For now this feature is activated only for default inner pipeline.
+        # Not for the probes inner pipeline.
         if "public" in measurement_tags:  # TODO parametrize public tag name
             log("Grant public access to results tables (if public user is set)")
             await insert_results.grant_public_access()

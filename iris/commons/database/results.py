@@ -115,13 +115,17 @@ class InsertResults:
 
         async def insert(file):
             async with semaphore:
+                password = self.database.settings.DATABASE_PASSWORD
+                if password is None:
+                    password = "''"
+
                 await start_stream_subprocess(
                     f"""
                     {self.database.settings.CLICKHOUSE_CMD} \
                     --database={self.database.settings.DATABASE_NAME} \
                     --host={self.database.settings.DATABASE_HOST} \
                     --user={self.database.settings.DATABASE_USERNAME} \
-                    --password={self.database.settings.DATABASE_PASSWORD} \
+                    --password {password} \
                     --query='INSERT INTO {results_table(self.measurement_id)} FORMAT CSV' \
                     < {file}
                     """,

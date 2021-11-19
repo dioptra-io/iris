@@ -35,7 +35,7 @@ mypy iris
 You can run the coverage using pytest.
 
 ```
-docker run -d --name clickhouse -v $(pwd)/volumes/clickhouse:/var/lib/clickhouse -p 9000:9000 yandex/clickhouse-server:latest
+docker run -d -p 9000:9000 yandex/clickhouse-server:latest
 pytest
 ...
 docker rm -f clickhouse

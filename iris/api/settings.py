@@ -12,6 +12,8 @@ class APISettings(CommonSettings):
 
     API_CORS_ALLOW_ORIGIN: Optional[str] = None
 
+    API_WAIT_FOR_DATABASE: int = 10
+
     API_TOKEN_SECRET_KEY: str = (
         "809dc30aafc109be9050e19f90ab8bf5924b8ddae334b2960d55b6a813af90c7"
     )

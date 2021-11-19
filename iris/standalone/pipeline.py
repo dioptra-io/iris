@@ -116,7 +116,6 @@ async def pipeline(
 
     # Create the database if not exists
     database = Database(agent_settings, logger)
-    await database.create_database()
 
     # Create a target file
     target_file: Path = (

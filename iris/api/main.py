@@ -1,4 +1,5 @@
 """API Entrypoint."""
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,6 +44,9 @@ async def startup_event():
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+    # Wait for database to be ready
+    await asyncio.sleep(settings.API_WAIT_FOR_DATABASE)
 
     database = get_database()
     storage = get_storage()
