@@ -101,7 +101,7 @@ def common_settings(s3_server):
         DATABASE_HOST="localhost",
         DATABASE_NAME="iris_test",
         DATABASE_USERNAME="default",
-        DATABASE_PASSWORD=None,
+        DATABASE_PASSWORD="",
         DATABASE_TIMEOUT=0,
         REDIS_TIMEOUT=0,
     )

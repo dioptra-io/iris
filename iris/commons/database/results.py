@@ -116,7 +116,7 @@ class InsertResults:
         async def insert(file):
             async with semaphore:
                 password = self.database.settings.DATABASE_PASSWORD
-                if password is None:
+                if not password:
                     password = "''"
 
                 await start_stream_subprocess(

@@ -56,7 +56,7 @@ class CommonSettings(BaseSettings):
     DATABASE_HOST: str = "clickhouse"
     DATABASE_NAME: str = "iris"
     DATABASE_USERNAME: str = "iris"
-    DATABASE_PASSWORD: Optional[str] = "iris"
+    DATABASE_PASSWORD: str = "iris"  # Put an empty string for no password
     DATABASE_PUBLIC_USER: Optional[str] = None
     DATABASE_CONNECT_TIMEOUT: int = 10
     DATABASE_SEND_RECEIVE_TIMEOUT: int = 300
@@ -100,8 +100,6 @@ class CommonSettings(BaseSettings):
         database = self.DATABASE_NAME if not default else "default"
         username = self.DATABASE_USERNAME
         password = self.DATABASE_PASSWORD
-        if password is None:
-            password = ""
         url = f"clickhouse://{username}:{password}@{host}/{database}"
         url += f"?connect_timeout={self.DATABASE_CONNECT_TIMEOUT}"
         url += f"&send_receive_timeout={self.DATABASE_SEND_RECEIVE_TIMEOUT}"
