@@ -15,8 +15,8 @@ app = FastAPI(
     title="Iris",
     description="Resilient Internet-scale measurement system.",
     version=__version__,
-    openapi_url="/api/openapi.json",
-    docs_url="/api/docs",
+    openapi_url="/openapi.json",
+    docs_url="/docs",
     redoc_url=None,
     contact={
         "name": "Dioptra",
@@ -29,7 +29,7 @@ app = FastAPI(
 app.add_middleware(PrometheusMiddleware)
 app.add_route("/metrics", handle_metrics)
 
-app.include_router(router, prefix="/api")
+app.include_router(router)
 
 
 @app.on_event("startup")
