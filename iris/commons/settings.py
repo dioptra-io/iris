@@ -55,6 +55,9 @@ class CommonSettings(BaseSettings):
 
     DATABASE_HOST: str = "clickhouse"
     DATABASE_NAME: str = "iris"
+    DATABASE_USERNAME: str = "iris"
+    DATABASE_PASSWORD: str = "iris"
+    DATABASE_PUBLIC_USER: Optional[str] = None
     DATABASE_CONNECT_TIMEOUT: int = 10
     DATABASE_SEND_RECEIVE_TIMEOUT: int = 300
     DATABASE_SYNC_REQUEST_TIMEOUT: int = 5
@@ -90,11 +93,13 @@ class CommonSettings(BaseSettings):
     SQLMODEL_DATABASE_URL: str = "sqlite:///iris.sqlite3"
     sqlmodel_engine_: Optional[Engine] = None
 
-    def database_url(self, default: bool = False) -> str:
+    def database_url(self) -> str:
         """Return the ClickHouse URL."""
         host = self.DATABASE_HOST
-        database = self.DATABASE_NAME if not default else "default"
-        url = f"clickhouse://{host}/{database}"
+        database = self.DATABASE_NAME
+        username = self.DATABASE_USERNAME
+        password = self.DATABASE_PASSWORD
+        url = f"clickhouse://{username}:{password}@{host}/{database}"
         url += f"?connect_timeout={self.DATABASE_CONNECT_TIMEOUT}"
         url += f"&send_receive_timeout={self.DATABASE_SEND_RECEIVE_TIMEOUT}"
         url += f"&sync_request_timeout={self.DATABASE_SYNC_REQUEST_TIMEOUT}"

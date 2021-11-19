@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from logging import Logger
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from iris.commons.database import Database, agents
@@ -25,6 +25,7 @@ async def outer_pipeline(
     logger: Logger,
     measurement_uuid: UUID,
     agent_uuid: UUID,
+    measurement_tags: List[str],
     # NOTE: See comments about these parameters in inner_pipeline.py.
     sliding_window_size: int,
     sliding_window_stopping_condition: int,
@@ -96,6 +97,7 @@ async def outer_pipeline(
         logger=logger,
         measurement_uuid=measurement_uuid,
         agent_uuid=agent_uuid,
+        measurement_tags=measurement_tags,
         agent_min_ttl=agent_parameters.min_ttl,
         sliding_window_stopping_condition=sliding_window_stopping_condition,
         tool=tool,

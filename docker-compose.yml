@@ -19,7 +19,7 @@ services:
     networks:
       default:
         aliases:
-          - "iris.docker.localhost"
+          - "api.docker.localhost"
           - "minio.docker.localhost"
           - "minio-console.docker.localhost"
 
@@ -28,7 +28,10 @@ services:
     image: ${CLICKHOUSE_IMAGE:-docker.io/yandex/clickhouse-server:21}
     ports:
       - "9000:9000"
-    # volumes:
+    volumes:
+      - "./configuration/clickhouse/users.d:/etc/clickhouse-server/users.d:ro"
+      - "./configuration/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init\
+        -db.sh"
     #   - "./volumes/clickhouse:/var/lib/clickhouse"
 
   redis:
@@ -53,13 +56,14 @@ services:
       - "traefik.http.services.minio.loadbalancer.server.port=9000"
       # Console
       - "traefik.http.routers.minio-console.entrypoints=web"
-      - "traefik.http.routers.minio-console.rule=Host(`minio-console.docker.localhost`)"
+      - "traefik.http.routers.minio-console.rule=Host(`minio-console.docker.loc\
+        alhost`)"
       - "traefik.http.routers.minio-console.service=minio-console"
       - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
     # volumes:
     #   - "./volumes/minio:/data"
 
-  # Iris
+    # Iris
   agent:
     build:
       context: .
@@ -95,13 +99,14 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.rule=Host(`api.docker.localhost`) &&
+        PathPrefix(`/api`)"
     volumes:
       - "./iris:/app/iris:ro"
     depends_on:
-    - clickhouse
-    - minio
-    - redis
+      - clickhouse
+      - minio
+      - redis
 
   worker:
     build:

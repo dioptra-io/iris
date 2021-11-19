@@ -81,6 +81,12 @@ class InsertResults:
             self.measurement_id,
         )
 
+    async def grant_public_access(self) -> None:
+        """Grant public access to the tables."""
+        await self.database.grant_public_access(results_table(self.measurement_id))
+        await self.database.grant_public_access(links_table(self.measurement_id))
+        await self.database.grant_public_access(prefixes_table(self.measurement_id))
+
     async def insert_csv(self, csv_filepath: Path) -> None:
         """Insert CSV file into table."""
         logger_prefix = f"{self.measurement_uuid} :: {self.agent_uuid} ::"
@@ -114,6 +120,8 @@ class InsertResults:
                     {self.database.settings.CLICKHOUSE_CMD} \
                     --database={self.database.settings.DATABASE_NAME} \
                     --host={self.database.settings.DATABASE_HOST} \
+                    --user={self.database.settings.DATABASE_USERNAME} \
+                    --password={self.database.settings.DATABASE_PASSWORD} \
                     --query='INSERT INTO {results_table(self.measurement_id)} FORMAT CSV' \
                     < {file}
                     """,

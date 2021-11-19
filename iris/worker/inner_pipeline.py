@@ -2,7 +2,7 @@ import subprocess
 from collections import defaultdict
 from logging import Logger
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 from uuid import UUID
 
 from diamond_miner import mappers
@@ -25,6 +25,7 @@ async def default_inner_pipeline(
     measurement_uuid: UUID,
     agent_uuid: UUID,
     agent_min_ttl: int,
+    measurement_tags: List[str],
     # NOTE: Ideally the sliding window parameters would be tool parameters.
     # Iris shouldn't need to know about this feature.
     sliding_window_stopping_condition: int,
@@ -67,6 +68,11 @@ async def default_inner_pipeline(
         )
         log("Create results tables")
         await insert_results.create_table()
+
+        if "public" in measurement_tags:  # TODO parametrize public tag name
+            log("Grant public access to results tables (if public user is set)")
+            await insert_results.grant_public_access()
+
         log("Insert results file")
         await insert_results.insert_csv(results_filepath)
         log("Insert prefixes")

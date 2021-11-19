@@ -15,16 +15,16 @@ class Database:
     logger: Logger
 
     @asynccontextmanager
-    async def client(self, default: bool):
-        client = Client.from_url(self.settings.database_url(default))
+    async def client(self):
+        client = Client.from_url(self.settings.database_url())
         try:
             yield client
         finally:
             await client.disconnect()
 
     @fault_tolerant(CommonSettings.database_retry)
-    async def call(self, *args: Any, default: bool = False, **kwargs: Any):
-        async with self.client(default) as c:
+    async def call(self, *args: Any, **kwargs: Any):
+        async with self.client() as c:
             return await c.execute(*args, **kwargs)
 
     @fault_tolerant(CommonSettings.database_retry)
@@ -33,8 +33,9 @@ class Database:
             self.settings.database_url(), measurement_id, **kwargs
         )
 
-    async def create_database(self) -> None:
+    async def grant_public_access(self, table) -> None:
         """Create a database if not exists."""
-        await self.call(
-            f"CREATE DATABASE IF NOT EXISTS {self.settings.DATABASE_NAME}", default=True
-        )
+        public_user = self.settings.DATABASE_PUBLIC_USER
+        if public_user is None:
+            return
+        await self.call(f"GRANT SELECT ON {table} TO {public_user}")

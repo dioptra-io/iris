@@ -50,9 +50,6 @@ async def startup_event():
     # Create the SQLModel database
     SQLModel.metadata.create_all(settings.sqlmodel_engine())
 
-    # Create the database
-    await database.create_database()
-
     # Create the measurement table
     await measurements.create_table(database)
 
