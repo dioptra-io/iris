@@ -176,6 +176,7 @@ async def probes_inner_pipeline(
     measurement_uuid: UUID,
     agent_uuid: UUID,
     agent_min_ttl: int,
+    measurement_tags: List[str],
     # NOTE: Ideally the sliding window parameters would be tool parameters.
     # Iris shouldn't need to know about this feature.
     sliding_window_stopping_condition: int,
