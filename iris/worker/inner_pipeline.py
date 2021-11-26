@@ -106,6 +106,9 @@ async def default_inner_pipeline(
             log("Enumerate initial prefixes")
             for prefix in targets:
                 for protocol, ttls, n_initial_flows in targets[prefix]:
+                    if tool == Tool.Ping:
+                        # In the case of ping, only take the max TTL in the TTL range.
+                        ttls = (ttls[-1],)
                     prefixes.append((prefix, protocol, ttls, n_initial_flows))
         else:
             log("Enumerate sliding prefixes")
