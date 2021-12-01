@@ -32,7 +32,7 @@ fakeredis = "^1.7.0"
 fastapi = {optional = true, version = "^0.70.0"}
 gunicorn = {optional = true, version = "^20.1.0"}
 passlib = {extras = ["bcrypt"], optional = true, version = "^1.7.4"}
-pycaracal = {optional = true, version = "^0.5.1"}
+pycaracal = {optional = true, version = "^0.5.3"}
 pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], optional = true, version = "^3.3.0"}
 python-multipart = {optional = true, version = "^0.0.5"}

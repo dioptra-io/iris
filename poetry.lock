@@ -1278,7 +1278,7 @@ python-versions = "*"
 
 [[package]]
 name = "pycaracal"
-version = "0.5.2"
+version = "0.5.3"
 description = ""
 category = "main"
 optional = true
@@ -1970,7 +1970,7 @@ worker = ["dramatiq", "pytricia"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "5f4ba14dfb669679455247bb0fd0d2f2b1ba61ba1359d358919a4bdfda949fa2"
+content-hash = "0aa7850f1e985291cb047f7fd1b6d9b81347127f6b15d5a2ab02ab47af77ea8d"
 
 [metadata.files]
 aioboto3 = [
@@ -2858,13 +2858,13 @@ pyasn1 = [
     {file = "pyasn1-0.4.8.tar.gz", hash = "sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba"},
 ]
 pycaracal = [
-    {file = "pycaracal-0.5.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e6a2c78bd7392f902abdc443f0b62f36eb9beb6b4cccf89220e7a1dca2a7f83f"},
-    {file = "pycaracal-0.5.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6c75b1be62d46024d4b96d15a4044035ff95bdb5b0c4943d85393496bc042c8b"},
-    {file = "pycaracal-0.5.2-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:406ea8dc56367044036b78f101d7160cd787d941731a819cc2af8e94662134b4"},
-    {file = "pycaracal-0.5.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9427dd9c76ece62b527f6e6bb58ec0b5cf94902c121e9a0a43a11c34a2645e46"},
-    {file = "pycaracal-0.5.2-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:6cc40af90e15ae90db06b0b3db576d094afbc0e198938006bf712371f02a93b3"},
-    {file = "pycaracal-0.5.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8c062d5da34f3b877a45c28e3710922775c42b74c0a1365c68bdbfcd539bc001"},
-    {file = "pycaracal-0.5.2.tar.gz", hash = "sha256:4c835884fd70f098d4732158c45a0d0cff3af4cec78bcaa16fd0c677e3bc6706"},
+    {file = "pycaracal-0.5.3-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:98f029ee4de02b718c35758b3391b205109788c5f9edd3d0421f92768b6e01d7"},
+    {file = "pycaracal-0.5.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:279947857389a1a47b0d50c74287dca3ef826b5465dd4755be7da36bc55b6d15"},
+    {file = "pycaracal-0.5.3-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:14ea549db9f27cc602b6375ad765d59ae5c36144fb389fd424613adbe011a9ba"},
+    {file = "pycaracal-0.5.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1c11d6783cf2ea345a8624cecc8d80e98fc354dca1b238890afdf800cb2ff1bf"},
+    {file = "pycaracal-0.5.3-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:ed6b682237399a0e3f24f6a0072ebd558c0336195c43e3539a0d95950da7ba7a"},
+    {file = "pycaracal-0.5.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:842a8360ba627db4a6ba35c177801c4acd3b9c701bfa2d566f47580b132ffbce"},
+    {file = "pycaracal-0.5.3.tar.gz", hash = "sha256:abaa895137323410c922096061c6697f5d36b004dce33da6795e3bc989ff88b2"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.8.0-py2.py3-none-any.whl", hash = "sha256:720f8b39dde8b293825e7ff02c475f3077124006db4f440dcbc9a20b76548a20"},
