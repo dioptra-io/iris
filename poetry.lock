@@ -1556,7 +1556,7 @@ idna2008 = ["idna"]
 
 [[package]]
 name = "rich"
-version = "10.13.0"
+version = "10.15.1"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = false
@@ -1970,7 +1970,7 @@ worker = ["dramatiq", "pytricia"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "b88657695bfcd39648f1348e65f8d3c06d38fd5e94a08d5b538eb5dc4e539ece"
+content-hash = "5f4ba14dfb669679455247bb0fd0d2f2b1ba61ba1359d358919a4bdfda949fa2"
 
 [metadata.files]
 aioboto3 = [
@@ -3102,8 +3102,8 @@ rfc3986 = [
     {file = "rfc3986-1.5.0.tar.gz", hash = "sha256:270aaf10d87d0d4e095063c65bf3ddbc6ee3d0b226328ce21e036f946e421835"},
 ]
 rich = [
-    {file = "rich-10.13.0-py3-none-any.whl", hash = "sha256:96d15285b64dbf8154e0717298d2fdfdbbe03da26a392632c23820068f06c3b3"},
-    {file = "rich-10.13.0.tar.gz", hash = "sha256:d80fc76f34d819c481a48f73ec9ac396bed3bd6a16ecd57f9e0654cd89a8fb56"},
+    {file = "rich-10.15.1-py3-none-any.whl", hash = "sha256:a59fb2721c52c5061ac65f318c0afb709e098b1ab6ce5813ea38982654c4b6ee"},
+    {file = "rich-10.15.1.tar.gz", hash = "sha256:93d0ea3c35ecfd8703dbe52b76885e224ad8d68c7766c921c726b14b22a57b7d"},
 ]
 rsa = [
     {file = "rsa-4.7.2-py3-none-any.whl", hash = "sha256:78f9a9bf4e7be0c5ded4583326e7461e3a3c5aae24073648b4bdfa797d78c9d2"},

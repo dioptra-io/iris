@@ -37,7 +37,7 @@ pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], optional = true, version = "^3.3.0"}
 python-multipart = {optional = true, version = "^0.0.5"}
 pytricia = {optional = true, version = "^1.0.2"}
-rich = {optional = true, version = "^10.9.0"}
+rich = {optional = true, version = "^10.15.1"}
 SQLAlchemy-Utils = "^0.37.8"
 sqlmodel = "^0.0.4"
 starlette_exporter = {optional = true, version = "^0.11.0"}
