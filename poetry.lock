@@ -45,7 +45,7 @@ clickhouse-driver = ">=0.1.2"
 
 [[package]]
 name = "aiofiles"
-version = "0.7.0"
+version = "0.8.0"
 description = "File support for asyncio."
 category = "main"
 optional = false
@@ -1955,7 +1955,7 @@ worker = ["dramatiq", "pytricia"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "1da5b26f49a52c5e1941e4816ba3dee2b4db7cf4cb1c52890fe77222e52cb9e1"
+content-hash = "8038e8cb99fcdbcf9c6fc319fdc0fba12896534e269d0c789c5b2c1ad43dc6fc"
 
 [metadata.files]
 aioboto3 = [
@@ -1969,8 +1969,8 @@ aioch = [
     {file = "aioch-0.0.2.tar.gz", hash = "sha256:1e36c042d54c2386b5a36bf9a0c8a8e68da10ce51209a3c0854eb79fd36e0c03"},
 ]
 aiofiles = [
-    {file = "aiofiles-0.7.0-py3-none-any.whl", hash = "sha256:c67a6823b5f23fcab0a2595a289cec7d8c863ffcb4322fb8cd6b90400aedfdbc"},
-    {file = "aiofiles-0.7.0.tar.gz", hash = "sha256:a1c4fc9b2ff81568c83e21392a82f344ea9d23da906e4f6a52662764545e19d4"},
+    {file = "aiofiles-0.8.0-py3-none-any.whl", hash = "sha256:7a973fc22b29e9962d0897805ace5856e6a566ab1f0c8e5c91ff6c866519c937"},
+    {file = "aiofiles-0.8.0.tar.gz", hash = "sha256:8334f23235248a3b2e83b2c3a78a22674f39969b96397126cc93664d9a901e59"},
 ]
 aiohttp = [
     {file = "aiohttp-3.7.4.post0-cp36-cp36m-macosx_10_14_x86_64.whl", hash = "sha256:3cf75f7cdc2397ed4442594b935a11ed5569961333d49b7539ea741be2cc79d5"},

@@ -21,7 +21,7 @@ classifiers = [
 python = "^3.8"
 aioboto3 = "^9.2.0"
 aioch = "^0.0.2"
-aiofiles = "^0.7.0"
+aiofiles = "^0.8.0"
 aioredis = "^2.0.0"
 asgiref = {optional = true, version = "^3.2.7"}
 async-timeout = "^3.0.1"
