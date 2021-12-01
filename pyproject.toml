@@ -28,7 +28,7 @@ async-timeout = "^3.0.1"
 diamond-miner = "^0.3.3"
 dramatiq = {extras = ["redis", "watch"], optional = true, version = "^1.9.0"}
 email-validator = "^1.1.3"
-fakeredis = "^1.6.1"
+fakeredis = "^1.7.0"
 fastapi = {optional = true, version = "^0.70.0"}
 gunicorn = {optional = true, version = "^20.1.0"}
 passlib = {extras = ["bcrypt"], optional = true, version = "^1.7.4"}
