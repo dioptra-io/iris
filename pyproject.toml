@@ -24,7 +24,7 @@ aioch = "^0.0.2"
 aiofiles = "^0.8.0"
 aioredis = "^2.0.0"
 asgiref = {optional = true, version = "^3.2.7"}
-async-timeout = "^3.0.1"
+async-timeout = "^4.0.1"
 diamond-miner = "^0.3.3"
 dramatiq = {extras = ["redis", "watch"], optional = true, version = "^1.9.0"}
 email-validator = "^1.1.3"
