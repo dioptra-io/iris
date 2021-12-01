@@ -55,7 +55,7 @@ flake8 = "^4.0.1"
 Flask = "^2.0.1"
 Flask-Cors = "^3.0.10"
 httpx = "^0.20.0"
-moto = {version = "^2.2.8", extras = ["s3"]}
+moto = {version = "^2.2.17", extras = ["s3"]}
 mypy = "^0.910"
 pre-commit = "^2.16.0"
 pytest = "^6.2.5"
