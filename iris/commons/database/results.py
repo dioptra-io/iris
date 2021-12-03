@@ -238,22 +238,22 @@ class Replies(QueryWrapper[public.Reply]):
 
     def formatter(self, row: tuple):
         return public.Reply(
-            probe_protocol=PROTOCOLS.get(row[0]),
-            probe_src_addr=addr_to_string(row[1]),
-            probe_dst_addr=addr_to_string(row[2]),
-            probe_src_port=row[3],
-            probe_dst_port=row[4],
-            probe_ttl=row[5],
-            quoted_ttl=row[6],
-            reply_src_addr=addr_to_string(row[7]),
-            reply_protocol=PROTOCOLS.get(row[8]),
-            reply_icmp_type=row[9],
-            reply_icmp_code=row[10],
-            reply_ttl=row[11],
-            reply_size=row[12],
-            reply_mpls_labels=row[13],
-            rtt=round(row[14], 2),
-            round=row[15],
+            probe_protocol=PROTOCOLS.get(row[1]),
+            probe_src_addr=addr_to_string(row[2]),
+            probe_dst_addr=addr_to_string(row[3]),
+            probe_src_port=row[4],
+            probe_dst_port=row[5],
+            probe_ttl=row[6],
+            quoted_ttl=row[7],
+            reply_src_addr=addr_to_string(row[8]),
+            reply_protocol=PROTOCOLS.get(row[9]),
+            reply_icmp_type=row[10],
+            reply_icmp_code=row[11],
+            reply_ttl=row[12],
+            reply_size=row[13],
+            reply_mpls_labels=row[14],
+            rtt=round(row[15], 2),
+            round=row[16],
         )
 
     def query(self):

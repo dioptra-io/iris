@@ -98,7 +98,7 @@ def common_settings(s3_server):
     return CommonSettings(
         AWS_S3_HOST=s3_server,
         AWS_TIMEOUT=0,
-        DATABASE_HOST="localhost",
+        DATABASE_HOST="127.0.0.1",
         DATABASE_NAME="iris_test",
         DATABASE_USERNAME="default",
         DATABASE_PASSWORD="",
