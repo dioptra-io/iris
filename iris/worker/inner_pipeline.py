@@ -106,6 +106,9 @@ async def default_inner_pipeline(
             log("Enumerate initial prefixes")
             for prefix in targets:
                 for protocol, ttls, n_initial_flows in targets[prefix]:
+                    if tool == Tool.Ping:
+                        # In the case of ping, only take the max TTL in the TTL range.
+                        ttls = (ttls[-1],)
                     prefixes.append((prefix, protocol, ttls, n_initial_flows))
         else:
             log("Enumerate sliding prefixes")
@@ -173,6 +176,7 @@ async def probes_inner_pipeline(
     measurement_uuid: UUID,
     agent_uuid: UUID,
     agent_min_ttl: int,
+    measurement_tags: List[str],
     # NOTE: Ideally the sliding window parameters would be tool parameters.
     # Iris shouldn't need to know about this feature.
     sliding_window_stopping_condition: int,

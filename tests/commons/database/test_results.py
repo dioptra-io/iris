@@ -16,8 +16,8 @@ async def test_measurement_results(database, tmp_path):
 
     results_file = tmp_path / "results.csv"
     results_file.write_text(
-        '1,::ffff:10.31.46.69,::ffff:8.8.8.8,24000,0,4,1,::ffff:20.20.20.1,1,11,0,252,62,"[]",90,1'
-        + '\n1,::ffff:10.31.46.69,::ffff:8.8.8.8,24000,0,5,1,::ffff:20.20.20.2,1,11,0,252,62,"[]",90,1'
+        '1638530032054872,1,::ffff:10.31.46.69,::ffff:8.8.8.8,24000,0,4,1,::ffff:20.20.20.1,1,11,0,252,62,"[]",90,1'
+        + '\n1638530032054872,1,::ffff:10.31.46.69,::ffff:8.8.8.8,24000,0,5,1,::ffff:20.20.20.2,1,11,0,252,62,"[]",90,1'
     )
     run([settings.ZSTD_CMD, results_file], check=True)
 
