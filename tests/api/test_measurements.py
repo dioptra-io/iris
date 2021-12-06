@@ -6,7 +6,7 @@ import pytest
 from iris.api.dependencies import get_redis, get_storage
 from iris.api.measurements import verify_quota
 from iris.api.security import get_current_active_user
-from iris.commons.database import Replies, agents, measurements
+from iris.commons.database import agents, measurements
 from iris.commons.schemas.public import (
     FlowMapper,
     Measurement,
@@ -17,7 +17,6 @@ from iris.commons.schemas.public import (
     MeasurementState,
     MeasurementSummary,
     Paginated,
-    Reply,
     Tool,
     ToolParameters,
 )
@@ -430,124 +429,3 @@ def test_delete_measurement_by_uuid_already_finished(api_client_sync, monkeypatc
     response = api_client_sync.delete(f"/measurements/{measurement_uuid}")
     assert response.status_code == 404
     assert response.json() == {"detail": "Measurement already finished"}
-
-
-# --- GET /measurements/{measurement_uuid}/{agent_uuid} ---
-
-
-def test_get_measurement_results(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
-):
-    measurement_uuid = str(uuid.uuid4())
-    agent_uuid = str(uuid.uuid4())
-    results = [
-        {
-            "probe_protocol": "icmp",
-            "probe_src_addr": "::ffff:ac12:b",
-            "probe_dst_addr": "::ffff:84e3:7b81",
-            "probe_src_port": 24000,
-            "probe_dst_port": 34334,
-            "probe_ttl": 78,
-            "quoted_ttl": 9,
-            "reply_src_addr": "::ffff:869d:fe0a",
-            "reply_protocol": "udp",
-            "reply_icmp_type": 11,
-            "reply_icmp_code": 0,
-            "reply_ttl": 37,
-            "reply_size": 56,
-            "reply_mpls_labels": [1],
-            "rtt": 1280.2,
-            "round": 1,
-        }
-    ]
-
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(
-        agents,
-        "get",
-        async_mock(
-            measurement_agent1.copy(update={"state": MeasurementState.Finished})
-        ),
-    )
-    monkeypatch.setattr(Replies, "exists", async_mock(True))
-    monkeypatch.setattr(Replies, "all", async_mock(results))
-    monkeypatch.setattr(Replies, "all_count", async_mock(1))
-
-    response = api_client_sync.get(
-        f"/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
-    )
-    assert Paginated[Reply](**response.json()) == Paginated(count=1, results=results)
-
-
-def test_get_measurement_results_table_not_exists(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
-):
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(
-        agents,
-        "get",
-        async_mock(
-            measurement_agent1.copy(update={"state": MeasurementState.Finished})
-        ),
-    )
-    monkeypatch.setattr(Replies, "exists", async_mock(0))
-    response = api_client_sync.get(
-        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
-    )
-    assert Paginated[Reply](**response.json()) == Paginated(count=0, results=[])
-
-
-def test_get_measurement_results_not_finished(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
-):
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(
-        agents,
-        "get",
-        async_mock(measurement_agent1.copy(update={"state": MeasurementState.Ongoing})),
-    )
-    response = api_client_sync.get(
-        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
-    )
-    assert response.status_code == 412
-
-
-def test_get_measurement_results_no_agent(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
-):
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(agents, "get", async_mock(None))
-
-    response = api_client_sync.get(
-        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
-    )
-    assert response.status_code == 404
-    assert response.json() == {
-        "detail": (
-            f"The agent `{measurement_agent1.uuid}` "
-            f"did not participate to measurement `{measurement1.uuid}`"
-        )
-    }
-
-
-def test_get_measurement_result_not_found(api_client_sync, monkeypatch):
-    monkeypatch.setattr(measurements, "get", async_mock(None))
-    response = api_client_sync.get(
-        f"/results/{uuid.uuid4()}/{uuid.uuid4()}/replies/0.0.0.0"
-    )
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Measurement not found"}
-
-
-def test_get_measurement_results_invalid_measurement_uuid(api_client_sync):
-    response = api_client_sync.get(
-        f"/results/invalid_uuid/{uuid.uuid4()}/replies/0.0.0.0"
-    )
-    assert response.status_code == 422
-
-
-def test_get_measurement_results_invalid_agent_uuid(api_client_sync):
-    response = api_client_sync.get(
-        f"/results/{uuid.uuid4()}/invalid_uuid/replies/0.0.0.0"
-    )
-    assert response.status_code == 422

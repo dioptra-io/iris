@@ -5,33 +5,23 @@ from dataclasses import dataclass
 from datetime import datetime
 from ipaddress import IPv6Address
 from pathlib import Path
-from typing import Generic, List, Optional, TypeVar, Union
+from typing import TypeVar, Union
 from uuid import UUID
 
 import aiofiles.os
-from diamond_miner.defaults import PROTOCOLS, UNIVERSE_SUBSET
 from diamond_miner.queries import (
-    Count,
     CreateTables,
     DropTables,
-    GetLinks,
-    GetNodes,
-    GetPrefixes,
-    GetResults,
     InsertLinks,
     InsertPrefixes,
-    Query,
     StoragePolicy,
     links_table,
     prefixes_table,
     results_table,
 )
 from diamond_miner.subsets import subsets_for
-from diamond_miner.typing import IPNetwork
-from pydantic import IPvAnyAddress
 
 from iris.commons.database.database import Database
-from iris.commons.schemas import public
 from iris.commons.settings import CommonSettings, fault_tolerant
 from iris.commons.subprocess import start_stream_subprocess
 
@@ -170,147 +160,3 @@ class InsertResults:
             subsets,
             concurrent_requests=8,
         )
-
-
-@dataclass(frozen=True)
-class QueryWrapper(Generic[T]):
-    database: Database
-    measurement_uuid: Union[str, UUID]
-    agent_uuid: Union[str, UUID]
-    subset: IPNetwork = UNIVERSE_SUBSET
-
-    def formatter(self, row: tuple) -> T:
-        ...
-
-    def query(self) -> Query:
-        ...
-
-    def table(self) -> str:
-        ...
-
-    @property
-    def measurement_id(self) -> str:
-        return f"{self.measurement_uuid}__{self.agent_uuid}"
-
-    async def all(self, offset: int, limit: int) -> List[T]:
-        response = await self.database.execute(
-            self.query(),
-            self.measurement_id,
-            subsets=(self.subset,),
-            limit=(limit, offset),
-        )
-        return [self.formatter(row) for row in response]
-
-    async def all_count(self) -> int:
-        response = await self.database.execute(
-            Count(query=self.query()), self.measurement_id, subsets=(self.subset,)
-        )
-        return int(response[0][0])
-
-    async def exists(self) -> bool:
-        response = await self.database.call(f"EXISTS TABLE {self.table()}")
-        return bool(response[0][0])
-
-
-@dataclass(frozen=True)
-class Prefixes(QueryWrapper[public.Prefix]):
-    """Get measurement prefixes."""
-
-    reply_src_addr_in: Optional[IPNetwork] = None
-
-    def formatter(self, row):
-        return public.Prefix(
-            prefix=addr_to_string(row[0]),
-            has_amplification=bool(row[1]),
-            has_loops=bool(row[2]),
-        )
-
-    def query(self):
-        return GetPrefixes(reply_src_addr_in=self.reply_src_addr_in)
-
-    def table(self):
-        return prefixes_table(self.measurement_id)
-
-
-@dataclass(frozen=True)
-class Replies(QueryWrapper[public.Reply]):
-    """Get measurement replies."""
-
-    def formatter(self, row: tuple):
-        return public.Reply(
-            probe_protocol=PROTOCOLS.get(row[1]),
-            probe_src_addr=addr_to_string(row[2]),
-            probe_dst_addr=addr_to_string(row[3]),
-            probe_src_port=row[4],
-            probe_dst_port=row[5],
-            probe_ttl=row[6],
-            quoted_ttl=row[7],
-            reply_src_addr=addr_to_string(row[8]),
-            reply_protocol=PROTOCOLS.get(row[9]),
-            reply_icmp_type=row[10],
-            reply_icmp_code=row[11],
-            reply_ttl=row[12],
-            reply_size=row[13],
-            reply_mpls_labels=row[14],
-            rtt=round(row[15], 2),
-            round=row[16],
-        )
-
-    def query(self):
-        return GetResults()
-
-    def table(self):
-        return results_table(self.measurement_id)
-
-
-@dataclass(frozen=True)
-class Interfaces(QueryWrapper[public.Interface]):
-    """Get measurement interfaces."""
-
-    filter_invalid_prefixes: bool = False
-
-    def formatter(self, row: tuple):
-        return public.Interface(ttl=row[0], addr=addr_to_string(row[1]))
-
-    def query(self):
-        return GetNodes(
-            include_probe_ttl=True, filter_invalid_prefixes=self.filter_invalid_prefixes
-        )
-
-    def table(self):
-        return results_table(self.measurement_id)
-
-
-@dataclass(frozen=True)
-class Links(QueryWrapper[public.Link]):
-    """Get measurement links."""
-
-    filter_invalid_prefixes: bool = False
-    filter_inter_round: bool = False
-    filter_partial: bool = False
-    filter_virtual: bool = False
-    near_or_far_addr: Optional[IPvAnyAddress] = None
-
-    def formatter(self, row: tuple):
-        return public.Link(
-            near_ttl=row[0],
-            far_ttl=row[1],
-            near_addr=addr_to_string(row[2]),
-            far_addr=addr_to_string(row[3]),
-        )
-
-    def query(self):
-        near_or_far_addr = None
-        if self.near_or_far_addr:
-            near_or_far_addr = str(self.near_or_far_addr)
-        return GetLinks(
-            include_metadata=True,
-            filter_invalid_prefixes=self.filter_invalid_prefixes,
-            filter_inter_round=self.filter_inter_round,
-            filter_partial=self.filter_partial,
-            filter_virtual=self.filter_virtual,
-            near_or_far_addr=near_or_far_addr,
-        )
-
-    def table(self):
-        return links_table(self.measurement_id)

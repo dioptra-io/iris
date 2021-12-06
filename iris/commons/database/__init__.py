@@ -1,11 +1,7 @@
 from .database import Database
-from .results import InsertResults, Interfaces, Links, Prefixes, Replies
+from .results import InsertResults
 
 __all__ = (
     "Database",
     "InsertResults",
-    "Interfaces",
-    "Links",
-    "Prefixes",
-    "Replies",
 )
