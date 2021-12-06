@@ -1,7 +1,7 @@
-from typing import TypeVar, Generic, Iterator
+from typing import Generic, Iterator, TypeVar
 
-K = TypeVar('K')
-V = TypeVar('V')
+K = TypeVar("K")
+V = TypeVar("V")
 
 class PyTricia(Generic[K, V]):
     def __init__(self, prefixlen: int): ...

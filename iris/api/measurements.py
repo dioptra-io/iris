@@ -61,6 +61,48 @@ async def get_measurements(
     return output
 
 
+@router.get(
+    "/public/",
+    response_model=public.Paginated[public.MeasurementSummary],
+    summary="Get all public measurements.",
+)
+async def get_measurements_public(
+    request: Request,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=0, le=200),
+    user: public.Profile = Depends(get_current_active_user),
+    database: Database = Depends(get_database),
+    redis: Redis = Depends(get_redis),
+):
+    """Get all measurements."""
+    querier = DatabasePagination(
+        database, measurements.all, measurements.all_count, request, offset, limit
+    )
+    output = await querier.query(tag="public")
+
+    measurements_: List[public.Measurement] = output["results"]
+    summaries: List[public.MeasurementSummary] = []
+
+    for measurement in measurements_:
+        state = await redis.get_measurement_state(measurement.uuid)
+        if not state or state == public.MeasurementState.Unknown:
+            state = measurement.state
+        summaries.append(
+            public.MeasurementSummary(
+                uuid=measurement.uuid,
+                state=state,
+                tool=measurement.tool,
+                tags=measurement.tags,
+                start_time=measurement.start_time,
+                end_time=measurement.end_time,
+            )
+        )
+
+    output["results"] = summaries
+
+    return output
+
+
 async def verify_quota(
     content: str,
     prefix_len_v4: int,

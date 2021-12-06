@@ -48,11 +48,16 @@ async def create_table(database: Database, drop: bool = False) -> None:
     )
 
 
-async def all_count(database: Database, user: str, tag: Optional[str] = None) -> int:
+async def all_count(
+    database: Database, user: Optional[str] = None, tag: Optional[str] = None
+) -> int:
     """Get the count of all results."""
-    where_clause = "WHERE user=%(user)s "
+    where_clause = "WHERE 1=1 "
+    if user:
+        where_clause += "AND user=%(user)s "
     if tag:
         where_clause += f"AND has(tags, '{tag}') "
+
     response = await database.call(
         f"SELECT Count() FROM {table(database)} {where_clause}",
         {"user": user},
@@ -61,12 +66,19 @@ async def all_count(database: Database, user: str, tag: Optional[str] = None) ->
 
 
 async def all(
-    database: Database, user: str, offset: int, limit: int, tag: Optional[str] = None
+    database: Database,
+    offset: int,
+    limit: int,
+    user: Optional[str] = None,
+    tag: Optional[str] = None,
 ) -> List[public.Measurement]:
     """Get all measurements uuid for a given user."""
-    where_clause = "WHERE user=%(user)s "
+    where_clause = "WHERE 1=1 "
+    if user:
+        where_clause += "AND user=%(user)s "
     if tag:
         where_clause += f"AND has(tags, '{tag}') "
+
     responses = await database.call(
         f"SELECT * FROM {table(database)} "
         f"{where_clause}"

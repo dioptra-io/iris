@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Optional
 from uuid import UUID
 
-from pycaracal import cast_addr, make_probe, prober, set_log_level
+from pycaracal import prober, set_log_level
 
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
