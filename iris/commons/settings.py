@@ -6,8 +6,8 @@ from typing import Optional
 
 import aioredis
 from pydantic import BaseSettings
+from sqlalchemy import create_engine
 from sqlalchemy.future import Engine
-from sqlmodel import create_engine
 from tenacity import (  # type: ignore
     before_sleep_log,
     retry,
@@ -91,8 +91,8 @@ class CommonSettings(BaseSettings):
     SPLIT_CMD: str = "gsplit" if platform.system() == "Darwin" else "split"
     ZSTD_CMD: str = "zstd"
 
-    SQLMODEL_DATABASE_URL: str = "sqlite:///iris.sqlite3"
-    sqlmodel_engine_: Optional[Engine] = None
+    SQLALCHEMY_DATABASE_URL: str = "sqlite:///iris.sqlite3"
+    sqlalchemy_engine_: Optional[Engine] = None
 
     def database_url(self, default: bool = False) -> str:
         """Return the ClickHouse URL."""
@@ -106,14 +106,14 @@ class CommonSettings(BaseSettings):
         url += f"&sync_request_timeout={self.DATABASE_SYNC_REQUEST_TIMEOUT}"
         return url
 
-    def sqlmodel_engine(self) -> Engine:
-        if not self.sqlmodel_engine_:
-            self.sqlmodel_engine_ = create_engine(
-                self.SQLMODEL_DATABASE_URL,
+    def sqlalchemy_engine(self) -> Engine:
+        if not self.sqlalchemy_engine_:
+            self.sqlalchemy_engine_ = create_engine(
+                self.SQLALCHEMY_DATABASE_URL,
                 connect_args={"check_same_thread": False},
                 echo=True,
             )
-        return self.sqlmodel_engine_
+        return self.sqlalchemy_engine_
 
     async def redis_client(self) -> aioredis.Redis:
         redis: aioredis.Redis = await aioredis.from_url(

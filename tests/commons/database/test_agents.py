@@ -27,7 +27,7 @@ async def test_agents(database, agent, statistics):
         probing_rate=200,
     )
     measurement_request = MeasurementRequest(
-        agents=[measurement_agent], username="test"
+        agents=[measurement_agent], user_id=uuid4()
     )
     expected = MeasurementAgent(
         uuid=measurement_agent.uuid,

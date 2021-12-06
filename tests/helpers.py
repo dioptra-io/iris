@@ -52,6 +52,12 @@ def fake_redis_factory(agent=None, measurement_state=None):
 def fake_storage_factory(files):
     def fake_storage():
         class FakeStorage:
+            def archive_bucket(*args, **kwargs) -> str:
+                return "bucket"
+
+            def targets_bucket(*args, **kwargs) -> str:
+                return "bucket"
+
             async def get_all_files_no_retry(*args, **kwargs):
                 return files
 

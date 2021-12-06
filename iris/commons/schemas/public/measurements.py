@@ -157,7 +157,7 @@ class Measurement(BaseModel):
     """Information about a measurement (Response)."""
 
     uuid: UUID
-    username: str
+    user_id: UUID
     state: MeasurementState
     tool: Tool
     agents: List[MeasurementAgent]

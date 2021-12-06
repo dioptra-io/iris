@@ -6,9 +6,9 @@ from uuid import UUID
 from diamond_miner.generators.standalone import count_prefixes
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
-from iris.api.dependencies import get_database, get_redis, get_storage, settings
+from iris.api.dependencies import get_database, get_redis, get_storage
 from iris.api.pagination import DatabasePagination
-from iris.api.security import get_current_active_user
+from iris.api.users import current_active_user
 from iris.commons.database import Database, agents, measurements
 from iris.commons.redis import Redis
 from iris.commons.schemas import private, public
@@ -28,7 +28,7 @@ async def get_measurements(
     tag: str = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
@@ -36,7 +36,7 @@ async def get_measurements(
     querier = DatabasePagination(
         database, measurements.all, measurements.all_count, request, offset, limit
     )
-    output = await querier.query(user=user.username, tag=tag)
+    output = await querier.query(user_id=user.id, tag=tag)
 
     measurements_: List[public.Measurement] = output["results"]
     summaries: List[public.MeasurementSummary] = []
@@ -70,7 +70,7 @@ async def get_measurements_public(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
@@ -103,25 +103,10 @@ async def get_measurements_public(
     return output
 
 
-async def verify_quota(
-    content: str,
-    prefix_len_v4: int,
-    prefix_len_v6: int,
-    user_quota: int,
-) -> bool:
-    """Verify that the quota is not exceeded."""
-    n_prefixes = count_prefixes(
-        (p.split(",")[0].strip() for p in content.split()),
-        prefix_len_v4=prefix_len_v4,
-        prefix_len_v6=prefix_len_v6,
-    )
-    return n_prefixes <= user_quota
-
-
 async def target_file_validator(
     storage: Storage,
     tool: public.Tool,
-    user: public.Profile,
+    user: public.UserDB,
     target_filename: str,
     prefix_len_v4: int,
     prefix_len_v6: int,
@@ -133,7 +118,7 @@ async def target_file_validator(
         # Verify that the target file exists on S3
         try:
             target_file = await storage.get_file_no_retry(
-                settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username,
+                storage.targets_bucket(user.id),
                 target_filename,
                 retrieve_content=False,
             )
@@ -143,7 +128,7 @@ async def target_file_validator(
             )
 
         # Check if the user is admin
-        if not user.is_admin:
+        if not user.is_superuser:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Admin priviledges required",
@@ -162,7 +147,7 @@ async def target_file_validator(
     # Verify that the target file exists on S3
     try:
         target_file = await storage.get_file_no_retry(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username,
+            storage.targets_bucket(user.id),
             target_filename,
         )
     except Exception:
@@ -170,19 +155,16 @@ async def target_file_validator(
             status_code=status.HTTP_404_NOT_FOUND, detail="Target file not found"
         )
 
-    # Check if the user respects his quota
+    # Check if the prefixes respect the tool prefix length
     try:
-        is_quota_respected = await verify_quota(
-            target_file["content"], prefix_len_v4, prefix_len_v6, user.quota
+        count_prefixes(
+            (p.split(",")[0].strip() for p in target_file["content"].split()),
+            prefix_len_v4=prefix_len_v4,
+            prefix_len_v6=prefix_len_v6,
         )
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid prefixes length"
-        )
-    if not is_quota_respected:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Quota exceeded",
         )
 
     # Check protocol and min/max TTL
@@ -224,7 +206,7 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     redis: Redis = Depends(get_redis),
     storage: Storage = Depends(get_storage),
 ):
@@ -297,7 +279,7 @@ async def post_measurement(
     measurement_request = private.MeasurementRequest(
         **measurement.dict(exclude={"agents"}),
         agents=list(registered_agents.values()),
-        username=user.username,
+        user_id=user.id,
     )
 
     # Launch a measurement procedure on the worker.
@@ -315,13 +297,13 @@ async def post_measurement(
 async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: UUID,
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
     storage: Storage = Depends(get_storage),
 ):
     """Get measurement information by uuid."""
-    measurement = await measurements.get(database, user.username, measurement_uuid)
+    measurement = await measurements.get(database, user.id, measurement_uuid)
     if measurement is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -339,7 +321,7 @@ async def get_measurement_by_uuid(
             agent_info = agent_info.copy(update={"state": measurement.state})
         try:
             target_file = await storage.get_file_no_retry(
-                settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user.username,
+                storage.archive_bucket(user.id),
                 f"targets__{measurement.uuid}__{agent_info.uuid}.csv",
             )
             target_file_content = [c.strip() for c in target_file["content"].split()]
@@ -369,12 +351,12 @@ async def get_measurement_by_uuid(
 async def delete_measurement(
     request: Request,
     measurement_uuid: UUID,
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
     """Cancel a measurement."""
-    measurement_info = await measurements.get(database, user.username, measurement_uuid)
+    measurement_info = await measurements.get(database, user.id, measurement_uuid)
     if measurement_info is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"

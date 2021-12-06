@@ -51,11 +51,11 @@ class Storage:
             "region_name": self.settings.AWS_REGION_NAME,
         }
 
-    def archive_bucket(self, username: str) -> str:
-        return self.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + username
+    def archive_bucket(self, user_id: UUID) -> str:
+        return self.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + str(user_id)
 
-    def targets_bucket(self, username: str) -> str:
-        return self.settings.AWS_S3_TARGETS_BUCKET_PREFIX + username
+    def targets_bucket(self, user_id: UUID) -> str:
+        return self.settings.AWS_S3_TARGETS_BUCKET_PREFIX + str(user_id)
 
     @staticmethod
     def measurement_bucket(uuid: UUID) -> str:

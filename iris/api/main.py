@@ -3,14 +3,12 @@ import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import Session, SQLModel, select
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
 from iris.api import router
-from iris.api.dependencies import get_database, get_storage, settings
+from iris.api.dependencies import Base, get_database, get_sqlalchemy, settings
 from iris.commons.database import measurements
-from iris.commons.schemas.public import Profile
 
 app = FastAPI(
     title="Iris",
@@ -48,38 +46,20 @@ async def startup_event():
     # Wait for database to be ready
     await asyncio.sleep(settings.API_WAIT_FOR_DATABASE)
 
-    database = get_database()
-    storage = get_storage()
+    database_clickhouse = get_database()
+    database_sqlalchemy = get_sqlalchemy()
 
-    # Create the SQLModel database
-    SQLModel.metadata.create_all(settings.sqlmodel_engine())
+    # Connect to the sqlalchemy database
+    await database_sqlalchemy.connect()
 
     # Create the measurement table
-    await measurements.create_table(database)
+    await measurements.create_table(database_clickhouse)
 
-    # Create the admin user if it doesn't exists
-    with Session(settings.sqlmodel_engine()) as session:
-        results = session.exec(
-            select(Profile).where(Profile.username == settings.API_ADMIN_USERNAME)
-        )
-        if not results.one_or_none():
-            session.add(
-                Profile(
-                    username=settings.API_ADMIN_USERNAME,
-                    email=settings.API_ADMIN_EMAIL,
-                    is_active=True,
-                    is_admin=True,
-                    quota=settings.API_ADMIN_QUOTA,
-                    hashed_password=settings.API_ADMIN_HASHED_PASSWORD,
-                )
-            )
-            session.commit()
+    # Create the sqlalchemy database
+    Base.metadata.create_all(settings.sqlalchemy_engine())
 
-    # Create `targets` bucket in S3 for admin user
-    await storage.create_bucket(
-        settings.AWS_S3_TARGETS_BUCKET_PREFIX + settings.API_ADMIN_USERNAME
-    )
-    # Create `archive` bucket in S3 for admin user
-    await storage.create_bucket(
-        settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + settings.API_ADMIN_USERNAME
-    )
+
+@app.on_event("shutdown")
+async def shutdown():
+    database_sqlalchemy = get_sqlalchemy()
+    await database_sqlalchemy.disconnect()

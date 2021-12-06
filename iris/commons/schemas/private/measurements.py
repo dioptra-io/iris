@@ -12,7 +12,7 @@ class MeasurementRequest(public.MeasurementPostBody):
         default_factory=lambda: datetime.utcnow().replace(microsecond=0)
     )
     uuid: UUID = Field(default_factory=uuid4)
-    username: str
+    user_id: UUID
 
     def agent(self, uuid: UUID) -> public.MeasurementAgentPostBody:
         for agent in self.agents:

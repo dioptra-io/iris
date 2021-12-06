@@ -229,6 +229,9 @@ async def test_delete_targets_by_key_not_found(api_client):
 @pytest.mark.asyncio
 async def test_delete_targets_internal_error(api_client):
     class FakeStorage:
+        def targets_bucket(*args, **kwargs) -> str:
+            return "bucket"
+
         async def delete_file_check_no_retry(*args, **kwargs):
             return {"ResponseMetadata": {"HTTPStatusCode": 500}}
 

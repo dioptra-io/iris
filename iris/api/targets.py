@@ -13,9 +13,9 @@ from fastapi import (
     status,
 )
 
-from iris.api.dependencies import get_storage, settings
+from iris.api.dependencies import get_storage
 from iris.api.pagination import ListPagination
-from iris.api.security import get_current_active_user
+from iris.api.users import current_active_user, current_super_user
 from iris.commons.schemas import public
 from iris.commons.storage import Storage
 
@@ -31,14 +31,12 @@ async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get all target lists."""
     try:
-        targets = await storage.get_all_files_no_retry(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username
-        )
+        targets = await storage.get_all_files_no_retry(storage.targets_bucket(user.id))
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
@@ -63,13 +61,13 @@ async def get_targets(
 async def get_target_by_key(
     request: Request,
     key: str,
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
     try:
         target_file = await storage.get_file_no_retry(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username, key
+            storage.targets_bucket(user.id), key
         )
     except Exception:
         raise HTTPException(
@@ -133,7 +131,7 @@ async def verify_target_file(target_file):
 async def post_target(
     request: Request,
     target_file: UploadFile = File(...),
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a target list to object storage."""
@@ -151,7 +149,7 @@ async def post_target(
         )
 
     await storage.upload_file_no_retry(
-        storage.targets_bucket(user.username), target_file.filename, target_file.file
+        storage.targets_bucket(user.id), target_file.filename, target_file.file
     )
     return {"key": target_file.filename, "action": "upload"}
 
@@ -199,7 +197,7 @@ async def verify_probe_target_file(target_file):
     "/probes",
     status_code=status.HTTP_201_CREATED,
     response_model=public.TargetPostResponse,
-    summary="Upload a probe list (admin only).",
+    summary="Upload a probe list.",
     description="""
     Each line of the file must be like `dst_addr,src_port,dst_port,ttl,protocol`
     where the target is a IPv4/IPv6 prefix or IPv4/IPv6 address.
@@ -209,16 +207,10 @@ async def verify_probe_target_file(target_file):
 async def post_probes_target(
     request: Request,
     target_file: UploadFile = File(...),
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_super_user),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a probe list to object storage."""
-    if not user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin priviledges required",
-        )
-
     if not target_file.filename.endswith(".csv"):
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
@@ -233,7 +225,7 @@ async def post_probes_target(
         )
 
     await storage.upload_file_no_retry(
-        storage.targets_bucket(user.username),
+        storage.targets_bucket(user.id),
         target_file.filename,
         target_file.file,
         metadata={"is_probes_file": "True"},  # MinIO doesn't like bool type in metadata
@@ -253,13 +245,13 @@ async def post_probes_target(
 async def delete_target_by_key(
     request: Request,
     key: str,
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""
     try:
         response = await storage.delete_file_check_no_retry(
-            settings.AWS_S3_TARGETS_BUCKET_PREFIX + user.username, key
+            storage.targets_bucket(user.id), key
         )
     except Exception:
         raise HTTPException(

@@ -34,7 +34,7 @@ async def outer_pipeline(
     working_directory: Path,
     targets_key: str,
     results_key: Optional[str],
-    username: str,
+    user_id: str,
     debug_mode: bool = False,
 ) -> Optional[OuterPipelineResult]:
     """
@@ -60,7 +60,7 @@ async def outer_pipeline(
 
     log("Download target file from object storage")
     targets_filepath = await storage.download_file_to(
-        storage.targets_bucket(username), targets_key, working_directory
+        storage.targets_bucket(user_id), targets_key, working_directory
     )
 
     if results_key:

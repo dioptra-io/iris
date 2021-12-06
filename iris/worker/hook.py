@@ -134,7 +134,7 @@ async def watch(
             ),
             targets_key=agent.target_file,
             results_key=results_filename,
-            username=measurement_request.username,
+            user_id=measurement_request.user_id,
             debug_mode=settings.WORKER_DEBUG_MODE,
         )
 
@@ -206,8 +206,8 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
             # noinspection PyBroadException
             try:
                 await storage.copy_file_to_bucket(
-                    storage.targets_bucket(measurement_request.username),
-                    storage.archive_bucket(measurement_request.username),
+                    storage.targets_bucket(measurement_request.user_id),
+                    storage.archive_bucket(measurement_request.user_id),
                     agent.target_file,
                     f"targets__{measurement_request.uuid}__{agent.uuid}.csv",
                 )
@@ -253,7 +253,7 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
                 ),
                 targets_key=agent.target_file,
                 results_key=None,
-                username=measurement_request.username,
+                user_id=measurement_request.user_id,
                 debug_mode=settings.WORKER_DEBUG_MODE,
             )
 
@@ -319,16 +319,16 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         == MeasurementState.Canceled
     ):
         await measurements.stamp_canceled(
-            database, measurement_request.username, measurement_request.uuid
+            database, measurement_request.user_id, measurement_request.uuid
         )
     else:
         await measurements.stamp_finished(
-            database, measurement_request.username, measurement_request.uuid
+            database, measurement_request.user_id, measurement_request.uuid
         )
 
     logger.info(f"{logger_prefix} Stamp measurement end time")
     await measurements.stamp_end_time(
-        database, measurement_request.username, measurement_request.uuid
+        database, measurement_request.user_id, measurement_request.uuid
     )
 
     logger.info(f"{logger_prefix} Measurement done")

@@ -11,7 +11,7 @@ from httpx import AsyncClient
 
 from iris.api.dependencies import get_database, get_redis
 from iris.api.main import app
-from iris.api.security import get_current_active_user
+from iris.api.users import current_active_user
 from iris.commons.database import Database
 from iris.commons.redis import AgentRedis, Redis
 from iris.commons.schemas.public import (
@@ -19,8 +19,8 @@ from iris.commons.schemas.public import (
     AgentParameters,
     AgentState,
     ProbingStatistics,
-    Profile,
     Round,
+    UserDB,
 )
 from iris.commons.settings import CommonSettings
 
@@ -44,12 +44,11 @@ def agent():
 
 @pytest.fixture
 def user():
-    user = Profile(
-        username="test",
+    user = UserDB(
         email="foo.bar@mail.com",
         is_active=True,
-        is_admin=True,
-        quota=1000,
+        is_verified=True,
+        is_superuser=True,
         hashed_password="$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve",
     )
     return user
@@ -145,7 +144,7 @@ def api_client_factory(common_settings, redis_client):
         }
 
         if override_user:
-            app.dependency_overrides[get_current_active_user] = lambda: override_user
+            app.dependency_overrides[current_active_user] = lambda: override_user
 
         kwargs = dict(app=app, base_url="http://testserver")
         if klass == AsyncClient:

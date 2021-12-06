@@ -18,9 +18,8 @@ from .measurements import (
     ToolParameters,
 )
 from .paging import Paginated
-from .profiles import Profile
-from .results import Interface, Link, Prefix, Reply
 from .targets import Target, TargetDeleteResponse, TargetPostResponse, TargetSummary
+from .users import User, UserCreate, UserDB, UserUpdate
 
 __all__ = [
     "Agent",
@@ -28,8 +27,6 @@ __all__ = [
     "AgentState",
     "FlowMapper",
     "GenericException",
-    "Interface",
-    "Link",
     "Measurement",
     "MeasurementAgent",
     "MeasurementAgentPostBody",
@@ -40,10 +37,7 @@ __all__ = [
     "MeasurementState",
     "MeasurementSummary",
     "Paginated",
-    "Prefix",
     "ProbingStatistics",
-    "Profile",
-    "Reply",
     "Round",
     "Target",
     "TargetDeleteResponse",
@@ -51,4 +45,8 @@ __all__ = [
     "TargetSummary",
     "Tool",
     "ToolParameters",
+    "User",
+    "UserCreate",
+    "UserUpdate",
+    "UserDB",
 ]

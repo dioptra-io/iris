@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from iris.api.dependencies import get_redis
 from iris.api.pagination import ListPagination
-from iris.api.security import get_current_active_user
+from iris.api.users import current_active_user
 from iris.commons.redis import Redis
 from iris.commons.schemas import public
 
@@ -22,7 +22,7 @@ async def get_agents(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     redis: Redis = Depends(get_redis),
 ):
     """Get all agents."""
@@ -40,7 +40,7 @@ async def get_agents(
 async def get_agent_by_uuid(
     request: Request,
     uuid: UUID,
-    user: public.Profile = Depends(get_current_active_user),
+    user: public.UserDB = Depends(current_active_user),
     redis: Redis = Depends(get_redis),
 ):
     """Get one agent specified by UUID."""

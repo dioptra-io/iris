@@ -4,8 +4,6 @@ from datetime import datetime
 import pytest
 
 from iris.api.dependencies import get_redis, get_storage
-from iris.api.measurements import verify_quota
-from iris.api.security import get_current_active_user
 from iris.commons.database import agents, measurements
 from iris.commons.schemas.public import (
     FlowMapper,
@@ -57,7 +55,7 @@ target_probes = {
 def measurement1():
     return Measurement(
         uuid=uuid.uuid4(),
-        username="test",
+        user_id=uuid.uuid4(),
         state=MeasurementState.Unknown,
         tool=Tool.DiamondMiner,
         agents=[],
@@ -107,7 +105,7 @@ def test_get_measurements(api_client_sync, monkeypatch):
     measurements_ = [
         Measurement(
             uuid=uuid.uuid4(),
-            username="test",
+            user_id=uuid.uuid4(),
             state=MeasurementState.Finished,
             tool=Tool.DiamondMiner,
             agents=[],
@@ -117,7 +115,7 @@ def test_get_measurements(api_client_sync, monkeypatch):
         ),
         Measurement(
             uuid=uuid.uuid4(),
-            username="test",
+            user_id=uuid.uuid4(),
             state=MeasurementState.Finished,
             tool=Tool.DiamondMiner,
             agents=[],
@@ -127,7 +125,7 @@ def test_get_measurements(api_client_sync, monkeypatch):
         ),
         Measurement(
             uuid=uuid.uuid4(),
-            username="test",
+            user_id=uuid.uuid4(),
             state=MeasurementState.Finished,
             tool=Tool.DiamondMiner,
             agents=[],
@@ -139,11 +137,11 @@ def test_get_measurements(api_client_sync, monkeypatch):
 
     measurements_ = sorted(measurements_, key=lambda x: x.start_time, reverse=True)
     summaries = [
-        MeasurementSummary(**x.dict(exclude={"agents", "username"}))
+        MeasurementSummary(**x.dict(exclude={"agents", "user_id"}))
         for x in measurements_
     ]
 
-    async def all(self, user, offset, limit, tag=None):
+    async def all(self, user_id, offset, limit, tag=None):
         return measurements_[offset : offset + limit]  # noqa : E203
 
     override(
@@ -195,18 +193,11 @@ def test_get_measurements(api_client_sync, monkeypatch):
 # --- POST /measurements/ ---
 
 
-@pytest.mark.asyncio
-async def test_verify_quota():
-    assert await verify_quota("8.8.8.0/23,icmp,2,32", 24, 64, 2) is True
-    assert await verify_quota("8.8.8.0/23,icmp,2,32", 24, 64, 1) is False
-    assert await verify_quota("8.8.8.0/24", 32, 128, 256) is True
-    assert await verify_quota("8.8.8.0/24", 32, 128, 255) is False
-
-
 def test_post_measurement(api_client_sync, agent, monkeypatch):
     override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
     override(api_client_sync, get_storage, fake_storage_factory([target23]))
     monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
+
     for tool in Tool:
         if tool == Tool.Probes:
             continue
@@ -247,20 +238,6 @@ def test_post_measurement_probes(api_client_sync, agent, monkeypatch):
     )
     response = api_client_sync.post("/measurements/", data=body.json())
     assert response.status_code == 201
-
-
-def test_post_measurement_quota_exceeded(api_client_sync, agent, user, monkeypatch):
-    user = user.copy(update={"is_admin": False, "quota": 0})
-    override(api_client_sync, get_current_active_user, lambda: user)
-    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    body = MeasurementPostBody(
-        tool=Tool.DiamondMiner,
-        agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 403
 
 
 def test_post_measurement_diamond_miner_invalid_prefix_length(

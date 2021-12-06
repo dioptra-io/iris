@@ -41,7 +41,7 @@ async def measurement(
         settings.AGENT_TARGETS_DIR_PATH,
     )
 
-    logger.info(f"{logger_prefix} Username : {measurement_request.username}")
+    logger.info(f"{logger_prefix} User ID : {measurement_request.user_id}")
     logger.info(f"{logger_prefix} Probe File: {request.probe_filename}")
     logger.info(f"{logger_prefix} {request.round}")
     logger.info(f"{logger_prefix} Tool : {measurement_request.tool}")

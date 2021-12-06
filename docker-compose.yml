@@ -88,9 +88,6 @@ services:
       dockerfile: "./dockerfiles/iris-api.dockerfile"
     environment:
       API_CORS_ALLOW_ORIGIN: "http://localhost:8081"
-      API_ADMIN_USERNAME: "admin"
-      API_ADMIN_EMAIL: "admin@iris.docker.localhost"
-      API_ADMIN_HASHED_PASSWORD: "$$2b$$12$$DOA6t1HC4zlT/AqFgQcrzuxwcTVAV2HuyZrzxORdBDxhctmMfIbUi"
       AWS_S3_HOST: "http://minio.docker.localhost"
       AWS_ACCESS_KEY_ID: "minioadmin"
       AWS_SECRET_ACCESS_KEY: "minioadmin"
