@@ -5,18 +5,15 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9']
-
+    services:
+      clickhouse:
+        image: yandex/clickhouse-server
+        ports: ['8123:8123', '9000:9000']
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Start ClickHouse
-        run: docker run -d -p 8123:8213 -p 9000:9000 yandex/clickhouse-server
+          python-version: '3.9'
       - name: Install clickhouse-client and zstd
         run: |
           sudo apt install --yes apt-transport-https ca-certificates dirmngr
