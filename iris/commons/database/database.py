@@ -29,8 +29,8 @@ class Database:
 
     @fault_tolerant(CommonSettings.database_retry)
     async def execute(self, query: Query, measurement_id: str, **kwargs: Any):
-        return await query.execute_async(
-            self.settings.database_url(), measurement_id, **kwargs
+        return query.execute(
+            self.settings.database_url_http(), measurement_id, **kwargs
         )
 
     async def create_database(self) -> None:

@@ -48,7 +48,7 @@ async def default_inner_pipeline(
     def log(s):
         logger.info(f"{measurement_uuid} :: {agent_uuid} :: {s}")
 
-    database_url = database.settings.database_url()
+    database_url = database.settings.database_url_http()
     measurement_id = f"{measurement_uuid}__{agent_uuid}"
 
     flow_mapper_v4, flow_mapper_v6 = instantiate_flow_mappers(
@@ -116,9 +116,7 @@ async def default_inner_pipeline(
                 window_max_ttl=previous_round.max_ttl,
                 stopping_condition=sliding_window_stopping_condition,
             )
-            async for _, _, addr_v6 in query.execute_iter_async(
-                database_url, measurement_id
-            ):
+            for _, _, addr_v6 in query.execute_iter(database_url, measurement_id):
                 if addr_v4 := addr_v6.ipv4_mapped:
                     prefix = f"{addr_v4}/{tool_parameters.prefix_len_v4}"
                 else:
@@ -145,7 +143,7 @@ async def default_inner_pipeline(
     else:
         assert previous_round, "round > 1 must have a previous round"
         log("Insert MDA probe counts")
-        await insert_mda_probe_counts_parallel(
+        insert_mda_probe_counts_parallel(
             url=database_url,
             measurement_id=measurement_id,
             previous_round=previous_round.number,
@@ -154,7 +152,7 @@ async def default_inner_pipeline(
         )
 
     log("Generate probes file")
-    return await probe_generator_parallel(
+    return probe_generator_parallel(
         filepath=probes_filepath,
         url=database_url,
         measurement_id=measurement_id,

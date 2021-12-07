@@ -132,13 +132,13 @@ class InsertResults:
         """Insert the links in the links table from the flow view."""
         await self.database.call(f"TRUNCATE {links_table(self.measurement_id)}")
         query = InsertLinks()
-        subsets = await subsets_for(
-            query, self.database.settings.database_url(), self.measurement_id
+        subsets = subsets_for(
+            query, self.database.settings.database_url_http(), self.measurement_id
         )
         # We limit the number of concurrent requests since this query
         # uses a lot of memory (aggregation of the flows table).
-        await query.execute_concurrent(
-            self.database.settings.database_url(),
+        query.execute_concurrent(
+            self.database.settings.database_url_http(),
             self.measurement_id,
             subsets,
             concurrent_requests=8,
@@ -149,13 +149,13 @@ class InsertResults:
         """Insert the invalid prefixes in the prefix table."""
         await self.database.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
         query = InsertPrefixes()
-        subsets = await subsets_for(
-            query, self.database.settings.database_url(), self.measurement_id
+        subsets = subsets_for(
+            query, self.database.settings.database_url_http(), self.measurement_id
         )
         # We limit the number of concurrent requests since this query
         # uses a lot of memory.
-        await query.execute_concurrent(
-            self.database.settings.database_url(),
+        query.execute_concurrent(
+            self.database.settings.database_url_http(),
             self.measurement_id,
             subsets,
             concurrent_requests=8,
