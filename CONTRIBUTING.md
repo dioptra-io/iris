@@ -2,8 +2,6 @@
 
 Thanks for contributing ! Here is some guidelines to make your life easier during the development process.
 
-
-
 ## Run with Docker-Compose
 
 For development purposes, you can setup a new local infrastructure like this.

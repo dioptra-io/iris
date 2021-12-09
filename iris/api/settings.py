@@ -17,5 +17,4 @@ class APISettings(CommonSettings):
     API_TOKEN_SECRET_KEY: str = (
         "809dc30aafc109be9050e19f90ab8bf5924b8ddae334b2960d55b6a813af90c7"
     )
-    API_TOKEN_ALGORITHM: str = "HS256"
-    API_TOKEN_EXPIRATION_TIME: int = 1  # in days
+    API_TOKEN_LIFETIME: int = 3600

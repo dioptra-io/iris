@@ -1,6 +1,8 @@
 import databases
 from fastapi_users.db import SQLAlchemyBaseUserTable, SQLAlchemyUserDatabase
+from sqlalchemy import Column
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
+from sqlalchemy.types import Boolean, Integer
 
 from iris.api.settings import APISettings
 from iris.commons.database import Database
@@ -17,7 +19,8 @@ Base: DeclarativeMeta = declarative_base()
 
 
 class UserTable(Base, SQLAlchemyBaseUserTable):
-    pass
+    probing_enabled = Column(Boolean, nullable=False, default=False)
+    probing_limit = Column(Integer, nullable=False, default=0)
 
 
 users = UserTable.__table__

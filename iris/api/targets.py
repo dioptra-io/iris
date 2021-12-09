@@ -13,9 +13,9 @@ from fastapi import (
     status,
 )
 
+from iris.api.authentication import current_superuser, current_verified_user
 from iris.api.dependencies import get_storage
 from iris.api.pagination import ListPagination
-from iris.api.users import current_active_user, current_super_user
 from iris.commons.schemas import public
 from iris.commons.storage import Storage
 
@@ -31,10 +31,17 @@ async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get all target lists."""
+    # First check is user has probing enabled
+    if not user.probing_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must have probing enabled to access this resource",
+        )
+
     try:
         targets = await storage.get_all_files_no_retry(storage.targets_bucket(user.id))
     except Exception:
@@ -61,10 +68,17 @@ async def get_targets(
 async def get_target_by_key(
     request: Request,
     key: str,
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
+    # First check is user has probing enabled
+    if not user.probing_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must have probing enabled to access this resource",
+        )
+
     try:
         target_file = await storage.get_file_no_retry(
             storage.targets_bucket(user.id), key
@@ -131,7 +145,7 @@ async def verify_target_file(target_file):
 async def post_target(
     request: Request,
     target_file: UploadFile = File(...),
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a target list to object storage."""
@@ -207,10 +221,17 @@ async def verify_probe_target_file(target_file):
 async def post_probes_target(
     request: Request,
     target_file: UploadFile = File(...),
-    user: public.UserDB = Depends(current_super_user),
+    user: public.UserDB = Depends(current_superuser),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a probe list to object storage."""
+    # First check is user has probing enabled
+    if not user.probing_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must have probing enabled to access this resource",
+        )
+
     if not target_file.filename.endswith(".csv"):
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
@@ -245,10 +266,17 @@ async def post_probes_target(
 async def delete_target_by_key(
     request: Request,
     key: str,
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""
+    # First check is user has probing enabled
+    if not user.probing_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must have probing enabled to access this resource",
+        )
+
     try:
         response = await storage.delete_file_check_no_retry(
             storage.targets_bucket(user.id), key

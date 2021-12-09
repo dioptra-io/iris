@@ -6,9 +6,9 @@ from uuid import UUID
 from diamond_miner.generators.standalone import count_prefixes
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
+from iris.api.authentication import current_verified_user
 from iris.api.dependencies import get_database, get_redis, get_storage
 from iris.api.pagination import DatabasePagination
-from iris.api.users import current_active_user
 from iris.commons.database import Database, agents, measurements
 from iris.commons.redis import Redis
 from iris.commons.schemas import private, public
@@ -28,11 +28,18 @@ async def get_measurements(
     tag: str = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
     """Get all measurements."""
+    # First check is user has probing enabled
+    if not user.probing_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must have probing enabled to access this resource",
+        )
+
     querier = DatabasePagination(
         database, measurements.all, measurements.all_count, request, offset, limit
     )
@@ -70,7 +77,7 @@ async def get_measurements_public(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
@@ -206,11 +213,18 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     storage: Storage = Depends(get_storage),
 ):
     """Request a measurement."""
+    # First check is user has probing enabled
+    if not user.probing_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must have probing enabled to access this resource",
+        )
+
     active_agents = await redis.get_agents_by_uuid()
 
     # Update the list of requested agents to include agents selected by tag.
@@ -297,12 +311,19 @@ async def post_measurement(
 async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: UUID,
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
     storage: Storage = Depends(get_storage),
 ):
     """Get measurement information by uuid."""
+    # First check is user has probing enabled
+    if not user.probing_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must have probing enabled to access this resource",
+        )
+
     measurement = await measurements.get(database, user.id, measurement_uuid)
     if measurement is None:
         raise HTTPException(
@@ -351,11 +372,18 @@ async def get_measurement_by_uuid(
 async def delete_measurement(
     request: Request,
     measurement_uuid: UUID,
-    user: public.UserDB = Depends(current_active_user),
+    user: public.UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
     """Cancel a measurement."""
+    # First check is user has probing enabled
+    if not user.probing_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must have probing enabled to access this resource",
+        )
+
     measurement_info = await measurements.get(database, user.id, measurement_uuid)
     if measurement_info is None:
         raise HTTPException(
