@@ -8,13 +8,8 @@ import aioredis
 from pydantic import BaseSettings
 from sqlalchemy import create_engine
 from sqlalchemy.future import Engine
-from tenacity import (  # type: ignore
-    before_sleep_log,
-    retry,
-    stop_after_delay,
-    wait_exponential,
-    wait_random,
-)
+from tenacity import retry  # type: ignore
+from tenacity import before_sleep_log, stop_after_delay, wait_exponential, wait_random
 
 
 def fault_tolerant(retry_):
@@ -105,6 +100,14 @@ class CommonSettings(BaseSettings):
         url += f"&send_receive_timeout={self.DATABASE_SEND_RECEIVE_TIMEOUT}"
         url += f"&sync_request_timeout={self.DATABASE_SYNC_REQUEST_TIMEOUT}"
         return url
+
+    def database_url_http(self) -> str:
+        """Return the ClickHouse HTTP URL."""
+        host = self.DATABASE_HOST
+        database = self.DATABASE_NAME
+        username = self.DATABASE_USERNAME
+        password = self.DATABASE_PASSWORD
+        return f"http://{username}:{password}@{host}:8123/?database={database}"
 
     def sqlalchemy_engine(self) -> Engine:
         if not self.sqlalchemy_engine_:
