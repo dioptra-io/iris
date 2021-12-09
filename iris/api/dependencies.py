@@ -1,5 +1,9 @@
 import databases
-from fastapi_users.db import SQLAlchemyBaseUserTable, SQLAlchemyUserDatabase
+from fastapi_users.db import (
+    SQLAlchemyBaseOAuthAccountTable,
+    SQLAlchemyBaseUserTable,
+    SQLAlchemyUserDatabase,
+)
 from sqlalchemy import Column
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.types import Boolean, Integer
@@ -23,7 +27,12 @@ class UserTable(Base, SQLAlchemyBaseUserTable):
     probing_limit = Column(Integer, nullable=False, default=0)
 
 
+class OAuthAccount(SQLAlchemyBaseOAuthAccountTable, Base):
+    pass
+
+
 users = UserTable.__table__
+oauth_accounts = OAuthAccount.__table__
 
 
 def get_database():
@@ -43,7 +52,7 @@ async def get_redis():
 
 
 def get_session():
-    yield SQLAlchemyUserDatabase(UserDB, get_sqlalchemy(), users)
+    yield SQLAlchemyUserDatabase(UserDB, get_sqlalchemy(), users, oauth_accounts)
 
 
 def get_storage():

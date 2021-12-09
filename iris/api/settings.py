@@ -18,3 +18,5 @@ class APISettings(CommonSettings):
         "809dc30aafc109be9050e19f90ab8bf5924b8ddae334b2960d55b6a813af90c7"
     )
     API_TOKEN_LIFETIME: int = 3600
+
+    API_DEFAULT_PROBING_LIMIT: int = 10_000_000  # packets per measurement

@@ -17,7 +17,7 @@ class CustomCreateUpdateDictModel(models.BaseModel):
         )
 
 
-class User(models.BaseUser):
+class User(models.BaseUser, models.BaseOAuthAccountMixin):
     probing_enabled: bool = False
     probing_limit: int = 0
 
