@@ -24,9 +24,11 @@ router.include_router(
     fastapi_users.get_register_router(), prefix="/auth", tags=["Authentication"]
 )
 
-github_oauth_client = GitHubOAuth2("CLIENT_ID", "CLIENT_SECRET")
+github_oauth_client = GitHubOAuth2(
+    settings.API_OAUTH_GITHUB_CLIENT_ID, settings.API_OAUTH_GITHUB_CLIENT_SECRET
+)
 router.include_router(
-    fastapi_users.get_oauth_router(github_oauth_client, "SECRET"),
+    fastapi_users.get_oauth_router(github_oauth_client, settings.API_TOKEN_SECRET_KEY),
     prefix="/auth/github",
     tags=["Authentication"],
 )

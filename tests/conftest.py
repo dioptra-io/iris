@@ -9,9 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+from iris.api.authentication import current_verified_user
 from iris.api.dependencies import get_database, get_redis
 from iris.api.main import app
-from iris.api.users import current_active_user
 from iris.commons.database import Database
 from iris.commons.redis import AgentRedis, Redis
 from iris.commons.schemas.public import (
@@ -20,7 +20,7 @@ from iris.commons.schemas.public import (
     AgentState,
     ProbingStatistics,
     Round,
-    UserDB,
+    User,
 )
 from iris.commons.settings import CommonSettings
 
@@ -44,12 +44,14 @@ def agent():
 
 @pytest.fixture
 def user():
-    user = UserDB(
+    user = User(
         email="foo.bar@mail.com",
         is_active=True,
         is_verified=True,
         is_superuser=True,
         hashed_password="$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve",
+        probing_enabled=True,
+        probing_limit=10_000_000,
     )
     return user
 
@@ -144,7 +146,7 @@ def api_client_factory(common_settings, redis_client):
         }
 
         if override_user:
-            app.dependency_overrides[current_active_user] = lambda: override_user
+            app.dependency_overrides[current_verified_user] = lambda: override_user
 
         kwargs = dict(app=app, base_url="http://testserver")
         if klass == AsyncClient:
