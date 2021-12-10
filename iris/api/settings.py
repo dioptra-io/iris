@@ -21,5 +21,3 @@ class APISettings(CommonSettings):
 
     API_OAUTH_GITHUB_CLIENT_ID: str = ""
     API_OAUTH_GITHUB_CLIENT_SECRET: str = ""
-
-    API_DEFAULT_PROBING_LIMIT: int = 10_000_000  # packets per measurement

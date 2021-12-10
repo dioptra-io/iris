@@ -268,6 +268,7 @@ async def post_measurement(
                 detail=f"Multiple definition of agent `{agent.uuid}`",
             )
 
+        # TODO: Check probing limit
         # Check agent target file is compatible with the measurement's parameters
         global_min_ttl, global_max_ttl = await target_file_validator(
             storage,

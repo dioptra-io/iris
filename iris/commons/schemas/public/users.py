@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi_users import models
 
 
@@ -18,18 +20,24 @@ class CustomCreateUpdateDictModel(models.BaseModel):
 
 
 class User(models.BaseUser, models.BaseOAuthAccountMixin):
+    firstname: str = "string"
+    lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: int = 0
+    probing_limit: Optional[int] = 0
 
 
 class UserCreate(CustomCreateUpdateDictModel, models.BaseUserCreate):
+    firstname: str = "string"
+    lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: int = 0
+    probing_limit: Optional[int] = 0
 
 
 class UserUpdate(CustomCreateUpdateDictModel, models.BaseUserUpdate):
+    firstname: str = "string"
+    lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: int = 0
+    probing_limit: Optional[int] = 0
 
 
 class UserDB(User, models.BaseUserDB):

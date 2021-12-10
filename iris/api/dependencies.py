@@ -6,7 +6,7 @@ from fastapi_users.db import (
 )
 from sqlalchemy import Column
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
-from sqlalchemy.types import Boolean, Integer
+from sqlalchemy.types import Boolean, Integer, String
 
 from iris.api.settings import APISettings
 from iris.commons.database import Database
@@ -23,8 +23,10 @@ Base: DeclarativeMeta = declarative_base()
 
 
 class UserTable(Base, SQLAlchemyBaseUserTable):
+    firstname: str = Column(String, nullable=False)
+    lastname: str = Column(String, nullable=False)
     probing_enabled = Column(Boolean, nullable=False, default=False)
-    probing_limit = Column(Integer, nullable=False, default=0)
+    probing_limit = Column(Integer, nullable=True, default=0)
 
 
 class OAuthAccount(SQLAlchemyBaseOAuthAccountTable, Base):
