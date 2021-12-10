@@ -18,20 +18,8 @@ RUN apt-get update \
         zstd \
     && rm -rf /var/lib/apt/lists/*
 
-RUN [ $(arch) = "x86_64" ] && exit 0 \
-    || curl --location --output /usr/bin/clickhouse \
-        https://builds.clickhouse.tech/master/aarch64/clickhouse \
-    && strip /usr/bin/clickhouse \
+RUN curl -L https://github.com/dioptra-io/clickhouse-builds/releases/download/20211210/clickhouse.$(arch).zst | zstd > /usr/bin/clickhouse \
     && chmod +x /usr/bin/clickhouse
-
-RUN [ $(arch) = "aarch64" ] && exit 0 \
-    || apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4 \
-    && echo "deb https://repo.clickhouse.tech/deb/stable/ main/" > \
-        /etc/apt/sources.list.d/clickhouse.list \
-    && apt-get update \
-    && apt-get install -y -q --no-install-recommends \
-        clickhouse-client \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

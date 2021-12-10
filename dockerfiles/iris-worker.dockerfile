@@ -33,9 +33,7 @@ RUN apt-get update \
         zstd \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl --location --output /usr/bin/clickhouse \
-        "https://builds.clickhouse.tech/master/$(arch | sed s/x86_64/amd64/)/clickhouse" \
-    && strip /usr/bin/clickhouse \
+RUN curl -L https://github.com/dioptra-io/clickhouse-builds/releases/download/20211210/clickhouse.$(arch).zst | zstd > /usr/bin/clickhouse \
     && chmod +x /usr/bin/clickhouse
 
 WORKDIR /app
