@@ -32,7 +32,7 @@ At this point a user is created but it's not verified and don't have probing cap
 It's not possible to add these capababilities without first having an admin user.  So we need to change the user's role in the database.
 We can use docker compose to make this change.
 ```bash
-docker compose exec api sqlite3 iris.sqlite3 'UPDATE user SET is_verified = true, probing_enabled = true WHERE email = "user@example.com"'
+docker compose exec api sqlite3 iris.sqlite3 'UPDATE user SET is_verified = true, probing_enabled = true, probing_limit = none WHERE email = "user@example.com"'
 ```
 
 Now the user has the ability to do measurements, but you probably may want it to be an admin.

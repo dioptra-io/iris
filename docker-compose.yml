@@ -88,7 +88,7 @@ services:
       context: .
       dockerfile: "./dockerfiles/iris-api.dockerfile"
     environment:
-      API_CORS_ALLOW_ORIGIN: "http://localhost:8081"
+      API_CORS_ALLOW_ORIGIN: "http://localhost:8080"
       AWS_S3_HOST: "http://minio.docker.localhost"
       AWS_ACCESS_KEY_ID: "minioadmin"
       AWS_SECRET_ACCESS_KEY: "minioadmin"

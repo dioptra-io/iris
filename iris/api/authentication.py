@@ -3,9 +3,10 @@
 from typing import Optional
 
 from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, FastAPIUsers
+from fastapi_users import BaseUserManager, FastAPIUsers, models
 from fastapi_users.authentication import JWTAuthentication
 from fastapi_users.db import SQLAlchemyUserDatabase
+from fastapi_users.jwt import generate_jwt
 
 from iris.api.dependencies import get_session, get_storage, settings
 from iris.commons.schemas.public import User, UserCreate, UserDB, UserUpdate
@@ -27,7 +28,20 @@ async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_session
     yield UserManager(user_db)
 
 
-jwt_authentication = JWTAuthentication(
+class CustomJWTAuthentication(JWTAuthentication):
+    async def _generate_token(self, user: models.UD) -> str:
+        data = {
+            "user_id": str(user.id),
+            "is_active": user.is_active,
+            "is_verified": user.is_verified,
+            "is_superuser": user.is_superuser,
+            "probing_enabled": user.probing_enabled,
+            "aud": self.token_audience,
+        }
+        return generate_jwt(data, self.secret, self.lifetime_seconds)
+
+
+jwt_authentication = CustomJWTAuthentication(
     secret=settings.API_TOKEN_SECRET_KEY,
     lifetime_seconds=settings.API_TOKEN_LIFETIME,
     tokenUrl="auth/jwt/login",
