@@ -13,7 +13,7 @@ class Mail(object):
             return
 
         message = EmailMessage()
-        message["From"] = self.settings.MAIL_SENDER
+        message["From"] = self.settings.MAIL_FROM
         message["To"] = receiver
         message["Subject"] = self.settings.MAIL_SUBJECT
         message.set_content(self.settings.MAIL_BODY)
