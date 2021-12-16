@@ -47,13 +47,15 @@ router.include_router(
 )
 async def get_users(
     request: Request,
+    filter_verified: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: public.UserDB = Depends(current_superuser),
     sqlalchemy: databases.Database = Depends(get_sqlalchemy),
 ):
     """Get all users."""
-    users = await sqlalchemy.fetch_all("SELECT * FROM user")
+    where_clause = "WHERE is_verified = false" if filter_verified else ""
+    users = await sqlalchemy.fetch_all(f"SELECT * FROM user {where_clause}")
     users = [public.User(**dict(user)) for user in users]
     querier = ListPagination(users, request, offset, limit)
     return await querier.query()
