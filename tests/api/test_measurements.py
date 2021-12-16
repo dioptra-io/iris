@@ -141,7 +141,7 @@ def test_get_measurements(api_client_sync, monkeypatch):
         for x in measurements_
     ]
 
-    async def all(self, user_id, offset, limit, tag=None):
+    async def all(self, offset, limit, user_id=None, tag=None):
         return measurements_[offset : offset + limit]  # noqa : E203
 
     override(

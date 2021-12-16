@@ -72,7 +72,7 @@ async def all(
     user_id: Optional[UUID] = None,
     tag: Optional[str] = None,
 ) -> List[public.Measurement]:
-    """Get all measurements uuid for a given user."""
+    """Get all measurements uuid for a given user or a tag."""
     where_clause = "WHERE 1=1 "
     if user_id:
         where_clause += "AND user_id=%(user_id)s "
@@ -90,11 +90,20 @@ async def all(
 
 
 async def get(
-    database: Database, user_id: UUID, uuid: UUID
+    database: Database,
+    uuid: UUID,
+    user_id: Optional[UUID] = None,
+    tag: Optional[str] = None,
 ) -> Optional[public.Measurement]:
-    """Get all measurement information."""
+    """Get a measurement information based on its uuid for a given user of a tag."""
+    where_clause = "WHERE 1=1 "
+    if user_id:
+        where_clause += "AND user_id=%(user_id)s "
+    if tag:
+        where_clause += f"AND has(tags, '{tag}') "
+
     responses = await database.call(
-        f"SELECT * FROM {table(database)} WHERE user_id=%(user_id)s AND uuid=%(uuid)s",
+        f"SELECT * FROM {table(database)} {where_clause} AND uuid=%(uuid)s",
         {"user_id": user_id, "uuid": uuid},
     )
     if responses:
