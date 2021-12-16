@@ -80,6 +80,15 @@ class CommonSettings(BaseSettings):
     REDIS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     REDIS_TIMEOUT_RANDOM_MAX: int = 5  # in seconds
 
+    MAIL_ENABLE: bool = False
+    MAIL_PORT: int = 25
+    MAIL_SERVER: str = ""
+    MAIL_USERNAME: str = ""
+    MAIL_PASSWORD: str = ""
+    MAIL_FROM: str = "iris@localhost"
+    MAIL_SUBJECT: str = ""
+    MAIL_BODY: str = ""
+
     STREAM_LOGGING_LEVEL: int = logging.DEBUG
 
     CLICKHOUSE_CMD: str = "clickhouse client"
