@@ -41,7 +41,6 @@ RUN mkdir targets
 RUN mkdir results
 
 COPY statics/excluded_prefixes statics/excluded_prefixes
-COPY statics/index.html statics/index.html
 
 EXPOSE 80
-CMD ["sh", "-c", "/app/.venv/bin/python3 -m http.server -d statics/ 80 & /app/.venv/bin/python3 -u main.py"]
+CMD ["/app/.venv/bin/python3", "-u", "main.py"]
