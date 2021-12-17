@@ -19,9 +19,14 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
     verification_token_secret = settings.API_TOKEN_SECRET_KEY
 
     async def on_after_register(self, user: UserDB, request: Optional[Request] = None):
-        """After user registration hook."""
-        # Create the buckets for the user
+        """
+        After user registration hook.
+        :param user: The newly registered user.
+        :param request: The request that triggered the registration.
+        """
         storage = get_storage()
+
+        # Create the buckets for the user
         await storage.create_bucket(storage.targets_bucket(user.id))
         await storage.create_bucket(storage.archive_bucket(user.id))
 
@@ -29,6 +34,29 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
         if settings.MAIL_ENABLE:
             mail = Mail(settings)
             await mail.send(user.email)
+
+    async def delete(self, user: models.UD) -> None:
+        """
+        Delete a user.
+        :param user: The user to delete.
+        """
+        await self.user_db.delete(user)
+        await self.on_after_delete(user)
+
+    async def on_after_delete(self, user: UserDB) -> None:
+        """
+        Perform cleanup after a user is deleted.
+        :param user: The user that has been deleted.
+        """
+        storage = get_storage()
+
+        # Remove all files from the storage
+        await storage.delete_all_files_from_bucket(storage.archive_bucket(user.id))
+        await storage.delete_all_files_from_bucket(storage.targets_bucket(user.id))
+
+        # Remove user's buckets
+        await storage.delete_bucket(storage.archive_bucket(user.id))
+        await storage.delete_bucket(storage.targets_bucket(user.id))
 
 
 async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_session)):

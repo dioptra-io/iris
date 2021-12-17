@@ -47,6 +47,6 @@ __all__ = [
     "ToolParameters",
     "User",
     "UserCreate",
-    "UserUpdate",
     "UserDB",
+    "UserUpdate",
 ]
