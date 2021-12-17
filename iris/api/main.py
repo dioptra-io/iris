@@ -20,7 +20,7 @@ app = FastAPI(
     contact={
         "name": "Dioptra",
         "url": "https://dioptra.io",
-        "email": "contact@dioptra.io",
+        "email": "iris@dioptra.io",
     },
 )
 

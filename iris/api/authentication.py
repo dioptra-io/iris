@@ -9,7 +9,6 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import generate_jwt
 
 from iris.api.dependencies import get_session, get_storage, settings
-from iris.commons.mail import Mail
 from iris.commons.schemas.public import User, UserCreate, UserDB, UserUpdate
 
 
@@ -29,11 +28,6 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
         # Create the buckets for the user
         await storage.create_bucket(storage.targets_bucket(user.id))
         await storage.create_bucket(storage.archive_bucket(user.id))
-
-        # Send the verification email
-        if settings.MAIL_ENABLE:
-            mail = Mail(settings)
-            await mail.send(user.email)
 
     async def delete(self, user: models.UD) -> None:
         """
