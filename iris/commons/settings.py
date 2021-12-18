@@ -8,8 +8,10 @@ import aioredis
 from pydantic import BaseSettings
 from sqlalchemy import create_engine
 from sqlalchemy.future import Engine
-from tenacity import retry  # type: ignore
-from tenacity import before_sleep_log, stop_after_delay, wait_exponential, wait_random
+from tenacity import retry
+from tenacity.before_sleep import before_sleep_log
+from tenacity.stop import stop_after_delay
+from tenacity.wait import wait_exponential, wait_random
 
 
 def fault_tolerant(retry_):

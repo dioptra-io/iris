@@ -2,7 +2,7 @@ import subprocess
 from collections import defaultdict
 from logging import Logger
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from diamond_miner import mappers
@@ -247,5 +247,7 @@ def instantiate_flow_mappers(
     return flow_mapper_v4, flow_mapper_v6
 
 
-inner_pipeline_for_tool = defaultdict(lambda: default_inner_pipeline)
+inner_pipeline_for_tool: Dict[Tool, Callable] = defaultdict(
+    lambda: default_inner_pipeline
+)
 inner_pipeline_for_tool[Tool.Probes] = probes_inner_pipeline
