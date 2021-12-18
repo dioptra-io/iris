@@ -91,19 +91,27 @@ class ToolParameters(BaseModel):
     destination_port: int = Field(33434, title="Destination port", gt=0, lt=65_536)
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
     failure_rate: float = Field(
-        0.05, title="Diamond-Miner failure rate. Ignored for other tools."
+        0.05, title="Diamond-Miner failure rate", description="Ignored for other tools"
     )
     flow_mapper: str = Field(FlowMapper.RandomFlowMapper, title="Flow mapper")
     flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(
-        {"seed": 42}, title="Optional keyword arguments for the flow mapper"
+        {"seed": 42}, title="Flow mapper optional arguments"
     )
     prefix_len_v4: int = Field(24, ge=0, le=32, title="Target prefix length")
     prefix_len_v6: int = Field(64, ge=0, le=128, title="Target prefix length")
     global_min_ttl: int = Field(
-        0, ge=0, le=255, title="Do not set. Overridden by the API."
+        0,
+        ge=0,
+        le=255,
+        title="Global Min TTL",
+        description="Do not set. Overridden by the API",
     )
     global_max_ttl: int = Field(
-        255, ge=0, le=255, title="Do not set. Overridden by the API."
+        255,
+        ge=0,
+        le=255,
+        title="Global Max TTL",
+        description="Do not set. Overridden by the API",
     )
 
     @property
@@ -126,9 +134,9 @@ class MeasurementState(str, Enum):
 class MeasurementSummary(BaseModel):
     """Summary information about a measurement (Response)."""
 
-    uuid: UUID
-    state: MeasurementState
-    tool: Tool
+    uuid: UUID = Field(..., title="UUID")
+    state: MeasurementState = Field(..., title="State")
+    tool: Tool = Field(..., title="Probing tool")
     tags: List[str]
     start_time: datetime
     end_time: Optional[datetime]
@@ -146,8 +154,8 @@ class MeasurementAgentSpecific(BaseModel):
 class MeasurementAgent(BaseModel):
     """Information about information of agents specific to a measurement (Response)."""
 
-    uuid: UUID
-    state: MeasurementState
+    uuid: UUID = Field(..., title="UUID")
+    state: MeasurementState = Field(..., title="State")
     specific: MeasurementAgentSpecific
     parameters: AgentParameters
     probing_statistics: List[ProbingStatistics]
@@ -156,10 +164,10 @@ class MeasurementAgent(BaseModel):
 class Measurement(BaseModel):
     """Information about a measurement (Response)."""
 
-    uuid: UUID
+    uuid: UUID = Field(..., title="UUID")
     user_id: UUID
-    state: MeasurementState
-    tool: Tool
+    state: MeasurementState = Field(..., title="State")
+    tool: Tool = Field(..., title="Probing tool")
     agents: List[MeasurementAgent]
     tags: List[str]
     start_time: datetime
@@ -221,11 +229,11 @@ class MeasurementPostBody(BaseModel):
 class MeasurementPostResponse(BaseModel):
     """POST /measurements (Response)."""
 
-    uuid: UUID
+    uuid: UUID = Field(..., title="UUID")
 
 
 class MeasurementDeleteResponse(BaseModel):
     """DELETE /measurements/{uuid} (Response)."""
 
-    uuid: UUID
+    uuid: UUID = Field(..., title="UUID")
     action: str
