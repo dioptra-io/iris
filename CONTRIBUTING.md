@@ -33,10 +33,10 @@ mypy iris
 You can run the coverage using pytest.
 
 ```
-docker run -d -p 9000:9000 yandex/clickhouse-server:latest
+docker compose up -d traefik clickhouse minio redis
 pytest
 ...
-docker rm -f clickhouse
+docker compose down
 ```
 
 

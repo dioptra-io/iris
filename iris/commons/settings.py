@@ -35,7 +35,7 @@ class CommonSettings(BaseSettings):
 
     SETTINGS_CLASS = "commons"
 
-    AWS_S3_HOST: str = "http://minio:9000"
+    AWS_S3_HOST: str = "http://minio.docker.localhost"
     AWS_ACCESS_KEY_ID: str = "minioadmin"
     AWS_SECRET_ACCESS_KEY: str = "minioadmin"
     AWS_REGION_NAME: str = "local"
@@ -48,10 +48,11 @@ class CommonSettings(BaseSettings):
     AWS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     AWS_TIMEOUT_RANDOM_MAX: int = 10 * 60  # in seconds
 
-    DATABASE_HOST: str = "clickhouse"
+    DATABASE_HOST: str = "clickhouse.docker.localhost"
+    DATABASE_HTTP_PORT: int = 80
     DATABASE_NAME: str = "iris"
-    DATABASE_USERNAME: str = "iris"
-    DATABASE_PASSWORD: str = "iris"  # Put an empty string for no password
+    DATABASE_USERNAME: str = "default"
+    DATABASE_PASSWORD: str = ""  # Put an empty string for no password
     DATABASE_PUBLIC_USER: Optional[str] = None
     DATABASE_CONNECT_TIMEOUT: int = 10
     DATABASE_SEND_RECEIVE_TIMEOUT: int = 300
@@ -72,7 +73,7 @@ class CommonSettings(BaseSettings):
     TABLE_NAME_AGENTS: str = "agents"
 
     REDIS_NAMESPACE: str = "iris"
-    REDIS_URL: str = "redis://default:redispass@redis"
+    REDIS_URL: str = "redis://default:redispass@redis.docker.localhost"
     REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     REDIS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
@@ -104,10 +105,11 @@ class CommonSettings(BaseSettings):
     def database_url_http(self) -> str:
         """Return the ClickHouse HTTP URL."""
         host = self.DATABASE_HOST
+        port = self.DATABASE_HTTP_PORT
         database = self.DATABASE_NAME
         username = self.DATABASE_USERNAME
         password = self.DATABASE_PASSWORD
-        return f"http://{username}:{password}@{host}:8123/?database={database}"
+        return f"http://{username}:{password}@{host}:{port}/?database={database}"
 
     def sqlalchemy_engine(self) -> Engine:
         if not self.sqlalchemy_engine_:

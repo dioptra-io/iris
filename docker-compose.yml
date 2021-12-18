@@ -5,41 +5,53 @@ services:
   traefik:
     image: docker.io/library/traefik:2.5
     command:
-      - "--api=true"
-      - "--api.insecure=true"
+      - "--api.dashboard=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.redis.address=:6379"
+      - "--entrypoints.clickhouse.address=:9000"
       - "--providers.docker"
-      - "--providers.docker.exposedbydefault=false"
+    labels:
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.docker.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
     ports:
       - "80:80"
       - "6379:6379"
+      - "9000:9000"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       default:
         aliases:
           - "api.docker.localhost"
+          - "clickhouse.docker.localhost"
           - "minio.docker.localhost"
           - "minio-console.docker.localhost"
+          - "redis.docker.localhost"
 
   # Control-Plane & Data-Plane
   clickhouse:
     image: ${CLICKHOUSE_IMAGE:-docker.io/yandex/clickhouse-server:21}
-    ports:
-      - "8123:8123"
-      - "9000:9000"
+    labels:
+      # ClickHouse HTTP (8123)
+      - traefik.http.routers.clickhouse-http.entrypoints=web
+      - traefik.http.routers.clickhouse-http.rule=Host(`clickhouse.docker.localhost`)
+      - traefik.http.routers.clickhouse-http.service=clickhouse-http
+      - traefik.http.services.clickhouse-http.loadbalancer.server.port=8123
+      # ClickHouse Native (9000)
+      - traefik.tcp.routers.clickhouse-tcp.entrypoints=clickhouse
+      - traefik.tcp.routers.clickhouse-tcp.rule=HostSNI(`*`)
+      - traefik.tcp.routers.clickhouse-tcp.service=clickhouse-tcp
+      - traefik.tcp.services.clickhouse-tcp.loadbalancer.server.port=9000
     volumes:
       - "./configuration/clickhouse/users.d:/etc/clickhouse-server/users.d:ro"
-      - "./configuration/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init\
-        -db.sh"
+      - "./configuration/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh"
     #   - "./volumes/clickhouse:/var/lib/clickhouse"
 
   redis:
     image: docker.io/library/redis:6
     command: "redis-server --requirepass redispass"
     labels:
-      - "traefik.enable=true"
       - "traefik.tcp.routers.redis.entrypoints=redis"
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
     # volumes:
@@ -49,7 +61,6 @@ services:
     image: docker.io/minio/minio:latest
     command: "server /data --console-address :9001"
     labels:
-      - "traefik.enable=true"
       # API
       - "traefik.http.routers.minio.entrypoints=web"
       - "traefik.http.routers.minio.rule=Host(`minio.docker.localhost`)"
@@ -57,14 +68,13 @@ services:
       - "traefik.http.services.minio.loadbalancer.server.port=9000"
       # Console
       - "traefik.http.routers.minio-console.entrypoints=web"
-      - "traefik.http.routers.minio-console.rule=Host(`minio-console.docker.loc\
-        alhost`)"
+      - "traefik.http.routers.minio-console.rule=Host(`minio-console.docker.localhost`)"
       - "traefik.http.routers.minio-console.service=minio-console"
       - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
     # volumes:
     #   - "./volumes/minio:/data"
 
-    # Iris
+  # Iris
   agent:
     build:
       context: .
@@ -73,10 +83,6 @@ services:
       AGENT_CARACAL_INTEGRITY_CHECK: "false" # In order to test from Docker for Mac
       AGENT_DEBUG_MODE: "true"
       AGENT_MAX_PROBING_RATE: ${AGENT_MAX_PROBING_RATE:-100}
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
-      REDIS_URL: "redis://default:redispass@redis"
     volumes:
       - "./iris:/app/iris:ro"
     depends_on:
@@ -89,13 +95,8 @@ services:
       dockerfile: "./dockerfiles/iris-api.dockerfile"
     environment:
       API_CORS_ALLOW_ORIGIN: "http://localhost:8080"
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
       GUNICORN_CMD_ARGS: "--workers 1"
-      REDIS_URL: "redis://default:redispass@redis"
     labels:
-      - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"
       - "traefik.http.routers.api.rule=Host(`api.docker.localhost`)"
     volumes:
@@ -110,10 +111,6 @@ services:
       context: .
       dockerfile: "./dockerfiles/iris-worker.dockerfile"
     environment:
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
-      REDIS_URL: "redis://default:redispass@redis"
       WORKER_DEBUG_MODE: "true"
     volumes:
       - "./iris:/app/iris:ro"

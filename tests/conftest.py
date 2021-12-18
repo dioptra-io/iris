@@ -1,10 +1,9 @@
 import logging
-import subprocess
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address
 from uuid import uuid4
 
-import fakeredis.aioredis
+import aioredis
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -77,32 +76,12 @@ def statistics():
     )
 
 
-@pytest.fixture(scope="session")
-def s3_server():
-    # We cannot use moto decorators directly since they are synchronous.
-    # Instead we launch moto_server in a separate process, this is similar
-    # to what is done by aiobotocore and aioboto3 for testing.
-    p = subprocess.Popen(
-        ["moto_server", "--host", "127.0.0.1", "--port", "3000", "s3"],
-        stderr=subprocess.PIPE,
-    )
-    p.stderr.readline()  # Wait for moto_server to start
-    try:
-        yield "http://127.0.0.1:3000"
-    finally:
-        p.terminate()
-
-
 @pytest.fixture(scope="function")
-def common_settings(s3_server):
+def common_settings():
     # The `function` scope ensures that the settings are reset before every test.
     return CommonSettings(
-        AWS_S3_HOST=s3_server,
         AWS_TIMEOUT=0,
-        DATABASE_HOST="127.0.0.1",
         DATABASE_NAME="iris_test",
-        DATABASE_USERNAME="default",
-        DATABASE_PASSWORD="",
         DATABASE_TIMEOUT=0,
         REDIS_TIMEOUT=0,
     )
@@ -116,8 +95,11 @@ async def database(common_settings):
 
 
 @pytest.fixture(scope="function")
-async def redis_client():
-    return fakeredis.aioredis.FakeRedis(decode_responses=True)
+async def redis_client(common_settings):
+    # NOTE: When we were using fakeredis the store was reset between each calls.
+    # We reproduce this behavior here.
+    await aioredis.from_url(common_settings.REDIS_URL).flushall()
+    return aioredis.from_url(common_settings.REDIS_URL, decode_responses=True)
 
 
 @pytest.fixture(scope="function")

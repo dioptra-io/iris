@@ -16,6 +16,7 @@ You can then access the Swagger UI of the API from the browser: http://api.docke
 >```
 >127.0.0.1 api.docker.localhost
 >127.0.0.1 minio-console.docker.localhost
+>127.0.0.1 traefik.docker.localhost
 >```
 
 ## Create the first (super) user
