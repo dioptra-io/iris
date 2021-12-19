@@ -93,10 +93,11 @@ async def test_agents(database, agent, statistics):
     ).probing_statistics == [statistics, statistics2]
 
     assert (
-        await agents.stamp_canceled(
+        await agents.set_state(
             database,
             measurement_uuid=measurement_request.uuid,
             agent_uuid=measurement_agent.uuid,
+            state=MeasurementState.Canceled,
         )
         is None
     )
@@ -109,10 +110,11 @@ async def test_agents(database, agent, statistics):
     ).state == MeasurementState.Canceled
 
     assert (
-        await agents.stamp_finished(
+        await agents.set_state(
             database,
             measurement_uuid=measurement_request.uuid,
             agent_uuid=measurement_agent.uuid,
+            state=MeasurementState.Finished,
         )
         is None
     )

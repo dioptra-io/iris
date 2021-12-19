@@ -83,8 +83,11 @@ async def watch(
             )
             if not is_agent_alive:
                 logger.warning(f"{logger_prefix} Stop watching agent")
-                await agents.stamp_finished(
-                    database, measurement_request.uuid, agent.uuid
+                await agents.set_state(
+                    database,
+                    measurement_request.uuid,
+                    agent.uuid,
+                    MeasurementState.Finished,
                 )
                 break
             # Check if the measurement has been canceled
@@ -96,8 +99,11 @@ async def watch(
                 MeasurementState.Unknown,
             ]:
                 logger.warning(f"{logger_prefix} Measurement canceled")
-                await agents.stamp_canceled(
-                    database, measurement_request.uuid, agent.uuid
+                await agents.set_state(
+                    database,
+                    measurement_request.uuid,
+                    agent.uuid,
+                    MeasurementState.Canceled,
                 )
                 break
 
@@ -150,7 +156,12 @@ async def watch(
             )
         else:
             logger.info(f"{logger_prefix} Measurement done for this agent")
-            await agents.stamp_finished(database, measurement_request.uuid, agent.uuid)
+            await agents.set_state(
+                database,
+                measurement_request.uuid,
+                agent.uuid,
+                MeasurementState.Finished,
+            )
             break
 
 
@@ -269,8 +280,11 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
                 )
             else:
                 logger.info(f"{logger_prefix} Measurement done for this agent")
-                await agents.stamp_finished(
-                    database, measurement_request.uuid, agent.uuid
+                await agents.set_state(
+                    database,
+                    measurement_request.uuid,
+                    agent.uuid,
+                    MeasurementState.Finished,
                 )
 
         agents_ = measurement_request.agents
@@ -318,12 +332,18 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         await redis.get_measurement_state(measurement_request.uuid)
         == MeasurementState.Canceled
     ):
-        await measurements.stamp_canceled(
-            database, measurement_request.user_id, measurement_request.uuid
+        await measurements.set_state(
+            database,
+            measurement_request.user_id,
+            measurement_request.uuid,
+            MeasurementState.Canceled,
         )
     else:
-        await measurements.stamp_finished(
-            database, measurement_request.user_id, measurement_request.uuid
+        await measurements.set_state(
+            database,
+            measurement_request.user_id,
+            measurement_request.uuid,
+            MeasurementState.Finished,
         )
 
     logger.info(f"{logger_prefix} Stamp measurement end time")

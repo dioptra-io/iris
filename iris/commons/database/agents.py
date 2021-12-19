@@ -8,6 +8,7 @@ from uuid import UUID
 
 from iris.commons.database.database import Database
 from iris.commons.schemas import private, public
+from iris.commons.schemas.public import MeasurementState
 
 
 def table(database: Database) -> str:
@@ -157,8 +158,11 @@ async def store_probing_statistics(
     )
 
 
-async def stamp_finished(
-    database: Database, measurement_uuid: UUID, agent_uuid: UUID
+async def set_state(
+    database: Database,
+    measurement_uuid: UUID,
+    agent_uuid: UUID,
+    state: MeasurementState,
 ) -> None:
     await database.call(
         """
@@ -170,27 +174,7 @@ async def stamp_finished(
         """,
         params={
             "table": table(database),
-            "state": public.MeasurementState.Finished.value,
-            "measurement_uuid": measurement_uuid,
-            "agent_uuid": agent_uuid,
-        },
-    )
-
-
-async def stamp_canceled(
-    database: Database, measurement_uuid: UUID, agent_uuid: UUID
-) -> None:
-    await database.call(
-        """
-        ALTER TABLE {table:Identifier}
-        UPDATE state={state:String}
-        WHERE measurement_uuid={measurement_uuid:UUID}
-        AND agent_uuid={agent_uuid:UUID}
-        SETTINGS mutations_sync=1
-        """,
-        params={
-            "table": table(database),
-            "state": public.MeasurementState.Canceled.value,
+            "state": state.value,
             "measurement_uuid": measurement_uuid,
             "agent_uuid": agent_uuid,
         },
