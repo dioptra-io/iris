@@ -81,7 +81,7 @@ def common_settings():
     # The `function` scope ensures that the settings are reset before every test.
     return CommonSettings(
         AWS_TIMEOUT=0,
-        DATABASE_NAME="iris_test",
+        DATABASE_URL="http://clickhouse.docker.localhost/?database=iris_test",
         DATABASE_TIMEOUT=0,
         REDIS_TIMEOUT=0,
     )
@@ -90,7 +90,7 @@ def common_settings():
 @pytest.fixture(scope="function")
 async def database(common_settings):
     database = Database(common_settings, logging.getLogger(__name__))
-    await database.create_database()
+    await database.create_database("iris_test")
     return database
 
 

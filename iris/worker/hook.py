@@ -327,7 +327,7 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         )
 
     logger.info(f"{logger_prefix} Stamp measurement end time")
-    await measurements.stamp_end_time(
+    await measurements.set_end_time(
         database, measurement_request.user_id, measurement_request.uuid
     )
 

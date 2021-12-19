@@ -54,7 +54,12 @@ async def test_measurements(database):
     assert sorted(all1, key=lambda x: x.uuid) == sorted(all2, key=lambda x: x.uuid)
 
     assert (
-        await measurements.stamp_canceled(database, user_id=user_id, uuid=data[0].uuid)
+        await measurements.set_state(
+            database,
+            user_id=user_id,
+            uuid=data[0].uuid,
+            state=MeasurementState.Canceled,
+        )
         is None
     )
     res = await measurements.get(database, user_id=user_id, uuid=data[0].uuid)
@@ -62,11 +67,16 @@ async def test_measurements(database):
     assert res.end_time is None
 
     assert (
-        await measurements.stamp_finished(database, user_id=user_id, uuid=data[1].uuid)
+        await measurements.set_state(
+            database,
+            user_id=user_id,
+            uuid=data[1].uuid,
+            state=MeasurementState.Finished,
+        )
         is None
     )
     assert (
-        await measurements.stamp_end_time(database, user_id=user_id, uuid=data[1].uuid)
+        await measurements.set_end_time(database, user_id=user_id, uuid=data[1].uuid)
         is None
     )
     res = await measurements.get(database, user_id=user_id, uuid=data[1].uuid)

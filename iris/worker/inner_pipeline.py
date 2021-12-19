@@ -10,10 +10,10 @@ from diamond_miner.generators import probe_generator_parallel
 from diamond_miner.insert import insert_mda_probe_counts_parallel, insert_probe_counts
 from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.typing import FlowMapper
+from zstandard import ZstdDecompressor
 
 from iris.commons.database import Database, InsertResults
 from iris.commons.schemas.public import Round, Tool, ToolParameters
-from iris.commons.subprocess import start_stream_subprocess
 from iris.worker.tree import load_targets
 
 
@@ -48,7 +48,7 @@ async def default_inner_pipeline(
     def log(s):
         logger.info(f"{measurement_uuid} :: {agent_uuid} :: {s}")
 
-    database_url = database.settings.database_url_http()
+    database_url = database.settings.DATABASE_URL
     measurement_id = f"{measurement_uuid}__{agent_uuid}"
 
     flow_mapper_v4, flow_mapper_v6 = instantiate_flow_mappers(
@@ -218,13 +218,10 @@ async def probes_inner_pipeline(
         # This is the first round
         # Copy the target_file to the probes file.
         log("Copy targets file to probes file")
-        await start_stream_subprocess(
-            f"""
-            {database.settings.ZSTD_CMD} {targets_filepath} -o {probes_filepath}
-            """,
-            stdout=database.logger.info,
-            stderr=database.logger.error,
-        )
+        ctx = ZstdDecompressor()
+        with targets_filepath.open("rb") as inp:
+            with probes_filepath.open("wb") as out:
+                ctx.copy_stream(inp, out)
 
         # Count the number of probes (i.e., the number of line in the probe file)
         # in order to be compliant with the default inner pipeline

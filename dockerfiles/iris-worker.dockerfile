@@ -27,14 +27,9 @@ RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         binutils \
         ca-certificates \
-        curl \
         python3 \
         tzdata \
-        zstd \
     && rm -rf /var/lib/apt/lists/*
-
-RUN curl -L https://github.com/dioptra-io/clickhouse-builds/releases/download/20211210/clickhouse.$(arch).zst | zstd > /usr/bin/clickhouse \
-    && chmod +x /usr/bin/clickhouse
 
 WORKDIR /app
 COPY iris iris

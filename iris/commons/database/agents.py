@@ -14,28 +14,32 @@ def table(database: Database) -> str:
     return database.settings.TABLE_NAME_AGENTS
 
 
-def formatter(row: tuple) -> public.MeasurementAgent:
+def formatter(row: dict) -> public.MeasurementAgent:
     return public.MeasurementAgent(
-        uuid=row[1],
-        state=public.MeasurementState(row[7]),
+        uuid=row["agent_uuid"],
+        state=public.MeasurementState(row["state"]),
         specific=public.MeasurementAgentSpecific(
-            target_file=row[2],
+            target_file=row["target_file"],
             target_file_content=[],
-            probing_rate=row[3],
-            tool_parameters=public.ToolParameters.parse_raw(row[6]),
+            probing_rate=row["probing_rate"],
+            tool_parameters=public.ToolParameters.parse_raw(row["tool_parameters"]),
         ),
-        parameters=public.AgentParameters.parse_raw(row[5]),
-        probing_statistics=[public.ProbingStatistics(**x) for x in json.loads(row[4])],
+        parameters=public.AgentParameters.parse_raw(row["agent_parameters"]),
+        probing_statistics=[
+            public.ProbingStatistics(**x) for x in json.loads(row["probing_statistics"])
+        ],
     )
 
 
 async def create_table(database: Database, drop: bool = False) -> None:
     if drop:
-        await database.call(f"DROP TABLE IF EXISTS {table(database)}")
+        await database.call(
+            "DROP TABLE IF EXISTS {table:Identifier}", params={"table": table(database)}
+        )
 
     await database.call(
-        f"""
-        CREATE TABLE IF NOT EXISTS {table(database)}
+        """
+        CREATE TABLE IF NOT EXISTS {table:Identifier}
         (
             measurement_uuid   UUID,
             agent_uuid         UUID,
@@ -50,6 +54,7 @@ async def create_table(database: Database, drop: bool = False) -> None:
         ENGINE MergeTree
         ORDER BY (measurement_uuid, agent_uuid)
         """,
+        params={"table": table(database)},
     )
 
 
@@ -58,8 +63,12 @@ async def all(
 ) -> List[public.MeasurementAgent]:
     """Get all measurement information."""
     responses = await database.call(
-        f"SELECT * FROM {table(database)} WHERE measurement_uuid=%(uuid)s",
-        {"uuid": measurement_uuid},
+        """
+        SELECT *
+        FROM {table:Identifier}
+        WHERE measurement_uuid={uuid:UUID}
+        """,
+        params={"table": table(database), "uuid": measurement_uuid},
     )
     return [formatter(response) for response in responses]
 
@@ -69,10 +78,17 @@ async def get(
 ) -> Optional[public.MeasurementAgent]:
     """Get measurement information about a agent."""
     responses = await database.call(
-        f"SELECT * FROM {table(database)} "
-        "WHERE measurement_uuid=%(measurement_uuid)s "
-        "AND agent_uuid=%(agent_uuid)s",
-        {"measurement_uuid": measurement_uuid, "agent_uuid": agent_uuid},
+        """
+        SELECT *
+        FROM {table:Identifier}
+        WHERE measurement_uuid={measurement_uuid:UUID}
+        AND agent_uuid={agent_uuid:UUID}
+        """,
+        params={
+            "table": table(database),
+            "measurement_uuid": measurement_uuid,
+            "agent_uuid": agent_uuid,
+        },
     )
     if responses:
         return formatter(responses[0])
@@ -87,8 +103,9 @@ async def register(
 ) -> None:
     agent = measurement_request.agent(agent_uuid)
     await database.call(
-        f"INSERT INTO {table(database)} VALUES",
-        [
+        "INSERT INTO {table:Identifier} FORMAT JSONEachRow",
+        params={"table": table(database)},
+        values=[
             {
                 "measurement_uuid": measurement_request.uuid,
                 "agent_uuid": agent.uuid,
@@ -98,7 +115,7 @@ async def register(
                 "agent_parameters": agent_parameters.json(),
                 "tool_parameters": agent.tool_parameters.json(),
                 "state": public.MeasurementState.Ongoing.value,
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
             }
         ],
     )
@@ -122,14 +139,15 @@ async def store_probing_statistics(
 
     # Store the updated statistics on the database
     await database.call(
-        f"""
-        ALTER TABLE {table(database)}
-        UPDATE probing_statistics=%(probing_statistics)s
-        WHERE measurement_uuid=%(measurement_uuid)s
-        AND agent_uuid=%(agent_uuid)s
+        """
+        ALTER TABLE {table:Identifier}
+        UPDATE probing_statistics={probing_statistics:String}
+        WHERE measurement_uuid={measurement_uuid:UUID}
+        AND agent_uuid={agent_uuid:UUID}
         SETTINGS mutations_sync=1
         """,
-        {
+        params={
+            "table": table(database),
             "probing_statistics": json.dumps(
                 [json.loads(x.json()) for x in current_probing_statistics.values()]
             ),
@@ -143,14 +161,15 @@ async def stamp_finished(
     database: Database, measurement_uuid: UUID, agent_uuid: UUID
 ) -> None:
     await database.call(
-        f"""
-        ALTER TABLE {table(database)}
-        UPDATE state=%(state)s
-        WHERE measurement_uuid=%(measurement_uuid)s
-        AND agent_uuid=%(agent_uuid)s
+        """
+        ALTER TABLE {table:Identifier}
+        UPDATE state={state:String}
+        WHERE measurement_uuid={measurement_uuid:UUID}
+        AND agent_uuid={agent_uuid:UUID}
         SETTINGS mutations_sync=1
         """,
-        {
+        params={
+            "table": table(database),
             "state": public.MeasurementState.Finished.value,
             "measurement_uuid": measurement_uuid,
             "agent_uuid": agent_uuid,
@@ -162,14 +181,15 @@ async def stamp_canceled(
     database: Database, measurement_uuid: UUID, agent_uuid: UUID
 ) -> None:
     await database.call(
-        f"""
-        ALTER TABLE {table(database)}
-        UPDATE state=%(state)s
-        WHERE measurement_uuid=%(measurement_uuid)s
-        AND agent_uuid=%(agent_uuid)s
+        """
+        ALTER TABLE {table:Identifier}
+        UPDATE state={state:String}
+        WHERE measurement_uuid={measurement_uuid:UUID}
+        AND agent_uuid={agent_uuid:UUID}
         SETTINGS mutations_sync=1
         """,
-        {
+        params={
+            "table": table(database),
             "state": public.MeasurementState.Canceled.value,
             "measurement_uuid": measurement_uuid,
             "agent_uuid": agent_uuid,

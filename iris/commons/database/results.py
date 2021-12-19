@@ -1,14 +1,15 @@
 import asyncio
 import os
-from asyncio import Semaphore
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from ipaddress import IPv6Address
 from pathlib import Path
-from typing import TypeVar, Union
+from typing import Iterator, TypeVar, Union
 from uuid import UUID
 
 import aiofiles.os
+import httpx
 from diamond_miner.queries import (
     CreateTables,
     DropTables,
@@ -22,8 +23,8 @@ from diamond_miner.queries import (
 from diamond_miner.subsets import subsets_for
 
 from iris.commons.database.database import Database
+from iris.commons.filesplit import split_compressed_file
 from iris.commons.settings import CommonSettings, fault_tolerant
-from iris.commons.subprocess import start_stream_subprocess
 
 T = TypeVar("T")
 
@@ -37,6 +38,15 @@ def addr_to_string(addr: IPv6Address) -> str:
     '8.8.8.8'
     """
     return str(addr.ipv4_mapped or addr)
+
+
+def iter_file(file: str, *, read_size: int = 2 ** 20) -> Iterator[bytes]:
+    with open(file, "rb") as f:
+        while True:
+            chunk = f.read(read_size)
+            if not chunk:
+                break
+            yield chunk
 
 
 @dataclass(frozen=True)
@@ -84,61 +94,53 @@ class InsertResults:
         split_dir = csv_filepath.with_suffix(".split")
         split_dir.mkdir(exist_ok=True)
 
-        await start_stream_subprocess(
-            f"""
-            {self.database.settings.ZSTD_CMD}  --decompress --stdout {csv_filepath} | \
-            {self.database.settings.SPLIT_CMD} --lines={self.database.settings.DATABASE_PARALLEL_CSV_MAX_LINE}
-            """,
-            stdout=self.database.logger.info,
-            stderr=self.database.logger.error,
-            cwd=split_dir,
+        split_compressed_file(
+            str(csv_filepath),
+            str(split_dir / "splitted_"),
+            self.database.settings.DATABASE_PARALLEL_CSV_MAX_LINE,
+            max_estimate_lines=10_000,
         )
 
         files = list(split_dir.glob("*"))
         self.database.logger.info(f"{logger_prefix} Number of chunks: {len(files)}")
 
         concurrency = (os.cpu_count() or 2) // 2
-        semaphore = Semaphore(concurrency)
         self.database.logger.info(
             f"{logger_prefix} Number of concurrent processes: {concurrency}"
         )
 
-        async def insert(file):
-            async with semaphore:
-                password = self.database.settings.DATABASE_PASSWORD
-                if not password:
-                    password = "''"
+        def insert(file):
+            query = f"INSERT INTO {results_table(self.measurement_id)} FORMAT CSV"
+            r = httpx.post(
+                self.database.settings.DATABASE_URL,
+                content=iter_file(file),
+                params={"query": query},
+            )
+            os.remove(file)
+            r.raise_for_status()
 
-                await start_stream_subprocess(
-                    f"""
-                    {self.database.settings.CLICKHOUSE_CMD} \
-                    --database={self.database.settings.DATABASE_NAME} \
-                    --host={self.database.settings.DATABASE_HOST} \
-                    --user={self.database.settings.DATABASE_USERNAME} \
-                    --password {password} \
-                    --query='INSERT INTO {results_table(self.measurement_id)} FORMAT CSV' \
-                    < {file}
-                    """,
-                    stdout=self.database.logger.info,
-                    stderr=self.database.logger.error,
-                )
-                await aiofiles.os.remove(file)
-
-        await asyncio.gather(*[insert(file) for file in files])
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(concurrency) as pool:
+            await asyncio.gather(
+                *[loop.run_in_executor(pool, insert, file) for file in files]
+            )
         await aiofiles.os.rmdir(split_dir)
 
     @fault_tolerant(CommonSettings.database_retry)
     async def insert_links(self) -> None:
         """Insert the links in the links table from the flow view."""
-        await self.database.call(f"TRUNCATE {links_table(self.measurement_id)}")
+        await self.database.call(
+            "TRUNCATE {table:Identifier}",
+            params={"table": links_table(self.measurement_id)},
+        )
         query = InsertLinks()
         subsets = subsets_for(
-            query, self.database.settings.database_url_http(), self.measurement_id
+            query, self.database.settings.DATABASE_URL, self.measurement_id
         )
         # We limit the number of concurrent requests since this query
         # uses a lot of memory (aggregation of the flows table).
         query.execute_concurrent(
-            self.database.settings.database_url_http(),
+            self.database.settings.DATABASE_URL,
             self.measurement_id,
             subsets,
             concurrent_requests=8,
@@ -147,15 +149,18 @@ class InsertResults:
     @fault_tolerant(CommonSettings.database_retry)
     async def insert_prefixes(self) -> None:
         """Insert the invalid prefixes in the prefix table."""
-        await self.database.call(f"TRUNCATE {prefixes_table(self.measurement_id)}")
+        await self.database.call(
+            "TRUNCATE {table:Identifier}",
+            params={"table": prefixes_table(self.measurement_id)},
+        )
         query = InsertPrefixes()
         subsets = subsets_for(
-            query, self.database.settings.database_url_http(), self.measurement_id
+            query, self.database.settings.DATABASE_URL, self.measurement_id
         )
         # We limit the number of concurrent requests since this query
         # uses a lot of memory.
         query.execute_concurrent(
-            self.database.settings.database_url_http(),
+            self.database.settings.DATABASE_URL,
             self.measurement_id,
             subsets,
             concurrent_requests=8,

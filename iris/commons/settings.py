@@ -1,5 +1,4 @@
 import logging
-import platform
 from datetime import timedelta
 from functools import wraps
 from typing import Optional
@@ -50,15 +49,8 @@ class CommonSettings(BaseSettings):
     AWS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     AWS_TIMEOUT_RANDOM_MAX: int = 10 * 60  # in seconds
 
-    DATABASE_HOST: str = "clickhouse.docker.localhost"
-    DATABASE_HTTP_PORT: int = 80
-    DATABASE_NAME: str = "iris"
-    DATABASE_USERNAME: str = "default"
-    DATABASE_PASSWORD: str = ""  # Put an empty string for no password
+    DATABASE_URL: str = "http://clickhouse.docker.localhost/?database=iris"
     DATABASE_PUBLIC_USER: Optional[str] = None
-    DATABASE_CONNECT_TIMEOUT: int = 10
-    DATABASE_SEND_RECEIVE_TIMEOUT: int = 300
-    DATABASE_SYNC_REQUEST_TIMEOUT: int = 5
     DATABASE_TIMEOUT: int = 2 * 60 * 60  # in seconds
     DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     DATABASE_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
@@ -85,33 +77,8 @@ class CommonSettings(BaseSettings):
 
     STREAM_LOGGING_LEVEL: int = logging.DEBUG
 
-    CLICKHOUSE_CMD: str = "clickhouse client"
-    SPLIT_CMD: str = "gsplit" if platform.system() == "Darwin" else "split"
-    ZSTD_CMD: str = "zstd"
-
     SQLALCHEMY_DATABASE_URL: str = "sqlite:///iris.sqlite3"
     sqlalchemy_engine_: Optional[Engine] = None
-
-    def database_url(self, default: bool = False) -> str:
-        """Return the ClickHouse URL."""
-        host = self.DATABASE_HOST
-        database = self.DATABASE_NAME if not default else "default"
-        username = self.DATABASE_USERNAME
-        password = self.DATABASE_PASSWORD
-        url = f"clickhouse://{username}:{password}@{host}/{database}"
-        url += f"?connect_timeout={self.DATABASE_CONNECT_TIMEOUT}"
-        url += f"&send_receive_timeout={self.DATABASE_SEND_RECEIVE_TIMEOUT}"
-        url += f"&sync_request_timeout={self.DATABASE_SYNC_REQUEST_TIMEOUT}"
-        return url
-
-    def database_url_http(self) -> str:
-        """Return the ClickHouse HTTP URL."""
-        host = self.DATABASE_HOST
-        port = self.DATABASE_HTTP_PORT
-        database = self.DATABASE_NAME
-        username = self.DATABASE_USERNAME
-        password = self.DATABASE_PASSWORD
-        return f"http://{username}:{password}@{host}:{port}/?database={database}"
 
     def sqlalchemy_engine(self) -> Engine:
         if not self.sqlalchemy_engine_:

@@ -5,22 +5,23 @@ from uuid import UUID
 
 from iris.commons.database.database import Database
 from iris.commons.schemas import private, public
+from iris.commons.schemas.public import MeasurementState
 
 
 def table(database: Database) -> str:
     return database.settings.TABLE_NAME_MEASUREMENTS
 
 
-def formatter(row: tuple) -> public.Measurement:
+def formatter(row: dict) -> public.Measurement:
     """Database row -> response formater."""
     return public.Measurement(
-        uuid=row[0],
-        user_id=row[1],
-        tool=public.Tool(row[2]),
-        tags=row[3],
-        state=public.MeasurementState(row[4]),
-        start_time=row[5],
-        end_time=row[6],
+        uuid=row["uuid"],
+        user_id=row["user_id"],
+        tool=public.Tool(row["tool"]),
+        tags=row["tags"],
+        state=public.MeasurementState(row["state"]),
+        start_time=row["start_time"],
+        end_time=row["end_time"],
         agents=[],
     )
 
@@ -28,11 +29,13 @@ def formatter(row: tuple) -> public.Measurement:
 async def create_table(database: Database, drop: bool = False) -> None:
     """Create the table with all registered measurements."""
     if drop:
-        await database.call(f"DROP TABLE IF EXISTS {table(database)}")
+        await database.call(
+            "DROP TABLE IF EXISTS {table:Identifier}", params={"table": table(database)}
+        )
 
     await database.call(
-        f"""
-        CREATE TABLE IF NOT EXISTS {table(database)}
+        """
+        CREATE TABLE IF NOT EXISTS {table:Identifier}
         (
             uuid       UUID,
             user_id    UUID,
@@ -44,7 +47,8 @@ async def create_table(database: Database, drop: bool = False) -> None:
         )
         ENGINE = MergeTree
         ORDER BY (uuid)
-        """
+        """,
+        params={"table": table(database)},
     )
 
 
@@ -52,17 +56,16 @@ async def all_count(
     database: Database, user_id: Optional[UUID] = None, tag: Optional[str] = None
 ) -> int:
     """Get the count of all results."""
-    where_clause = "WHERE 1=1 "
+    query = "SELECT count() FROM {table:Identifier} WHERE 1"
     if user_id:
-        where_clause += "AND user_id=%(user_id)s "
+        query += "\nAND user_id={user_id:UUID}"
     if tag:
-        where_clause += f"AND has(tags, '{tag}') "
-
+        query += "\nAND has(tags, {tag:String})"
     response = await database.call(
-        f"SELECT Count() FROM {table(database)} {where_clause}",
-        {"user_id": user_id},
+        query,
+        params={"table": table(database), "user_id": user_id, "tag": tag},
     )
-    return int(response[0][0])
+    return int(response[0]["count()"])
 
 
 async def all(
@@ -73,18 +76,24 @@ async def all(
     tag: Optional[str] = None,
 ) -> List[public.Measurement]:
     """Get all measurements uuid for a given user or a tag."""
-    where_clause = "WHERE 1=1 "
+    query = "SELECT * FROM {table:Identifier} WHERE 1"
     if user_id:
-        where_clause += "AND user_id=%(user_id)s "
+        query += "\nAND user_id={user_id:UUID}"
     if tag:
-        where_clause += f"AND has(tags, '{tag}') "
-
+        query += "\nAND has(tags, {tag:String})"
+    query += """
+    ORDER BY start_time DESC
+    LIMIT {offset:Int},{limit:Int}
+    """
     responses = await database.call(
-        f"SELECT * FROM {table(database)} "
-        f"{where_clause}"
-        "ORDER BY start_time DESC "
-        "LIMIT %(offset)s,%(limit)s",
-        {"user_id": user_id, "offset": offset, "limit": limit},
+        query,
+        params={
+            "table": table(database),
+            "user_id": user_id,
+            "tag": tag,
+            "limit": limit,
+            "offset": offset,
+        },
     )
     return [formatter(response) for response in responses]
 
@@ -96,15 +105,14 @@ async def get(
     tag: Optional[str] = None,
 ) -> Optional[public.Measurement]:
     """Get a measurement information based on its uuid for a given user of a tag."""
-    where_clause = "WHERE 1=1 "
+    query = "SELECT * FROM {table:Identifier} WHERE uuid = {uuid:UUID}"
     if user_id:
-        where_clause += "AND user_id=%(user_id)s "
+        query += "\nAND user_id={user_id:UUID}"
     if tag:
-        where_clause += f"AND has(tags, '{tag}') "
-
+        query += "\nAND has(tags, {tag:String})"
     responses = await database.call(
-        f"SELECT * FROM {table(database)} {where_clause} AND uuid=%(uuid)s",
-        {"user_id": user_id, "uuid": uuid},
+        query,
+        params={"table": table(database), "uuid": uuid, "user_id": user_id, "tag": tag},
     )
     if responses:
         return formatter(responses[0])
@@ -116,8 +124,9 @@ async def register(
 ) -> None:
     """Register a measurement."""
     await database.call(
-        f"INSERT INTO {table(database)} VALUES",
-        [
+        "INSERT INTO {table:Identifier} FORMAT JSONEachRow",
+        params={"table": table(database)},
+        values=[
             {
                 "uuid": measurement_request.uuid,
                 "user_id": measurement_request.user_id,
@@ -131,48 +140,36 @@ async def register(
     )
 
 
-async def stamp_finished(database: Database, user_id: UUID, uuid: UUID) -> None:
+async def set_state(
+    database: Database, user_id: UUID, uuid: UUID, state: MeasurementState
+) -> None:
     await database.call(
-        f"""
-        ALTER TABLE {table(database)}
-        UPDATE state=%(state)s
-        WHERE user_id=%(user_id)s AND uuid=%(uuid)s
+        """
+        ALTER TABLE {table:Identifier}
+        UPDATE state={state:String}
+        WHERE user_id={user_id:UUID} AND uuid={uuid:UUID}
         SETTINGS mutations_sync=1
         """,
-        {
-            "state": public.MeasurementState.Finished.value,
+        params={
+            "table": table(database),
+            "state": state.value,
             "user_id": user_id,
             "uuid": uuid,
         },
     )
 
 
-async def stamp_canceled(database: Database, user_id: UUID, uuid: UUID) -> None:
-    await database.call(
-        f"""
-        ALTER TABLE {table(database)}
-        UPDATE state=%(state)s
-        WHERE user_id=%(user_id)s AND uuid=%(uuid)s
-        SETTINGS mutations_sync=1
-        """,
-        {
-            "state": public.MeasurementState.Canceled.value,
-            "user_id": user_id,
-            "uuid": uuid,
-        },
-    )
-
-
-async def stamp_end_time(database: Database, user_id: UUID, uuid: UUID) -> None:
+async def set_end_time(database: Database, user_id: UUID, uuid: UUID) -> None:
     """Stamp the end time for a measurement."""
     await database.call(
-        f"""
-        ALTER TABLE {table(database)}
-        UPDATE end_time=toDateTime(%(end_time)s)
-        WHERE user_id=%(user_id)s AND uuid=%(uuid)s
+        """
+        ALTER TABLE {table:Identifier}
+        UPDATE end_time=toDateTime({end_time:String})
+        WHERE user_id={user_id:UUID} AND uuid={uuid:UUID}
         SETTINGS mutations_sync=1
         """,
-        {
+        params={
+            "table": table(database),
             "end_time": datetime.utcnow().replace(microsecond=0),
             "user_id": user_id,
             "uuid": uuid,
