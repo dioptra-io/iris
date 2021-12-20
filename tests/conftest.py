@@ -79,6 +79,7 @@ def common_settings():
         DATABASE_URL="http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
         DATABASE_TIMEOUT=0,
         REDIS_TIMEOUT=0,
+        SQLALCHEMY_DATABASE_URL="sqlite://",
     )
 
 

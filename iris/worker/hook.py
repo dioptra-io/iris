@@ -203,11 +203,9 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
             logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
         logger.info(f"{logger_prefix} Register measurement into database")
-        await measurements.create_table(database)
         await measurements.register(database, measurement_request)
 
         logger.info(f"{logger_prefix} Register agents into database")
-        await agents.create_table(database)
         for agent in measurement_request.agents:
             # Register agent in this measurement
             assert agent.uuid
@@ -338,23 +336,15 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
         == MeasurementState.Canceled
     ):
         await measurements.set_state(
-            database,
-            measurement_request.user_id,
-            measurement_request.uuid,
-            MeasurementState.Canceled,
+            database, measurement_request.uuid, MeasurementState.Canceled
         )
     else:
         await measurements.set_state(
-            database,
-            measurement_request.user_id,
-            measurement_request.uuid,
-            MeasurementState.Finished,
+            database, measurement_request.uuid, MeasurementState.Finished
         )
 
     logger.info(f"{logger_prefix} Stamp measurement end time")
-    await measurements.set_end_time(
-        database, measurement_request.user_id, measurement_request.uuid
-    )
+    await measurements.set_end_time(database, measurement_request.uuid)
 
     logger.info(f"{logger_prefix} Measurement done")
     await redis.delete_measurement_state(measurement_request.uuid)

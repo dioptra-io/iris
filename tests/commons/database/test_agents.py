@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import pytest
+from sqlmodel import SQLModel
 
 from iris.commons.database import agents
 from iris.commons.schemas.measurements import (
@@ -15,7 +16,7 @@ from iris.commons.schemas.measurements import (
 
 @pytest.mark.asyncio
 async def test_agents(database, agent, statistics):
-    assert await agents.create_table(database, drop=True) is None
+    SQLModel.metadata.create_all(database.settings.sqlalchemy_engine())
 
     statistics2 = statistics.copy(
         update={"round": Round(number=2, limit=0, offset=0), "packets_sent": 30}

@@ -6,8 +6,11 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
+from sqlmodel import Session, select
+
 from iris.commons.database.database import Database
 from iris.commons.schemas.agents import AgentParameters
+from iris.commons.schemas.agents2 import AgentDatabase
 from iris.commons.schemas.measurements import (
     MeasurementAgent,
     MeasurementAgentSpecific,
@@ -18,86 +21,45 @@ from iris.commons.schemas.measurements import (
 )
 
 
-def table(database: Database) -> str:
-    return database.settings.TABLE_NAME_AGENTS
-
-
-def formatter(row: dict) -> MeasurementAgent:
+# TODO: Merge AgentDatabase with MeasurementAgent and get rid of the formatter?
+def formatter2(agent: AgentDatabase) -> MeasurementAgent:
     return MeasurementAgent(
-        uuid=row["agent_uuid"],
-        state=MeasurementState(row["state"]),
+        uuid=agent.agent_uuid,
+        state=agent.state,
         specific=MeasurementAgentSpecific(
-            target_file=row["target_file"],
+            target_file=agent.target_file,
             target_file_content=[],
-            probing_rate=row["probing_rate"],
-            tool_parameters=ToolParameters.parse_raw(row["tool_parameters"]),
+            probing_rate=agent.probing_rate,
+            tool_parameters=ToolParameters.parse_raw(agent.tool_parameters),
         ),
-        parameters=AgentParameters.parse_raw(row["agent_parameters"]),
+        parameters=AgentParameters.parse_raw(agent.agent_parameters),
         probing_statistics=[
-            ProbingStatistics(**x) for x in json.loads(row["probing_statistics"])
+            ProbingStatistics(**x) for x in json.loads(agent.probing_statistics)
         ],
-    )
-
-
-async def create_table(database: Database, drop: bool = False) -> None:
-    if drop:
-        await database.call(
-            "DROP TABLE IF EXISTS {table:Identifier}", params={"table": table(database)}
-        )
-
-    await database.call(
-        """
-        CREATE TABLE IF NOT EXISTS {table:Identifier}
-        (
-            measurement_uuid   UUID,
-            agent_uuid         UUID,
-            target_file        String,
-            probing_rate       Nullable(UInt32),
-            probing_statistics String,
-            agent_parameters   String,
-            tool_parameters    String,
-            state              Enum8('ongoing' = 1, 'finished' = 2, 'canceled' = 3),
-            timestamp          DateTime
-        )
-        ENGINE MergeTree
-        ORDER BY (measurement_uuid, agent_uuid)
-        """,
-        params={"table": table(database)},
     )
 
 
 async def all(database: Database, measurement_uuid: UUID) -> List[MeasurementAgent]:
     """Get all measurement information."""
-    responses = await database.call(
-        """
-        SELECT *
-        FROM {table:Identifier}
-        WHERE measurement_uuid={uuid:UUID}
-        """,
-        params={"table": table(database), "uuid": measurement_uuid},
-    )
-    return [formatter(response) for response in responses]
+    with Session(database.settings.sqlalchemy_engine()) as session:
+        measurement_agents = session.exec(
+            select(AgentDatabase).where(
+                AgentDatabase.measurement_uuid == measurement_uuid
+            )
+        ).all()
+        return [
+            formatter2(measurement_agent) for measurement_agent in measurement_agents
+        ]
 
 
 async def get(
     database: Database, measurement_uuid: UUID, agent_uuid: UUID
 ) -> Optional[MeasurementAgent]:
-    """Get measurement information about a agent."""
-    responses = await database.call(
-        """
-        SELECT *
-        FROM {table:Identifier}
-        WHERE measurement_uuid={measurement_uuid:UUID}
-        AND agent_uuid={agent_uuid:UUID}
-        """,
-        params={
-            "table": table(database),
-            "measurement_uuid": measurement_uuid,
-            "agent_uuid": agent_uuid,
-        },
-    )
-    if responses:
-        return formatter(responses[0])
+    """Get measurement information about an agent."""
+    with Session(database.settings.sqlalchemy_engine()) as session:
+        measurement_agent = session.get(AgentDatabase, (measurement_uuid, agent_uuid))
+    if measurement_agent:
+        return formatter2(measurement_agent)
     return None
 
 
@@ -108,23 +70,20 @@ async def register(
     agent_parameters: AgentParameters,
 ) -> None:
     agent = measurement_request.agent(agent_uuid)
-    await database.call(
-        "INSERT INTO {table:Identifier} FORMAT JSONEachRow",
-        params={"table": table(database)},
-        values=[
-            {
-                "measurement_uuid": measurement_request.uuid,
-                "agent_uuid": agent.uuid,
-                "target_file": agent.target_file,
-                "probing_rate": agent.probing_rate,
-                "probing_statistics": json.dumps([]),
-                "agent_parameters": agent_parameters.json(),
-                "tool_parameters": agent.tool_parameters.json(),
-                "state": MeasurementState.Ongoing.value,
-                "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
-            }
-        ],
+    measurement_agent = AgentDatabase(
+        measurement_uuid=measurement_request.uuid,
+        agent_uuid=agent_uuid,
+        target_file=agent.target_file,
+        probing_rate=agent.probing_rate,
+        probing_statistics=json.dumps([]),
+        agent_parameters=agent_parameters.json(),
+        tool_parameters=agent.tool_parameters.json(),
+        state=MeasurementState.Ongoing,
+        timestamp=datetime.utcnow(),
     )
+    with Session(database.settings.sqlalchemy_engine()) as session:
+        session.add(measurement_agent)
+        session.commit()
 
 
 async def store_probing_statistics(
@@ -133,34 +92,22 @@ async def store_probing_statistics(
     agent_uuid: UUID,
     probing_statistics: ProbingStatistics,
 ) -> None:
-    # Get the probing statistics already stored
-    measurement = await get(database, measurement_uuid, agent_uuid)
-    assert measurement
-
-    # Update the probing statistics
-    current_probing_statistics = {
-        x.round.encode(): x for x in measurement.probing_statistics
-    }
-    current_probing_statistics[probing_statistics.round.encode()] = probing_statistics
-
-    # Store the updated statistics on the database
-    await database.call(
-        """
-        ALTER TABLE {table:Identifier}
-        UPDATE probing_statistics={probing_statistics:String}
-        WHERE measurement_uuid={measurement_uuid:UUID}
-        AND agent_uuid={agent_uuid:UUID}
-        SETTINGS mutations_sync=1
-        """,
-        params={
-            "table": table(database),
-            "probing_statistics": json.dumps(
-                [json.loads(x.json()) for x in current_probing_statistics.values()]
-            ),
-            "measurement_uuid": measurement_uuid,
-            "agent_uuid": agent_uuid,
-        },
-    )
+    with Session(database.settings.sqlalchemy_engine()) as session:
+        measurement_agent = session.get(AgentDatabase, (measurement_uuid, agent_uuid))
+        # TODO: Cleanup this after model merge.
+        ps = [
+            ProbingStatistics(**x)
+            for x in json.loads(measurement_agent.probing_statistics)
+        ]
+        current_probing_statistics = {x.round.encode(): x for x in ps}
+        current_probing_statistics[
+            probing_statistics.round.encode()
+        ] = probing_statistics
+        measurement_agent.probing_statistics = json.dumps(
+            [json.loads(x.json()) for x in current_probing_statistics.values()]
+        )
+        session.add(measurement_agent)
+        session.commit()
 
 
 async def set_state(
@@ -169,18 +116,8 @@ async def set_state(
     agent_uuid: UUID,
     state: MeasurementState,
 ) -> None:
-    await database.call(
-        """
-        ALTER TABLE {table:Identifier}
-        UPDATE state={state:String}
-        WHERE measurement_uuid={measurement_uuid:UUID}
-        AND agent_uuid={agent_uuid:UUID}
-        SETTINGS mutations_sync=1
-        """,
-        params={
-            "table": table(database),
-            "state": state.value,
-            "measurement_uuid": measurement_uuid,
-            "agent_uuid": agent_uuid,
-        },
-    )
+    with Session(database.settings.sqlalchemy_engine()) as session:
+        measurement_agent = session.get(AgentDatabase, (measurement_uuid, agent_uuid))
+        measurement_agent.state = state
+        session.add(measurement_agent)
+        session.commit()

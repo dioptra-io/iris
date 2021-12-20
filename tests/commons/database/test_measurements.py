@@ -1,6 +1,7 @@
 import uuid
 
 import pytest
+from sqlmodel import SQLModel
 
 from iris.commons.database import measurements
 from iris.commons.schemas.measurements import (
@@ -12,10 +13,12 @@ from iris.commons.schemas.measurements import (
 
 @pytest.mark.asyncio
 async def test_measurements(database):
+    # TEMP
+    import iris.commons.schemas.measurements2
+
+    SQLModel.metadata.create_all(database.settings.sqlalchemy_engine())
 
     user_id = uuid.uuid4()
-
-    assert await measurements.create_table(database, drop=True) is None
 
     data = [
         MeasurementRequest(agents=[], tags=["tag1"], user_id=user_id),
@@ -58,10 +61,7 @@ async def test_measurements(database):
 
     assert (
         await measurements.set_state(
-            database,
-            user_id=user_id,
-            uuid=data[0].uuid,
-            state=MeasurementState.Canceled,
+            database, uuid=data[0].uuid, state=MeasurementState.Canceled
         )
         is None
     )
@@ -71,17 +71,11 @@ async def test_measurements(database):
 
     assert (
         await measurements.set_state(
-            database,
-            user_id=user_id,
-            uuid=data[1].uuid,
-            state=MeasurementState.Finished,
+            database, uuid=data[1].uuid, state=MeasurementState.Finished
         )
         is None
     )
-    assert (
-        await measurements.set_end_time(database, user_id=user_id, uuid=data[1].uuid)
-        is None
-    )
+    assert await measurements.set_end_time(database, uuid=data[1].uuid) is None
     res = await measurements.get(database, user_id=user_id, uuid=data[1].uuid)
     assert res.state == MeasurementState.Finished
     assert res.end_time is not None

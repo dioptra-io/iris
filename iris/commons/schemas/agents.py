@@ -35,7 +35,7 @@ class AgentState(str, Enum):
 
 
 class Agent(BaseModel):
-    """Summary information about a agent (Response)."""
+    """Summary information about an agent (Response)."""
 
     uuid: UUID
     parameters: Optional[AgentParameters]
