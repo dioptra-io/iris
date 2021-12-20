@@ -11,7 +11,20 @@ from iris.api.dependencies import get_database, get_redis, get_storage
 from iris.api.pagination import DatabasePagination
 from iris.commons.database import Database, agents, measurements
 from iris.commons.redis import Redis
-from iris.commons.schemas import private, public
+from iris.commons.schemas.exceptions import GenericException
+from iris.commons.schemas.measurements import (
+    Measurement,
+    MeasurementAgentPostBody,
+    MeasurementDeleteResponse,
+    MeasurementPostBody,
+    MeasurementPostResponse,
+    MeasurementRequest,
+    MeasurementState,
+    MeasurementSummary,
+    Tool,
+)
+from iris.commons.schemas.paging import Paginated
+from iris.commons.schemas.users import UserDB
 from iris.commons.storage import Storage
 from iris.worker.hook import hook
 
@@ -20,7 +33,7 @@ router = APIRouter()
 
 @router.get(
     "/",
-    response_model=public.Paginated[public.MeasurementSummary],
+    response_model=Paginated[MeasurementSummary],
     summary="Get all measurements.",
 )
 async def get_measurements(
@@ -28,7 +41,7 @@ async def get_measurements(
     tag: str = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
@@ -45,15 +58,15 @@ async def get_measurements(
     )
     output = await querier.query(user_id=user.id, tag=tag)
 
-    measurements_: List[public.Measurement] = output["results"]
-    summaries: List[public.MeasurementSummary] = []
+    measurements_: List[Measurement] = output["results"]
+    summaries: List[MeasurementSummary] = []
 
     for measurement in measurements_:
         state = await redis.get_measurement_state(measurement.uuid)
-        if not state or state == public.MeasurementState.Unknown:
+        if not state or state == MeasurementState.Unknown:
             state = measurement.state
         summaries.append(
-            public.MeasurementSummary(
+            MeasurementSummary(
                 uuid=measurement.uuid,
                 state=state,
                 tool=measurement.tool,
@@ -70,14 +83,14 @@ async def get_measurements(
 
 @router.get(
     "/public/",
-    response_model=public.Paginated[public.MeasurementSummary],
+    response_model=Paginated[MeasurementSummary],
     summary="Get all public measurements.",
 )
 async def get_measurements_public(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
@@ -87,15 +100,15 @@ async def get_measurements_public(
     )
     output = await querier.query(tag="public")
 
-    measurements_: List[public.Measurement] = output["results"]
-    summaries: List[public.MeasurementSummary] = []
+    measurements_: List[Measurement] = output["results"]
+    summaries: List[MeasurementSummary] = []
 
     for measurement in measurements_:
         state = await redis.get_measurement_state(measurement.uuid)
-        if not state or state == public.MeasurementState.Unknown:
+        if not state or state == MeasurementState.Unknown:
             state = measurement.state
         summaries.append(
-            public.MeasurementSummary(
+            MeasurementSummary(
                 uuid=measurement.uuid,
                 state=state,
                 tool=measurement.tool,
@@ -112,8 +125,8 @@ async def get_measurements_public(
 
 async def target_file_validator(
     storage: Storage,
-    tool: public.Tool,
-    user: public.UserDB,
+    tool: Tool,
+    user: UserDB,
     target_filename: str,
     prefix_len_v4: int,
     prefix_len_v6: int,
@@ -121,7 +134,7 @@ async def target_file_validator(
     """Validate the target file input."""
     # Check validation for "Probe" tool
     # The user must be admin and the target file must have the proper metadata
-    if tool == public.Tool.Probes:
+    if tool == Tool.Probes:
         # Verify that the target file exists on S3
         try:
             target_file = await storage.get_file_no_retry(
@@ -182,7 +195,7 @@ async def target_file_validator(
         min_ttl, max_ttl = int(min_ttl), int(max_ttl)
         global_min_ttl = min(global_min_ttl, min_ttl)
         global_max_ttl = max(global_max_ttl, max_ttl)
-        if tool == public.Tool.Ping and protocol == "udp":
+        if tool == Tool.Ping and protocol == "udp":
             # Disabling UDP port scanning abilities
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -194,13 +207,12 @@ async def target_file_validator(
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
-    response_model=public.MeasurementPostResponse,
-    responses={404: {"model": public.GenericException}},
+    response_model=MeasurementPostResponse,
+    responses={404: {"model": GenericException}},
     summary="Request a measurement.",
 )
 async def post_measurement(
-    request: Request,
-    measurement: public.MeasurementPostBody = Body(
+    measurement: MeasurementPostBody = Body(
         ...,
         example={
             "tool": "diamond-miner",
@@ -213,7 +225,7 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     storage: Storage = Depends(get_storage),
 ):
@@ -228,7 +240,7 @@ async def post_measurement(
     active_agents = await redis.get_agents_by_uuid()
 
     # Update the list of requested agents to include agents selected by tag.
-    agents_: List[public.MeasurementAgentPostBody] = []
+    agents_: List[MeasurementAgentPostBody] = []
 
     for agent in measurement.agents:
         if agent.uuid:
@@ -251,7 +263,7 @@ async def post_measurement(
 
     # Keep track of the registered agents to make sure that an agent is not
     # registered twice. e.g. with two overlapping agent tags.
-    registered_agents: Dict[UUID, public.MeasurementAgentPostBody] = {}
+    registered_agents: Dict[UUID, MeasurementAgentPostBody] = {}
 
     for agent in agents_:
         # Ensure that the agent exists
@@ -291,7 +303,7 @@ async def post_measurement(
         )
 
     # Update the agents list and set private metadata.
-    measurement_request = private.MeasurementRequest(
+    measurement_request = MeasurementRequest(
         **measurement.dict(exclude={"agents"}),
         agents=list(registered_agents.values()),
         user_id=user.id,
@@ -300,19 +312,18 @@ async def post_measurement(
     # Launch a measurement procedure on the worker.
     hook.send(measurement_request)
 
-    return public.MeasurementPostResponse(uuid=measurement_request.uuid)
+    return MeasurementPostResponse(uuid=measurement_request.uuid)
 
 
 @router.get(
     "/{measurement_uuid}",
-    response_model=public.Measurement,
-    responses={404: {"model": public.GenericException}},
+    response_model=Measurement,
+    responses={404: {"model": GenericException}},
     summary="Get measurement specified by UUID.",
 )
 async def get_measurement_by_uuid(
-    request: Request,
     measurement_uuid: UUID,
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
     storage: Storage = Depends(get_storage),
@@ -332,14 +343,14 @@ async def get_measurement_by_uuid(
         )
 
     state = await redis.get_measurement_state(measurement_uuid)
-    if state and state != public.MeasurementState.Unknown:
+    if state and state != MeasurementState.Unknown:
         measurement = measurement.copy(update={"state": state})
 
     measurement_agents = []
     agents_info = await agents.all(database, measurement.uuid)
 
     for agent_info in agents_info:
-        if measurement.state == public.MeasurementState.Waiting:
+        if measurement.state == MeasurementState.Waiting:
             agent_info = agent_info.copy(update={"state": measurement.state})
         try:
             target_file = await storage.get_file_no_retry(
@@ -366,14 +377,14 @@ async def get_measurement_by_uuid(
 
 @router.delete(
     "/{measurement_uuid}",
-    response_model=public.MeasurementDeleteResponse,
-    responses={404: {"model": public.GenericException}},
+    response_model=MeasurementDeleteResponse,
+    responses={404: {"model": GenericException}},
     summary="Cancel measurement specified by UUID.",
 )
 async def delete_measurement(
     request: Request,
     measurement_uuid: UUID,
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
@@ -397,7 +408,5 @@ async def delete_measurement(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement already finished"
         )
 
-    await redis.set_measurement_state(
-        measurement_uuid, public.MeasurementState.Canceled
-    )
-    return public.MeasurementDeleteResponse(uuid=measurement_uuid, action="canceled")
+    await redis.set_measurement_state(measurement_uuid, MeasurementState.Canceled)
+    return MeasurementDeleteResponse(uuid=measurement_uuid, action="canceled")

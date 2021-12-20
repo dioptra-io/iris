@@ -2,12 +2,12 @@ import re
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import Field, NonNegativeInt, PositiveInt, root_validator
 
+from iris.commons.schemas.agents import AgentParameters
 from iris.commons.schemas.base import BaseModel
-from iris.commons.schemas.public.agents import AgentParameters
 
 
 class Round(BaseModel):
@@ -237,3 +237,23 @@ class MeasurementDeleteResponse(BaseModel):
 
     uuid: UUID = Field(..., title="UUID")
     action: str
+
+
+class MeasurementRequest(MeasurementPostBody):
+    start_time: datetime = Field(
+        default_factory=lambda: datetime.utcnow().replace(microsecond=0)
+    )
+    uuid: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+
+    def agent(self, uuid: UUID) -> MeasurementAgentPostBody:
+        for agent in self.agents:
+            if agent.uuid == uuid:
+                return agent
+        raise ValueError(f"no agent found for UUID {uuid}")
+
+
+class MeasurementRoundRequest(BaseModel):
+    measurement: MeasurementRequest
+    probe_filename: str
+    round: Round

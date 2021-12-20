@@ -2,7 +2,8 @@ from uuid import uuid4
 
 import pytest
 
-from iris.commons.schemas.public import Agent, Paginated
+from iris.commons.schemas.agents import Agent
+from iris.commons.schemas.paging import Paginated
 
 
 @pytest.mark.asyncio

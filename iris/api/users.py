@@ -7,7 +7,8 @@ from httpx_oauth.clients.github import GitHubOAuth2
 from iris.api.authentication import current_superuser, fastapi_users, jwt_authentication
 from iris.api.dependencies import get_sqlalchemy, settings
 from iris.api.pagination import ListPagination
-from iris.commons.schemas import public
+from iris.commons.schemas.paging import Paginated
+from iris.commons.schemas.users import User, UserDB
 
 router = APIRouter()
 
@@ -41,7 +42,7 @@ router.include_router(
 
 @router.get(
     "/users",
-    response_model=public.Paginated[public.User],
+    response_model=Paginated[User],
     summary="Get all users (Admin only).",
     tags=["Users"],
 )
@@ -50,12 +51,12 @@ async def get_users(
     filter_verified: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: public.UserDB = Depends(current_superuser),
+    user: UserDB = Depends(current_superuser),
     sqlalchemy: databases.Database = Depends(get_sqlalchemy),
 ):
     """Get all users."""
     where_clause = "WHERE is_verified = false" if filter_verified else ""
     users = await sqlalchemy.fetch_all(f"SELECT * FROM user {where_clause}")
-    users = [public.User(**dict(user)) for user in users]
+    users = [User(**dict(user)) for user in users]
     querier = ListPagination(users, request, offset, limit)
     return await querier.query()

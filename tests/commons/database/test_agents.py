@@ -3,11 +3,11 @@ from uuid import uuid4
 import pytest
 
 from iris.commons.database import agents
-from iris.commons.schemas.private import MeasurementRequest
-from iris.commons.schemas.public import (
+from iris.commons.schemas.measurements import (
     MeasurementAgent,
     MeasurementAgentPostBody,
     MeasurementAgentSpecific,
+    MeasurementRequest,
     MeasurementState,
     Round,
 )

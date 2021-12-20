@@ -12,7 +12,7 @@ from iris.api.settings import APISettings
 from iris.commons.database import Database
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
-from iris.commons.schemas.public import UserDB
+from iris.commons.schemas.users import UserDB
 from iris.commons.storage import Storage
 
 settings = APISettings()

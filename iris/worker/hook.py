@@ -12,8 +12,12 @@ from aiofiles import os as aios
 from iris.commons.database import Database, InsertResults, agents, measurements
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
-from iris.commons.schemas.private import MeasurementRequest, MeasurementRoundRequest
-from iris.commons.schemas.public import MeasurementState, Round
+from iris.commons.schemas.measurements import (
+    MeasurementRequest,
+    MeasurementRoundRequest,
+    MeasurementState,
+    Round,
+)
 from iris.commons.storage import Storage
 from iris.worker.outer_pipeline import outer_pipeline
 from iris.worker.settings import WorkerSettings

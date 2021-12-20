@@ -10,7 +10,14 @@ from iris.api.dependencies import get_database, get_redis, get_storage
 from iris.api.pagination import DatabasePagination
 from iris.commons.database import Database, agents, measurements
 from iris.commons.redis import Redis
-from iris.commons.schemas import public
+from iris.commons.schemas.exceptions import GenericException
+from iris.commons.schemas.measurements import (
+    Measurement,
+    MeasurementState,
+    MeasurementSummary,
+)
+from iris.commons.schemas.paging import Paginated
+from iris.commons.schemas.users import UserDB
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -18,14 +25,14 @@ router = APIRouter()
 
 @router.get(
     "/public/",
-    response_model=public.Paginated[public.MeasurementSummary],
+    response_model=Paginated[MeasurementSummary],
     summary="Get all public measurements.",
 )
 async def get_measurements_public(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
 ):
@@ -35,15 +42,15 @@ async def get_measurements_public(
     )
     output = await querier.query(tag="public")
 
-    measurements_: List[public.Measurement] = output["results"]
-    summaries: List[public.MeasurementSummary] = []
+    measurements_: List[Measurement] = output["results"]
+    summaries: List[MeasurementSummary] = []
 
     for measurement in measurements_:
         state = await redis.get_measurement_state(measurement.uuid)
-        if not state or state == public.MeasurementState.Unknown:
+        if not state or state == MeasurementState.Unknown:
             state = measurement.state
         summaries.append(
-            public.MeasurementSummary(
+            MeasurementSummary(
                 uuid=measurement.uuid,
                 state=state,
                 tool=measurement.tool,
@@ -60,14 +67,14 @@ async def get_measurements_public(
 
 @router.get(
     "/public/{measurement_uuid}",
-    response_model=public.Measurement,
-    responses={404: {"model": public.GenericException}},
+    response_model=Measurement,
+    responses={404: {"model": GenericException}},
     summary="Get public measurement specified by UUID.",
 )
 async def get_measurement_by_uuid(
     request: Request,
     measurement_uuid: UUID,
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     database: Database = Depends(get_database),
     redis: Redis = Depends(get_redis),
     storage: Storage = Depends(get_storage),
@@ -80,14 +87,14 @@ async def get_measurement_by_uuid(
         )
 
     state = await redis.get_measurement_state(measurement_uuid)
-    if state and state != public.MeasurementState.Unknown:
+    if state and state != MeasurementState.Unknown:
         measurement = measurement.copy(update={"state": state})
 
     measurement_agents = []
     agents_info = await agents.all(database, measurement.uuid)
 
     for agent_info in agents_info:
-        if measurement.state == public.MeasurementState.Waiting:
+        if measurement.state == MeasurementState.Waiting:
             agent_info = agent_info.copy(update={"state": measurement.state})
         try:
             target_file = await storage.get_file_no_retry(

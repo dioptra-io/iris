@@ -7,8 +7,7 @@ from multiprocessing import Manager, Process
 from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
-from iris.commons.schemas.private import MeasurementRoundRequest
-from iris.commons.schemas.public import ProbingStatistics
+from iris.commons.schemas.measurements import MeasurementRoundRequest, ProbingStatistics
 from iris.commons.storage import Storage, results_key
 
 

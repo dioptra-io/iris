@@ -5,7 +5,8 @@ from uuid import uuid4
 import pytest
 
 from iris.commons.redis import AgentRedis, Redis
-from iris.commons.schemas.public import AgentState, MeasurementState
+from iris.commons.schemas.agents import AgentState
+from iris.commons.schemas.measurements import MeasurementState
 
 
 @pytest.mark.asyncio

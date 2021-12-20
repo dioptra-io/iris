@@ -9,7 +9,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import generate_jwt
 
 from iris.api.dependencies import get_session, get_storage, settings
-from iris.commons.schemas.public import User, UserCreate, UserDB, UserUpdate
+from iris.commons.schemas.users import User, UserCreate, UserDB, UserUpdate
 
 
 class UserManager(BaseUserManager[UserCreate, UserDB]):

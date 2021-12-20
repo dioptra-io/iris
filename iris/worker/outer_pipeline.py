@@ -7,7 +7,7 @@ from uuid import UUID
 
 from iris.commons.database import Database, agents
 from iris.commons.redis import Redis
-from iris.commons.schemas.public import Round, Tool, ToolParameters
+from iris.commons.schemas.measurements import Round, Tool, ToolParameters
 from iris.commons.storage import Storage, next_round_key
 from iris.worker.inner_pipeline import inner_pipeline_for_tool
 

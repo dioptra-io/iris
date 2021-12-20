@@ -11,7 +11,7 @@ import aioboto3
 import boto3
 from botocore.exceptions import ClientError
 
-from iris.commons.schemas.public import Round
+from iris.commons.schemas.measurements import Round
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 

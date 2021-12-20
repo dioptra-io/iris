@@ -4,22 +4,26 @@ from typing import List, Optional
 from uuid import UUID
 
 from iris.commons.database.database import Database
-from iris.commons.schemas import private, public
-from iris.commons.schemas.public import MeasurementState
+from iris.commons.schemas.measurements import (
+    Measurement,
+    MeasurementRequest,
+    MeasurementState,
+    Tool,
+)
 
 
 def table(database: Database) -> str:
     return database.settings.TABLE_NAME_MEASUREMENTS
 
 
-def formatter(row: dict) -> public.Measurement:
+def formatter(row: dict) -> Measurement:
     """Database row -> response formater."""
-    return public.Measurement(
+    return Measurement(
         uuid=row["uuid"],
         user_id=row["user_id"],
-        tool=public.Tool(row["tool"]),
+        tool=Tool(row["tool"]),
         tags=row["tags"],
-        state=public.MeasurementState(row["state"]),
+        state=MeasurementState(row["state"]),
         start_time=row["start_time"],
         end_time=row["end_time"],
         agents=[],
@@ -74,7 +78,7 @@ async def all(
     limit: int,
     user_id: Optional[UUID] = None,
     tag: Optional[str] = None,
-) -> List[public.Measurement]:
+) -> List[Measurement]:
     """Get all measurements uuid for a given user or a tag."""
     query = "SELECT * FROM {table:Identifier} WHERE 1"
     if user_id:
@@ -103,7 +107,7 @@ async def get(
     uuid: UUID,
     user_id: Optional[UUID] = None,
     tag: Optional[str] = None,
-) -> Optional[public.Measurement]:
+) -> Optional[Measurement]:
     """Get a measurement information based on its uuid for a given user of a tag."""
     query = "SELECT * FROM {table:Identifier} WHERE uuid = {uuid:UUID}"
     if user_id:
@@ -120,7 +124,8 @@ async def get(
 
 
 async def register(
-    database: Database, measurement_request: private.MeasurementRequest
+    database: Database,
+    measurement_request: MeasurementRequest,
 ) -> None:
     """Register a measurement."""
     await database.call(
@@ -132,7 +137,7 @@ async def register(
                 "user_id": measurement_request.user_id,
                 "tool": measurement_request.tool,
                 "tags": measurement_request.tags,
-                "state": public.MeasurementState.Ongoing.value,
+                "state": MeasurementState.Ongoing.value,
                 "start_time": measurement_request.start_time,
                 "end_time": None,
             }

@@ -13,14 +13,9 @@ from iris.api.dependencies import get_database, get_redis
 from iris.api.main import app
 from iris.commons.database import Database
 from iris.commons.redis import AgentRedis, Redis
-from iris.commons.schemas.public import (
-    Agent,
-    AgentParameters,
-    AgentState,
-    ProbingStatistics,
-    Round,
-    User,
-)
+from iris.commons.schemas.agents import Agent, AgentParameters, AgentState
+from iris.commons.schemas.measurements import ProbingStatistics, Round
+from iris.commons.schemas.users import User
 from iris.commons.settings import CommonSettings
 
 

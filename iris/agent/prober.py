@@ -10,7 +10,7 @@ from pycaracal import prober, set_log_level
 
 from iris.agent.settings import AgentSettings
 from iris.commons.redis import AgentRedis
-from iris.commons.schemas.public import MeasurementState
+from iris.commons.schemas.measurements import MeasurementState
 
 
 async def watcher(

@@ -3,8 +3,11 @@ import uuid
 import pytest
 
 from iris.commons.database import measurements
-from iris.commons.schemas.private import MeasurementRequest
-from iris.commons.schemas.public import Measurement, MeasurementState
+from iris.commons.schemas.measurements import (
+    Measurement,
+    MeasurementRequest,
+    MeasurementState,
+)
 
 
 @pytest.mark.asyncio

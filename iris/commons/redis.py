@@ -7,11 +7,9 @@ from uuid import UUID
 import aioredis
 import async_timeout
 
-from iris.commons.schemas.private import MeasurementRoundRequest
-from iris.commons.schemas.public import (
-    Agent,
-    AgentParameters,
-    AgentState,
+from iris.commons.schemas.agents import Agent, AgentParameters, AgentState
+from iris.commons.schemas.measurements import (
+    MeasurementRoundRequest,
     MeasurementState,
     ProbingStatistics,
 )

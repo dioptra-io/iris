@@ -16,7 +16,15 @@ from fastapi import (
 from iris.api.authentication import current_superuser, current_verified_user
 from iris.api.dependencies import get_storage
 from iris.api.pagination import ListPagination
-from iris.commons.schemas import public
+from iris.commons.schemas.exceptions import GenericException
+from iris.commons.schemas.paging import Paginated
+from iris.commons.schemas.targets import (
+    Target,
+    TargetDeleteResponse,
+    TargetPostResponse,
+    TargetSummary,
+)
+from iris.commons.schemas.users import UserDB
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -24,14 +32,14 @@ router = APIRouter()
 
 @router.get(
     "/",
-    response_model=public.Paginated[public.TargetSummary],
+    response_model=Paginated[TargetSummary],
     summary="Get all target lists.",
 )
 async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get all target lists."""
@@ -49,7 +57,7 @@ async def get_targets(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
         )
     summaries = [
-        public.TargetSummary(
+        TargetSummary(
             key=target["key"],
             last_modified=target["last_modified"],
         )
@@ -61,14 +69,14 @@ async def get_targets(
 
 @router.get(
     "/{key}",
-    response_model=public.Target,
-    responses={404: {"model": public.GenericException}},
+    response_model=Target,
+    responses={404: {"model": GenericException}},
     summary="Get target list specified by key.",
 )
 async def get_target_by_key(
     request: Request,
     key: str,
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
@@ -88,7 +96,7 @@ async def get_target_by_key(
             status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
         )
 
-    return public.Target(
+    return Target(
         key=target_file["key"],
         size=target_file["size"],
         content=[c.strip() for c in target_file["content"].split()],
@@ -134,7 +142,7 @@ async def verify_target_file(target_file):
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
-    response_model=public.TargetPostResponse,
+    response_model=TargetPostResponse,
     summary="Upload a target list.",
     description="""
     Each line of the file must be like `target,protocol,min_ttl,max_ttl,n_initial_flows`
@@ -145,7 +153,7 @@ async def verify_target_file(target_file):
 async def post_target(
     request: Request,
     target_file: UploadFile = File(...),
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a target list to object storage."""
@@ -210,7 +218,7 @@ async def verify_probe_target_file(target_file):
 @router.post(
     "/probes",
     status_code=status.HTTP_201_CREATED,
-    response_model=public.TargetPostResponse,
+    response_model=TargetPostResponse,
     summary="Upload a probe list.",
     description="""
     Each line of the file must be like `dst_addr,src_port,dst_port,ttl,protocol`
@@ -221,7 +229,7 @@ async def verify_probe_target_file(target_file):
 async def post_probes_target(
     request: Request,
     target_file: UploadFile = File(...),
-    user: public.UserDB = Depends(current_superuser),
+    user: UserDB = Depends(current_superuser),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a probe list to object storage."""
@@ -256,17 +264,17 @@ async def post_probes_target(
 
 @router.delete(
     "/{key}",
-    response_model=public.TargetDeleteResponse,
+    response_model=TargetDeleteResponse,
     responses={
-        404: {"model": public.GenericException},
-        500: {"model": public.GenericException},
+        404: {"model": GenericException},
+        500: {"model": GenericException},
     },
     summary="Delete a target list.",
 )
 async def delete_target_by_key(
     request: Request,
     key: str,
-    user: public.UserDB = Depends(current_verified_user),
+    user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""

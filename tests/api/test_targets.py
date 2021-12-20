@@ -5,7 +5,8 @@ import pytest
 
 from iris.api.dependencies import get_storage
 from iris.api.targets import verify_probe_target_file, verify_target_file
-from iris.commons.schemas.public import Paginated, Target, TargetSummary
+from iris.commons.schemas.paging import Paginated
+from iris.commons.schemas.targets import Target, TargetSummary
 from tests.helpers import fake_storage_factory, override
 
 target1 = {

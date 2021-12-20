@@ -13,7 +13,7 @@ from diamond_miner.typing import FlowMapper
 from zstandard import ZstdDecompressor
 
 from iris.commons.database import Database, InsertResults
-from iris.commons.schemas.public import Round, Tool, ToolParameters
+from iris.commons.schemas.measurements import Round, Tool, ToolParameters
 from iris.worker.tree import load_targets
 
 

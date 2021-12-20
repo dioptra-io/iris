@@ -12,7 +12,8 @@ from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl
 from iris.commons.logger import create_logger
 from iris.commons.redis import AgentRedis
-from iris.commons.schemas.public import AgentParameters, AgentState, MeasurementState
+from iris.commons.schemas.agents import AgentParameters, AgentState
+from iris.commons.schemas.measurements import MeasurementState
 from iris.commons.storage import Storage
 from iris.commons.utils import get_ipv4_address, get_ipv6_address
 

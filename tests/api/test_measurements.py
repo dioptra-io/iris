@@ -5,7 +5,7 @@ import pytest
 
 from iris.api.dependencies import get_redis, get_storage
 from iris.commons.database import agents, measurements
-from iris.commons.schemas.public import (
+from iris.commons.schemas.measurements import (
     FlowMapper,
     Measurement,
     MeasurementAgent,
@@ -14,10 +14,10 @@ from iris.commons.schemas.public import (
     MeasurementPostBody,
     MeasurementState,
     MeasurementSummary,
-    Paginated,
     Tool,
     ToolParameters,
 )
+from iris.commons.schemas.paging import Paginated
 from tests.helpers import async_mock, fake_redis_factory, fake_storage_factory, override
 
 

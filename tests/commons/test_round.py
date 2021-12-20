@@ -1,4 +1,4 @@
-from iris.commons.schemas.public import Round
+from iris.commons.schemas.measurements import Round
 
 
 def test_round():
