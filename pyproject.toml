@@ -81,7 +81,7 @@ worker = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--ignore volumes --cov=iris --cov-report term-missing --doctest-modules -vvs"
+addopts = "--ignore volumes --cov=iris --cov-report= --doctest-modules -vvs"
 filterwarnings = [
     "ignore::DeprecationWarning:aioboto3.*:",
     "ignore::DeprecationWarning:aiofiles.*:",

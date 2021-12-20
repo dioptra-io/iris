@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from iris.commons.database.agents import formatter2
+from iris.commons.database.agents import formatter
 from iris.commons.database.database import Database
 from iris.commons.schemas.measurements import (
     Measurement,
@@ -16,7 +16,7 @@ from iris.commons.schemas.measurements2 import Measurement2
 
 
 # TODO: Merge
-def formatter2(measurement: Measurement2) -> Measurement:
+def formatter(measurement: Measurement2) -> Measurement:
     return Measurement(
         uuid=measurement.uuid,
         user_id=measurement.user_id,
@@ -56,7 +56,9 @@ async def all(
     """Get all measurements uuid for a given user or a tag."""
     with Session(database.settings.sqlalchemy_engine()) as session:
         # TODO: Proper tag and measurement_tag tables and query
-        measurements = session.exec(select(Measurement2)).all()
+        measurements = session.exec(
+            select(Measurement2).offset(offset).limit(limit)
+        ).all()
         kept = []
         for measurement in measurements:
             if user_id and measurement.user_id != user_id:
@@ -64,26 +66,16 @@ async def all(
             if tag and tag not in measurement.tags:
                 continue
             kept.append(measurement)
-    return [formatter2(measurement) for measurement in kept]
+    return [formatter(measurement) for measurement in kept]
 
 
-async def get(
-    database: Database,
-    uuid: UUID,
-    user_id: Optional[UUID] = None,
-    tag: Optional[str] = None,
-) -> Optional[Measurement]:
+async def get(database: Database, uuid: UUID) -> Optional[Measurement]:
     """Get a measurement information based on its uuid for a given user of a tag."""
     with Session(database.settings.sqlalchemy_engine()) as session:
         measurement = session.get(Measurement2, uuid)
-    # TODO: Remove user_id and tag parameters and check at the user level.
     if not measurement:
         return None
-    if user_id and measurement.user_id != user_id:
-        return None
-    if tag and tag not in measurement.tags:
-        return None
-    return formatter2(measurement)
+    return formatter(measurement)
 
 
 async def register(
@@ -106,6 +98,7 @@ async def register(
 
 
 async def set_state(database: Database, uuid: UUID, state: MeasurementState) -> None:
+    """Set the state of a measurement."""
     with Session(database.settings.sqlalchemy_engine()) as session:
         measurement = session.get(Measurement2, uuid)
         measurement.state = state

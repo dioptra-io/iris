@@ -22,7 +22,7 @@ from iris.commons.schemas.measurements import (
 
 
 # TODO: Merge AgentDatabase with MeasurementAgent and get rid of the formatter?
-def formatter2(agent: AgentDatabase) -> MeasurementAgent:
+def formatter(agent: AgentDatabase) -> MeasurementAgent:
     return MeasurementAgent(
         uuid=agent.agent_uuid,
         state=agent.state,
@@ -48,7 +48,7 @@ async def all(database: Database, measurement_uuid: UUID) -> List[MeasurementAge
             )
         ).all()
         return [
-            formatter2(measurement_agent) for measurement_agent in measurement_agents
+            formatter(measurement_agent) for measurement_agent in measurement_agents
         ]
 
 
@@ -59,7 +59,7 @@ async def get(
     with Session(database.settings.sqlalchemy_engine()) as session:
         measurement_agent = session.get(AgentDatabase, (measurement_uuid, agent_uuid))
     if measurement_agent:
-        return formatter2(measurement_agent)
+        return formatter(measurement_agent)
     return None
 
 

@@ -33,9 +33,7 @@ async def test_measurements(database):
     assert await measurements.all_count(database, user_id=user_id, tag="tag2") == 1
 
     for obj in data:
-        assert await measurements.get(
-            database, user_id=user_id, uuid=obj.uuid
-        ) == Measurement(
+        assert await measurements.get(database, obj.uuid) == Measurement(
             uuid=obj.uuid,
             user_id=obj.user_id,
             tool=obj.tool,
@@ -51,12 +49,10 @@ async def test_measurements(database):
         )
         == []
     )
-    assert await measurements.get(database, user_id=user_id, uuid=uuid.uuid4()) is None
+    assert await measurements.get(database, uuid.uuid4()) is None
 
     all1 = await measurements.all(database, user_id=user_id, offset=0, limit=10)
-    all2 = [
-        await measurements.get(database, user_id=user_id, uuid=obj.uuid) for obj in data
-    ]
+    all2 = [await measurements.get(database, obj.uuid) for obj in data]
     assert sorted(all1, key=lambda x: x.uuid) == sorted(all2, key=lambda x: x.uuid)
 
     assert (
@@ -65,7 +61,7 @@ async def test_measurements(database):
         )
         is None
     )
-    res = await measurements.get(database, user_id=user_id, uuid=data[0].uuid)
+    res = await measurements.get(database, data[0].uuid)
     assert res.state == MeasurementState.Canceled
     assert res.end_time is None
 
@@ -76,6 +72,6 @@ async def test_measurements(database):
         is None
     )
     assert await measurements.set_end_time(database, uuid=data[1].uuid) is None
-    res = await measurements.get(database, user_id=user_id, uuid=data[1].uuid)
+    res = await measurements.get(database, data[1].uuid)
     assert res.state == MeasurementState.Finished
     assert res.end_time is not None

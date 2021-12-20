@@ -44,10 +44,10 @@ target_probes = {
 
 
 @pytest.fixture(scope="function")
-def measurement1():
+def measurement1(user):
     return Measurement(
         uuid=uuid.uuid4(),
-        user_id=uuid.uuid4(),
+        user_id=user.id,
         state=MeasurementState.Unknown,
         tool=Tool.DiamondMiner,
         agents=[],
@@ -182,7 +182,7 @@ def test_get_measurements(api_client_sync, monkeypatch):
     )
 
 
-# --- GET /measurements/{measurement_uuid} ---
+# --- GET /measurements/public/{measurement_uuid} ---
 
 
 def test_get_measurement_by_uuid(
@@ -192,7 +192,7 @@ def test_get_measurement_by_uuid(
     monkeypatch.setattr(agents, "all", async_mock([measurement_agent1]))
     monkeypatch.setattr(measurements, "get", async_mock(measurement1))
     expected = measurement1.copy(update={"agents": [measurement_agent1]})
-    response = api_client_sync.get(f"/measurements/{measurement1.uuid}")
+    response = api_client_sync.get(f"/measurements/public/{measurement1.uuid}")
     assert Measurement(**response.json()) == expected
 
 

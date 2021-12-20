@@ -336,8 +336,8 @@ async def get_measurement_by_uuid(
             detail="You must have probing enabled to access this resource",
         )
 
-    measurement = await measurements.get(database, measurement_uuid, user_id=user.id)
-    if measurement is None:
+    measurement = await measurements.get(database, measurement_uuid)
+    if not measurement or measurement.user_id != user.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )

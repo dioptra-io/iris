@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import aioredis
 import pytest
@@ -39,6 +39,7 @@ def agent():
 @pytest.fixture
 def user():
     user = User(
+        id=UUID("8a7c04f4-3b10-4abb-a11f-d566fe9d85c1"),
         email="foo.bar@mail.com",
         is_active=True,
         is_verified=True,

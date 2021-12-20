@@ -52,10 +52,10 @@ target_probes = {
 
 
 @pytest.fixture(scope="function")
-def measurement1():
+def measurement1(user):
     return Measurement(
         uuid=uuid.uuid4(),
-        user_id=uuid.uuid4(),
+        user_id=user.id,
         state=MeasurementState.Unknown,
         tool=Tool.DiamondMiner,
         agents=[],
