@@ -68,14 +68,6 @@ class Database:
     async def execute(self, query: Query, measurement_id: str, **kwargs: Any):
         return query.execute(self.settings.DATABASE_URL, measurement_id, **kwargs)
 
-    async def create_database(self, database: str) -> None:
-        """Create a database if not exists."""
-        await self.call(
-            "CREATE DATABASE IF NOT EXISTS {database:Identifier}",
-            database="default",
-            params={"database": database},
-        )
-
     async def grant_public_access(self, table) -> None:
         """Create a database if not exists."""
         public_user = self.settings.DATABASE_PUBLIC_USER

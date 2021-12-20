@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 from functools import wraps
+from pathlib import Path
 from typing import Optional
 
 import aioredis
@@ -49,7 +50,7 @@ class CommonSettings(BaseSettings):
     AWS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     AWS_TIMEOUT_RANDOM_MAX: int = 10 * 60  # in seconds
 
-    DATABASE_URL: str = "http://clickhouse.docker.localhost/?database=iris"
+    DATABASE_URL: str = "http://iris:iris@clickhouse.docker.localhost/?database=iris"
     DATABASE_PUBLIC_USER: Optional[str] = None
     DATABASE_TIMEOUT: int = 2 * 60 * 60  # in seconds
     DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
@@ -77,7 +78,7 @@ class CommonSettings(BaseSettings):
 
     STREAM_LOGGING_LEVEL: int = logging.DEBUG
 
-    SQLALCHEMY_DATABASE_URL: str = "sqlite:///iris.sqlite3"
+    SQLALCHEMY_DATABASE_URL: str = "sqlite:///iris_data/iris.sqlite3"
     sqlalchemy_engine_: Optional[Engine] = None
 
     def sqlalchemy_engine(self) -> Engine:
@@ -88,6 +89,9 @@ class CommonSettings(BaseSettings):
                 echo=True,
             )
         return self.sqlalchemy_engine_
+
+    def sqlalchemy_database_path(self) -> Path:
+        return Path(self.SQLALCHEMY_DATABASE_URL.removeprefix("sqlite:///"))
 
     async def redis_client(self) -> aioredis.Redis:
         redis: aioredis.Redis = await aioredis.from_url(
