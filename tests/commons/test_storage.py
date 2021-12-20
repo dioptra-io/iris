@@ -75,3 +75,12 @@ async def test_files(common_settings, tmp_path):
 
     await storage.delete_all_files_from_bucket("bucket2")
     assert len(await storage.get_all_files_no_retry("bucket2")) == 0
+
+
+@pytest.mark.asyncio
+async def test_generate_credentials(common_settings):
+    storage = Storage(common_settings, logging.getLogger(__name__))
+    r = await storage.generate_temporary_credentials()
+    assert "AccessKeyId" in r
+    assert "SecretAccessKey" in r
+    # TODO: Check that the credentials work on S3.

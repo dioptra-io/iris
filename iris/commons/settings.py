@@ -2,7 +2,7 @@ import logging
 from datetime import timedelta
 from functools import wraps
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import aioredis
 from pydantic import BaseSettings
@@ -43,6 +43,7 @@ class CommonSettings(BaseSettings):
     AWS_REGION_NAME: str = "local"
     AWS_S3_ARCHIVE_BUCKET_PREFIX = "archive-"
     AWS_S3_TARGETS_BUCKET_PREFIX = "targets-"
+    AWS_PUBLIC_RESOURCES: List[str] = ["arn:aws:s3:::public-exports/*"]
     AWS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds

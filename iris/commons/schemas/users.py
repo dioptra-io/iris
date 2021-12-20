@@ -1,6 +1,9 @@
+from datetime import datetime
 from typing import Optional
 
 from fastapi_users import models
+
+from iris.commons.schemas.base import BaseModel
 
 
 class CustomCreateUpdateDictModel(models.BaseModel):
@@ -42,3 +45,10 @@ class UserUpdate(CustomCreateUpdateDictModel, models.BaseUserUpdate):
 
 class UserDB(User, models.BaseUserDB):
     pass
+
+
+class StorageCredentials(BaseModel):
+    s3_host: str
+    s3_access_key_expiration: datetime
+    s3_access_key_id: str
+    s3_secret_access_key: str

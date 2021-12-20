@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 import logging
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -276,3 +277,25 @@ class Storage:
             await bucket_destination.copy(
                 {"Bucket": bucket_src, "Key": filename_src}, filename_dst
             )
+
+    @fault_tolerant(CommonSettings.storage_retry)
+    async def generate_temporary_credentials(self) -> Dict:
+        session = aioboto3.Session()
+        policy = dict(
+            Version="2012-10-17",
+            Statement=[
+                dict(
+                    Effect="Allow",
+                    Action=["s3:GetObject", "s3:ListBucket"],
+                    Resource=self.settings.AWS_PUBLIC_RESOURCES,
+                )
+            ],
+        )
+        async with session.client("sts", **self.aws_settings) as sts:
+            r = await sts.assume_role(
+                DurationSeconds=60 * 60 * 3,
+                Policy=json.dumps(policy),
+                RoleArn="NotNeededForMinIO---",
+                RoleSessionName="NotNeededForMinIO---",
+            )
+            return r["Credentials"]
