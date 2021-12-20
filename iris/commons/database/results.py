@@ -21,8 +21,9 @@ from diamond_miner.queries import (
     results_table,
 )
 from diamond_miner.subsets import subsets_for
+from httpx import HTTPStatusError
 
-from iris.commons.database.database import Database
+from iris.commons.database.database import Database, QueryError
 from iris.commons.filesplit import split_compressed_file
 from iris.commons.settings import CommonSettings, fault_tolerant
 
@@ -110,14 +111,19 @@ class InsertResults:
         )
 
         def insert(file):
-            query = f"INSERT INTO {results_table(self.measurement_id)} FORMAT CSV"
+            query = (
+                f"INSERT INTO {results_table(self.measurement_id)} FORMAT CSVWithNames"
+            )
             r = httpx.post(
                 self.database.settings.DATABASE_URL,
                 content=iter_file(file),
                 params={"query": query},
             )
             os.remove(file)
-            r.raise_for_status()
+            try:
+                r.raise_for_status()
+            except HTTPStatusError as e:
+                raise QueryError(r.content) from e
 
         loop = asyncio.get_running_loop()
         with ThreadPoolExecutor(concurrency) as pool:

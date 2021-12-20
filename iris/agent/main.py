@@ -1,7 +1,10 @@
 import asyncio
 import socket
+import time
 import traceback
 from logging import Logger
+
+import aioredis
 
 from iris import __version__
 from iris.agent.measurements import measurement
@@ -74,12 +77,21 @@ async def main():
     )
     storage = Storage(settings, logger)
 
+    settings.AGENT_RESULTS_DIR_PATH.mkdir(parents=True, exist_ok=True)
+    settings.AGENT_TARGETS_DIR_PATH.mkdir(parents=True, exist_ok=True)
+
     if settings.AGENT_MIN_TTL < 0:
         settings.AGENT_MIN_TTL = find_exit_ttl(
             logger, settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2
         )
 
-    await asyncio.sleep(settings.AGENT_WAIT_FOR_START)
+    while True:
+        try:
+            await redis.client.ping()
+            break
+        except aioredis.exceptions.ConnectionError:
+            print("Waiting for redis...")
+            time.sleep(1)
 
     tasks = []
     try:
@@ -117,11 +129,3 @@ async def main():
         await redis.delete_agent_parameters()
         await redis.deregister()
         await redis.disconnect()
-
-
-def app():
-    asyncio.run(main())
-
-
-if __name__ == "__main__":
-    app()

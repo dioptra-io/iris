@@ -23,6 +23,7 @@ RUN poetry install --no-root --no-dev --extras "api worker" \
 FROM docker.io/library/ubuntu:20.04
 LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
@@ -37,4 +38,4 @@ COPY iris iris
 COPY --from=builder /app/.venv .venv
 
 EXPOSE 8000
-CMD ["/app/.venv/bin/gunicorn", "--access-logfile", "-", "--error-logfile", "-", "--bind", "0.0.0.0:8000", "--worker-class", "uvicorn.workers.UvicornWorker", "iris.api.main:app"]
+CMD ["/app/.venv/bin/python3", "-m", "iris.api", "--access-logfile", "-", "--error-logfile", "-", "--bind", "0.0.0.0:8000"]

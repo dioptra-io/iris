@@ -8,7 +8,7 @@ class WorkerSettings(CommonSettings):
 
     SETTINGS_CLASS = "worker"
 
-    WORKER_RESULTS_DIR_PATH: Path = Path("/app/results")
+    WORKER_RESULTS_DIR_PATH: Path = Path("iris_data/worker/results")
 
     WORKER_TIME_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)
     WORKER_MESSAGE_AGE_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)

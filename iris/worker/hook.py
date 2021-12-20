@@ -176,6 +176,7 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
     database = Database(settings, logger)
     redis = Redis(await settings.redis_client(), settings, logger)
     storage = Storage(settings, logger)
+    settings.WORKER_RESULTS_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
     measurement_results_path = settings.WORKER_RESULTS_DIR_PATH / str(
         measurement_request.uuid

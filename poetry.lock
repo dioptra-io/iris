@@ -195,7 +195,7 @@ name = "bcrypt"
 version = "3.2.0"
 description = "Modern password hashing for your software and your servers"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -715,7 +715,7 @@ name = "databases"
 version = "0.5.3"
 description = "Async database support for Python."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -833,7 +833,7 @@ name = "fastapi"
 version = "0.70.1"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6.1"
 
 [package.dependencies]
@@ -851,7 +851,7 @@ name = "fastapi-users"
 version = "8.1.3"
 description = "Ready-to-use and customizable users management for FastAPI."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -876,7 +876,7 @@ name = "fastapi-users-db-sqlalchemy"
 version = "1.0.0"
 description = "FastAPI Users database adapter for SQLAlchemy + encode/databases."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -1012,7 +1012,7 @@ name = "httpx-oauth"
 version = "0.4.0"
 description = "Async OAuth client using HTTPX."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -1073,7 +1073,7 @@ name = "makefun"
 version = "1.12.1"
 description = "Small library to dynamically create python functions."
 category = "main"
-optional = true
+optional = false
 python-versions = "*"
 
 [[package]]
@@ -1149,7 +1149,7 @@ name = "passlib"
 version = "1.7.4"
 description = "comprehensive password hashing framework supporting over 30 schemes"
 category = "main"
-optional = true
+optional = false
 python-versions = "*"
 
 [package.dependencies]
@@ -1246,7 +1246,7 @@ python-versions = "*"
 
 [[package]]
 name = "pycaracal"
-version = "0.6.1"
+version = "0.6.2"
 description = ""
 category = "main"
 optional = true
@@ -1312,7 +1312,7 @@ name = "pyjwt"
 version = "2.3.0"
 description = "JSON Web Token implementation in Python"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [package.extras]
@@ -1430,7 +1430,7 @@ name = "python-multipart"
 version = "0.0.5"
 description = "A streaming multipart parser for Python"
 category = "main"
-optional = true
+optional = false
 python-versions = "*"
 
 [package.dependencies]
@@ -1618,7 +1618,7 @@ name = "starlette"
 version = "0.16.0"
 description = "The little ASGI library that shines."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -1814,13 +1814,13 @@ cffi = ["cffi (>=1.11)"]
 
 [extras]
 agent = ["pycaracal"]
-api = ["asgiref", "dramatiq", "fastapi", "fastapi-users", "gunicorn", "python-jose", "python-multipart", "starlette_exporter", "uvicorn"]
+api = ["asgiref", "dramatiq", "fastapi", "gunicorn", "python-jose", "python-multipart", "starlette_exporter", "uvicorn"]
 worker = ["dramatiq", "pytricia"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "bdafbc319881ed56e4f990120c5282e528f550e2e2c97e68290e11dc04dbf8df"
+content-hash = "0d72d6d7c969cab3ba90df6a3f421c64ec3f1ad21e2548d797724def572d4434"
 
 [metadata.files]
 aioboto3 = [
@@ -2589,13 +2589,13 @@ pyasn1 = [
     {file = "pyasn1-0.4.8.tar.gz", hash = "sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba"},
 ]
 pycaracal = [
-    {file = "pycaracal-0.6.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:959451c933c3115dc0cf60db0fee9d1f3f26c1823cd6edd537054c21533c07d4"},
-    {file = "pycaracal-0.6.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:365749893629cf9097a4b35a40fa5795690751c4718662975904077c4ee1d0d6"},
-    {file = "pycaracal-0.6.1-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:b55354a784164efb45f7c95cb7c1be403795f622682868824f89f10cc45411a0"},
-    {file = "pycaracal-0.6.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:54e51b17a00710ff444116126c8420eb4e278f2fa292fccd5bd5234f9e53fc4b"},
-    {file = "pycaracal-0.6.1-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:c4de6a1e2c42e4a67a414209a3690df44ce03459ebd8826f89c0465dd9859169"},
-    {file = "pycaracal-0.6.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:92b032dce73b3076382e2f96bdf640d4b7e42234b4b1d766e790a14dad949784"},
-    {file = "pycaracal-0.6.1.tar.gz", hash = "sha256:7cb8853fd74caf5b4f75e5494eedd00b3b851c972056349b73209a5bc4b3d4da"},
+    {file = "pycaracal-0.6.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:ddd631c5f8bb3ac8739fb9fe5de59bdf797df7ba3ab5c690b50058052c5c289c"},
+    {file = "pycaracal-0.6.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5f601c8451348da06fbbf1a0275f93cd63bbd38f5bf5fbcf6fbc4f49ada89cf1"},
+    {file = "pycaracal-0.6.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:556229928713c49674f4aa896d02035093d7917d403201424d445230b0791677"},
+    {file = "pycaracal-0.6.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:91e1c84c781ab589e7a76a578e91d23f11c2abbfe1bd24cbcb71a163d3c57f94"},
+    {file = "pycaracal-0.6.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:c64eb68b0950cac4d261c4b607110341089f03812c1071daea17fe7bc806f3dc"},
+    {file = "pycaracal-0.6.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5f9c68b15185e68c4b9aed05c45d075fe8e11d12ae9c8aedb8021e115aa6a12f"},
+    {file = "pycaracal-0.6.2.tar.gz", hash = "sha256:9264d3905e0e0f7a35d38905fdb9c745ce13b3f17656d32bc84efd41dfa0ca38"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.8.0-py2.py3-none-any.whl", hash = "sha256:720f8b39dde8b293825e7ff02c475f3077124006db4f440dcbc9a20b76548a20"},

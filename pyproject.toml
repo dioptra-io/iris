@@ -34,7 +34,7 @@ fastapi = {optional = true, version = "^0.70.0"}
 httpx = "<0.21"
 fastapi-users = {extras = ["sqlalchemy", "oauth"], version = "^8.1.2"}
 gunicorn = {optional = true, version = "^20.1.0"}
-pycaracal = {optional = true, version = "^0.6.0"}
+pycaracal = {optional = true, version = "^0.6.2"}
 pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], optional = true, version = "^3.3.0"}
 python-multipart = {optional = true, version = "^0.0.5"}
@@ -80,7 +80,7 @@ worker = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--ignore volumes --cov=iris --cov-report term-missing -vvs"
+addopts = "--ignore volumes --cov=iris --cov-report term-missing --doctest-modules -vvs"
 filterwarnings = [
     "ignore::DeprecationWarning:aioboto3.*:",
     "ignore::DeprecationWarning:aiofiles.*:",

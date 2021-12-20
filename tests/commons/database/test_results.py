@@ -12,8 +12,11 @@ async def test_measurement_results(common_settings, database, tmp_path):
 
     results_file = tmp_path / "results.csv"
     results_file.write_text(
-        '1638530032054872,1,::ffff:10.31.46.69,::ffff:8.8.8.8,24000,0,4,1,::ffff:20.20.20.1,1,11,0,252,62,"[]",90,1'
-        + '\n1638530032054872,1,::ffff:10.31.46.69,::ffff:8.8.8.8,24000,0,5,1,::ffff:20.20.20.2,1,11,0,252,62,"[]",90,1'
+        """capture_timestamp,probe_protocol,probe_src_addr,probe_dst_addr,probe_src_port,probe_dst_port,probe_ttl,quoted_ttl,reply_src_addr,reply_protocol,reply_icmp_type,reply_icmp_code,reply_ttl,reply_size,reply_mpls_labels,rtt,round
+1640006077,1,::ffff:172.17.0.2,::ffff:62.40.124.69,24000,0,1,1,::ffff:172.17.0.1,1,11,0,64,59,"[]",1,1
+1640006077,1,::ffff:172.17.0.2,::,24000,0,64,0,::ffff:62.40.124.69,1,0,0,254,94,"[]",28524,1
+1640006077,1,::ffff:172.17.0.2,::,24000,0,5,0,::ffff:62.40.124.69,1,0,0,254,35,"[]",28524,1
+"""
     )
     with results_file.open("rb") as inp:
         with results_file.with_suffix(".csv.zst").open("wb") as out:

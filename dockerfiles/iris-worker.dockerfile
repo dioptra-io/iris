@@ -22,10 +22,10 @@ RUN poetry install --no-root --no-dev --extras worker \
 FROM docker.io/library/ubuntu:20.04
 LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
-        binutils \
         ca-certificates \
         python3 \
         tzdata \
@@ -35,6 +35,4 @@ WORKDIR /app
 COPY iris iris
 COPY --from=builder /app/.venv .venv
 
-RUN mkdir results
-
-CMD ["/app/.venv/bin/dramatiq", "iris.worker.hook"]
+CMD ["/app/.venv/bin/python3", "-m", "iris.worker"]

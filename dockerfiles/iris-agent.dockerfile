@@ -22,6 +22,7 @@ RUN poetry install --no-root --no-dev --extras agent \
 FROM docker.io/library/ubuntu:20.04
 LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
@@ -34,13 +35,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY iris iris
-COPY iris/agent/main.py main.py
 COPY --from=builder /app/.venv .venv
-
-RUN mkdir targets
-RUN mkdir results
-
 COPY statics/excluded_prefixes statics/excluded_prefixes
 
-EXPOSE 80
-CMD ["/app/.venv/bin/python3", "-u", "main.py"]
+CMD ["/app/.venv/bin/python3", "-m", "iris.agent"]

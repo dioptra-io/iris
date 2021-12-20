@@ -91,7 +91,9 @@ class CommonSettings(BaseSettings):
         return self.sqlalchemy_engine_
 
     def sqlalchemy_database_path(self) -> Path:
-        return Path(self.SQLALCHEMY_DATABASE_URL.removeprefix("sqlite:///"))
+        # Remove sqlite:///
+        # TODO: Use .removeprefix with Python 3.9+
+        return Path(self.SQLALCHEMY_DATABASE_URL[10:])
 
     async def redis_client(self) -> aioredis.Redis:
         redis: aioredis.Redis = await aioredis.from_url(

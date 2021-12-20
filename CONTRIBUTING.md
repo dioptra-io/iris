@@ -2,21 +2,46 @@
 
 Thanks for contributing ! Here is some guidelines to make your life easier during the development process.
 
+## Preparation
+
+You may need to add this to your hosts file:
+```
+127.0.0.1 api.docker.localhost
+127.0.0.1 minio-console.docker.localhost
+127.0.0.1 traefik.docker.localhost
+```
+
 ## Run with Docker-Compose
 
 For development purposes, you can setup a new local infrastructure like this.
 
-```
-docker-compose up -d --build
-...
+```bash
+docker-compose up --detach --build
+# ...
 docker-compose down
 ```
+
+The API documentation will be available at `http://api.docker.localhost/docs`.
+
+## Run locally
+
+For easier debugging, you can run also run the code directly on your machine.
+
+```bash
+docker compose up --detach traefik clickhouse minio redis
+poetry install --extras "api agent worker"
+poetry run python -m iris.api
+poetry run python -m iris.agent
+poetry run python -m iris.worker
+```
+
+The API documentation will be available at `http://127.0.0.1:8000/docs`.
 
 ## Syntax checking
 
 You can check the syntax using flake8.
 
-```
+```bash
 flake8 --ignore=E501,W503 iris
 ```
 
@@ -24,7 +49,7 @@ flake8 --ignore=E501,W503 iris
 
 If you used annotations to do static Python type checking with mypy.
 
-```
+```bash
 mypy iris
 ```
 
@@ -32,10 +57,10 @@ mypy iris
 
 You can run the coverage using pytest.
 
-```
-docker compose up -d traefik clickhouse minio redis
+```bash
+docker compose up --detach traefik clickhouse minio redis
 pytest
-...
+# ...
 docker compose down
 ```
 

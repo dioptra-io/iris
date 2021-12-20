@@ -1,8 +1,10 @@
 """API Entrypoint."""
-import asyncio
+import time
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from httpx import HTTPStatusError
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
@@ -43,8 +45,17 @@ async def startup_event():
             allow_headers=["*"],
         )
 
-    # Wait for database to be ready
-    await asyncio.sleep(settings.API_WAIT_FOR_DATABASE)
+    settings.sqlalchemy_database_path().parent.mkdir(parents=True, exist_ok=True)
+
+    while True:
+        try:
+            httpx.get(
+                settings.DATABASE_URL, params={"query": "SELECT 1"}, timeout=1
+            ).raise_for_status()
+            break
+        except HTTPStatusError:
+            print("Waiting for database...")
+            time.sleep(1)
 
     database_clickhouse = get_database()
     database_sqlalchemy = get_sqlalchemy()

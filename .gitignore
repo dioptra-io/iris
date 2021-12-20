@@ -152,16 +152,5 @@ cython_debug/
 .gitconfig
 .viminfo
 
-# Internal Resources
-resources
-
-# Internal deployment & scripts
-deployment
-maintenance
-
-# Internal Docker configuration
-docker-compose.prod.yml
-docker-compose.test.yml
-
-# Internal Documentation
-PRODUCTION.md
+# Iris data
+iris_data/

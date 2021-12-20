@@ -34,10 +34,8 @@ class AgentSettings(CommonSettings):
     AGENT_MIN_TTL_FIND_TARGET: IPv4Address = IPv4Address("8.8.8.8")
     AGENT_TAGS: List[str] = ["all"]
 
-    AGENT_TARGETS_DIR_PATH: Path = Path("/app/targets")
-    AGENT_RESULTS_DIR_PATH: Path = Path("/app/results")
+    AGENT_TARGETS_DIR_PATH: Path = Path("iris_data/agent/targets")
+    AGENT_RESULTS_DIR_PATH: Path = Path("iris_data/agent/results")
 
     AGENT_STOPPER_REFRESH: int = 1  # seconds
-    AGENT_WAIT_FOR_START: int = 10  # seconds
-
     AGENT_DEBUG_MODE: bool = False
