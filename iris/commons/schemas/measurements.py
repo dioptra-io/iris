@@ -4,10 +4,12 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import Field, NonNegativeInt, PositiveInt, root_validator
+from pydantic import NonNegativeInt, PositiveInt, root_validator
+from sqlalchemy_utils import UUIDType
+from sqlmodel import Column, Field, Session, SQLModel, func, select
 
 from iris.commons.schemas.agents import AgentParameters
-from iris.commons.schemas.base import BaseModel
+from iris.commons.schemas.base import BaseModel, ListType
 
 
 class Round(BaseModel):
@@ -161,19 +163,6 @@ class MeasurementAgent(BaseModel):
     probing_statistics: List[ProbingStatistics]
 
 
-class Measurement(BaseModel):
-    """Information about a measurement (Response)."""
-
-    uuid: UUID = Field(..., title="UUID")
-    user_id: UUID
-    state: MeasurementState = Field(..., title="State")
-    tool: Tool = Field(..., title="Probing tool")
-    agents: List[MeasurementAgent]
-    tags: List[str]
-    start_time: datetime
-    end_time: Optional[datetime]
-
-
 class MeasurementAgentPostBody(BaseModel):
     """POST /measurements (Body)."""
 
@@ -257,3 +246,109 @@ class MeasurementRoundRequest(BaseModel):
     measurement: MeasurementRequest
     probe_filename: str
     round: Round
+
+
+class Measurement(SQLModel, table=True):
+    """
+    >>> from iris.commons.test import create_test_engine
+    >>> engine = create_test_engine()
+    >>> request_1 = MeasurementRequest(
+    ...     user_id=uuid4(), agents=[], tags=["public", "exhaustive"]
+    ... )
+    >>> request_2 = MeasurementRequest(
+    ...     user_id=uuid4(), agents=[], tags=["exhaustive"]
+    ... )
+    >>> Measurement.register(engine, request_1)
+    >>> Measurement.register(engine, request_2)
+    >>> Measurement.count(engine)
+    2
+    >>> Measurement.count(engine, tag="public")
+    1
+    >>> Measurement.count(engine, user_id=request_1.user_id)
+    1
+    >>> Measurement.all(engine, user_id=request_1.user_id)[0].state
+    MeasurementState.Ongoing
+    >>> Measurement.stamp(engine, request_1.uuid, MeasurementState.Finished)
+    >>> Measurement.all(engine, user_id=request_1.user_id)[0].state
+    MeasurementState.Finished
+    """
+
+    # NOTE: We temporarily use UUIDType from sqlalchemy_utils until
+    # https://github.com/tiangolo/sqlmodel/issues/25 is fixed.
+    uuid: UUID = Field(
+        default_factory=uuid4,
+        sa_column=Column(UUIDType(), primary_key=True),
+        title="UUID",
+    )
+    user_id: UUID = Field(sa_column=Column(UUIDType()))
+    tool: Tool = Field(title="Probing tool")
+    state: MeasurementState = Field(title="State")
+    tags: List[str] = Field(sa_column=Column(ListType()))
+    start_time: datetime
+    end_time: Optional[datetime]
+    # Not stored in the database, dynamically inserted by the API
+    agents: List[MeasurementAgent] = Field(sa_column=Column(ListType()))
+
+    @classmethod
+    def all(
+        cls,
+        engine,
+        *,
+        tag: Optional[str] = None,
+        user_id: Optional[UUID] = None,
+        offset: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> List["Measurement"]:
+        with Session(engine) as session:
+            query = select(Measurement).offset(offset).limit(limit)
+            if tag:
+                query = query.where(Measurement.tags.contains(tag))
+            if user_id:
+                query = query.where(Measurement.user_id == user_id)
+            return session.exec(query).all()
+
+    @classmethod
+    def count(
+        cls,
+        engine,
+        *,
+        tag: Optional[str] = None,
+        user_id: Optional[UUID] = None,
+    ) -> int:
+        with Session(engine) as session:
+            query = select(func.count(Measurement.uuid))
+            if tag:
+                query = query.where(Measurement.tags.contains(tag))
+            if user_id:
+                query = query.where(Measurement.user_id == user_id)
+            return session.exec(query).one()
+
+    @classmethod
+    def get(cls, engine, uuid: UUID) -> Optional["Measurement"]:
+        with Session(engine) as session:
+            return session.get(Measurement, uuid)
+
+    @classmethod
+    def register(cls, engine, r: MeasurementRequest) -> None:
+        with Session(engine) as session:
+            session.add(
+                Measurement(
+                    uuid=r.uuid,
+                    user_id=r.user_id,
+                    tool=r.tool,
+                    tags=r.tags,
+                    state=MeasurementState.Ongoing,
+                    start_time=r.start_time,
+                    end_time=None,
+                )
+            )
+            session.commit()
+
+    @classmethod
+    def stamp(cls, engine, uuid: UUID, state: MeasurementState) -> None:
+        with Session(engine) as session:
+            measurement = session.get(Measurement, uuid)
+            measurement.end_time = datetime.utcnow()
+            measurement.state = state
+            session.add(measurement)
+            session.commit()

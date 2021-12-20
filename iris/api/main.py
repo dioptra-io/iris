@@ -1,16 +1,18 @@
 """API Entrypoint."""
 import time
+from uuid import uuid4
 
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from httpx import HTTPStatusError
-from sqlmodel import SQLModel
+from sqlmodel import Session, SQLModel, select
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
 from iris.api import router
 from iris.api.dependencies import Base, get_database, get_sqlalchemy, settings
+from iris.commons.schemas.measurements import Measurement, MeasurementRequest
 
 app = FastAPI(
     title="Iris",

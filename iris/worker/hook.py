@@ -3,16 +3,19 @@
 import asyncio
 import random
 import traceback
+from datetime import datetime
 from logging import Logger
 from uuid import UUID
 
 import dramatiq
 from aiofiles import os as aios
+from sqlmodel import Session
 
 from iris.commons.database import Database, InsertResults, agents, measurements
 from iris.commons.logger import create_logger
 from iris.commons.redis import Redis
 from iris.commons.schemas.measurements import (
+    Measurement,
     MeasurementRequest,
     MeasurementRoundRequest,
     MeasurementState,
@@ -203,7 +206,7 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
             logger.warning(f"{logger_prefix} Local measurement directory already exits")
 
         logger.info(f"{logger_prefix} Register measurement into database")
-        await measurements.register(database, measurement_request)
+        Measurement.register(database.settings.sqlalchemy_engine(), measurement_request)
 
         logger.info(f"{logger_prefix} Register agents into database")
         for agent in measurement_request.agents:
@@ -330,21 +333,13 @@ async def callback(measurement_request: MeasurementRequest, logger: Logger):
     except Exception:
         logger.error(f"{logger_prefix} Impossible to remove bucket")
 
-    logger.info(f"{logger_prefix} Stamp measurement state")
-    if (
-        await redis.get_measurement_state(measurement_request.uuid)
-        == MeasurementState.Canceled
-    ):
-        await measurements.set_state(
-            database, measurement_request.uuid, MeasurementState.Canceled
-        )
-    else:
-        await measurements.set_state(
-            database, measurement_request.uuid, MeasurementState.Finished
-        )
-
-    logger.info(f"{logger_prefix} Stamp measurement end time")
-    await measurements.set_end_time(database, measurement_request.uuid)
+    logger.info(f"{logger_prefix} Stamp measurement state and end time")
+    state = await redis.get_measurement_state(measurement_request.uuid)
+    if state != MeasurementState.Canceled:
+        state = MeasurementState.Finished
+    Measurement.stamp(
+        database.settings.sqlalchemy_engine(), measurement_request.uuid, state
+    )
 
     logger.info(f"{logger_prefix} Measurement done")
     await redis.delete_measurement_state(measurement_request.uuid)

@@ -7,6 +7,7 @@ from fastapi_users.db import (
 from sqlalchemy import Column
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.types import Boolean, Integer, String
+from sqlmodel import Session
 
 from iris.api.settings import APISettings
 from iris.commons.database import Database
@@ -41,6 +42,10 @@ def get_database():
     return Database(settings, logger)
 
 
+def get_engine():
+    return settings.sqlalchemy_engine()
+
+
 def get_sqlalchemy():
     return databases.Database(settings.SQLALCHEMY_DATABASE_URL)
 
@@ -55,6 +60,11 @@ async def get_redis():
 
 def get_session():
     yield SQLAlchemyUserDatabase(UserDB, get_sqlalchemy(), users, oauth_accounts)
+
+
+def get_sqlmodel_session():
+    with Session(settings.sqlalchemy_engine()) as session:
+        yield session
 
 
 def get_storage():
