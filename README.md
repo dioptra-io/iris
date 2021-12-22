@@ -13,15 +13,15 @@ Its main features are:
 
 To start using Iris, please visit our [website](https://iris.dioptra.io)!
 
-## Deployment
+## 🚀 Deployment
 
 See [DEPLOYMENT](DEPLOYMENT.md) for more information about how to deploy Iris on your own infrastructure.
 
-## Publications
+## 📚 Publications
 
 ```
 ```
 
-## Contributing
+## ✏️ Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for more information about how to contribute to this project.
