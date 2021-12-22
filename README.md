@@ -11,7 +11,7 @@ Its main features are:
 - Can tolerate the temporary loss of agents, database or control-plane.
 - Support IPv6 and IPv4 measurements.
 
-To start using Iris, please visit our [website](https://iris.dioptra.io)!
+To start using Iris, please visit our [website](https://iris.dioptra.io).
 
 ## 🚀 Deployment
 
