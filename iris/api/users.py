@@ -82,7 +82,8 @@ async def get_users_s3_credentials(
     credentials = await storage.generate_temporary_credentials()
     return StorageCredentials(
         s3_host=settings.AWS_S3_HOST,
+        s3_access_key_expiration=credentials["Expiration"],
         s3_access_key_id=credentials["AccessKeyId"],
         s3_secret_access_key=credentials["SecretAccessKey"],
-        s3_access_key_expiration=credentials["Expiration"],
+        s3_session_token=credentials["SessionToken"],
     )

@@ -52,3 +52,4 @@ class StorageCredentials(BaseModel):
     s3_access_key_expiration: datetime
     s3_access_key_id: str
     s3_secret_access_key: str
+    s3_session_token: str

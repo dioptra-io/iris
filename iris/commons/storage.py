@@ -286,7 +286,7 @@ class Storage:
             Statement=[
                 dict(
                     Effect="Allow",
-                    Action=["s3:GetObject", "s3:ListBucket"],
+                    Action=self.settings.AWS_PUBLIC_ACTIONS,
                     Resource=self.settings.AWS_PUBLIC_RESOURCES,
                 )
             ],
