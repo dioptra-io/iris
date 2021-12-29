@@ -21,8 +21,8 @@ def fault_tolerant(retry_):
             # Retrieve logger and settings objects from
             # the instance to which the function belongs.
             parent = self
-            if hasattr(parent, "database"):
-                parent = parent.database
+            if hasattr(parent, "clickhouse"):
+                parent = parent.clickhouse
             return await retry_(parent.settings, parent.logger)(func)(
                 self, *args, **kwargs
             )
@@ -35,14 +35,14 @@ def fault_tolerant(retry_):
 class CommonSettings(BaseSettings):
     """Common settings."""
 
-    SETTINGS_CLASS = "commons"
-
     AWS_S3_HOST: str = "http://minio.docker.localhost"
     AWS_ACCESS_KEY_ID: str = "minioadmin"
     AWS_SECRET_ACCESS_KEY: str = "minioadmin"
+    AWS_SESSION_TOKEN: Optional[str] = None
     AWS_REGION_NAME: str = "local"
     AWS_S3_ARCHIVE_BUCKET_PREFIX = "archive-"
     AWS_S3_TARGETS_BUCKET_PREFIX = "targets-"
+    AWS_PUBLIC_ACTIONS: List[str] = ["s3:GetObject", "s3:ListBucket"]
     AWS_PUBLIC_RESOURCES: List[str] = ["arn:aws:s3:::public-exports/*"]
     AWS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
@@ -51,18 +51,18 @@ class CommonSettings(BaseSettings):
     AWS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     AWS_TIMEOUT_RANDOM_MAX: int = 10 * 60  # in seconds
 
-    DATABASE_URL: str = "http://iris:iris@clickhouse.docker.localhost/?database=iris"
-    DATABASE_PUBLIC_USER: Optional[str] = None
-    DATABASE_TIMEOUT: int = 2 * 60 * 60  # in seconds
-    DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
-    DATABASE_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
-    DATABASE_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
-    DATABASE_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
-    DATABASE_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
-    DATABASE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
-    DATABASE_STORAGE_POLICY: str = "default"
-    DATABASE_ARCHIVE_VOLUME: str = "default"
-    DATABASE_ARCHIVE_INTERVAL: timedelta = timedelta(days=15)
+    CLICKHOUSE_URL: str = "http://iris:iris@clickhouse.docker.localhost/?database=iris"
+    CLICKHOUSE_PUBLIC_USER: Optional[str] = None
+    CLICKHOUSE_TIMEOUT: int = 2 * 60 * 60  # in seconds
+    CLICKHOUSE_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
+    CLICKHOUSE_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
+    CLICKHOUSE_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
+    CLICKHOUSE_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
+    CLICKHOUSE_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
+    CLICKHOUSE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
+    CLICKHOUSE_STORAGE_POLICY: str = "default"
+    CLICKHOUSE_ARCHIVE_VOLUME: str = "default"
+    CLICKHOUSE_ARCHIVE_INTERVAL: timedelta = timedelta(days=15)
 
     TABLE_NAME_USERS: str = "users"
     TABLE_NAME_MEASUREMENTS: str = "measurements"
@@ -105,15 +105,15 @@ class CommonSettings(BaseSettings):
 
     def database_retry(self, logger):
         return retry(
-            stop=stop_after_delay(self.DATABASE_TIMEOUT),
+            stop=stop_after_delay(self.CLICKHOUSE_TIMEOUT),
             wait=wait_exponential(
-                multiplier=self.DATABASE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-                min=self.DATABASE_TIMEOUT_EXPONENTIAL_MIN,
-                max=self.DATABASE_TIMEOUT_EXPONENTIAL_MAX,
+                multiplier=self.CLICKHOUSE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
+                min=self.CLICKHOUSE_TIMEOUT_EXPONENTIAL_MIN,
+                max=self.CLICKHOUSE_TIMEOUT_EXPONENTIAL_MAX,
             )
             + wait_random(
-                self.DATABASE_TIMEOUT_RANDOM_MIN,
-                self.DATABASE_TIMEOUT_RANDOM_MAX,
+                self.CLICKHOUSE_TIMEOUT_RANDOM_MIN,
+                self.CLICKHOUSE_TIMEOUT_RANDOM_MAX,
             ),
             before_sleep=(before_sleep_log(logger, logging.ERROR)),
         )

@@ -4,24 +4,24 @@ import asyncio
 from multiprocessing import Process
 from pathlib import Path
 from typing import Dict, Optional
-from uuid import UUID
 
 from pycaracal import prober, set_log_level
 
 from iris.agent.settings import AgentSettings
+from iris.commons.models.measurement_agent import MeasurementAgentState
 from iris.commons.redis import AgentRedis
-from iris.commons.schemas.measurements import MeasurementState
 
 
 async def watcher(
-    process: Process, settings: AgentSettings, measurement_uuid: UUID, redis: AgentRedis
+    process: Process, settings: AgentSettings, measurement_uuid: str, redis: AgentRedis
 ) -> bool:
     """Watch the prober execution and stop it according to the measurement state."""
     while process.is_alive():
+        # TODO: Watch in another way. Dedicated cancel key?
         measurement_state = await redis.get_measurement_state(measurement_uuid)
         if measurement_state in [
-            MeasurementState.Canceled,
-            MeasurementState.Unknown,
+            MeasurementAgentState.Canceled,
+            MeasurementAgentState.Unknown,
         ]:
             process.kill()
             return False

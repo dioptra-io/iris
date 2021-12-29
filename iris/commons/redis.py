@@ -1,55 +1,58 @@
 import asyncio
-import logging
 from dataclasses import dataclass
+from logging import LoggerAdapter
 from typing import Dict, List, Optional
-from uuid import UUID
 
 import aioredis
 import async_timeout
 
-from iris.commons.schemas.agents import Agent, AgentParameters, AgentState
-from iris.commons.schemas.measurements import (
-    MeasurementRoundRequest,
-    MeasurementState,
-    ProbingStatistics,
-)
+from iris.commons.models.agent import Agent, AgentParameters, AgentState
+from iris.commons.models.diamond_miner import ProbingStatistics
+from iris.commons.models.measurement_agent import MeasurementAgentState
+from iris.commons.models.measurement_round_request import MeasurementRoundRequest
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 
-def agent_heartbeat_key(namespace: str, uuid: Optional[UUID]) -> str:
+def agent_heartbeat_key(namespace: str, uuid: Optional[str]) -> str:
     return f"{namespace}:agent_heartbeat:{uuid or '*'}"
 
 
-def agent_listen_key(namespace: str, uuid: UUID) -> str:
+def agent_listen_key(namespace: str, uuid: str) -> str:
     return f"{namespace}:agent_listen:{uuid}"
 
 
-def agent_parameters_key(namespace: str, uuid: UUID) -> str:
+def agent_parameters_key(namespace: str, uuid: str) -> str:
     return f"{namespace}:agent_parameters:{uuid}"
 
 
-def agent_state_key(namespace: str, uuid: UUID) -> str:
+def agent_state_key(namespace: str, uuid: str) -> str:
     return f"{namespace}:agent_state:{uuid}"
 
 
-def measurement_state_key(namespace: str, uuid: UUID) -> str:
+def measurement_state_key(namespace: str, uuid: str) -> str:
     return f"{namespace}:measurement_state:{uuid}"
 
 
 def measurement_stats_key(
-    namespace: str, measurement_uuid: UUID, agent_uuid: UUID
+    namespace: str, measurement_uuid: str, agent_uuid: str
 ) -> str:
     return f"{namespace}:measurement_stats:{measurement_uuid}:{agent_uuid}"
+
+
+def measurement_agent_cancel_key(
+    namespace: str, measurement_uuid: str, agent_uuid: str
+) -> str:
+    return f"{namespace}:measurement_agent_cancel:{measurement_uuid}:{agent_uuid}"
 
 
 @dataclass(frozen=True)
 class Redis:
     client: aioredis.Redis
     settings: CommonSettings
-    logger: logging.Logger
+    logger: LoggerAdapter
 
     @fault_tolerant(CommonSettings.redis_retry)
-    async def get_agent_state(self, uuid: UUID) -> AgentState:
+    async def get_agent_state(self, uuid: str) -> AgentState:
         """Get agent state."""
         if state := await self.client.get(
             agent_state_key(self.settings.REDIS_NAMESPACE, uuid)
@@ -58,7 +61,7 @@ class Redis:
         return AgentState.Unknown
 
     @fault_tolerant(CommonSettings.redis_retry)
-    async def get_agent_parameters(self, uuid: UUID) -> Optional[AgentParameters]:
+    async def get_agent_parameters(self, uuid: str) -> Optional[AgentParameters]:
         """Get agent parameters."""
         if parameters := await self.client.get(
             agent_parameters_key(self.settings.REDIS_NAMESPACE, uuid)
@@ -68,12 +71,12 @@ class Redis:
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def get_agents(self) -> List[Agent]:
-        """Get agents UUID along with their state."""
+        """Get agents str along with their state."""
         # TODO: Use SCAN instead of KEYS for better scaling?
         alive = await self.client.keys(
             agent_heartbeat_key(self.settings.REDIS_NAMESPACE, None)
         )
-        uuids = [UUID(key.split(":")[2]) for key in alive]
+        uuids = [str(key.split(":")[2]) for key in alive]
         return [
             Agent(
                 uuid=uuid,
@@ -83,11 +86,11 @@ class Redis:
             for uuid in uuids
         ]
 
-    async def get_agents_by_uuid(self) -> Dict[UUID, Agent]:
+    async def get_agents_by_uuid(self) -> Dict[str, Agent]:
         agents = await self.get_agents()
         return {agent.uuid: agent for agent in agents}
 
-    async def get_agent_by_uuid(self, uuid: UUID) -> Optional[Agent]:
+    async def get_agent_by_uuid(self, uuid: str) -> Optional[Agent]:
         if await self.client.exists(
             agent_heartbeat_key(self.settings.REDIS_NAMESPACE, uuid)
         ):
@@ -99,7 +102,7 @@ class Redis:
         return None
 
     @fault_tolerant(CommonSettings.redis_retry)
-    async def check_agent(self, uuid: UUID) -> bool:
+    async def check_agent(self, uuid: str) -> bool:
         """Check the conformity of an agent."""
         if not await self.client.exists(
             agent_heartbeat_key(self.settings.REDIS_NAMESPACE, uuid)
@@ -112,31 +115,19 @@ class Redis:
         return True
 
     @fault_tolerant(CommonSettings.redis_retry)
-    async def get_measurement_state(self, uuid: UUID) -> MeasurementState:
-        """Get measurement state."""
-        if state := await self.client.get(
-            measurement_state_key(self.settings.REDIS_NAMESPACE, uuid)
-        ):
-            return MeasurementState(state)
-        return MeasurementState.Unknown
-
-    @fault_tolerant(CommonSettings.redis_retry)
-    async def set_measurement_state(self, uuid: UUID, state: MeasurementState):
-        """Set measurement state."""
+    async def cancel_measurement_agent(
+        self, measurement_uuid: str, agent_uuid: str
+    ) -> None:
         await self.client.set(
-            measurement_state_key(self.settings.REDIS_NAMESPACE, uuid), state
-        )
-
-    @fault_tolerant(CommonSettings.redis_retry)
-    async def delete_measurement_state(self, uuid: UUID) -> None:
-        """Delete measurement state."""
-        await self.client.delete(
-            measurement_state_key(self.settings.REDIS_NAMESPACE, uuid)
+            measurement_agent_cancel_key(
+                self.settings.REDIS_NAMESPACE, measurement_uuid, agent_uuid
+            ),
+            1,
         )
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def get_measurement_stats(
-        self, measurement_uuid: UUID, agent_uuid: UUID
+        self, measurement_uuid: str, agent_uuid: str
     ) -> Optional[ProbingStatistics]:
         """Get measurement statistics."""
         if state := await self.client.get(
@@ -149,7 +140,7 @@ class Redis:
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def set_measurement_stats(
-        self, measurement_uuid: UUID, agent_uuid: UUID, stats: ProbingStatistics
+        self, measurement_uuid: str, agent_uuid: str, stats: ProbingStatistics
     ) -> None:
         """Set measurement statistics."""
         await self.client.set(
@@ -161,7 +152,7 @@ class Redis:
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def delete_measurement_stats(
-        self, measurement_uuid: UUID, agent_uuid: UUID
+        self, measurement_uuid: str, agent_uuid: str
     ) -> None:
         """Delete measurement statistics."""
         await self.client.delete(
@@ -171,8 +162,9 @@ class Redis:
         )
 
     @fault_tolerant(CommonSettings.redis_retry)
-    async def publish(self, uuid: UUID, request: MeasurementRoundRequest) -> None:
-        """Publish a message via into a channel."""
+    async def publish(self, uuid: str, request: MeasurementRoundRequest) -> None:
+        """Publish a message into a channel."""
+        self.logger.info("Publishing next measurement round request")
         await self.client.publish(
             agent_listen_key(self.settings.REDIS_NAMESPACE, uuid), request.json()
         )
@@ -185,7 +177,7 @@ class Redis:
 
 @dataclass(frozen=True)
 class AgentRedis(Redis):
-    uuid: UUID
+    uuid: str
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def register(self, ttl_seconds: int) -> None:
@@ -205,7 +197,7 @@ class AgentRedis(Redis):
     async def set_agent_state(self, state: AgentState) -> None:
         """Set agent state."""
         await self.client.set(
-            agent_state_key(self.settings.REDIS_NAMESPACE, self.uuid), state
+            agent_state_key(self.settings.REDIS_NAMESPACE, self.uuid), state.value
         )
 
     @fault_tolerant(CommonSettings.redis_retry)
@@ -231,7 +223,7 @@ class AgentRedis(Redis):
         )
 
     @fault_tolerant(CommonSettings.redis_retry)
-    async def subscribe(self) -> MeasurementRoundRequest:
+    async def subscribe(self) -> "MeasurementRoundRequest":
         """Subscribe to agent channels (all, specific) and wait for a response"""
         psub = self.client.pubsub()
         async with psub as p:

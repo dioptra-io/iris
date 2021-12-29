@@ -13,18 +13,15 @@ from fastapi import (
     status,
 )
 
-from iris.api.authentication import current_superuser, current_verified_user
-from iris.api.dependencies import get_storage
-from iris.api.pagination import ListPagination
-from iris.commons.schemas.exceptions import GenericException
-from iris.commons.schemas.paging import Paginated
-from iris.commons.schemas.targets import (
-    Target,
-    TargetDeleteResponse,
-    TargetPostResponse,
-    TargetSummary,
+from iris.api.authentication import (
+    assert_probing_enabled,
+    current_superuser,
+    current_verified_user,
 )
-from iris.commons.schemas.users import UserDB
+from iris.api.dependencies import get_storage
+from iris.commons.models.pagination import Paginated
+from iris.commons.models.target import Target, TargetSummary
+from iris.commons.models.user import UserDB
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -43,15 +40,12 @@ async def get_targets(
     storage: Storage = Depends(get_storage),
 ):
     """Get all target lists."""
-    # First check is user has probing enabled
-    if not user.probing_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must have probing enabled to access this resource",
-        )
+    assert_probing_enabled(user)
 
     try:
-        targets = await storage.get_all_files_no_retry(storage.targets_bucket(user.id))
+        targets = await storage.get_all_files_no_retry(
+            storage.targets_bucket(str(user.id))
+        )
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
@@ -63,33 +57,25 @@ async def get_targets(
         )
         for target in targets
     ]
-    querier = ListPagination(summaries, request, offset, limit)
-    return await querier.query()
+    return Paginated.from_results(request.url, summaries, len(summaries), offset, limit)
 
 
 @router.get(
     "/{key}",
     response_model=Target,
-    responses={404: {"model": GenericException}},
     summary="Get target list specified by key.",
 )
 async def get_target_by_key(
-    request: Request,
     key: str,
     user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
-    # First check is user has probing enabled
-    if not user.probing_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must have probing enabled to access this resource",
-        )
+    assert_probing_enabled(user)
 
     try:
         target_file = await storage.get_file_no_retry(
-            storage.targets_bucket(user.id), key
+            storage.targets_bucket(str(user.id)), key
         )
     except Exception:
         raise HTTPException(
@@ -141,8 +127,8 @@ async def verify_target_file(target_file):
 
 @router.post(
     "/",
+    response_model=Target,
     status_code=status.HTTP_201_CREATED,
-    response_model=TargetPostResponse,
     summary="Upload a target list.",
     description="""
     Each line of the file must be like `target,protocol,min_ttl,max_ttl,n_initial_flows`
@@ -151,7 +137,6 @@ async def verify_target_file(target_file):
     """,
 )
 async def post_target(
-    request: Request,
     target_file: UploadFile = File(...),
     user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
@@ -171,9 +156,9 @@ async def post_target(
         )
 
     await storage.upload_file_no_retry(
-        storage.targets_bucket(user.id), target_file.filename, target_file.file
+        storage.targets_bucket(str(user.id)), target_file.filename, target_file.file
     )
-    return {"key": target_file.filename, "action": "upload"}
+    return get_target_by_key(key=target_file.filename, user=user, storage=storage)
 
 
 async def verify_probe_target_file(target_file):
@@ -217,8 +202,8 @@ async def verify_probe_target_file(target_file):
 
 @router.post(
     "/probes",
+    response_model=Target,
     status_code=status.HTTP_201_CREATED,
-    response_model=TargetPostResponse,
     summary="Upload a probe list.",
     description="""
     Each line of the file must be like `dst_addr,src_port,dst_port,ttl,protocol`
@@ -227,18 +212,12 @@ async def verify_probe_target_file(target_file):
     """,
 )
 async def post_probes_target(
-    request: Request,
     target_file: UploadFile = File(...),
     user: UserDB = Depends(current_superuser),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a probe list to object storage."""
-    # First check is user has probing enabled
-    if not user.probing_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must have probing enabled to access this resource",
-        )
+    assert_probing_enabled(user)
 
     if not target_file.filename.endswith(".csv"):
         raise HTTPException(
@@ -254,40 +233,31 @@ async def post_probes_target(
         )
 
     await storage.upload_file_no_retry(
-        storage.targets_bucket(user.id),
+        storage.targets_bucket(str(user.id)),
         target_file.filename,
         target_file.file,
         metadata={"is_probes_file": "True"},  # MinIO doesn't like bool type in metadata
     )
-    return {"key": target_file.filename, "action": "upload"}
+
+    return get_target_by_key(key=target_file.filename, user=user, storage=storage)
 
 
 @router.delete(
     "/{key}",
-    response_model=TargetDeleteResponse,
-    responses={
-        404: {"model": GenericException},
-        500: {"model": GenericException},
-    },
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a target list.",
 )
 async def delete_target_by_key(
-    request: Request,
     key: str,
     user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""
-    # First check is user has probing enabled
-    if not user.probing_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must have probing enabled to access this resource",
-        )
+    assert_probing_enabled(user)
 
     try:
         response = await storage.delete_file_check_no_retry(
-            storage.targets_bucket(user.id), key
+            storage.targets_bucket(str(user.id)), key
         )
     except Exception:
         raise HTTPException(
@@ -299,4 +269,3 @@ async def delete_target_by_key(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error while removing file object",
         )
-    return {"key": key, "action": "delete"}

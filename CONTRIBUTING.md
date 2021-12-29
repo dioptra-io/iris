@@ -37,6 +37,45 @@ poetry run python -m iris.worker
 
 The API documentation will be available at `http://127.0.0.1:8000/docs`.
 
+## Coding style
+
+The code is formatted with black with its standard option.
+
+Try to follow the rules, but prefer to make a MVP first, and the refactor.
+Avoir overthinking and premature optimization.
+
+####
+
+https://sqlmodel.tiangolo.com/tutorial/fastapi/multiple-models/#inheritance-and-table-models
+
+#### Prefer SQLModel imports over SQLAlchemy
+
+#### Do not write un-needed doctests
+
+```python
+# Don't
+def engine():
+    """Return the engine."""
+    ...
+```
+
+#### Pass the minimum number of information
+
+#### Prefer summaries to docstrings for routes and do not write redundant docstrings
+(Keep the *code entropy* high)
+```python
+# Don't
+@router.get("/", summary="Get all measurements.", ...)
+async def get_measurements(...):
+    """Get all measurements."""
+    ...
+
+# Do
+@router.get("/", summary="Get all measurements.", ...)
+async def get_measurements(...):
+    ...
+```
+
 ## Syntax checking
 
 You can check the syntax using flake8.

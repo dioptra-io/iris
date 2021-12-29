@@ -1,7 +1,13 @@
-from sqlmodel import SQLModel, create_engine
+from pydantic import BaseModel
+from zstandard import ZstdCompressor
 
 
-def create_test_engine():
-    engine = create_engine("sqlite://")
-    SQLModel.metadata.create_all(engine)
-    return engine
+class TestModel(BaseModel):
+    a: int
+
+
+def compress_file(input_path, output_path):
+    with open(input_path, "rb") as inp:
+        with open(output_path, "wb") as out:
+            ctx = ZstdCompressor()
+            ctx.copy_stream(inp, out)

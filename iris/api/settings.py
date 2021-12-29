@@ -8,8 +8,6 @@ from iris.commons.settings import CommonSettings
 class APISettings(CommonSettings):
     """API specific settings."""
 
-    SETTINGS_CLASS = "api"
-
     API_CORS_ALLOW_ORIGIN: Optional[str] = None
 
     API_TOKEN_SECRET_KEY: str = (

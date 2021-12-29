@@ -1,7 +1,5 @@
-"""Users operations."""
-
-import databases
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from httpx_oauth.clients.github import GitHubOAuth2
 
 from iris.api.authentication import (
@@ -10,13 +8,13 @@ from iris.api.authentication import (
     fastapi_users,
     jwt_authentication,
 )
-from iris.api.dependencies import get_sqlalchemy, get_storage, settings
-from iris.api.pagination import ListPagination
-from iris.commons.schemas.paging import Paginated
-from iris.commons.schemas.users import StorageCredentials, User, UserDB
+from iris.api.dependencies import get_settings, get_storage, get_user_db
+from iris.commons.models.pagination import Paginated
+from iris.commons.models.user import StorageCredentials, User, UserDB
 from iris.commons.storage import Storage
 
 router = APIRouter()
+settings = get_settings()
 
 
 # Authentication routes
@@ -56,19 +54,20 @@ async def get_users(
     request: Request,
     filter_verified: bool = False,
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=0, le=200),
-    user: UserDB = Depends(current_superuser),
-    sqlalchemy: databases.Database = Depends(get_sqlalchemy),
+    limit: int = Query(20, ge=0, le=200),
+    user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
+    _user: UserDB = Depends(current_superuser),
 ):
-    """Get all users."""
-    where_clause = "WHERE is_verified = false" if filter_verified else ""
-    users = await sqlalchemy.fetch_all(f"SELECT * FROM user {where_clause}")
-    users = [User(**dict(user)) for user in users]
-    querier = ListPagination(users, request, offset, limit)
-    return await querier.query()
+    query = user_db.users.select()
+    if filter_verified:
+        query = query.where(not UserDB.is_verified)
+    users = await user_db.database.fetch_all(query)
+    # TODO: Proper SQL limit/offset
+    #  => override SQLAlchemyUserDatabase with .all()/.count()?
+    return Paginated.from_results(request.url, users, len(users), offset, limit)
 
 
-# TODO: Integrate with FastAPI users?
+# TODO: Rename to /credentials and return chproxy credentials.
 @router.get(
     "/users/me/s3",
     response_model=StorageCredentials,
@@ -76,13 +75,14 @@ async def get_users(
     tags=["Users"],
 )
 async def get_users_s3_credentials(
-    user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
+    _user: UserDB = Depends(current_verified_user),
 ):
     credentials = await storage.generate_temporary_credentials()
     return StorageCredentials(
         s3_host=settings.AWS_S3_HOST,
+        s3_access_key_expiration=credentials["Expiration"],
         s3_access_key_id=credentials["AccessKeyId"],
         s3_secret_access_key=credentials["SecretAccessKey"],
-        s3_access_key_expiration=credentials["Expiration"],
+        s3_session_token=credentials["SessionToken"],
     )

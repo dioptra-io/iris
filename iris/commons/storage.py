@@ -1,37 +1,33 @@
-import asyncio
 import datetime
 import json
-import logging
-from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
+from logging import LoggerAdapter
 from pathlib import Path
 from typing import Any, Dict, List, Union
-from uuid import UUID
 
 import aioboto3
-import boto3
 from botocore.exceptions import ClientError
 
-from iris.commons.schemas.measurements import Round
+from iris.commons.models.round import Round
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 
-def next_round_key(agent_uuid: UUID, round_: Round) -> str:
+def next_round_key(agent_uuid: str, round_: Round) -> str:
     """The name of the file containing the probes to send at the next round."""
     return f"{agent_uuid}_next_round_{round_.encode()}.csv.zst"
 
 
-def results_key(agent_uuid: UUID, round_: Round) -> str:
+def results_key(agent_uuid: str, round_: Round) -> str:
     """The name of the file containing the results of the probing round."""
     return f"{agent_uuid}_results_{round_.encode()}.csv.zst"
 
 
-def prefixes_key(agent_uuid: UUID, round_: Round) -> str:
+def prefixes_key(agent_uuid: str, round_: Round) -> str:
     """The name of the file containing a list of allowed prefixes."""
     return f"{agent_uuid}_prefixes_{round_.encode()}.csv.zst"
 
 
-def targets_key(measurement_uuid: UUID, agent_uuid: UUID) -> str:
+def targets_key(measurement_uuid: str, agent_uuid: str) -> str:
     """The name of the file containing the targets to probe."""
     return f"targets__{measurement_uuid}__{agent_uuid}.csv"
 
@@ -41,45 +37,45 @@ class Storage:
     """S3 object storage interface."""
 
     settings: CommonSettings
-    logger: logging.Logger
+    logger: LoggerAdapter
 
     @property
     def aws_settings(self):
         return {
             "aws_access_key_id": self.settings.AWS_ACCESS_KEY_ID,
             "aws_secret_access_key": self.settings.AWS_SECRET_ACCESS_KEY,
+            "aws_session_token": self.settings.AWS_SESSION_TOKEN,
             "endpoint_url": self.settings.AWS_S3_HOST,
             "region_name": self.settings.AWS_REGION_NAME,
         }
 
-    def archive_bucket(self, user_id: UUID) -> str:
-        return self.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + str(user_id)
+    def archive_bucket(self, user_id: str) -> str:
+        return self.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user_id
 
-    def targets_bucket(self, user_id: UUID) -> str:
-        return self.settings.AWS_S3_TARGETS_BUCKET_PREFIX + str(user_id)
+    def targets_bucket(self, user_id: str) -> str:
+        return self.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user_id
+
+    # TODO: Remove
+    @staticmethod
+    def measurement_bucket(uuid: str) -> str:
+        return uuid
 
     @staticmethod
-    def measurement_bucket(uuid: UUID) -> str:
-        return str(uuid)
+    def measurement_agent_bucket(measurement_uuid: str, agent_uuid: str) -> str:
+        # TODO: Prefix?
+        return f"{measurement_uuid[:18]}-{agent_uuid[:18]}"
 
     @fault_tolerant(CommonSettings.storage_retry)
     async def get_measurement_buckets(self) -> List[str]:
-        """Get bucket list that is not infrastructure."""
-        infrastructure_buckets = ["targets"]
-
-        buckets = []
         session = aioboto3.Session()
         async with session.client("s3", **self.aws_settings) as s3:
             response = await s3.list_buckets()
-        for bucket in response["Buckets"]:
-            if bucket["Name"] in infrastructure_buckets:
-                continue
-            buckets.append(bucket["Name"])
-        return buckets
+            return [x["Name"] for x in response["Buckets"]]
 
     @fault_tolerant(CommonSettings.storage_retry)
     async def create_bucket(self, bucket: str) -> None:
         """Create a bucket."""
+        self.logger.info("Creating bucket %s", bucket)
         session = aioboto3.Session()
         async with session.client("s3", **self.aws_settings) as s3:
             try:
@@ -166,19 +162,6 @@ class Storage:
             bucket, filename, retrieve_content=retrieve_content
         )
 
-    def _upload_sync_file(
-        self,
-        bucket: str,
-        filename: str,
-        filepath: Union[Path, str],
-        metadata: Any = None,
-    ) -> None:
-        """Underlying synchronous upload function."""
-        with Path(filepath).open("rb") as fd:
-            s3 = boto3.client("s3", **self.aws_settings)
-            extraargs = {"Metadata": metadata} if metadata else None
-            s3.upload_fileobj(fd, bucket, filename, ExtraArgs=extraargs)
-
     @fault_tolerant(CommonSettings.storage_retry)
     async def upload_file(
         self,
@@ -188,15 +171,8 @@ class Storage:
         metadata: Any = None,
     ) -> None:
         """Upload a file in a bucket."""
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            ProcessPoolExecutor(),
-            self._upload_sync_file,
-            bucket,
-            filename,
-            filepath,
-            metadata,
-        )
+        with Path(filepath).open("rb") as fd:
+            return await self.upload_file_no_retry(bucket, filename, fd, metadata)
 
     async def upload_file_no_retry(
         self, bucket: str, filename: str, fd, metadata: Any = None
@@ -207,27 +183,15 @@ class Storage:
             extraargs = {"Metadata": metadata} if metadata else None
             await s3.upload_fileobj(fd, bucket, filename, ExtraArgs=extraargs)
 
-    def _download_sync_file(
-        self, bucket: str, filename: str, output_path: Union[Path, str]
-    ) -> None:
-        """Underlying synchronous download function."""
-        with Path(output_path).open("wb") as fd:
-            s3 = boto3.client("s3", **self.aws_settings)
-            s3.download_fileobj(bucket, filename, fd)
-
     @fault_tolerant(CommonSettings.storage_retry)
     async def download_file(
         self, bucket: str, filename: str, output_path: Union[Path, str]
     ) -> None:
         """Download a file in a bucket."""
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            ProcessPoolExecutor(),
-            self._download_sync_file,
-            bucket,
-            filename,
-            output_path,
-        )
+        session = aioboto3.Session()
+        async with session.client("s3", **self.aws_settings) as s3:
+            with Path(output_path).open("wb") as fd:
+                await s3.download_fileobj(bucket, filename, fd)
 
     async def download_file_to(self, bucket: str, filename: str, output_dir: Path):
         output_path = output_dir / filename
@@ -286,7 +250,7 @@ class Storage:
             Statement=[
                 dict(
                     Effect="Allow",
-                    Action=["s3:GetObject", "s3:ListBucket"],
+                    Action=self.settings.AWS_PUBLIC_ACTIONS,
                     Resource=self.settings.AWS_PUBLIC_RESOURCES,
                 )
             ],

@@ -40,7 +40,7 @@ python-jose = {extras = ["cryptography"], optional = true, version = "^3.3.0"}
 python-multipart = {optional = true, version = "^0.0.5"}
 pytricia = {optional = true, version = "^1.0.2"}
 SQLAlchemy-Utils = "^0.37.8"
-sqlmodel = "^0.0.5"
+sqlmodel = "^0.0.6"
 starlette_exporter = {optional = true, version = "^0.11.0"}
 tenacity = "^8.0.1"
 uvicorn = {optional = true, version = "^0.16.0"}
@@ -48,18 +48,19 @@ zstandard = "^0.16.0"
 
 [tool.poetry.dev-dependencies]
 black = "^21.11b1"
-boto3-stubs = "^1.20.17"
+boto3-stubs = "^1.20.26"
 bumpversion = "^0.6.0"
 coverage = "^6.2"
 flake8 = "^4.0.1"
 isort = "^5.10.1"
-mypy = "^0.920"
+mypy = "^0.930"
 pre-commit = "^2.16.0"
 pytest = "^6.2.5"
 pytest-asyncio = "^0.16.0"
 pytest-cov = "^3.0.0"
 pytest-clarity = "^1.0.1"
-types-aiofiles = "^0.7.0"
+types-aiofiles = "^0.7.2"
+alembic = "^1.7.5"
 
 [tool.poetry.extras]
 agent = [
@@ -81,7 +82,9 @@ worker = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--ignore volumes --cov=iris --cov-report= --doctest-modules -vvs"
+# TODO: Make this compatible with PyCharm debugger?
+addopts = "--doctest-modules --verbosity=2"
+#addopts = "--ignore volumes --cov=iris --cov-report= --doctest-modules -vvs"
 filterwarnings = [
     "ignore::DeprecationWarning:aioboto3.*:",
     "ignore::DeprecationWarning:aiofiles.*:",

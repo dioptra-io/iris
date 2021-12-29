@@ -1,51 +1,51 @@
 """Measurement interface."""
 import shutil
 from datetime import datetime
-from logging import Logger
+from logging import Logger, LoggerAdapter
 from multiprocessing import Manager, Process
 
 from iris.agent.prober import probe, watcher
 from iris.agent.settings import AgentSettings
+from iris.commons.models.diamond_miner import ProbingStatistics
+from iris.commons.models.measurement_round_request import MeasurementRoundRequest
 from iris.commons.redis import AgentRedis
-from iris.commons.schemas.measurements import MeasurementRoundRequest, ProbingStatistics
 from iris.commons.storage import Storage, results_key
 
 
-async def measurement(
+async def do_measurement(
     settings: AgentSettings,
     request: MeasurementRoundRequest,
-    logger: Logger,
+    logger: LoggerAdapter,
     redis: AgentRedis,
     storage: Storage,
 ):
     """Conduct a measurement."""
-    measurement_request = request.measurement
-    agent = measurement_request.agent(settings.AGENT_UUID)
-    assert agent.uuid  # make mypy happy
-    logger_prefix = f"{measurement_request.uuid} :: {agent.uuid} ::"
+    measurement_agent = request.measurement_agent
 
-    logger.info(f"{logger_prefix} Create local measurement directory")
-    measurement_results_path = settings.AGENT_RESULTS_DIR_PATH / str(
-        measurement_request.uuid
+    logger.info("Create local measurement directory")
+    measurement_results_path = (
+        settings.AGENT_RESULTS_DIR_PATH / measurement_agent.measurement_uuid
     )
     measurement_results_path.mkdir(exist_ok=True)
 
     probes_filepath = None
-    results_filepath = measurement_results_path / results_key(agent.uuid, request.round)
+    results_filepath = measurement_results_path / results_key(
+        measurement_agent.agent_uuid, request.round
+    )
 
-    logger.info(f"{logger_prefix} Download CSV probe file locally")
+    logger.info("Download CSV probe file locally")
     probes_filepath = await storage.download_file_to(
-        storage.measurement_bucket(measurement_request.uuid),
+        storage.measurement_bucket(measurement_agent.measurement_uuid),
         request.probe_filename,
         settings.AGENT_TARGETS_DIR_PATH,
     )
 
-    logger.info(f"{logger_prefix} User ID : {measurement_request.user_id}")
-    logger.info(f"{logger_prefix} Probe File: {request.probe_filename}")
-    logger.info(f"{logger_prefix} {request.round}")
-    logger.info(f"{logger_prefix} Tool : {measurement_request.tool}")
-    logger.info(f"{logger_prefix} Tool Parameters : {agent.tool_parameters}")
-    logger.info(f"{logger_prefix} Max Probing Rate : {agent.probing_rate}")
+    logger.info("User ID: %s", measurement_agent.measurement.user_id)
+    logger.info("Probe File: %s", request.probe_filename)
+    logger.info(request.round)
+    logger.info("Tool: %s", measurement_agent.measurement.tool)
+    logger.info("Tool Parameters: %s", measurement_agent.tool_parameters)
+    logger.info("Max Probing Rate: %s", measurement_agent.probing_rate)
 
     probing_start_time = datetime.utcnow()
     with Manager() as manager:
@@ -57,7 +57,7 @@ async def measurement(
                 settings,
                 results_filepath,
                 request.round.number,
-                agent.probing_rate,
+                measurement_agent.probing_rate,
                 prober_statistics,
                 probes_filepath,
             ),
@@ -65,7 +65,7 @@ async def measurement(
 
         prober_process.start()
         is_not_canceled = await watcher(
-            prober_process, settings, measurement_request.uuid, redis
+            prober_process, settings, measurement_agent.measurement_uuid, redis
         )
         prober_statistics = dict(prober_statistics)
 
@@ -78,30 +78,30 @@ async def measurement(
             **prober_statistics,
         )
         await redis.set_measurement_stats(
-            measurement_request.uuid, agent.uuid, statistics
+            measurement_agent.measurement_uuid, measurement_agent.agent_uuid, statistics
         )
 
-        logger.info(f"{logger_prefix} Upload results file into S3")
+        logger.info("Upload results file into S3")
         await storage.upload_file(
-            storage.measurement_bucket(measurement_request.uuid),
-            results_key(agent.uuid, request.round),
+            storage.measurement_bucket(measurement_agent.measurement_uuid),
+            results_key(measurement_agent.agent_uuid, request.round),
             results_filepath,
         )
     else:
-        logger.warning(f"{logger_prefix} Measurement canceled")
+        logger.warning("Measurement canceled")
 
     if not settings.AGENT_DEBUG_MODE:
-        logger.info(f"{logger_prefix} Empty local results directory")
+        logger.info("Empty local results directory")
         shutil.rmtree(settings.AGENT_RESULTS_DIR_PATH)
         settings.AGENT_RESULTS_DIR_PATH.mkdir()
 
-        logger.info(f"{logger_prefix} Empty local targets directory")
+        logger.info("Empty local targets directory")
         shutil.rmtree(settings.AGENT_TARGETS_DIR_PATH)
         settings.AGENT_TARGETS_DIR_PATH.mkdir()
 
         if request.probe_filename:
-            logger.info(f"{logger_prefix} Remove prefix file from S3")
+            logger.info("Remove prefix file from S3")
             await storage.soft_delete(
-                storage.measurement_bucket(measurement_request.uuid),
+                storage.measurement_bucket(measurement_agent.measurement_uuid),
                 request.probe_filename,
             )
