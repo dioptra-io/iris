@@ -1669,7 +1669,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "types-aiofiles"
-version = "0.7.0"
+version = "0.7.3"
 description = "Typing stubs for aiofiles"
 category = "dev"
 optional = false
@@ -1821,7 +1821,7 @@ worker = ["dramatiq", "pytricia"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "a30b4aa9225065421ee7fa03212aaf01a3d66216d5f50460c15a88f6e34fa008"
+content-hash = "841c2426f5dee959c07fca4bbfdb6f48b00b91a53f2e3f55fa8f5569f5d9efbe"
 
 [metadata.files]
 aioboto3 = [
@@ -2852,8 +2852,8 @@ tomli = [
     {file = "tomli-1.2.3.tar.gz", hash = "sha256:05b6166bff487dc068d322585c7ea4ef78deed501cc124060e0f238e89a9231f"},
 ]
 types-aiofiles = [
-    {file = "types-aiofiles-0.7.0.tar.gz", hash = "sha256:f1c9aacd8ee8fcf3c66744b4bd0963e1eac3753f0e5c20d71214f53da11bc7e3"},
-    {file = "types_aiofiles-0.7.0-py3-none-any.whl", hash = "sha256:0334df97d4fcc70a29ad82ccbe48b914cd7bf31e6cc95942862057892ec5cc81"},
+    {file = "types-aiofiles-0.7.3.tar.gz", hash = "sha256:5c54783745252302f5ba3e14d8f7e8547d100f72c74c9a5478ce2f7f01aa0cda"},
+    {file = "types_aiofiles-0.7.3-py3-none-any.whl", hash = "sha256:fd7f410a94e0362c7a3cf7a98e62f972f1dab245130dfdf6f48914f462994262"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.0.1-py3-none-any.whl", hash = "sha256:7f001e5ac290a0c0401508864c7ec868be4e701886d5b573a9528ed3973d9d3b"},
