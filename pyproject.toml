@@ -35,7 +35,7 @@ httpx = "<0.21"
 fastapi-users = {extras = ["sqlalchemy", "oauth"], version = "^8.1.2"}
 gunicorn = {optional = true, version = "^20.1.0"}
 pycaracal = {optional = true, version = "^0.6.2"}
-pydantic = "^1.8.2"
+pydantic = "^1.9.0"
 python-jose = {extras = ["cryptography"], optional = true, version = "^3.3.0"}
 python-multipart = {optional = true, version = "^0.0.5"}
 pytricia = {optional = true, version = "^1.0.2"}
