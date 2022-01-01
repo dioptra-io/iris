@@ -845,7 +845,7 @@ test = ["pytest (>=6.2.4,<7.0.0)", "pytest-cov (>=2.12.0,<4.0.0)", "mypy (==0.91
 
 [[package]]
 name = "fastapi-users"
-version = "8.1.3"
+version = "9.1.0"
 description = "Ready-to-use and customizable users management for FastAPI."
 category = "main"
 optional = false
@@ -865,6 +865,7 @@ python-multipart = "0.0.5"
 mongodb = ["fastapi-users-db-mongodb (>=1.0.0)"]
 oauth = ["httpx-oauth (>=0.4,<0.5)"]
 ormar = ["fastapi-users-db-ormar (>=1.0.0)"]
+redis = ["aioredis (>=2.0.1,<2.1.0)", "hiredis (>=2.0.0,<2.1.0)"]
 sqlalchemy = ["fastapi-users-db-sqlalchemy (>=1.0.0)"]
 tortoise-orm = ["fastapi-users-db-tortoise (>=1.0.0)"]
 
@@ -1818,7 +1819,7 @@ worker = ["dramatiq", "pytricia"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "b7774874216b0edad35a387c28130bcf9905920033788caef14a163bf24c37ca"
+content-hash = "17a4c88be5fb05808d0bdbf243526880ac922c26bf83f39eacfd6629d68ca8b8"
 
 [metadata.files]
 aioboto3 = [
@@ -2184,8 +2185,8 @@ fastapi = [
     {file = "fastapi-0.70.1.tar.gz", hash = "sha256:21d03979b5336375c66fa5d1f3126c6beca650d5d2166fbb78345a30d33c8d06"},
 ]
 fastapi-users = [
-    {file = "fastapi-users-8.1.3.tar.gz", hash = "sha256:ddb7a11e8b53f6651cd5e318f7f0bc7e468baab0b46ad79a5d7b155a4ab3c9fe"},
-    {file = "fastapi_users-8.1.3-py3-none-any.whl", hash = "sha256:45d6beaf876bd16d4cac367836ceae83c10d247bbc080e0dc04489bc103cb4c6"},
+    {file = "fastapi-users-9.1.0.tar.gz", hash = "sha256:d3426dd1cecc5c2013af919dc590b298b6304ac08b5411fab781fd2f41dbd07c"},
+    {file = "fastapi_users-9.1.0-py3-none-any.whl", hash = "sha256:d743d2dfd5219e90fb494cf7352bfb3fb7179750f09619c8dbc94ab766207594"},
 ]
 fastapi-users-db-sqlalchemy = [
     {file = "fastapi-users-db-sqlalchemy-1.0.0.tar.gz", hash = "sha256:e6105181af1855e21ba31dfb8ae31b90e506cd2ac29f5f37998de66cefed2440"},
