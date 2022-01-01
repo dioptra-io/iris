@@ -40,7 +40,7 @@ python-jose = {extras = ["cryptography"], optional = true, version = "^3.3.0"}
 python-multipart = {optional = true, version = "^0.0.5"}
 pytricia = {optional = true, version = "^1.0.2"}
 SQLAlchemy-Utils = "^0.37.8"
-starlette_exporter = {optional = true, version = "^0.11.0"}
+starlette_exporter = {optional = true, version = "^0.12.0"}
 tenacity = "^8.0.1"
 uvicorn = {optional = true, version = "^0.16.0"}
 zstandard = "^0.16.0"
