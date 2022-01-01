@@ -31,7 +31,7 @@ dramatiq = {extras = ["redis", "watch"], optional = true, version = "^1.12.1"}
 email-validator = "^1.1.3"
 fastapi = {optional = true, version = "^0.70.0"}
 # <0.21 is a condition of fastapi-users oauth plugin
-httpx = "<0.21"
+httpx = "<0.22"
 fastapi-users = {extras = ["sqlalchemy", "oauth"], version = "^8.1.2"}
 gunicorn = {optional = true, version = "^20.1.0"}
 pycaracal = {optional = true, version = "^0.6.2"}
