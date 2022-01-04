@@ -1,3 +1,12 @@
+import os
+
+import pytest
+
+superuser = pytest.mark.skipif(
+    os.geteuid() != 0, reason="this test must be run as root"
+)
+
+
 def add_and_refresh(session, instances):
     session.add_all(instances)
     session.commit()

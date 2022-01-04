@@ -12,12 +12,28 @@ from iris.worker import WorkerSettings
 from iris.worker.watch import watch_measurement_agent_
 from tests.api.test_measurements import upload_target_file
 from tests.assertions import assert_status_code, cast_response
+from tests.helpers import superuser
 
 pytestmark = pytest.mark.asyncio
 
-# TODO: Mark + say that it requires sudo
+
+@superuser
+async def test_agent_registration(make_client, make_user, settings):
+    # TODO: {Agent,Worker}Settings in conftest.py + skip find_exit_ttl
+    agent_task = asyncio.create_task(iris.agent.main.main(settings))
+    client = make_client(make_user(probing_enabled=True))
+    # TODO: Loop and check if the agent appears.
+
+
+@superuser
 async def test_e2e(
-    settings, make_client, make_user, make_agent_parameters, make_agent_redis, storage
+    settings,
+    make_client,
+    make_user,
+    make_agent_parameters,
+    make_agent_redis,
+    storage,
+    worker_settings,
 ):
     # TODO: Mock send
     # TODO: How to pass the settings to the agent?
@@ -46,12 +62,12 @@ async def test_e2e(
     # agent_task = asyncio.create_task(iris.agent.main.main())
     # TODO: Watch multiple measurement agents?
     # TODO: Dramatiq test broker?
-    # TODO: Proper worker settings
+    # TODO: Proper worker settings with WORKER_RESULTS_DIR_PATH
     worker_task = asyncio.create_task(
         watch_measurement_agent_(
             measurement_uuid=measurement.uuid,
             agent_uuid=agent_redis.uuid,
-            settings=WorkerSettings(**settings.dict()),
+            settings=worker_settings,
         )
     )
     await asyncio.gather(worker_task)

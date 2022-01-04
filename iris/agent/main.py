@@ -2,14 +2,14 @@ import asyncio
 import socket
 import time
 import traceback
-from logging import Logger, LoggerAdapter
+from logging import LoggerAdapter
 
 import aioredis
 
 from iris import __version__
 from iris.agent.measurements import do_measurement
 from iris.agent.settings import AgentSettings
-from iris.agent.ttl import find_exit_ttl
+from iris.agent.ttl import find_exit_ttl_with_mtr
 from iris.commons.logger import Adapter, base_logger
 from iris.commons.models.agent import AgentParameters, AgentState
 from iris.commons.models.measurement_agent import MeasurementAgentState
@@ -82,9 +82,8 @@ async def consumer(
         await redis.set_agent_state(AgentState.Idle)
 
 
-async def main():
+async def main(settings=AgentSettings()):
     """Main agent function."""
-    settings = AgentSettings()
     logger = Adapter(
         base_logger, dict(component="agent", agent_uuid=settings.AGENT_UUID)
     )
@@ -97,8 +96,8 @@ async def main():
     settings.AGENT_TARGETS_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
     if settings.AGENT_MIN_TTL < 0:
-        settings.AGENT_MIN_TTL = find_exit_ttl(
-            logger, settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2
+        settings.AGENT_MIN_TTL = find_exit_ttl_with_mtr(
+            str(settings.AGENT_MIN_TTL_FIND_TARGET), min_ttl=2
         )
 
     while True:

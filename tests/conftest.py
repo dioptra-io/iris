@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, create_engine
 
+from iris.agent.settings import AgentSettings
 from iris.api.authentication import current_verified_user
 from iris.api.dependencies import get_session, get_settings
 from iris.api.main import app
@@ -19,19 +20,20 @@ from iris.commons.models.base import Base
 from iris.commons.redis import AgentRedis, Redis
 from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
+from iris.worker import WorkerSettings
 
 pytest.register_assert_rewrite("tests.assertions")
 pytest_plugins = ["tests.fixtures.models", "tests.fixtures.storage"]
 
-# Iris tests_old requires XXXX
+# Iris tests requires XXXX
 # Each test runs on a dedicated namespace (redis namespace, bucket prefixes, SQLite database, CH databse, ...)
 # To keep the result of each test runs, set IRIS_TEST_CLEANUP=0
 
 
 @pytest.fixture
-def settings(request):
+def settings():
     namespace = secrets.token_hex(nbytes=4)
-    print(f"test={request.node.name} namespace={namespace}")
+    print(f"@{namespace}", end=" ")
     return CommonSettings(
         AWS_PUBLIC_RESOURCES=["arn:aws:s3:::test-public-exports/*"],
         AWS_S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
@@ -48,8 +50,31 @@ def settings(request):
 
 
 @pytest.fixture
-def clickhouse(settings):
-    return ClickHouse(settings, logging.getLogger(__name__))
+def agent_settings(settings, tmp_path):
+    return AgentSettings(
+        **settings.dict(),
+        AGENT_CARACAL_SNIFFER_WAIT_TIME=1,
+        AGENT_MIN_TTL=0,
+        AGENT_RESULTS_DIR_PATH=tmp_path / "agent_results",
+        AGENT_TARGETS_DIR_PATH=tmp_path / "agent_targets",
+    )
+
+
+@pytest.fixture
+def worker_settings(settings, tmp_path):
+    return WorkerSettings(
+        **settings.dict(), WORKER_RESULTS_DIR_PATH=tmp_path / "worker_results"
+    )
+
+
+@pytest.fixture
+def logger():
+    return logging.getLogger(__name__)
+
+
+@pytest.fixture
+def clickhouse(settings, logger):
+    return ClickHouse(settings, logger)
 
 
 @pytest.fixture
@@ -65,9 +90,9 @@ def engine(settings):
 
 
 @pytest.fixture
-async def redis(settings):
+async def redis(settings, logger):
     client = await settings.redis_client()
-    yield Redis(client, settings, logging.getLogger(__name__))
+    yield Redis(client, settings, logger)
     await client.close()
 
 
@@ -78,8 +103,8 @@ def session(engine):
 
 
 @pytest.fixture
-def storage(settings):
-    return Storage(settings, logging.getLogger(__name__))
+def storage(settings, logger):
+    return Storage(settings, logger)
 
 
 @pytest.fixture(autouse=True, scope="session")
