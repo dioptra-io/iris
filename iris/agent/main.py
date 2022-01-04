@@ -1,8 +1,7 @@
 import asyncio
+import logging
 import socket
 import time
-import traceback
-from logging import LoggerAdapter
 
 import aioredis
 
@@ -10,7 +9,7 @@ from iris import __version__
 from iris.agent.measurements import do_measurement
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl_with_mtr
-from iris.commons.logger import Adapter, base_logger
+from iris.commons.logger import Adapter, base_logger, log_traceback
 from iris.commons.models.agent import AgentParameters, AgentState
 from iris.commons.models.measurement_round_request import MeasurementRoundRequest
 from iris.commons.redis import Redis
@@ -23,17 +22,6 @@ async def heartbeat(agent_uuid: str, redis: Redis) -> None:
     while True:
         await redis.register_agent(agent_uuid, 30)
         await asyncio.sleep(5)
-
-
-async def producer(
-    agent_uuid: str, redis: Redis, queue: asyncio.Queue, logger: LoggerAdapter
-) -> None:
-    """Consume tasks from a Redis channel and put them on a queue."""
-    while True:
-        logger.info("Waiting for requests...")
-        logger.info("Measurements in queue: %s", queue.qsize())
-        request = await redis.subscribe(agent_uuid)
-        await queue.put(request)
 
 
 async def consumer(
@@ -60,6 +48,7 @@ async def consumer(
 
 async def main(settings=AgentSettings()):
     """Main agent function."""
+    logging.basicConfig(level=settings.STREAM_LOGGING_LEVEL)
     logger = Adapter(
         base_logger, dict(component="agent", agent_uuid=settings.AGENT_UUID)
     )
@@ -71,7 +60,7 @@ async def main(settings=AgentSettings()):
 
     if settings.AGENT_MIN_TTL < 0:
         settings.AGENT_MIN_TTL = find_exit_ttl_with_mtr(
-            str(settings.AGENT_MIN_TTL_FIND_TARGET), min_ttl=2
+            settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2, logger=logger
         )
 
     while True:
@@ -101,16 +90,14 @@ async def main(settings=AgentSettings()):
         queue = asyncio.Queue()
         tasks = [
             asyncio.create_task(heartbeat(settings.AGENT_UUID, redis)),
-            asyncio.create_task(producer(settings.AGENT_UUID, redis, queue, logger)),
             asyncio.create_task(consumer(redis, storage, settings, queue)),
+            asyncio.create_task(redis.subscribe(settings.AGENT_UUID, queue)),
         ]
         await asyncio.gather(*tasks)
 
-    except Exception as exception:
-        traceback_content = traceback.format_exc()
-        for line in traceback_content.splitlines():
-            logger.critical(line)
-        raise exception
+    except Exception as e:
+        log_traceback(logger)
+        raise e
 
     finally:
         for task in tasks:

@@ -90,6 +90,7 @@ class InsertResults:
 
     async def insert_csv(self, csv_filepath: Path) -> None:
         """Insert CSV file into table."""
+        # TODO: Actually use this logger?
         logger = Adapter(
             base_logger,
             dict(

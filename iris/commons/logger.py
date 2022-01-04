@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 base_logger = logging.getLogger("iris")
 
@@ -12,6 +13,12 @@ class Adapter(logging.LoggerAdapter):
             parts.append(uuid)
         parts.append(msg)
         return " :: ".join(parts), kwargs
+
+
+def log_traceback(logger):
+    traceback_content = traceback.format_exc()
+    for line in traceback_content.splitlines():
+        logger.critical(line)
 
 
 # def create_logger(settings):

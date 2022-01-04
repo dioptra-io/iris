@@ -95,6 +95,8 @@ async def test_default_inner_pipeline_round_1_1_results(clickhouse, logger, tmp_
     agent_uuid = str(uuid4())
 
     # TODO: Refactor this or rename, InsertResults is confusing.
+    # TODO: Merge with ClickHouse class?
+    # clickhouse.create_tables(measurement_uuid, agent_uuid, drop=True)
     await InsertResults(
         clickhouse=clickhouse,
         measurement_uuid=measurement_uuid,

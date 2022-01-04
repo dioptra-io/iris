@@ -1,4 +1,5 @@
 import asyncio
+from asyncio import Queue
 from dataclasses import dataclass
 from logging import LoggerAdapter
 from typing import Dict, List, Optional
@@ -179,14 +180,12 @@ class Redis:
             > 0
         )
 
-    @fault_tolerant(CommonSettings.redis_retry)
     async def publish(self, uuid: str, request: MeasurementRoundRequest) -> None:
         self.logger.info("Publishing next measurement round request")
         name = f"{self.ns}:{agent_listen_key(uuid)}"
         await self.client.publish(name, request.json())
 
-    @fault_tolerant(CommonSettings.redis_retry)
-    async def subscribe(self, uuid: str) -> MeasurementRoundRequest:
+    async def subscribe(self, uuid: str, queue: Queue) -> None:
         self.logger.info("Subscribing to measurement round requests")
         name = f"{self.ns}:{agent_listen_key(uuid)}"
         psub = self.client.pubsub()
@@ -197,13 +196,12 @@ class Redis:
                     async with async_timeout.timeout(1.0):
                         message = await p.get_message(ignore_subscribe_messages=True)
                         if message:
-                            response = MeasurementRoundRequest.parse_raw(
-                                message["data"]
+                            self.logger.info("Received measurement request")
+                            request = MeasurementRoundRequest.parse_raw(message["data"])
+                            await queue.put(request)
+                            self.logger.info(
+                                "Queued measurement requests: %s", queue.qsize()
                             )
-                            break
                         await asyncio.sleep(0.1)
                 except asyncio.TimeoutError:
                     pass
-            await p.unsubscribe()
-        await psub.close()
-        return response
