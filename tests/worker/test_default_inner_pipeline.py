@@ -94,6 +94,7 @@ async def test_default_inner_pipeline_round_1_1_results(clickhouse, logger, tmp_
     measurement_uuid = str(uuid4())
     agent_uuid = str(uuid4())
 
+    # TODO: Refactor this or rename, InsertResults is confusing.
     await InsertResults(
         clickhouse=clickhouse,
         measurement_uuid=measurement_uuid,
@@ -103,6 +104,7 @@ async def test_default_inner_pipeline_round_1_1_results(clickhouse, logger, tmp_
     ).create_table(drop=True)
 
     probes_filepath = tmp_path / "probes.csv.zst"
+    # TODO: Create results filepath
     targets_filepath = tmp_path / "targets.csv"
     targets_filepath.write_text("1.0.0.0/23,icmp,2,32,6")
 

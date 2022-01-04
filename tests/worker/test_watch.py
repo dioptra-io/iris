@@ -11,19 +11,18 @@ from tests.helpers import upload_file
 pytestmark = pytest.mark.asyncio
 
 
-async def test_check_agent_offline(redis, make_agent_redis, make_agent_parameters):
+async def test_check_agent_offline(redis, make_agent_parameters):
     agent_uuid = str(uuid4())
     assert not await check_agent(
         redis=redis, agent_uuid=agent_uuid, trials=3, interval=0.1
     )
 
 
-async def test_check_agent_online(redis, make_agent_redis, make_agent_parameters):
+async def test_check_agent_online(redis, make_agent_parameters):
     agent_uuid = str(uuid4())
-    agent_redis = make_agent_redis(agent_uuid)
-    await agent_redis.register(10)
-    await agent_redis.set_agent_parameters(make_agent_parameters())
-    await agent_redis.set_agent_state(AgentState.Working)
+    await redis.register_agent(agent_uuid, 10)
+    await redis.set_agent_parameters(agent_uuid, make_agent_parameters())
+    await redis.set_agent_state(agent_uuid, AgentState.Working)
     assert await check_agent(redis=redis, agent_uuid=agent_uuid, trials=3, interval=0.1)
 
 

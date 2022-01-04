@@ -166,19 +166,17 @@ async def test_post_measurement_unknown_tag(make_client, make_user):
 
 
 async def test_post_measurement_uuid(
-    make_client, make_user, make_agent_parameters, make_agent_redis, storage
+    make_client, make_user, make_agent_parameters, redis, storage
 ):
     user = make_user(probing_enabled=True)
     client = make_client(user)
-    agent_redis = make_agent_redis(str(uuid4()))
-    await agent_redis.register(5)
-    await agent_redis.set_agent_parameters(make_agent_parameters())
-    await agent_redis.set_agent_state(AgentState.Idle)
+    agent_uuid = str(uuid4())
+    await redis.register_agent(agent_uuid, 5)
+    await redis.set_agent_parameters(agent_uuid, make_agent_parameters())
+    await redis.set_agent_state(agent_uuid, AgentState.Idle)
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
-        agents=[
-            MeasurementAgentCreate(uuid=agent_redis.uuid, target_file="targets.csv")
-        ],
+        agents=[MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv")],
     )
     await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
     # TODO: Best place to create the test buckets?
@@ -189,14 +187,14 @@ async def test_post_measurement_uuid(
 
 
 async def test_post_measurement_tag(
-    make_client, make_user, make_agent_parameters, make_agent_redis, storage
+    make_client, make_user, make_agent_parameters, redis, storage
 ):
     user = make_user(probing_enabled=True)
     client = make_client(user)
-    agent_redis = make_agent_redis(str(uuid4()))
-    await agent_redis.register(5)
-    await agent_redis.set_agent_parameters(make_agent_parameters(tags=["tag1"]))
-    await agent_redis.set_agent_state(AgentState.Idle)
+    agent_uuid = str(uuid4())
+    await redis.register_agent(agent_uuid, 5)
+    await redis.set_agent_parameters(agent_uuid, make_agent_parameters(tags=["tag1"]))
+    await redis.set_agent_state(agent_uuid, AgentState.Idle)
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(tag="tag1", target_file="targets.csv")],
@@ -210,19 +208,19 @@ async def test_post_measurement_tag(
 
 
 async def test_post_measurement_duplicate(
-    make_client, make_user, make_agent_parameters, make_agent_redis, storage
+    make_client, make_user, make_agent_parameters, redis, storage
 ):
     user = make_user(probing_enabled=True)
     client = make_client(user)
-    agent_redis = make_agent_redis(str(uuid4()))
-    await agent_redis.register(5)
-    await agent_redis.set_agent_parameters(make_agent_parameters(tags=["tag1"]))
-    await agent_redis.set_agent_state(AgentState.Idle)
+    agent_uuid = str(uuid4())
+    await redis.register_agent(agent_uuid, 5)
+    await redis.set_agent_parameters(agent_uuid, make_agent_parameters(tags=["tag1"]))
+    await redis.set_agent_state(agent_uuid, AgentState.Idle)
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[
             MeasurementAgentCreate(tag="tag1", target_file="targets.csv"),
-            MeasurementAgentCreate(uuid=agent_redis.uuid, target_file="targets.csv"),
+            MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv"),
         ],
     )
     await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])

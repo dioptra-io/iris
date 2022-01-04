@@ -10,7 +10,7 @@ from iris.api.authentication import (
 )
 from iris.api.dependencies import get_settings, get_storage, get_user_db
 from iris.commons.models.pagination import Paginated
-from iris.commons.models.user import StorageCredentials, User, UserDB
+from iris.commons.models.user import ExternalServices, User, UserDB
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -67,22 +67,24 @@ async def get_users(
     return Paginated.from_results(request.url, users, len(users), offset, limit)
 
 
-# TODO: Rename to /credentials and return chproxy credentials.
 @router.get(
-    "/users/me/s3",
-    response_model=StorageCredentials,
-    summary="Get S3 credentials",
+    "/users/me/services",
+    response_model=ExternalServices,
+    summary="Get external services credentials",
     tags=["Users"],
 )
-async def get_users_s3_credentials(
+async def get_user_services(
     storage: Storage = Depends(get_storage),
     _user: UserDB = Depends(current_verified_user),
 ):
-    credentials = await storage.generate_temporary_credentials()
-    return StorageCredentials(
+    s3_credentials = await storage.generate_temporary_credentials()
+    return ExternalServices(
+        chproxy_url=settings.CHPROXY_PUBLIC_URL,
+        chproxy_username=settings.CHPROXY_PUBLIC_USERNAME,
+        chproxy_password=settings.CHPROXY_PUBLIC_PASSWORD,
         s3_host=settings.AWS_S3_HOST,
-        s3_access_key_expiration=credentials["Expiration"],
-        s3_access_key_id=credentials["AccessKeyId"],
-        s3_secret_access_key=credentials["SecretAccessKey"],
-        s3_session_token=credentials["SessionToken"],
+        s3_access_key_expiration=s3_credentials["Expiration"],
+        s3_access_key_id=s3_credentials["AccessKeyId"],
+        s3_secret_access_key=s3_credentials["SecretAccessKey"],
+        s3_session_token=s3_credentials["SessionToken"],
     )

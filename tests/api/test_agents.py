@@ -14,16 +14,12 @@ def test_get_agents_probing_not_enabled(make_client, make_user):
     assert_status_code(client.get("/agents"), 403)
 
 
-async def test_get_agents_empty(
-    make_client, make_user, make_agent_parameters, make_agent_redis
-):
+async def test_get_agents_empty(make_client, make_user, make_agent_parameters):
     client = make_client(make_user(probing_enabled=True))
     assert_response(client.get("/agents"), Paginated[Agent](count=0, results=[]))
 
 
-async def test_get_agents(
-    make_client, make_user, make_agent_parameters, make_agent_redis
-):
+async def test_get_agents(make_client, make_user, make_agent_parameters, redis):
     client = make_client(make_user(probing_enabled=True))
 
     agents = [
@@ -35,10 +31,9 @@ async def test_get_agents(
     ]
 
     for agent in agents:
-        agent_redis = make_agent_redis(agent.uuid)
-        await agent_redis.register(5)
-        await agent_redis.set_agent_parameters(agent.parameters)
-        await agent_redis.set_agent_state(agent.state)
+        await redis.register_agent(agent.uuid, 5)
+        await redis.set_agent_parameters(agent.uuid, agent.parameters)
+        await redis.set_agent_state(agent.uuid, agent.state)
 
     # TODO: Add more agents and handle unordered comparisons.
     assert_response(
@@ -56,9 +51,7 @@ async def test_get_agent_not_found(make_client, make_user):
     assert_status_code(client.get(f"/agents/{uuid4()}"), 404)
 
 
-async def test_get_agent(
-    make_client, make_user, make_agent_parameters, make_agent_redis
-):
+async def test_get_agent(make_client, make_user, make_agent_parameters, redis):
     client = make_client(make_user(probing_enabled=True))
 
     agent = Agent(
@@ -67,9 +60,8 @@ async def test_get_agent(
         state=AgentState.Idle,
     )
 
-    agent_redis = make_agent_redis(agent.uuid)
-    await agent_redis.register(5)
-    await agent_redis.set_agent_parameters(agent.parameters)
-    await agent_redis.set_agent_state(agent.state)
+    await redis.register_agent(agent.uuid, 5)
+    await redis.set_agent_parameters(agent.uuid, agent.parameters)
+    await redis.set_agent_state(agent.uuid, agent.state)
 
     assert_response(client.get(f"/agents/{agent.uuid}"), agent)

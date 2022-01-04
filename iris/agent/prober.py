@@ -8,34 +8,32 @@ from typing import Dict, Optional
 from pycaracal import prober, set_log_level
 
 from iris.agent.settings import AgentSettings
-from iris.commons.models.measurement_agent import MeasurementAgentState
-from iris.commons.redis import AgentRedis
+from iris.commons.redis import Redis
 
 
-async def watcher(
-    process: Process, settings: AgentSettings, measurement_uuid: str, redis: AgentRedis
+async def watch_cancellation(
+    redis: Redis,
+    process: Process,
+    measurement_uuid: str,
+    agent_uuid: str,
+    interval: float,
 ) -> bool:
-    """Watch the prober execution and stop it according to the measurement state."""
+    """Kill the prober process if the measurement agent is cancelled."""
     while process.is_alive():
-        # TODO: Watch in another way. Dedicated cancel key?
-        measurement_state = await redis.get_measurement_state(measurement_uuid)
-        if measurement_state in [
-            MeasurementAgentState.Canceled,
-            MeasurementAgentState.Unknown,
-        ]:
+        if await redis.measurement_agent_cancelled(measurement_uuid, agent_uuid):
             process.kill()
             return False
-        await asyncio.sleep(settings.AGENT_STOPPER_REFRESH)
+        await asyncio.sleep(interval)
     return True
 
 
 def probe(
     settings: AgentSettings,
+    probes_filepath: Path,
     results_filepath: Path,
     round_number: int,
     probing_rate: int,
     prober_statistics: Dict,
-    probes_filepath: Optional[Path] = None,
 ) -> None:
     """Probing interface."""
     # Cap the probing rate if superior to the maximum probing rate

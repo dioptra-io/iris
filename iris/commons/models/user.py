@@ -63,7 +63,10 @@ class UserDB(User, models.BaseUserDB):
     pass
 
 
-class StorageCredentials(BaseModel):
+class ExternalServices(BaseModel):
+    chproxy_url: str
+    chproxy_username: str
+    chproxy_password: str
     s3_host: str
     s3_access_key_expiration: datetime
     s3_access_key_id: str

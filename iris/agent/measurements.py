@@ -1,14 +1,14 @@
 """Measurement interface."""
 import shutil
 from datetime import datetime
-from logging import Logger, LoggerAdapter
+from logging import LoggerAdapter
 from multiprocessing import Manager, Process
 
-from iris.agent.prober import probe, watcher
+from iris.agent.prober import probe, watch_cancellation
 from iris.agent.settings import AgentSettings
 from iris.commons.models.diamond_miner import ProbingStatistics
 from iris.commons.models.measurement_round_request import MeasurementRoundRequest
-from iris.commons.redis import AgentRedis
+from iris.commons.redis import Redis
 from iris.commons.storage import Storage, results_key
 
 
@@ -16,10 +16,11 @@ async def do_measurement(
     settings: AgentSettings,
     request: MeasurementRoundRequest,
     logger: LoggerAdapter,
-    redis: AgentRedis,
+    redis: Redis,
     storage: Storage,
 ):
     """Conduct a measurement."""
+    logger.info("Launch measurement procedure")
     measurement_agent = request.measurement_agent
 
     logger.info("Create local measurement directory")
@@ -28,7 +29,6 @@ async def do_measurement(
     )
     measurement_results_path.mkdir(exist_ok=True)
 
-    probes_filepath = None
     results_filepath = measurement_results_path / results_key(
         measurement_agent.agent_uuid, request.round
     )
@@ -55,17 +55,21 @@ async def do_measurement(
             target=probe,
             args=(
                 settings,
+                probes_filepath,
                 results_filepath,
                 request.round.number,
                 measurement_agent.probing_rate,
                 prober_statistics,
-                probes_filepath,
             ),
         )
 
         prober_process.start()
-        is_not_canceled = await watcher(
-            prober_process, settings, measurement_agent.measurement_uuid, redis
+        is_not_canceled = await watch_cancellation(
+            redis,
+            prober_process,
+            measurement_agent.measurement_uuid,
+            measurement_agent.agent_uuid,
+            settings.AGENT_STOPPER_REFRESH,
         )
         prober_statistics = dict(prober_statistics)
 

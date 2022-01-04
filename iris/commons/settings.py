@@ -51,6 +51,10 @@ class CommonSettings(BaseSettings):
     AWS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     AWS_TIMEOUT_RANDOM_MAX: int = 10 * 60  # in seconds
 
+    CHPROXY_PUBLIC_URL: str = ""
+    CHPROXY_PUBLIC_USERNAME: str = ""
+    CHPROXY_PUBLIC_PASSWORD: str = ""
+
     CLICKHOUSE_URL: str = "http://iris:iris@clickhouse.docker.localhost/?database=iris"
     CLICKHOUSE_PUBLIC_USER: Optional[str] = None
     CLICKHOUSE_TIMEOUT: int = 2 * 60 * 60  # in seconds
