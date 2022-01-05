@@ -45,6 +45,9 @@ async def outer_pipeline(
     """
     logger.info("Running outer pipeline with results key %s", results_key)
 
+    logger.info("Ensure that the working directory exists")
+    working_directory.mkdir(exist_ok=True, parents=True)
+
     logger.info("Retrieve agent information from redis")
     agent_parameters = await redis.get_agent_parameters(agent_uuid)
 
@@ -102,7 +105,6 @@ async def outer_pipeline(
         measurement_tags=measurement_tags,
         agent_min_ttl=agent_parameters.min_ttl,
         sliding_window_stopping_condition=sliding_window_stopping_condition,
-        tool=tool,
         tool_parameters=tool_parameters,
         results_filepath=results_filepath,
         targets_filepath=targets_filepath,

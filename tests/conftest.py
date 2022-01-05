@@ -6,6 +6,7 @@ from pathlib import Path
 import boto3
 import pytest
 import redis as pyredis
+from dramatiq import Worker
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, create_engine
@@ -24,7 +25,7 @@ from iris.commons.models.base import Base
 from iris.commons.redis import Redis
 from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
-from iris.worker import WorkerSettings
+from iris.worker import WorkerSettings, broker
 
 pytest.register_assert_rewrite("tests.assertions")
 pytest_plugins = ["tests.fixtures.models", "tests.fixtures.storage"]
@@ -92,7 +93,7 @@ def clickhouse(settings, logger):
 
 @pytest.fixture
 def engine(settings):
-    # See https://sqlmodel.tiangolo.com/tutorial/fastapi/tests/ for more information.
+    # See https://sqlmodel.tiangolo.com/tutorial/fastapi/tests/.
     engine = create_engine(
         settings.SQLALCHEMY_DATABASE_URL,
         connect_args={"check_same_thread": False},
@@ -118,6 +119,23 @@ def session(engine):
 @pytest.fixture
 def storage(settings, logger):
     return Storage(settings, logger)
+
+
+@pytest.fixture()
+def stub_broker(settings):
+    # See https://dramatiq.io/guide.html#unit-testing.
+    broker.emit_after("process_boot")
+    broker.flush_all()
+    return broker
+
+
+@pytest.fixture()
+def stub_worker():
+    # See https://dramatiq.io/guide.html#unit-testing.
+    worker = Worker(broker, worker_timeout=100)
+    worker.start()
+    yield worker
+    worker.stop()
 
 
 @pytest.fixture

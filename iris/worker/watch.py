@@ -16,22 +16,18 @@ from iris.commons.storage import Storage
 from iris.worker.outer_pipeline import outer_pipeline
 from iris.worker.settings import WorkerSettings
 
-default_settings = WorkerSettings()
+# Override iris.worker.settings if needed for testing.
+settings = WorkerSettings()
 
 
 @dramatiq.actor(
-    time_limit=default_settings.WORKER_TIME_LIMIT,
-    max_age=default_settings.WORKER_MESSAGE_AGE_LIMIT,
+    time_limit=settings.WORKER_TIME_LIMIT, max_age=settings.WORKER_MESSAGE_AGE_LIMIT
 )
-def watch_measurement_agent(
-    measurement_uuid: str, agent_uuid: str, *, settings=default_settings
-):
-    asyncio.run(watch_measurement_agent_(measurement_uuid, agent_uuid, settings))
+def watch_measurement_agent(measurement_uuid: str, agent_uuid: str):
+    asyncio.run(watch_measurement_agent_(measurement_uuid, agent_uuid))
 
 
-async def watch_measurement_agent_(
-    measurement_uuid: str, agent_uuid: str, settings: WorkerSettings
-):
+async def watch_measurement_agent_(measurement_uuid: str, agent_uuid: str):
     logger = Adapter(
         base_logger,
         dict(
@@ -45,6 +41,9 @@ async def watch_measurement_agent_(
     storage = Storage(settings, logger)
 
     ma = MeasurementAgent.get(session, measurement_uuid, agent_uuid)
+    if not ma:
+        logger.error("Measurement not found")
+        return
     logger.info("Watching measurement agent in state %s", ma.state)
 
     while True:
