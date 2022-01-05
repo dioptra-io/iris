@@ -12,21 +12,13 @@ jobs:
           python-version: '3.9'
       - name: Start services
         run: docker compose up -d -t 0 traefik clickhouse minio redis
-      - name: Install clickhouse-client and zstd
-        run: |
-          sudo apt install --yes apt-transport-https ca-certificates dirmngr
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4
-          echo "deb https://repo.clickhouse.tech/deb/stable/ main/" | sudo tee \
-              /etc/apt/sources.list.d/clickhouse.list
-          sudo apt update
-          sudo apt install --yes clickhouse-client zstd
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install poetry
           poetry install --extras "agent api worker"
-      - name: Tests
-        run: poetry run pytest --cov-report xml tests_old
+      - name: Run tests
+        run: poetry run pytest --cov-report xml tests
       - uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

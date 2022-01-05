@@ -2,14 +2,14 @@ from uuid import uuid4
 
 import pytest
 
-from iris.commons.results import InsertResults
 from iris.commons.test import compress_file
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_measurement_results(clickhouse, tmp_path):
-    db = InsertResults(clickhouse, str(uuid4()), str(uuid4()), 24, 64)
+async def test_insert_results(clickhouse, tmp_path):
+    measurement_uuid = str(uuid4())
+    agent_uuid = str(uuid4())
 
     results_file = tmp_path / "results.csv"
     results_file.write_text(
@@ -21,7 +21,16 @@ async def test_measurement_results(clickhouse, tmp_path):
     )
     compress_file(results_file, results_file.with_suffix(".csv.zst"))
 
-    assert await db.create_table(drop=True) is None
-    assert await db.insert_csv(results_file.with_suffix(".csv.zst")) is None
-    assert await db.insert_prefixes() is None
-    assert await db.insert_links() is None
+    assert (
+        await clickhouse.create_tables(measurement_uuid, agent_uuid, 24, 64, drop=True)
+        is None
+    )
+    assert (
+        await clickhouse.insert_csv(
+            measurement_uuid, agent_uuid, results_file.with_suffix(".csv.zst")
+        )
+        is None
+    )
+    assert await clickhouse.insert_prefixes(measurement_uuid, agent_uuid) is None
+    assert await clickhouse.insert_links(measurement_uuid, agent_uuid) is None
+    assert await clickhouse.grant_public_access(measurement_uuid, agent_uuid) is None

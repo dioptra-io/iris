@@ -21,8 +21,6 @@ def fault_tolerant(retry_):
             # Retrieve logger and settings objects from
             # the instance to which the function belongs.
             parent = self
-            if hasattr(parent, "clickhouse"):
-                parent = parent.clickhouse
             return await retry_(parent.settings, parent.logger)(func)(
                 self, *args, **kwargs
             )

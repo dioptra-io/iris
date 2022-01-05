@@ -3,7 +3,7 @@
 import asyncio
 from multiprocessing import Process
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 from pycaracal import prober, set_log_level
 
@@ -44,7 +44,7 @@ def probe(
     )
 
     # This set the log level of the C++ logger (spdlog).
-    # This allow the logs to be filtered in C++ (fast)
+    # This allows the logs to be filtered in C++ (fast)
     # before being forwarded to the (slower) Python logger.
     set_log_level(settings.AGENT_CARACAL_LOGGING_LEVEL)
 

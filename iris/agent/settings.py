@@ -2,7 +2,6 @@
 
 import logging
 from enum import Enum
-from ipaddress import IPv4Address
 from pathlib import Path
 from typing import List
 from uuid import uuid4

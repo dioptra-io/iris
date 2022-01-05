@@ -11,11 +11,10 @@ from diamond_miner.typing import FlowMapper
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.models.diamond_miner import Tool, ToolParameters
 from iris.commons.models.round import Round
-from iris.commons.results import InsertResults
 from iris.worker.tree import load_targets
 
 
-async def default_inner_pipeline(
+async def diamond_miner_inner_pipeline(
     clickhouse: ClickHouse,
     logger: Logger,
     # NOTE: Ideally we would not need to pass the UUIDs here,
@@ -27,7 +26,6 @@ async def default_inner_pipeline(
     # NOTE: Ideally the sliding window parameters would be tool parameters.
     # Iris shouldn't need to know about this feature.
     sliding_window_stopping_condition: int,
-    tool: Tool,
     tool_parameters: ToolParameters,
     results_filepath: Optional[Path],
     targets_filepath: Path,
@@ -38,14 +36,10 @@ async def default_inner_pipeline(
     """
     Given a targets file and an optional results file, write the probes for the next round.
     This is a generic implementation for the tools based on the diamond-miner library:
-    diamond-miner, yarrp and ping.
+    diamond-miner and yarrp.
 
     :returns: The number of probes written.
     """
-
-    def log(s):
-        logger.info(f"{measurement_uuid} :: {agent_uuid} :: {s}")
-
     database_url = clickhouse.settings.CLICKHOUSE_URL
     measurement_id = f"{measurement_uuid}__{agent_uuid}"
 
@@ -57,28 +51,18 @@ async def default_inner_pipeline(
     )
 
     if results_filepath:
-        insert_results = InsertResults(
-            clickhouse,
+        await clickhouse.create_tables(
             measurement_uuid,
             agent_uuid,
             tool_parameters.prefix_len_v4,
             tool_parameters.prefix_len_v6,
         )
-        log("Create results tables")
-        await insert_results.create_table()
-
-        # NOTE: For now this feature is activated only for default inner pipeline.
-        # Not for the probes inner pipeline.
-        if "public" in measurement_tags:  # TODO parametrize public tag name
-            log("Grant public access to results tables (if public user is set)")
-            await insert_results.grant_public_access()
-
-        log("Insert results file")
-        await insert_results.insert_csv(results_filepath)
-        log("Insert prefixes")
-        await insert_results.insert_prefixes()
-        log("Insert links")
-        await insert_results.insert_links()
+        # TODO parametrize public tag name
+        if "public" in measurement_tags:
+            await clickhouse.grant_public_access(measurement_uuid, agent_uuid)
+        await clickhouse.insert_csv(measurement_uuid, agent_uuid, results_filepath)
+        await clickhouse.insert_prefixes(measurement_uuid, agent_uuid)
+        await clickhouse.insert_links(measurement_uuid, agent_uuid)
 
     probe_ttl_geq = 0
     probe_ttl_leq = 255
@@ -87,9 +71,11 @@ async def default_inner_pipeline(
     if next_round.number == 1:
         probe_ttl_geq = max(agent_min_ttl, next_round.min_ttl)
         probe_ttl_leq = next_round.max_ttl
-        log(f"Next round window: TTL {probe_ttl_geq} to {probe_ttl_leq} (incl.)")
+        logger.info(
+            f"Next round window: TTL {probe_ttl_geq} to {probe_ttl_leq} (incl.)"
+        )
 
-        log("Load targets")
+        logger.info("Load targets")
         with targets_filepath.open() as f:
             targets = load_targets(
                 f,
@@ -97,19 +83,16 @@ async def default_inner_pipeline(
                 clamp_ttl_max=probe_ttl_leq,
             )
 
-        log("Compute the prefixes to probe")
+        logger.info("Compute the prefixes to probe")
         prefixes = []
 
         if previous_round is None:
-            log("Enumerate initial prefixes")
+            logger.info("Enumerate initial prefixes")
             for prefix in targets:
                 for protocol, ttls, n_initial_flows in targets[prefix]:
-                    if tool == Tool.Ping:
-                        # In the case of ping, only take the max TTL in the TTL range.
-                        ttls = (ttls[-1],)
                     prefixes.append((prefix, protocol, ttls, n_initial_flows))
         else:
-            log("Enumerate sliding prefixes")
+            logger.info("Enumerate sliding prefixes")
             query = GetSlidingPrefixes(
                 window_max_ttl=previous_round.max_ttl,
                 stopping_condition=sliding_window_stopping_condition,
@@ -120,12 +103,9 @@ async def default_inner_pipeline(
                 else:
                     prefix = f"{addr_v6}/{tool_parameters.prefix_len_v6}"
                 for protocol, ttls, n_initial_flows in targets[prefix]:
-                    if tool == Tool.Ping:
-                        # In the case of ping, only take the max TTL in the TTL range.
-                        ttls = (ttls[-1],)
                     prefixes.append((prefix, protocol, ttls, n_initial_flows))
 
-        log("Insert probe counts")
+        logger.info("Insert probe counts")
         insert_probe_counts(
             url=database_url,
             measurement_id=measurement_id,
@@ -140,7 +120,7 @@ async def default_inner_pipeline(
     # Compute MDA probes for round > 1
     else:
         assert previous_round, "round > 1 must have a previous round"
-        log("Insert MDA probe counts")
+        logger.info("Insert MDA probe counts")
         insert_mda_probe_counts_parallel(
             url=database_url,
             measurement_id=measurement_id,
@@ -149,7 +129,7 @@ async def default_inner_pipeline(
             adaptive_eps=True,
         )
 
-    log("Generate probes file")
+    logger.info("Generate probes file")
     return probe_generator_parallel(
         filepath=probes_filepath,
         url=database_url,
