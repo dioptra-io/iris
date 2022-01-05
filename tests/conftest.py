@@ -137,6 +137,7 @@ def make_client(engine, settings):
             app.dependency_overrides[current_verified_user] = lambda: user
         if user and user.is_active and user.is_verified and user.is_superuser:
             app.dependency_overrides[current_superuser] = lambda: user
+
         app.dependency_overrides[get_session] = get_session_override
         app.dependency_overrides[get_settings] = lambda: APISettings(**settings.dict())
         return TestClient(app)

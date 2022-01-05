@@ -199,7 +199,7 @@ class ClickHouse:
         query.execute_concurrent(
             self.settings.CLICKHOUSE_URL,
             measurement_id_,
-            subsets,
+            subsets=subsets,
             concurrent_requests=8,
         )
 
@@ -218,6 +218,6 @@ class ClickHouse:
         query.execute_concurrent(
             self.settings.CLICKHOUSE_URL,
             measurement_id_,
-            subsets,
+            subsets=subsets,
             concurrent_requests=8,
         )

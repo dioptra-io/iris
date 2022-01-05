@@ -78,8 +78,8 @@ async def get_measurements(
     measurements = Measurement.all(
         session, tag=tag, user_id=str(user.id), offset=offset, limit=limit
     )
-    measurements = MeasurementRead.from_measurements(measurements)
-    return Paginated.from_results(request.url, measurements, count, offset, limit)
+    measurements_ = MeasurementRead.from_measurements(measurements)
+    return Paginated.from_results(request.url, measurements_, count, offset, limit)
 
 
 @router.post(

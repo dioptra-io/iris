@@ -1,15 +1,12 @@
 from logging import Logger
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
-from diamond_miner import mappers
 from diamond_miner.generators import probe_generator_parallel
-from diamond_miner.insert import insert_mda_probe_counts_parallel, insert_probe_counts
-from diamond_miner.queries import GetSlidingPrefixes
-from diamond_miner.typing import FlowMapper
+from diamond_miner.insert import insert_probe_counts
 
 from iris.commons.clickhouse import ClickHouse
-from iris.commons.models.diamond_miner import Tool, ToolParameters
+from iris.commons.models.diamond_miner import ToolParameters
 from iris.commons.models.round import Round
 from iris.worker.inner_pipeline.diamond_miner import instantiate_flow_mappers
 from iris.worker.tree import load_targets

@@ -37,6 +37,10 @@ poetry run python -m iris.worker
 
 The API documentation will be available at `http://127.0.0.1:8000/docs`.
 
+##
+
+TODO: Document how to run with an IDE / debugger.
+
 ## Coding style
 
 The code is formatted with black with its standard option.

@@ -1,3 +1,4 @@
+from ipaddress import ip_address
 from logging import Logger
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -9,7 +10,7 @@ from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.typing import FlowMapper
 
 from iris.commons.clickhouse import ClickHouse
-from iris.commons.models.diamond_miner import Tool, ToolParameters
+from iris.commons.models.diamond_miner import ToolParameters
 from iris.commons.models.round import Round
 from iris.worker.tree import load_targets
 
@@ -97,7 +98,8 @@ async def diamond_miner_inner_pipeline(
                 window_max_ttl=previous_round.max_ttl,
                 stopping_condition=sliding_window_stopping_condition,
             )
-            for _, _, addr_v6 in query.execute_iter(database_url, measurement_id):
+            for row in query.execute_iter(database_url, measurement_id):
+                addr_v6 = ip_address(row["probe_dst_prefix"])
                 if addr_v4 := addr_v6.ipv4_mapped:
                     prefix = f"{addr_v4}/{tool_parameters.prefix_len_v4}"
                 else:

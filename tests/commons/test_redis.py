@@ -137,11 +137,16 @@ async def test_redis_publish_subscribe(redis, make_user, make_measurement):
     measurement = make_measurement(user_id=str(user.id))
     measurement_agent = measurement.agents[0]
 
-    # 1. Launch the subscriber and give it some time to start
-    subscriber = asyncio.create_task(redis.subscribe(measurement_agent.agent_uuid))
+    # 1. Create a queue
+    queue = asyncio.Queue()
+
+    # 2. Launch the subscriber and give it some time to start
+    subscriber = asyncio.create_task(
+        redis.subscribe(measurement_agent.agent_uuid, queue)
+    )
     await asyncio.sleep(0.5)
 
-    # 2. Publish the request
+    # 3. Publish the request
     request = MeasurementRoundRequest(
         measurement=measurement,
         measurement_agent=measurement_agent,
@@ -150,6 +155,6 @@ async def test_redis_publish_subscribe(redis, make_user, make_measurement):
     )
     await redis.publish(measurement_agent.agent_uuid, request)
 
-    # 3. Wait for the subscriber
-    await asyncio.wait_for(subscriber, timeout=0.5)
-    assert subscriber.result() == request
+    # 3. Verify that the request is in the queue
+    result = await asyncio.wait_for(queue.get(), timeout=0.5)
+    assert result == request

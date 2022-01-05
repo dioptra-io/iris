@@ -116,7 +116,7 @@ class Measurement(MeasurementBase, table=True):
         tag: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> int:
-        query = select(func.count(Measurement.uuid))
+        query = select(func.count(Measurement.uuid))  # type: ignore
         if tag:
             query = query.where(Measurement.tags.contains(tag))
         if user_id:

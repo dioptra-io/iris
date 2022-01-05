@@ -36,7 +36,7 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
         await self.storage.create_bucket(self.storage.targets_bucket(str(user.id)))
         await self.storage.create_bucket(self.storage.archive_bucket(str(user.id)))
 
-    async def delete(self, user: models.UD) -> None:
+    async def delete(self, user: UserDB) -> None:
         """
         Delete a user.
         :param user: The user to delete.
@@ -70,7 +70,7 @@ async def get_user_manager(
 
 
 class CustomJWTAuthentication(JWTAuthentication):
-    async def _generate_token(self, user: models.UD) -> str:
+    async def _generate_token(self, user: UserDB) -> str:
         data = {
             "user_id": str(user.id),
             "is_active": user.is_active,

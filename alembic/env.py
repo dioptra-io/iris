@@ -1,7 +1,10 @@
 from logging.config import fileConfig
 
+# TODO
 import iris.commons.models.measurement
 import iris.commons.models.user
+
+#
 from alembic import context
 from iris.commons.models.base import Base
 from iris.commons.settings import CommonSettings

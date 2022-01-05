@@ -157,3 +157,4 @@ async def find_results(
         #  Also remove the associated keys.
         if file["key"].startswith(f"{agent_uuid}_results"):
             return file["key"]
+    return None

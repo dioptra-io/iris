@@ -1,6 +1,5 @@
 """Targets operations."""
-
-import ipaddress
+from ipaddress import ip_address, ip_network
 
 from fastapi import (
     APIRouter,
@@ -90,41 +89,6 @@ async def get_target_by_key(
     )
 
 
-async def verify_target_file(target_file):
-    """Verify that a target file have a good structure."""
-    # Check if file is empty
-    target_file.file.seek(0, 2)
-    if target_file.file.tell() == 0:
-        return False
-    target_file.file.seek(0)
-
-    # Check if all lines of the file is valid
-    for line in target_file.file.readlines():
-        try:
-            line_split = line.decode("utf-8").strip().split(",")
-
-            # Check if the prefix is valid
-            ipaddress.ip_network(line_split[0])
-
-            # Check if the protocol is supported
-            if line_split[1] not in ["icmp", "icmp6", "udp"]:
-                return False
-
-            # Check the min TTL
-            if not (0 < int(line_split[2]) <= 255):
-                return False
-
-            # Check the max TTL
-            if not (0 < int(line_split[3]) <= 255):
-                return False
-
-        except Exception:
-            return False
-
-    target_file.file.seek(0)
-    return True
-
-
 @router.post(
     "/",
     response_model=Target,
@@ -161,43 +125,33 @@ async def post_target(
     return get_target_by_key(key=target_file.filename, user=user, storage=storage)
 
 
-async def verify_probe_target_file(target_file):
-    """Verify that a probe target file have a good structure."""
-    # Check if file is empty
-    target_file.file.seek(0, 2)
-    if target_file.file.tell() == 0:
-        return False
-    target_file.file.seek(0)
+@router.delete(
+    "/{key}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a target list.",
+)
+async def delete_target_by_key(
+    key: str,
+    user: UserDB = Depends(current_verified_user),
+    storage: Storage = Depends(get_storage),
+):
+    """Delete a target list from object storage."""
+    assert_probing_enabled(user)
 
-    # Check if all lines of the file is valid
-    for line in target_file.file.readlines():
-        try:
-            line_split = line.decode("utf-8").strip().split(",")
+    try:
+        response = await storage.delete_file_check_no_retry(
+            storage.targets_bucket(str(user.id)), key
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
+        )
 
-            # Check if the address is valid
-            ipaddress.ip_address(line_split[0])
-
-            # Check the source port
-            if not (0 <= int(line_split[1]) <= 65535):
-                return False
-
-            # Check the destination port
-            if not (0 <= int(line_split[2]) <= 65535):
-                return False
-
-            # Check the TTL
-            if not (0 < int(line_split[3]) <= 255):
-                return False
-
-            # Check if the protocol is supported
-            if line_split[4] not in ["icmp", "icmp6", "udp"]:
-                return False
-
-        except Exception:
-            return False
-
-    target_file.file.seek(0)
-    return True
+    if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error while removing file object",
+        )
 
 
 @router.post(
@@ -242,30 +196,75 @@ async def post_probes_target(
     return get_target_by_key(key=target_file.filename, user=user, storage=storage)
 
 
-@router.delete(
-    "/{key}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a target list.",
-)
-async def delete_target_by_key(
-    key: str,
-    user: UserDB = Depends(current_verified_user),
-    storage: Storage = Depends(get_storage),
-):
-    """Delete a target list from object storage."""
-    assert_probing_enabled(user)
+async def verify_target_file(target_file):
+    """Verify that a target file have a good structure."""
+    # Check if file is empty
+    target_file.file.seek(0, 2)
+    if target_file.file.tell() == 0:
+        return False
+    target_file.file.seek(0)
 
-    try:
-        response = await storage.delete_file_check_no_retry(
-            storage.targets_bucket(str(user.id)), key
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
-        )
+    # Check if all lines of the file is valid
+    for line in target_file.file.readlines():
+        try:
+            line_split = line.decode("utf-8").strip().split(",")
 
-    if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error while removing file object",
-        )
+            # Check if the prefix is valid
+            ip_network(line_split[0])
+
+            # Check if the protocol is supported
+            if line_split[1] not in ["icmp", "icmp6", "udp"]:
+                return False
+
+            # Check the min TTL
+            if not (0 < int(line_split[2]) <= 255):
+                return False
+
+            # Check the max TTL
+            if not (0 < int(line_split[3]) <= 255):
+                return False
+
+        except Exception:
+            return False
+
+    target_file.file.seek(0)
+    return True
+
+
+async def verify_probe_target_file(target_file):
+    """Verify that a probe target file have a good structure."""
+    # Check if file is empty
+    target_file.file.seek(0, 2)
+    if target_file.file.tell() == 0:
+        return False
+    target_file.file.seek(0)
+
+    # Check if all lines of the file is valid
+    for line in target_file.file.readlines():
+        try:
+            line_split = line.decode("utf-8").strip().split(",")
+
+            # Check if the address is valid
+            ip_address(line_split[0])
+
+            # Check the source port
+            if not (0 <= int(line_split[1]) <= 65535):
+                return False
+
+            # Check the destination port
+            if not (0 <= int(line_split[2]) <= 65535):
+                return False
+
+            # Check the TTL
+            if not (0 < int(line_split[3]) <= 255):
+                return False
+
+            # Check if the protocol is supported
+            if line_split[4] not in ["icmp", "icmp6", "udp"]:
+                return False
+
+        except Exception:
+            return False
+
+    target_file.file.seek(0)
+    return True
