@@ -1,10 +1,20 @@
 import os
+import tempfile
 
 import pytest
 
 superuser = pytest.mark.skipif(
     os.geteuid() != 0, reason="this test must be run as root"
 )
+
+
+class TestUploadFile:
+    def __init__(self, content):
+        self.file = tempfile.SpooledTemporaryFile()
+        if isinstance(content, str):
+            content = content.encode()
+        self.file.write(content)
+        self.file.seek(0)
 
 
 def add_and_refresh(session, instances):

@@ -40,22 +40,8 @@ async def get_targets(
 ):
     """Get all target lists."""
     assert_probing_enabled(user)
-
-    try:
-        targets = await storage.get_all_files_no_retry(
-            storage.targets_bucket(str(user.id))
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Bucket not found"
-        )
-    summaries = [
-        TargetSummary(
-            key=target["key"],
-            last_modified=target["last_modified"],
-        )
-        for target in targets
-    ]
+    targets = await storage.get_all_files_no_retry(storage.targets_bucket(str(user.id)))
+    summaries = [TargetSummary.from_s3(target) for target in targets]
     return Paginated.from_results(request.url, summaries, len(summaries), offset, limit)
 
 
@@ -64,29 +50,18 @@ async def get_targets(
     response_model=Target,
     summary="Get target list specified by key.",
 )
-async def get_target_by_key(
+async def get_target(
     key: str,
+    with_content: bool = True,
     user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
     assert_probing_enabled(user)
-
-    try:
-        target_file = await storage.get_file_no_retry(
-            storage.targets_bucket(str(user.id)), key
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
-        )
-
-    return Target(
-        key=target_file["key"],
-        size=target_file["size"],
-        content=[c.strip() for c in target_file["content"].split()],
-        last_modified=target_file["last_modified"],
+    target = await storage.get_file_no_retry(
+        storage.targets_bucket(str(user.id)), key, retrieve_content=with_content
     )
+    return Target.from_s3(target)
 
 
 @router.post(
@@ -111,18 +86,17 @@ async def post_target(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail="Bad target file extension (.csv required)",
         )
-
-    is_correct = await verify_target_file(target_file)
-    if not is_correct:
+    if not verify_target_file(target_file):
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail="Bad target file structure",
         )
-
     await storage.upload_file_no_retry(
         storage.targets_bucket(str(user.id)), target_file.filename, target_file.file
     )
-    return get_target_by_key(key=target_file.filename, user=user, storage=storage)
+    return await get_target(
+        key=target_file.filename, with_content=False, user=user, storage=storage
+    )
 
 
 @router.delete(
@@ -130,28 +104,16 @@ async def post_target(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a target list.",
 )
-async def delete_target_by_key(
+async def delete_target(
     key: str,
     user: UserDB = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""
     assert_probing_enabled(user)
-
-    try:
-        response = await storage.delete_file_check_no_retry(
-            storage.targets_bucket(str(user.id)), key
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="File object not found"
-        )
-
-    if response["ResponseMetadata"]["HTTPStatusCode"] != 204:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error while removing file object",
-        )
+    response = await storage.delete_file_check_no_retry(
+        storage.targets_bucket(str(user.id)), key
+    )
 
 
 @router.post(
@@ -172,31 +134,28 @@ async def post_probes_target(
 ):
     """Upload a probe list to object storage."""
     assert_probing_enabled(user)
-
     if not target_file.filename.endswith(".csv"):
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail="Bad target file extension (.csv required)",
         )
-
-    is_correct = await verify_probe_target_file(target_file)
-    if not is_correct:
+    if not verify_probe_target_file(target_file):
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail="Bad target file structure",
         )
-
     await storage.upload_file_no_retry(
         storage.targets_bucket(str(user.id)),
         target_file.filename,
         target_file.file,
         metadata={"is_probes_file": "True"},  # MinIO doesn't like bool type in metadata
     )
+    return await get_target(
+        key=target_file.filename, with_content=False, user=user, storage=storage
+    )
 
-    return get_target_by_key(key=target_file.filename, user=user, storage=storage)
 
-
-async def verify_target_file(target_file):
+def verify_target_file(target_file):
     """Verify that a target file have a good structure."""
     # Check if file is empty
     target_file.file.seek(0, 2)
@@ -231,7 +190,7 @@ async def verify_target_file(target_file):
     return True
 
 
-async def verify_probe_target_file(target_file):
+def verify_probe_target_file(target_file):
     """Verify that a probe target file have a good structure."""
     # Check if file is empty
     target_file.file.seek(0, 2)
