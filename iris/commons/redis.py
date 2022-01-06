@@ -210,3 +210,5 @@ class Redis:
                         await asyncio.sleep(0.1)
                 except asyncio.TimeoutError:
                     pass
+                except asyncio.CancelledError:
+                    return
