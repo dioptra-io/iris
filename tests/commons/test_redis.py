@@ -6,7 +6,7 @@ import pytest
 from iris.commons.models.agent import Agent, AgentState
 from iris.commons.models.measurement_round_request import MeasurementRoundRequest
 from iris.commons.models.round import Round
-from tests.helpers import cancel_task
+from iris.commons.utils import cancel_task
 
 pytestmark = pytest.mark.asyncio
 

@@ -1,3 +1,4 @@
+import asyncio
 import socket
 from ipaddress import IPv4Address, IPv6Address
 from typing import Callable, Optional, TypeVar
@@ -6,6 +7,14 @@ from pydantic import BaseModel
 from sqlmodel import SQLModel
 
 T = TypeVar("T")
+
+
+async def cancel_task(task: asyncio.Task):
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 def cast(to: Callable[..., BaseModel], from_: BaseModel, **extra) -> T:

@@ -7,10 +7,11 @@ from iris.commons.models.agent import Agent
 from iris.commons.models.diamond_miner import Tool
 from iris.commons.models.measurement import MeasurementCreate, MeasurementReadWithAgents
 from iris.commons.models.measurement_agent import MeasurementAgentCreate
+from iris.commons.utils import cancel_task
 from iris.worker.watch import watch_measurement_agent_
 from tests.api.test_measurements import upload_target_file
 from tests.assertions import APIResponseError, assert_status_code, cast_response
-from tests.helpers import cancel_task, superuser
+from tests.helpers import superuser
 
 pytestmark = pytest.mark.asyncio
 

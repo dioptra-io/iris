@@ -13,7 +13,7 @@ from iris.commons.logger import Adapter, base_logger, log_traceback
 from iris.commons.models import AgentParameters, AgentState, MeasurementRoundRequest
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
-from iris.commons.utils import get_ipv4_address, get_ipv6_address
+from iris.commons.utils import cancel_task, get_ipv4_address, get_ipv6_address
 
 
 async def heartbeat(agent_uuid: str, redis: Redis) -> None:
@@ -94,13 +94,16 @@ async def main(settings=AgentSettings()):
         ]
         await asyncio.gather(*tasks)
 
+    except asyncio.CancelledError:
+        pass
+
     except Exception as e:
         log_traceback(logger)
         raise e
 
     finally:
         for task in tasks:
-            task.cancel()
+            await cancel_task(task)
         await redis.delete_agent_state(settings.AGENT_UUID)
         await redis.delete_agent_parameters(settings.AGENT_UUID)
         await redis.unregister_agent(settings.AGENT_UUID)

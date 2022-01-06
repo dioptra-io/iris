@@ -53,6 +53,7 @@ def settings():
         AWS_S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
         AWS_S3_TARGETS_BUCKET_PREFIX=f"targets-test-{namespace}-",
         AWS_TIMEOUT=0,
+        CLICKHOUSE_PUBLIC_USER="public",
         CLICKHOUSE_URL="http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
         CLICKHOUSE_TIMEOUT=0,
         REDIS_NAMESPACE=f"iris-test-{namespace}",
@@ -174,6 +175,7 @@ def cleanup_redis():
             "redis://default:redispass@redis.docker.localhost?db=15"
         )
         redis_.flushdb()
+        redis_.close()
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -203,3 +205,5 @@ def cleanup_s3():
                     objects = [{"Key": x["Key"]} for x in objects.get("Contents", [])]
                     s3.delete_objects(Bucket=bucket, Delete=dict(Objects=objects))
                 s3.delete_bucket(Bucket=bucket)
+        # https://github.com/boto/botocore/pull/1810
+        s3._endpoint.http_session._manager.clear()

@@ -27,6 +27,10 @@ def test_find_exit_ttl_from_output_excluded():
     assert find_exit_ttl_from_output(output, 0, excluded=["AS15169"]) == 2
 
 
+def test_find_exit_ttl_from_output_empty():
+    assert find_exit_ttl_from_output("", 2) is None
+
+
 @skipci
 @superuser
 def test_find_exit_ttl_with_mtr():

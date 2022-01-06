@@ -139,10 +139,10 @@ class ClickHouse:
                 links_table(measurement_id_),
                 prefixes_table(measurement_id_),
             ]:
-                await self.call(
-                    "GRANT SELECT ON {table:Identifier} TO {user:Identifier}",
-                    params={"table": table, "user": public_user},
-                )
+                # TODO: Proper parameter injection?
+                # It doesn't seems to be supported for GRANT.
+                # Syntax error: failed at position 17 ('{'): {table:Identifier}
+                await self.call(f"GRANT SELECT ON {table} TO {public_user}")
 
     async def insert_csv(
         self, measurement_uuid: str, agent_uuid: str, csv_filepath: Path

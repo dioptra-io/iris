@@ -40,6 +40,7 @@ The API documentation will be available at `http://127.0.0.1:8000/docs`.
 ##
 
 TODO: Document how to run with an IDE / debugger.
+TODO: `env PYTHONDEVMODE=1 PYTHONTRACEMALLOC=1`
 
 ## Coding style
 
