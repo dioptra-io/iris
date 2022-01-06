@@ -6,6 +6,7 @@ import pytest
 from iris.commons.models.agent import Agent, AgentState
 from iris.commons.models.measurement_round_request import MeasurementRoundRequest
 from iris.commons.models.round import Round
+from tests.helpers import cancel_task
 
 pytestmark = pytest.mark.asyncio
 
@@ -158,3 +159,6 @@ async def test_redis_publish_subscribe(redis, make_user, make_measurement):
     # 3. Verify that the request is in the queue
     result = await asyncio.wait_for(queue.get(), timeout=0.5)
     assert result == request
+
+    # 4. Terminate the subscriber
+    await cancel_task(subscriber)

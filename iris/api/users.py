@@ -9,8 +9,7 @@ from iris.api.authentication import (
     jwt_authentication,
 )
 from iris.api.dependencies import get_settings, get_storage, get_user_db
-from iris.commons.models.pagination import Paginated
-from iris.commons.models.user import ExternalServices, User, UserDB
+from iris.commons.models import ExternalServices, Paginated, User, UserDB
 from iris.commons.storage import Storage
 
 router = APIRouter()

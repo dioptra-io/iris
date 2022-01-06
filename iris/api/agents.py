@@ -4,9 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from iris.api.authentication import assert_probing_enabled, current_verified_user
 from iris.api.dependencies import get_redis
-from iris.commons.models.agent import Agent
-from iris.commons.models.pagination import Paginated
-from iris.commons.models.user import UserDB
+from iris.commons.models import Agent, Paginated, UserDB
 from iris.commons.redis import Redis
 
 router = APIRouter()

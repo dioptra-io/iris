@@ -10,8 +10,7 @@ from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.typing import FlowMapper
 
 from iris.commons.clickhouse import ClickHouse
-from iris.commons.models.diamond_miner import ToolParameters
-from iris.commons.models.round import Round
+from iris.commons.models import Round, ToolParameters
 from iris.worker.tree import load_targets
 
 

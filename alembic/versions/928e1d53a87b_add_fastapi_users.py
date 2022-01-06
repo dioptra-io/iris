@@ -1,7 +1,7 @@
 """Add FastAPI-Users
 
 Revision ID: 928e1d53a87b
-Revises: 
+Revises:
 Create Date: 2021-12-22 10:23:33.534153
 
 """

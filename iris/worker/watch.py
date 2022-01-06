@@ -6,11 +6,11 @@ from sqlmodel import Session
 
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.logger import Adapter, base_logger
-from iris.commons.models.measurement_agent import (
+from iris.commons.models import (
     MeasurementAgent,
     MeasurementAgentState,
+    MeasurementRoundRequest,
 )
-from iris.commons.models.measurement_round_request import MeasurementRoundRequest
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from iris.worker.outer_pipeline import outer_pipeline
@@ -154,6 +154,6 @@ async def find_results(
     bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
     files = await storage.get_all_files(bucket)
     for file in files:
-        if file["key"].startswith(f"results_"):
+        if file["key"].startswith("results_"):
             return file["key"]
     return None

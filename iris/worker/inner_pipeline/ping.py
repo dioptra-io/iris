@@ -6,8 +6,7 @@ from diamond_miner.generators import probe_generator_parallel
 from diamond_miner.insert import insert_probe_counts
 
 from iris.commons.clickhouse import ClickHouse
-from iris.commons.models.diamond_miner import ToolParameters
-from iris.commons.models.round import Round
+from iris.commons.models import Round, ToolParameters
 from iris.worker.inner_pipeline.diamond_miner import instantiate_flow_mappers
 from iris.worker.tree import load_targets
 

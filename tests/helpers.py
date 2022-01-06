@@ -1,5 +1,7 @@
 import os
 import tempfile
+from asyncio import Task
+from concurrent.futures import CancelledError
 
 import pytest
 
@@ -26,6 +28,14 @@ def add_and_refresh(session, instances):
     session.commit()
     for instance in instances:
         session.refresh(instance)
+
+
+async def cancel_task(task: Task):
+    task.cancel()
+    try:
+        await task
+    except CancelledError:
+        pass
 
 
 async def upload_file(storage, bucket, tmp_file):

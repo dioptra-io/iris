@@ -6,8 +6,7 @@ from multiprocessing import Manager, Process
 
 from iris.agent.prober import probe, watch_cancellation
 from iris.agent.settings import AgentSettings
-from iris.commons.models.diamond_miner import ProbingStatistics
-from iris.commons.models.measurement_round_request import MeasurementRoundRequest
+from iris.commons.models import MeasurementRoundRequest, ProbingStatistics
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, results_key
 

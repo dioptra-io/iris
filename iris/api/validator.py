@@ -2,8 +2,7 @@ from diamond_miner.generators.standalone import count_prefixes
 from fastapi import HTTPException
 from starlette import status
 
-from iris.commons.models.diamond_miner import Tool
-from iris.commons.models.user import UserDB
+from iris.commons.models import Tool, UserDB
 from iris.commons.storage import Storage
 
 

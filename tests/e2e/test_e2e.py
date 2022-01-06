@@ -1,5 +1,4 @@
 import asyncio
-from asyncio import CancelledError, Task
 
 import pytest
 
@@ -11,17 +10,9 @@ from iris.commons.models.measurement_agent import MeasurementAgentCreate
 from iris.worker.watch import watch_measurement_agent_
 from tests.api.test_measurements import upload_target_file
 from tests.assertions import APIResponseError, assert_status_code, cast_response
-from tests.helpers import superuser
+from tests.helpers import cancel_task, superuser
 
 pytestmark = pytest.mark.asyncio
-
-
-async def cancel_task(task: Task):
-    task.cancel()
-    try:
-        await task
-    except CancelledError:
-        pass
 
 
 @superuser

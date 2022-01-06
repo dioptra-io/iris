@@ -10,8 +10,7 @@ from iris.agent.measurements import do_measurement
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl_with_mtr
 from iris.commons.logger import Adapter, base_logger, log_traceback
-from iris.commons.models.agent import AgentParameters, AgentState
-from iris.commons.models.measurement_round_request import MeasurementRoundRequest
+from iris.commons.models import AgentParameters, AgentState, MeasurementRoundRequest
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from iris.commons.utils import get_ipv4_address, get_ipv6_address

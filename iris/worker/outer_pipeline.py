@@ -7,8 +7,7 @@ from typing import List, Optional
 from sqlmodel import Session
 
 from iris.commons.clickhouse import ClickHouse
-from iris.commons.models.diamond_miner import Tool, ToolParameters
-from iris.commons.models.round import Round
+from iris.commons.models import MeasurementAgent, Round, Tool, ToolParameters
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, next_round_key
 from iris.worker.inner_pipeline import inner_pipeline_for_tool
@@ -61,11 +60,10 @@ async def outer_pipeline(
     if probing_statistics := await redis.get_measurement_stats(
         measurement_uuid, agent_uuid
     ):
+        # TODO: Avoid direct database access from the pipeline.
         logger.info("Store probing statistics into the database")
-        # TODO
-        # await agents.store_probing_statistics(
-        #     database, measurement_uuid, agent_uuid, probing_statistics
-        # )
+        ma = MeasurementAgent.get(session, measurement_uuid, agent_uuid)
+        ma.append_probing_statistics(session, probing_statistics)
         logger.info("Remove probing statistics from redis")
         await redis.delete_measurement_stats(measurement_uuid, agent_uuid)
 

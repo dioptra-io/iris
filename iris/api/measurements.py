@@ -9,21 +9,19 @@ from sqlmodel import Session
 from iris.api.authentication import assert_probing_enabled, current_verified_user
 from iris.api.dependencies import get_redis, get_session, get_storage
 from iris.api.validator import target_file_validator
-from iris.commons.models.agent import Agent
-from iris.commons.models.measurement import (
+from iris.commons.models import (
+    Agent,
     Measurement,
-    MeasurementCreate,
-    MeasurementRead,
-    MeasurementReadWithAgents,
-)
-from iris.commons.models.measurement_agent import (
     MeasurementAgent,
     MeasurementAgentCreate,
     MeasurementAgentState,
+    MeasurementCreate,
+    MeasurementRead,
+    MeasurementReadWithAgents,
+    Paginated,
+    Target,
+    UserDB,
 )
-from iris.commons.models.pagination import Paginated
-from iris.commons.models.target import Target
-from iris.commons.models.user import UserDB
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
 from iris.worker.watch import watch_measurement_agent

@@ -7,10 +7,7 @@ from iris import __version__
 from iris.commons.models.agent import AgentParameters
 from iris.commons.models.diamond_miner import ProbingStatistics, Tool, ToolParameters
 from iris.commons.models.measurement import Measurement
-from iris.commons.models.measurement_agent import (
-    MeasurementAgent,
-    MeasurementAgentState,
-)
+from iris.commons.models.measurement_agent import MeasurementAgent
 from iris.commons.models.round import Round
 from iris.commons.models.user import User
 

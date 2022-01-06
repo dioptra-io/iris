@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import root_validator
 from sqlalchemy import Column, Enum
@@ -9,6 +9,9 @@ from sqlmodel import Field, Relationship, Session
 from iris.commons.models.agent import AgentParameters
 from iris.commons.models.base import BaseSQLModel, JSONType
 from iris.commons.models.diamond_miner import ProbingStatistics, ToolParameters
+
+if TYPE_CHECKING:
+    from iris.commons.models.measurement import Measurement
 
 
 class MeasurementAgentState(enum.Enum):
@@ -79,6 +82,13 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
         cls, session: Session, measurement_uuid: str, agent_uuid: str
     ) -> Optional["MeasurementAgent"]:
         return session.get(MeasurementAgent, (measurement_uuid, agent_uuid))
+
+    def append_probing_statistics(
+        self, session: Session, statistics: ProbingStatistics
+    ):
+        self.probing_statistics.append(statistics)
+        session.add(self)
+        session.commit()
 
     def set_state(self, session: Session, state: MeasurementAgentState):
         self.state = state

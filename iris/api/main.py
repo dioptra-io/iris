@@ -1,11 +1,11 @@
 """API Entrypoint."""
 import botocore.exceptions
-from fastapi import FastAPI, HTTPException, Response, status
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
-from iris.api import agents, measurements, public, targets, users
+from iris.api import agents, measurements, targets, users
 from iris.api.dependencies import get_settings
 
 app = FastAPI(
@@ -30,7 +30,6 @@ app.include_router(users.router)
 app.include_router(agents.router, prefix="/agents", tags=["Agents"])
 app.include_router(targets.router, prefix="/targets", tags=["Targets"])
 app.include_router(measurements.router, prefix="/measurements", tags=["Measurements"])
-# app.include_router(public.router, prefix="/measurements", tags=["Public Measurements"])
 
 
 @app.exception_handler(botocore.exceptions.ClientError)

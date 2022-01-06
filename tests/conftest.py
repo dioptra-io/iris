@@ -53,7 +53,7 @@ def settings():
         AWS_S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
         AWS_S3_TARGETS_BUCKET_PREFIX=f"targets-test-{namespace}-",
         AWS_TIMEOUT=0,
-        CLICKHOUSE_URL=f"http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
+        CLICKHOUSE_URL="http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
         CLICKHOUSE_TIMEOUT=0,
         REDIS_NAMESPACE=f"iris-test-{namespace}",
         # Redis has 16 databases by default, we use the last one for testing.
@@ -170,10 +170,10 @@ def make_client(engine, settings):
 def cleanup_redis():
     yield
     if should_cleanup():
-        redis = pyredis.from_url(
+        redis_ = pyredis.from_url(
             "redis://default:redispass@redis.docker.localhost?db=15"
         )
-        redis.flushdb()
+        redis_.flushdb()
 
 
 @pytest.fixture(autouse=True, scope="session")

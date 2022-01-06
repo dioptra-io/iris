@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from iris.api.settings import APISettings
 from iris.commons.logger import Adapter, base_logger
-from iris.commons.models.user import OAuthAccount, UserDB, UserTable
+from iris.commons.models import OAuthAccount, UserDB, UserTable
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 

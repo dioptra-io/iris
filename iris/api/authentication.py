@@ -3,14 +3,14 @@
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request
-from fastapi_users import BaseUserManager, FastAPIUsers, models
+from fastapi_users import BaseUserManager, FastAPIUsers
 from fastapi_users.authentication import JWTAuthentication
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import generate_jwt
 from starlette import status
 
 from iris.api.dependencies import get_settings, get_storage, get_user_db
-from iris.commons.models.user import User, UserCreate, UserDB, UserUpdate
+from iris.commons.models import User, UserCreate, UserDB, UserUpdate
 from iris.commons.storage import Storage
 
 # TODO: DI for settings in this module?

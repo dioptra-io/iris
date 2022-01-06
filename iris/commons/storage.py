@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Union
 import aioboto3
 from botocore.exceptions import ClientError
 
-from iris.commons.models.round import Round
+from iris.commons.models import Round
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 

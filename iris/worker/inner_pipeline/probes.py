@@ -6,8 +6,7 @@ from typing import List, Optional
 from zstandard import ZstdDecompressor
 
 from iris.commons.clickhouse import ClickHouse
-from iris.commons.models.diamond_miner import Tool, ToolParameters
-from iris.commons.models.round import Round
+from iris.commons.models import Round, ToolParameters
 
 
 async def probes_inner_pipeline(

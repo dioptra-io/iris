@@ -18,9 +18,7 @@ from iris.api.authentication import (
     current_verified_user,
 )
 from iris.api.dependencies import get_storage
-from iris.commons.models.pagination import Paginated
-from iris.commons.models.target import Target, TargetSummary
-from iris.commons.models.user import UserDB
+from iris.commons.models import Paginated, Target, TargetSummary, UserDB
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -111,9 +109,7 @@ async def delete_target(
 ):
     """Delete a target list from object storage."""
     assert_probing_enabled(user)
-    response = await storage.delete_file_check_no_retry(
-        storage.targets_bucket(str(user.id)), key
-    )
+    await storage.delete_file_check_no_retry(storage.targets_bucket(str(user.id)), key)
 
 
 @router.post(

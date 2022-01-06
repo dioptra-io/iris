@@ -15,7 +15,9 @@ repos:
     rev: 3.9.2
     hooks:
       - id: flake8
-        args: ["--ignore=E501,W503"]
+        # https://github.com/PyCQA/pycodestyle/issues/373
+        # E203: False positive "whitespace before ':' " on list slice.
+        args: ["--ignore=E203,E501,W503"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1

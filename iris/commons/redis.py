@@ -7,9 +7,13 @@ from typing import Dict, List, Optional
 import aioredis
 import async_timeout
 
-from iris.commons.models.agent import Agent, AgentParameters, AgentState
-from iris.commons.models.diamond_miner import ProbingStatistics
-from iris.commons.models.measurement_round_request import MeasurementRoundRequest
+from iris.commons.models import (
+    Agent,
+    AgentParameters,
+    AgentState,
+    MeasurementRoundRequest,
+    ProbingStatistics,
+)
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 

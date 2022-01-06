@@ -1,6 +1,5 @@
 from uuid import uuid4
 
-import botocore.exceptions
 import pytest
 
 from iris.commons.models.agent import AgentState
