@@ -90,8 +90,8 @@ class Storage:
         """Delete a bucket."""
         session = aioboto3.Session()
         async with session.resource("s3", **self.aws_settings) as s3:
-            bucket = await s3.Bucket(bucket)
-            return await bucket.creation_date is not None
+            bucket_ = await s3.Bucket(bucket)
+            return await bucket_.creation_date is not None
 
     async def get_all_files_no_retry(self, bucket: str) -> List[Dict]:
         """Get all files inside a bucket."""
@@ -259,10 +259,11 @@ class Storage:
             ],
         )
         async with session.client("sts", **self.aws_settings) as sts:
-            r = await sts.assume_role(
+            response = await sts.assume_role(
                 DurationSeconds=60 * 60 * 3,
                 Policy=json.dumps(policy),
                 RoleArn="NotNeededForMinIO---",
                 RoleSessionName="NotNeededForMinIO---",
             )
-            return r["Credentials"]
+            credentials: dict = response["Credentials"]
+            return credentials

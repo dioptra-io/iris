@@ -24,16 +24,30 @@ from iris.commons.models import (
 )
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
+from iris.commons.utils import unwrap
 from iris.worker.watch import watch_measurement_agent
 
 router = APIRouter()
 
 
-def assert_measurement_visibility(measurement: Measurement, user: UserDB):
+def assert_measurement_visibility(
+    measurement: Optional[Measurement], user: UserDB
+) -> Measurement:
     if not measurement or measurement.user_id != str(user.id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
+    return measurement
+
+
+def assert_measurement_agent_visibility(
+    measurement_agent: Optional[MeasurementAgent], user: UserDB
+) -> MeasurementAgent:
+    if not measurement_agent or measurement_agent.measurement.user_id != str(user.id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Measurement agent not found"
+        )
+    return measurement_agent
 
 
 def set_or_raise(d, k, v):
@@ -108,7 +122,7 @@ async def post_measurement(
     assert_probing_enabled(user)
     active_agents = await redis.get_agents_by_uuid()
 
-    agents = {}
+    agents: Dict[str, MeasurementAgentCreate] = {}
     for agent in measurement_body.agents:
         if agent.uuid:
             if agent.uuid in active_agents:
@@ -152,7 +166,7 @@ async def post_measurement(
         MeasurementAgent(
             measurement_uuid=measurement.uuid,
             agent_uuid=agent.uuid,
-            agent_parameters=active_agents[agent.uuid].parameters,
+            agent_parameters=active_agents[unwrap(agent.uuid)].parameters,
             tool_parameters=agent.tool_parameters,
             probing_rate=agent.probing_rate,
             target_file=agent.target_file,
@@ -167,11 +181,12 @@ async def post_measurement(
             storage.targets_bucket(str(user.id)),
             storage.archive_bucket(str(user.id)),
             agent.target_file,
-            targets_key(measurement.uuid, agent.uuid),
+            targets_key(measurement.uuid, unwrap(agent.uuid)),
         )
 
     for agent in agents.values():
-        watch_measurement_agent.send(measurement.uuid, agent.uuid)
+        assert agent.uuid  # make mypy happy
+        watch_measurement_agent.send(measurement.uuid, unwrap(agent.uuid))
 
     return await get_measurement(
         measurement_uuid=UUID(measurement.uuid), user=user, session=session
@@ -190,7 +205,7 @@ async def get_measurement(
 ):
     assert_probing_enabled(user)
     measurement = Measurement.get(session, str(measurement_uuid))
-    assert_measurement_visibility(measurement, user)
+    measurement = assert_measurement_visibility(measurement, user)
     return MeasurementReadWithAgents.from_measurement(measurement)
 
 
@@ -226,6 +241,7 @@ async def delete_measurement(
     session: Session = Depends(get_session),
 ):
     measurement = Measurement.get(session, str(measurement_uuid))
+    measurement = assert_measurement_visibility(measurement, user)
     aws = [
         delete_measurement_agent(
             measurement_uuid=UUID(agent.measurement_uuid),
@@ -256,7 +272,7 @@ async def delete_measurement_agent(
     measurement_agent = MeasurementAgent.get(
         session, str(measurement_uuid), str(agent_uuid)
     )
-    assert_measurement_visibility(measurement_agent.measurement, user)
+    measurement_agent = assert_measurement_agent_visibility(measurement_agent, user)
     await redis.cancel_measurement_agent(str(measurement_uuid), str(agent_uuid))
     measurement_agent.state = MeasurementAgentState.Canceled
     session.add(measurement_agent)

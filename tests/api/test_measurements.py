@@ -138,6 +138,14 @@ async def test_delete_measurement(
     assert_response(client.get(f"/measurements/{measurement.uuid}"), expected)
 
 
+async def test_delete_measurement_not_found(
+    make_client, make_measurement, make_user, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    assert_status_code(client.delete(f"/measurements/{uuid4()}"), 404)
+
+
 async def test_post_measurement_unknown_uuid(make_client, make_user):
     client = make_client(make_user(probing_enabled=True))
     body = MeasurementCreate(

@@ -57,7 +57,9 @@ class MeasurementAgentRead(MeasurementAgentBase):
 
 
 class MeasurementAgent(MeasurementAgentBase, table=True):
-    measurement: Optional["Measurement"] = Relationship(back_populates="agents")
+    measurement: "Measurement" = Relationship(back_populates="agents")
+    # This is optional so that we can create a MeasurementAgent without
+    # specifying the measurement_uuid and let SQLModel do it for us.
     measurement_uuid: Optional[str] = Field(
         default=None,
         primary_key=True,

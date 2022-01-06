@@ -122,7 +122,7 @@ class Measurement(MeasurementBase, table=True):
             query = query.where(Measurement.tags.contains(tag))
         if user_id:
             query = query.where(Measurement.user_id == user_id)
-        return session.exec(query).one()
+        return int(session.exec(query).one())
 
     @classmethod
     def get(cls, session: Session, uuid: str) -> Optional["Measurement"]:

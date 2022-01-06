@@ -36,14 +36,14 @@ def find_exit_ttl_from_output(
     # Ensure that the exit TTL is never in one of these networks.
     # This can be useful if a spurious/invalid ASN appears
     # before the true "gateway" ASN.
-    excluded = [None, "AS???"] + (excluded or [])
+    excluded = [None, "AS???"] + (excluded or [])  # type: ignore
 
     reader = csv.DictReader(io.StringIO(str(output)))
     hops = {int(row["Hop"]): row for row in reader}
 
     if not hops:
         logger.info("No response from MTR")
-        return
+        return None
 
     # (current asn, first TTL where it appeared)
     curr_asn = (None, 0)
@@ -54,9 +54,9 @@ def find_exit_ttl_from_output(
 
     for ttl in range(min_ttl, max_ttl + 1):
         asn = hops.get(ttl, {}).get("Asn")
-        if asn not in excluded:
+        if asn not in excluded:  # type: ignore
             if not curr_asn[0]:
-                curr_asn = (asn, ttl)
+                curr_asn = (asn, ttl)  # type: ignore
             elif curr_asn[0] != asn:
                 curr_asn = (asn, ttl)
                 break

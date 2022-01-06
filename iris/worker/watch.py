@@ -155,5 +155,5 @@ async def find_results(
     files = await storage.get_all_files(bucket)
     for file in files:
         if file["key"].startswith("results_"):
-            return file["key"]
+            return str(file["key"])
     return None

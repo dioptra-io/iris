@@ -5,7 +5,7 @@ import sqlmodel
 from sqlalchemy import func, types
 from sqlalchemy.orm import DeclarativeMeta, declarative_base, registry
 
-Base: DeclarativeMeta = declarative_base()
+Base: DeclarativeMeta = declarative_base()  # type: ignore
 
 
 class BaseModel(pydantic.BaseModel):

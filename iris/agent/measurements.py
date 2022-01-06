@@ -22,6 +22,7 @@ async def do_measurement(
     logger.info("Launch measurement procedure")
     measurement = request.measurement
     measurement_agent = request.measurement_agent
+    assert measurement_agent.measurement_uuid  # make mypy happy
 
     logger.info("Create local measurement directory")
     measurement_results_path = (

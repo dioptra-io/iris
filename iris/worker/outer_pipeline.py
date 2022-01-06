@@ -10,6 +10,7 @@ from iris.commons.clickhouse import ClickHouse
 from iris.commons.models import MeasurementAgent, Round, Tool, ToolParameters
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, next_round_key
+from iris.commons.utils import unwrap
 from iris.worker.inner_pipeline import inner_pipeline_for_tool
 
 
@@ -54,7 +55,7 @@ async def outer_pipeline(
     )
 
     logger.info("Retrieve agent information from redis")
-    agent_parameters = await redis.get_agent_parameters(agent_uuid)
+    agent_parameters = unwrap(await redis.get_agent_parameters(agent_uuid))
 
     logger.info("Retrieve probing statistics from redis")
     if probing_statistics := await redis.get_measurement_stats(
@@ -62,7 +63,7 @@ async def outer_pipeline(
     ):
         # TODO: Avoid direct database access from the pipeline.
         logger.info("Store probing statistics into the database")
-        ma = MeasurementAgent.get(session, measurement_uuid, agent_uuid)
+        ma = unwrap(MeasurementAgent.get(session, measurement_uuid, agent_uuid))
         ma.append_probing_statistics(session, probing_statistics)
         logger.info("Remove probing statistics from redis")
         await redis.delete_measurement_stats(measurement_uuid, agent_uuid)

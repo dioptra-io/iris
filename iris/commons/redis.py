@@ -53,16 +53,19 @@ class Redis:
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def exists(self, *names: str) -> int:
-        names = [f"{self.ns}:{name}" for name in names]
-        return await self.client.exists(*names)
+        names_ = [f"{self.ns}:{name}" for name in names]
+        count: int = await self.client.exists(*names_)
+        return count
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def keys(self, pattern: str) -> List[str]:
-        return await self.client.keys(f"{self.ns}:{pattern}")
+        keys: List[str] = await self.client.keys(f"{self.ns}:{pattern}")
+        return keys
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def get(self, name: str) -> str:
-        return await self.client.get(f"{self.ns}:{name}")
+        value: str = await self.client.get(f"{self.ns}:{name}")
+        return value
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def set(self, name: str, value: str, **kwargs) -> None:
@@ -70,8 +73,8 @@ class Redis:
 
     @fault_tolerant(CommonSettings.redis_retry)
     async def delete(self, *names: str) -> None:
-        names = [f"{self.ns}:{name}" for name in names]
-        return await self.client.delete(*names)
+        names_ = [f"{self.ns}:{name}" for name in names]
+        await self.client.delete(*names_)
 
     async def register_agent(self, uuid: str, ttl_seconds: int) -> None:
         self.logger.info("Registering agent for %s seconds", ttl_seconds)
@@ -177,12 +180,10 @@ class Redis:
     async def measurement_agent_cancelled(
         self, measurement_uuid: str, agent_uuid: str
     ) -> bool:
-        return (
-            await self.exists(
-                measurement_agent_cancelled_key(measurement_uuid, agent_uuid)
-            )
-            > 0
+        count: int = await self.exists(
+            measurement_agent_cancelled_key(measurement_uuid, agent_uuid)
         )
+        return count > 0
 
     async def publish(self, uuid: str, request: MeasurementRoundRequest) -> None:
         self.logger.info("Publishing next measurement round request")

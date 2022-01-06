@@ -1,6 +1,6 @@
 import socket
 from ipaddress import IPv4Address, IPv6Address
-from typing import Callable, TypeVar
+from typing import Callable, Optional, TypeVar
 
 from pydantic import BaseModel
 from sqlmodel import SQLModel
@@ -8,7 +8,7 @@ from sqlmodel import SQLModel
 T = TypeVar("T")
 
 
-def cast(to: Callable[..., T], from_: BaseModel, **extra) -> T:
+def cast(to: Callable[..., BaseModel], from_: BaseModel, **extra) -> T:
     """Convert an (SQL)Model to another, including extra fields."""
     data = {}
     for field in from_.__fields__:
@@ -16,7 +16,12 @@ def cast(to: Callable[..., T], from_: BaseModel, **extra) -> T:
     if isinstance(from_, SQLModel):
         for field in from_.__sqlmodel_relationships__:
             data[field] = getattr(from_, field)
-    return to.parse_obj({**data, **extra})
+    return to.parse_obj({**data, **extra})  # type: ignore
+
+
+def unwrap(value: Optional[T]) -> T:
+    assert value, "unexpected None value"
+    return value
 
 
 def get_ipv4_address(host="8.8.8.8", port=80) -> IPv4Address:
