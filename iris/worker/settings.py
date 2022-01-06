@@ -20,4 +20,5 @@ class WorkerSettings(CommonSettings):
         3  # stops probing a prefix if more than this number of *
     )
 
+    WORKER_MAX_OPEN_FILES: int = 8192
     WORKER_DEBUG_MODE: bool = False

@@ -33,6 +33,7 @@ async def test_default_inner_pipeline_round_1_0(clickhouse, logger, tmp_path):
         probes_filepath=probes_filepath,
         previous_round=None,
         next_round=Round(number=1, limit=10, offset=0),
+        max_open_files=128,
     )
 
     probes_filepath = decompress_file(probes_filepath)
@@ -68,6 +69,7 @@ async def test_default_inner_pipeline_round_1_1_no_results(
         probes_filepath=probes_filepath,
         previous_round=Round(number=1, limit=10, offset=0),
         next_round=Round(number=1, limit=10, offset=1),
+        max_open_files=128,
     )
     assert n_probes == 0
     assert not probes_filepath.exists()
@@ -105,6 +107,7 @@ async def test_default_inner_pipeline_round_1_1_results(clickhouse, logger, tmp_
         probes_filepath=probes_filepath,
         previous_round=Round(number=1, limit=10, offset=0),
         next_round=Round(number=1, limit=10, offset=1),
+        max_open_files=128,
     )
 
     decompress_file(probes_filepath, probes_filepath.with_suffix(".csv"))
@@ -142,6 +145,7 @@ async def test_default_inner_pipeline_round_2(clickhouse, logger, tmp_path):
         probes_filepath=probes_filepath,
         previous_round=Round(number=1, limit=10, offset=1),
         next_round=Round(number=2, limit=0, offset=0),
+        max_open_files=128,
     )
     # No load-balancing, so Diamond-Miner should stop here.
     assert n_probes == 0

@@ -33,6 +33,7 @@ async def diamond_miner_inner_pipeline(
     probes_filepath: Path,
     previous_round: Optional[Round],
     next_round: Round,
+    max_open_files: int,
 ) -> int:
     """
     Given a targets file and an optional results file, write the probes for the next round.
@@ -145,6 +146,7 @@ async def diamond_miner_inner_pipeline(
         probe_dst_port=tool_parameters.destination_port,
         probe_ttl_geq=probe_ttl_geq,
         probe_ttl_leq=probe_ttl_leq,
+        max_open_files=max_open_files,
     )
 
 

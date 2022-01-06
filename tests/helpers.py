@@ -3,6 +3,10 @@ import tempfile
 
 import pytest
 
+skipci = pytest.mark.skipif(
+    "CI" in os.environ, reason="this test is not supported on GitHub actions"
+)
+
 superuser = pytest.mark.skipif(
     os.geteuid() != 0, reason="this test must be run as root"
 )

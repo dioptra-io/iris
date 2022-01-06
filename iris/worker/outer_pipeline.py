@@ -38,6 +38,7 @@ async def outer_pipeline(
     targets_key: str,
     results_key: Optional[str],
     user_id: str,
+    max_open_files: int,
     debug_mode: bool = False,
 ) -> Optional[OuterPipelineResult]:
     """
@@ -116,6 +117,7 @@ async def outer_pipeline(
         probes_filepath=probes_filepath,
         previous_round=previous_round,
         next_round=next_round,
+        max_open_files=max_open_files,
     )
     n_probes_to_send = await inner_pipeline_for_tool[tool](**inner_pipeline_kwargs)
 

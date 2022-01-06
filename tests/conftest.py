@@ -82,7 +82,9 @@ def agent_settings(settings, tmp_path):
 @pytest.fixture
 def worker_settings(settings, tmp_path):
     return WorkerSettings(
-        **settings.dict(), WORKER_RESULTS_DIR_PATH=tmp_path / "worker_results"
+        **settings.dict(),
+        WORKER_RESULTS_DIR_PATH=tmp_path / "worker_results",
+        WORKER_MAX_OPEN_FILES=128,
     )
 
 

@@ -33,6 +33,7 @@ async def test_ping_inner_pipeline(clickhouse, logger, tmp_path):
         probes_filepath=probes_filepath,
         previous_round=None,
         next_round=Round(number=1, limit=10, offset=0),
+        max_open_files=128,
     )
 
     probes_filepath = decompress_file(probes_filepath)

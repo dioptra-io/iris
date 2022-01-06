@@ -1,5 +1,5 @@
 from iris.agent.ttl import find_exit_ttl_from_output, find_exit_ttl_with_mtr
-from tests.helpers import superuser
+from tests.helpers import skipci, superuser
 
 output = """
 Mtr_Version,Start_Time,Status,Host,Hop,Ip,Asn,Loss%,Snt, ,Last,Avg,Best,Wrst,StDev,
@@ -27,6 +27,7 @@ def test_find_exit_ttl_from_output_excluded():
     assert find_exit_ttl_from_output(output, 0, excluded=["AS15169"]) == 2
 
 
+@skipci
 @superuser
 def test_find_exit_ttl_with_mtr():
     assert 2 <= find_exit_ttl_with_mtr("8.8.8.8", 2) <= 255

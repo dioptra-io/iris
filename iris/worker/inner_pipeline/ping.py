@@ -30,6 +30,7 @@ async def ping_inner_pipeline(
     probes_filepath: Path,
     previous_round: Optional[Round],
     next_round: Round,
+    max_open_files: int,
 ) -> int:
     """
     :returns: The number of probes written.
@@ -95,4 +96,5 @@ async def ping_inner_pipeline(
         mapper_v6=flow_mapper_v6,
         probe_src_port=tool_parameters.initial_source_port,
         probe_dst_port=tool_parameters.destination_port,
+        max_open_files=max_open_files,
     )

@@ -104,6 +104,7 @@ async def watch_measurement_agent_(
             targets_key=ma.target_file,
             results_key=results_filename,
             user_id=ma.measurement.user_id,
+            max_open_files=settings.WORKER_MAX_OPEN_FILES,
             debug_mode=settings.WORKER_DEBUG_MODE,
         )
 
