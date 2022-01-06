@@ -40,8 +40,15 @@ class CommonSettings(BaseSettings):
     AWS_REGION_NAME: str = "local"
     AWS_S3_ARCHIVE_BUCKET_PREFIX = "archive-"
     AWS_S3_TARGETS_BUCKET_PREFIX = "targets-"
-    AWS_PUBLIC_ACTIONS: List[str] = ["s3:GetObject", "s3:ListBucket"]
-    AWS_PUBLIC_RESOURCES: List[str] = ["arn:aws:s3:::public-exports/*"]
+    AWS_PUBLIC_ACTIONS: List[str] = [
+        "s3:GetBucketLocation",
+        "s3:GetObject",
+        "s3:ListBucket",
+    ]
+    AWS_PUBLIC_RESOURCES: List[str] = [
+        "arn:aws:s3:::public-exports",
+        "arn:aws:s3:::public-exports/*",
+    ]
     AWS_TIMEOUT: int = 2 * 60 * 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
     AWS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
