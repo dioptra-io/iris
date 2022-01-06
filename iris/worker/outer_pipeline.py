@@ -48,6 +48,11 @@ async def outer_pipeline(
     logger.info("Ensure that the working directory exists")
     working_directory.mkdir(exist_ok=True, parents=True)
 
+    logger.info("Ensure the the measurement agent bucket exists")
+    await storage.create_bucket(
+        storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
+    )
+
     logger.info("Retrieve agent information from redis")
     agent_parameters = await redis.get_agent_parameters(agent_uuid)
 
@@ -71,13 +76,13 @@ async def outer_pipeline(
     if results_key:
         logger.info("Download results file from object storage")
         results_filepath = await storage.download_file_to(
-            storage.measurement_bucket(measurement_uuid),
+            storage.measurement_agent_bucket(measurement_uuid, agent_uuid),
             results_key,
             working_directory,
         )
         logger.info("Delete results file from object storage")
         await storage.soft_delete(
-            storage.measurement_bucket(measurement_uuid), results_key
+            storage.measurement_agent_bucket(measurement_uuid, agent_uuid), results_key
         )
     else:
         results_filepath = None
@@ -96,7 +101,7 @@ async def outer_pipeline(
             next_round = next_round.next_round(tool_parameters.global_max_ttl)
     logger.info("%s => %s", previous_round, next_round)
 
-    probes_filepath = working_directory / next_round_key(agent_uuid, next_round)
+    probes_filepath = working_directory / next_round_key(next_round)
     inner_pipeline_kwargs = dict(
         clickhouse=clickhouse,
         logger=logger,
@@ -123,7 +128,7 @@ async def outer_pipeline(
     if next_round.number == 1 and n_probes_to_send == 0:
         logger.info("No remaining prefixes to probe at round 1. Going to round 2.")
         next_round = Round(number=2, limit=0, offset=0)
-        probes_filepath = working_directory / next_round_key(agent_uuid, next_round)
+        probes_filepath = working_directory / next_round_key(next_round)
         inner_pipeline_kwargs = {
             **inner_pipeline_kwargs,
             "probes_filepath": probes_filepath,
@@ -136,7 +141,7 @@ async def outer_pipeline(
     if n_probes_to_send > 0:
         logger.info("Upload probes file to object storage")
         await storage.upload_file(
-            storage.measurement_bucket(measurement_uuid),
+            storage.measurement_agent_bucket(measurement_uuid, agent_uuid),
             probes_filepath.name,
             probes_filepath,
         )

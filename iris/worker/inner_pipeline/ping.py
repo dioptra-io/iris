@@ -44,15 +44,16 @@ async def ping_inner_pipeline(
         tool_parameters.prefix_size_v6,
     )
 
+    await clickhouse.create_tables(
+        measurement_uuid,
+        agent_uuid,
+        tool_parameters.prefix_len_v4,
+        tool_parameters.prefix_len_v6,
+    )
+    if "public" in measurement_tags:
+        await clickhouse.grant_public_access(measurement_uuid, agent_uuid)
+
     if results_filepath:
-        await clickhouse.create_tables(
-            measurement_uuid,
-            agent_uuid,
-            tool_parameters.prefix_len_v4,
-            tool_parameters.prefix_len_v6,
-        )
-        if "public" in measurement_tags:
-            await clickhouse.grant_public_access(measurement_uuid, agent_uuid)
         await clickhouse.insert_csv(measurement_uuid, agent_uuid, results_filepath)
         await clickhouse.insert_prefixes(measurement_uuid, agent_uuid)
         await clickhouse.insert_links(measurement_uuid, agent_uuid)

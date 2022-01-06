@@ -33,13 +33,14 @@ async def probes_inner_pipeline(
     :returns: The number of probes written.
     """
 
+    await clickhouse.create_tables(
+        measurement_uuid,
+        agent_uuid,
+        tool_parameters.prefix_len_v4,
+        tool_parameters.prefix_len_v6,
+    )
+
     if results_filepath:
-        await clickhouse.create_tables(
-            measurement_uuid,
-            agent_uuid,
-            tool_parameters.prefix_len_v4,
-            tool_parameters.prefix_len_v6,
-        )
         await clickhouse.insert_csv(measurement_uuid, agent_uuid, results_filepath)
         await clickhouse.insert_prefixes(measurement_uuid, agent_uuid)
         await clickhouse.insert_links(measurement_uuid, agent_uuid)

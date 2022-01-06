@@ -6,7 +6,7 @@ from iris.api.targets import verify_probe_target_file, verify_target_file
 from iris.commons.models.pagination import Paginated
 from iris.commons.models.target import Target, TargetSummary
 from tests.assertions import assert_response, assert_status_code, cast_response
-from tests.helpers import TestUploadFile, upload_file
+from tests.helpers import FakeUploadFile, upload_file
 
 pytestmark = pytest.mark.asyncio
 
@@ -155,7 +155,7 @@ async def test_post_probes_invalid_content(make_client, make_user, storage, tmp_
     ],
 )
 def test_verify_target_file_valid(content):
-    assert verify_target_file(TestUploadFile(content))
+    assert verify_target_file(FakeUploadFile(content))
 
 
 @pytest.mark.parametrize(
@@ -172,7 +172,7 @@ def test_verify_target_file_valid(content):
     ],
 )
 def test_verify_target_file_invalid(content):
-    assert not verify_target_file(TestUploadFile(content))
+    assert not verify_target_file(FakeUploadFile(content))
 
 
 @pytest.mark.parametrize(
@@ -183,7 +183,7 @@ def test_verify_target_file_invalid(content):
     ],
 )
 def test_verify_probe_target_file_valid(content):
-    assert verify_probe_target_file(TestUploadFile(content))
+    assert verify_probe_target_file(FakeUploadFile(content))
 
 
 @pytest.mark.parametrize(
@@ -201,4 +201,4 @@ def test_verify_probe_target_file_valid(content):
     ],
 )
 def test_verify_probe_target_file_invalid(content):
-    assert not verify_probe_target_file(TestUploadFile(content))
+    assert not verify_probe_target_file(FakeUploadFile(content))

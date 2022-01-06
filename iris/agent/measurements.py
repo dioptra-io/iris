@@ -21,6 +21,7 @@ async def do_measurement(
 ):
     """Conduct a measurement."""
     logger.info("Launch measurement procedure")
+    measurement = request.measurement
     measurement_agent = request.measurement_agent
 
     logger.info("Create local measurement directory")
@@ -29,21 +30,21 @@ async def do_measurement(
     )
     measurement_results_path.mkdir(exist_ok=True)
 
-    results_filepath = measurement_results_path / results_key(
-        measurement_agent.agent_uuid, request.round
-    )
+    results_filepath = measurement_results_path / results_key(request.round)
 
     logger.info("Download CSV probe file locally")
     probes_filepath = await storage.download_file_to(
-        storage.measurement_bucket(measurement_agent.measurement_uuid),
+        storage.measurement_agent_bucket(
+            measurement_agent.measurement_uuid, measurement_agent.agent_uuid
+        ),
         request.probe_filename,
         settings.AGENT_TARGETS_DIR_PATH,
     )
 
-    logger.info("User ID: %s", measurement_agent.measurement.user_id)
+    logger.info("User ID: %s", measurement.user_id)
     logger.info("Probe File: %s", request.probe_filename)
-    logger.info(request.round)
-    logger.info("Tool: %s", measurement_agent.measurement.tool)
+    logger.info("%s", request.round)
+    logger.info("Tool: %s", measurement.tool)
     logger.info("Tool Parameters: %s", measurement_agent.tool_parameters)
     logger.info("Max Probing Rate: %s", measurement_agent.probing_rate)
 
@@ -87,8 +88,10 @@ async def do_measurement(
 
         logger.info("Upload results file into S3")
         await storage.upload_file(
-            storage.measurement_bucket(measurement_agent.measurement_uuid),
-            results_key(measurement_agent.agent_uuid, request.round),
+            storage.measurement_agent_bucket(
+                measurement_agent.measurement_uuid, measurement_agent.agent_uuid
+            ),
+            results_key(request.round),
             results_filepath,
         )
     else:
@@ -106,6 +109,8 @@ async def do_measurement(
         if request.probe_filename:
             logger.info("Remove prefix file from S3")
             await storage.soft_delete(
-                storage.measurement_bucket(measurement_agent.measurement_uuid),
+                storage.measurement_agent_bucket(
+                    measurement_agent.measurement_uuid, measurement_agent.agent_uuid
+                ),
                 request.probe_filename,
             )

@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+import botocore.exceptions
 import pytest
 
 from iris.commons.models.agent import AgentState
@@ -29,10 +30,10 @@ async def test_check_agent_online(redis, make_agent_parameters):
 async def test_find_results(storage, make_tmp_file):
     measurement_uuid = str(uuid4())
     agent_uuid = str(uuid4())
-    bucket = storage.measurement_bucket(measurement_uuid)
+    bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
     await storage.create_bucket(bucket)
 
-    tmp_filename = results_key(agent_uuid, Round(number=1, limit=10, offset=0))
+    tmp_filename = results_key(Round(number=1, limit=10, offset=0))
     tmp_file = make_tmp_file(tmp_filename)
     await upload_file(storage, bucket, tmp_file)
 
@@ -45,7 +46,7 @@ async def test_find_results(storage, make_tmp_file):
 async def test_find_results_not_found(storage, make_tmp_file):
     measurement_uuid = str(uuid4())
     agent_uuid = str(uuid4())
-    bucket = storage.measurement_bucket(measurement_uuid)
+    bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
     await storage.create_bucket(bucket)
     filename = await find_results(
         storage=storage, measurement_uuid=measurement_uuid, agent_uuid=agent_uuid
@@ -56,14 +57,14 @@ async def test_find_results_not_found(storage, make_tmp_file):
 async def test_clean_results(storage, make_tmp_file):
     measurement_uuid = str(uuid4())
     agent_uuid = str(uuid4())
-    bucket = storage.measurement_bucket(measurement_uuid)
+    bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
     await storage.create_bucket(bucket)
 
-    tmp_filename = results_key(agent_uuid, Round(number=1, limit=10, offset=0))
+    tmp_filename = results_key(Round(number=1, limit=10, offset=0))
     tmp_file = make_tmp_file(tmp_filename)
     await upload_file(storage, bucket, tmp_file)
 
     await clean_results(
         measurement_uuid=measurement_uuid, agent_uuid=agent_uuid, storage=storage
     )
-    assert len(await storage.get_all_files(bucket)) == 0
+    assert not await storage.bucket_exists(bucket)

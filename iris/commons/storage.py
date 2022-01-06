@@ -12,19 +12,19 @@ from iris.commons.models.round import Round
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 
-def next_round_key(agent_uuid: str, round_: Round) -> str:
+def next_round_key(round_: Round) -> str:
     """The name of the file containing the probes to send at the next round."""
-    return f"{agent_uuid}_next_round_{round_.encode()}.csv.zst"
+    return f"next_round_{round_.encode()}.csv.zst"
 
 
-def results_key(agent_uuid: str, round_: Round) -> str:
+def results_key(round_: Round) -> str:
     """The name of the file containing the results of the probing round."""
-    return f"{agent_uuid}_results_{round_.encode()}.csv.zst"
+    return f"results_{round_.encode()}.csv.zst"
 
 
-def prefixes_key(agent_uuid: str, round_: Round) -> str:
+def prefixes_key(round_: Round) -> str:
     """The name of the file containing a list of allowed prefixes."""
-    return f"{agent_uuid}_prefixes_{round_.encode()}.csv.zst"
+    return f"prefixes_{round_.encode()}.csv.zst"
 
 
 def targets_key(measurement_uuid: str, agent_uuid: str) -> str:
@@ -55,11 +55,6 @@ class Storage:
     def targets_bucket(self, user_id: str) -> str:
         return self.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user_id
 
-    # TODO: Remove
-    @staticmethod
-    def measurement_bucket(uuid: str) -> str:
-        return uuid
-
     @staticmethod
     def measurement_agent_bucket(measurement_uuid: str, agent_uuid: str) -> str:
         # TODO: Prefix?
@@ -89,6 +84,14 @@ class Storage:
         session = aioboto3.Session()
         async with session.client("s3", **self.aws_settings) as s3:
             await s3.delete_bucket(Bucket=bucket)
+
+    @fault_tolerant(CommonSettings.storage_retry)
+    async def bucket_exists(self, bucket: str) -> bool:
+        """Delete a bucket."""
+        session = aioboto3.Session()
+        async with session.resource("s3", **self.aws_settings) as s3:
+            bucket = await s3.Bucket(bucket)
+            return await bucket.creation_date is not None
 
     async def get_all_files_no_retry(self, bucket: str) -> List[Dict]:
         """Get all files inside a bucket."""

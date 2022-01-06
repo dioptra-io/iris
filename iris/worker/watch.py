@@ -16,18 +16,22 @@ from iris.commons.storage import Storage
 from iris.worker.outer_pipeline import outer_pipeline
 from iris.worker.settings import WorkerSettings
 
-# Override iris.worker.settings if needed for testing.
-settings = WorkerSettings()
+default_settings = WorkerSettings()
 
 
 @dramatiq.actor(
-    time_limit=settings.WORKER_TIME_LIMIT, max_age=settings.WORKER_MESSAGE_AGE_LIMIT
+    time_limit=default_settings.WORKER_TIME_LIMIT,
+    max_age=default_settings.WORKER_MESSAGE_AGE_LIMIT,
 )
 def watch_measurement_agent(measurement_uuid: str, agent_uuid: str):
-    asyncio.run(watch_measurement_agent_(measurement_uuid, agent_uuid))
+    asyncio.run(
+        watch_measurement_agent_(measurement_uuid, agent_uuid, default_settings)
+    )
 
 
-async def watch_measurement_agent_(measurement_uuid: str, agent_uuid: str):
+async def watch_measurement_agent_(
+    measurement_uuid: str, agent_uuid: str, settings: WorkerSettings
+):
     logger = Adapter(
         base_logger,
         dict(
@@ -138,22 +142,17 @@ async def check_agent(
 async def clean_results(
     storage: Storage, measurement_uuid: str, agent_uuid: str
 ) -> None:
-    """Clean S3 if the sanity check don't pass."""
-    bucket = storage.measurement_bucket(measurement_uuid)
-    files = await storage.get_all_files(bucket)
-    for file in files:
-        if file["key"].startswith(agent_uuid):
-            await storage.soft_delete(bucket, file["key"])
+    bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
+    await storage.delete_all_files_from_bucket(bucket)
+    await storage.delete_bucket(bucket)
 
 
 async def find_results(
     storage: Storage, measurement_uuid: str, agent_uuid: str
 ) -> Optional[str]:
-    bucket = storage.measurement_bucket(measurement_uuid)
+    bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
     files = await storage.get_all_files(bucket)
     for file in files:
-        # TODO: Remove agent_uuid in the results file since we're in the agent bucket.
-        #  Also remove the associated keys.
-        if file["key"].startswith(f"{agent_uuid}_results"):
+        if file["key"].startswith(f"results_"):
             return file["key"]
     return None

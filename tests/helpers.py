@@ -8,7 +8,7 @@ superuser = pytest.mark.skipif(
 )
 
 
-class TestUploadFile:
+class FakeUploadFile:
     def __init__(self, content):
         self.file = tempfile.SpooledTemporaryFile()
         if isinstance(content, str):
