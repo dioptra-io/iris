@@ -18,7 +18,7 @@ jobs:
           pip install poetry
           poetry install --extras "agent api worker"
       - name: Run tests
-        run: sudo (poetry env info -p)/bin/pytest --cov-report xml tests
+        run: sudo $(poetry env info -p)/bin/pytest --cov-report xml tests
       - uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
