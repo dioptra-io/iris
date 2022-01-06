@@ -11,6 +11,7 @@ from iris.commons.models.measurement_agent import MeasurementAgentCreate
 from iris.worker.watch import watch_measurement_agent_
 from tests.api.test_measurements import upload_target_file
 from tests.assertions import APIResponseError, assert_status_code, cast_response
+from tests.helpers import superuser
 
 pytestmark = pytest.mark.asyncio
 
@@ -23,6 +24,7 @@ async def cancel_task(task: Task):
         pass
 
 
+@superuser
 async def test_e2e(
     agent_settings,
     worker_settings,
