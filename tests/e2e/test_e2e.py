@@ -74,3 +74,5 @@ async def test_e2e(
     ]
     await asyncio.gather(*tasks)
     await cancel_task(agent_task)
+
+    # TODO: Call again the API and check the measurement state.

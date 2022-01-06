@@ -30,6 +30,7 @@ class MeasurementCreate(MeasurementBase):
         description="Optional agent parameters can also be set",
     )
 
+    # TODO: Call this!
     @root_validator
     def check_tool_parameters(cls, values):
         agents: List[MeasurementAgentCreate] = values.get("agents")
