@@ -22,11 +22,6 @@ def results_key(round_: Round) -> str:
     return f"results_{round_.encode()}.csv.zst"
 
 
-def prefixes_key(round_: Round) -> str:
-    """The name of the file containing a list of allowed prefixes."""
-    return f"prefixes_{round_.encode()}.csv.zst"
-
-
 def targets_key(measurement_uuid: str, agent_uuid: str) -> str:
     """The name of the file containing the targets to probe."""
     return f"targets__{measurement_uuid}__{agent_uuid}.csv"

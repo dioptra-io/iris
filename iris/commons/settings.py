@@ -72,10 +72,6 @@ class CommonSettings(BaseSettings):
     CLICKHOUSE_ARCHIVE_VOLUME: str = "default"
     CLICKHOUSE_ARCHIVE_INTERVAL: timedelta = timedelta(days=15)
 
-    TABLE_NAME_USERS: str = "users"
-    TABLE_NAME_MEASUREMENTS: str = "measurements"
-    TABLE_NAME_AGENTS: str = "agents"
-
     REDIS_NAMESPACE: str = "iris"
     REDIS_URL: str = "redis://default:redispass@redis.docker.localhost"
     REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
