@@ -1,21 +1,16 @@
+import pytest
+
 from iris.commons.models.round import Round
 
-# TODO: Test uncovered lines
-# TODO: Test round-tripping
-# TODO: Split tests
+
+def test_round_decode():
+    round = Round(number=1, limit=5, offset=0)
+    assert Round.decode(round.encode()) == round
 
 
-def test_round():
-    round = Round.decode("1:5:0")
-
-    assert round.number == 1
-    assert round.limit == 5
-    assert round.offset == 0
-
-    assert round.encode() == "1:5:0"
-
-    assert round.min_ttl == 1
-    assert round.max_ttl == 5
+def test_round_decode_invalid():
+    with pytest.raises(ValueError):
+        Round.decode("abcd")
 
 
 def test_round_from_filename():

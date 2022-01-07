@@ -6,7 +6,10 @@ import iris.agent.main
 from iris.commons.models.agent import Agent
 from iris.commons.models.diamond_miner import Tool
 from iris.commons.models.measurement import MeasurementCreate, MeasurementReadWithAgents
-from iris.commons.models.measurement_agent import MeasurementAgentCreate
+from iris.commons.models.measurement_agent import (
+    MeasurementAgentCreate,
+    MeasurementAgentState,
+)
 from iris.commons.utils import cancel_task
 from iris.worker.watch import watch_measurement_agent_
 from tests.api.test_measurements import upload_target_file
@@ -69,4 +72,6 @@ async def test_e2e(
     await asyncio.gather(*tasks)
     await cancel_task(agent_task)
 
-    # TODO: Call again the API and check the measurement state.
+    response = client.get(f"/measurements/{measurement.uuid}")
+    measurement = cast_response(response, MeasurementReadWithAgents)
+    assert measurement.state == MeasurementAgentState.Finished
