@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from iris.commons.models import Target
 from iris.commons.models.agent import AgentState
 from iris.commons.models.diamond_miner import Tool
 from iris.commons.models.measurement import (
@@ -20,12 +21,10 @@ from iris.commons.models.measurement_agent import (
 from iris.commons.models.pagination import Paginated
 from iris.commons.models.user import User
 from iris.commons.storage import Storage, targets_key
-from tests.assertions import assert_response, assert_status_code
+from tests.assertions import assert_response, assert_status_code, cast_response
 from tests.helpers import add_and_refresh
 
 pytestmark = pytest.mark.asyncio
-
-# TODO: Mock send
 
 
 # TODO: Move to helpers?
@@ -83,6 +82,24 @@ def test_get_measurements(make_client, make_measurement, make_user, session):
     assert_response(client.get("/measurements"), expected)
 
 
+def test_get_measurements_with_tag(make_client, make_measurement, make_user, session):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurements = [
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id), tags=["mytag"]),
+    ]
+    add_and_refresh(session, measurements)
+
+    expected = Paginated[MeasurementRead](
+        count=1,
+        results=MeasurementRead.from_measurements(measurements[2:3]),
+    )
+    assert_response(client.get("/measurements", params={"tag": "mytag"}), expected)
+
+
 async def test_get_measurement(
     make_client, make_measurement, make_user, redis, session, storage
 ):
@@ -98,26 +115,50 @@ async def test_get_measurement(
     )
 
 
-# TODO: test get_measurement_agent_target
-# agents_read = []
-# for agent in measurement.agents:
-#     if state != MeasurementAgentState.Unknown:
-#         agent.state = state
-#     await upload_target_file(storage, user, agent.target_file, ["0.0.0.0"])
-#     await archive_target_file(
-#         storage,
-#         user,
-#         measurement.uuid,
-#         agent.agent_uuid,
-#         agent.target_file,
-#     )
-#     agents_read.append(
-#         await MeasurementAgentRead.from_measurement_agent(
-#             agent, storage, str(user.id)
-#         )
-#     )
+async def test_get_measurement_other_user(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    measurement = make_measurement(user_id=str(uuid4()))
+    add_and_refresh(session, [measurement])
+    assert_status_code(client.get(f"/measurements/{measurement.uuid}"), 404)
 
-# TODO: Test measurement_not_found and measurement_other_user
+
+async def test_get_measurement_not_found(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    client = make_client(make_user(probing_enabled=True))
+    assert_status_code(client.get(f"/measurements/{uuid4()}"), 404)
+
+
+async def test_get_measurement_agent_target(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    measurement_agent = measurement.agents[0]
+    add_and_refresh(session, [measurement])
+
+    await storage.create_bucket(storage.archive_bucket(str(user.id)))
+    await upload_target_file(
+        storage, user, measurement_agent.target_file, ["0.0.0.0/0,icmp,8,32,6"]
+    )
+    await archive_target_file(
+        storage,
+        user,
+        measurement_agent.measurement_uuid,
+        measurement_agent.agent_uuid,
+        measurement_agent.target_file,
+    )
+
+    response = client.get(
+        f"/measurements/{measurement_agent.measurement_uuid}/{measurement_agent.agent_uuid}/target"
+    )
+    target = cast_response(response, Target)
+    assert target.content == ["0.0.0.0/0,icmp,8,32,6"]
 
 
 async def test_delete_measurement(
@@ -129,13 +170,14 @@ async def test_delete_measurement(
     measurement = make_measurement(user_id=str(user.id))
     add_and_refresh(session, [measurement])
 
-    # DELETE should be idempotent
-    assert_status_code(client.delete(f"/measurements/{measurement.uuid}"), 204)
-    assert_status_code(client.delete(f"/measurements/{measurement.uuid}"), 204)
-
     expected = MeasurementReadWithAgents.from_measurement(measurement)
     expected.state = MeasurementAgentState.Canceled
-    assert_response(client.get(f"/measurements/{measurement.uuid}"), expected)
+    for agent in expected.agents:
+        agent.state = MeasurementAgentState.Canceled
+
+    # DELETE should be idempotent
+    assert_response(client.delete(f"/measurements/{measurement.uuid}"), expected)
+    assert_response(client.delete(f"/measurements/{measurement.uuid}"), expected)
 
 
 async def test_delete_measurement_not_found(

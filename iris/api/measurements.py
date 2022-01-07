@@ -14,6 +14,7 @@ from iris.commons.models import (
     Measurement,
     MeasurementAgent,
     MeasurementAgentCreate,
+    MeasurementAgentRead,
     MeasurementAgentState,
     MeasurementCreate,
     MeasurementRead,
@@ -225,13 +226,12 @@ async def get_measurement_agent_target(
         storage.archive_bucket(str(user.id)),
         targets_key(str(measurement_uuid), str(agent_uuid)),
     )
-    # TODO: Return Target
-    return [x.strip() for x in target_file["content"].split()]
+    return Target.from_s3(target_file)
 
 
 @router.delete(
     "/{measurement_uuid}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=MeasurementReadWithAgents,
     summary="Cancel measurement specified by UUID.",
 )
 async def delete_measurement(
@@ -253,12 +253,14 @@ async def delete_measurement(
         for agent in measurement.agents
     ]
     await asyncio.gather(*aws)
+    return await get_measurement(
+        measurement_uuid=measurement_uuid, user=user, session=session
+    )
 
 
-# TODO: Return Measurement/MeasurementAgent models in all routes.
 @router.delete(
     "/{measurement_uuid}/{agent_uuid}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=MeasurementAgentRead,
     summary="Cancel measurement agent specified by UUID.",
 )
 async def delete_measurement_agent(
@@ -277,3 +279,4 @@ async def delete_measurement_agent(
     measurement_agent.state = MeasurementAgentState.Canceled
     session.add(measurement_agent)
     session.commit()
+    return measurement_agent

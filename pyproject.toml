@@ -82,9 +82,7 @@ worker = [
 ]
 
 [tool.pytest.ini_options]
-# TODO: Make this compatible with PyCharm debugger?
 addopts = "--capture=no --doctest-modules --strict-markers --verbosity=2"
-#addopts = "--ignore volumes --cov=iris --cov-report= --doctest-modules -vvs"
 filterwarnings = [
     "ignore::DeprecationWarning:aioboto3.*:",
     "ignore::DeprecationWarning:aiofiles.*:",
