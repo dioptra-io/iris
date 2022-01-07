@@ -4,7 +4,11 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException, Request
 from fastapi_users import BaseUserManager, FastAPIUsers
-from fastapi_users.authentication import JWTAuthentication
+from fastapi_users.authentication import (
+    AuthenticationBackend,
+    BearerTransport,
+    JWTStrategy,
+)
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import generate_jwt
 from starlette import status
@@ -69,8 +73,8 @@ async def get_user_manager(
     yield UserManager(user_db, storage=storage)
 
 
-class CustomJWTAuthentication(JWTAuthentication):
-    async def _generate_token(self, user: UserDB) -> str:
+class CustomJWTStrategy(JWTStrategy):
+    async def write_token(self, user: UserDB) -> str:
         data = {
             "user_id": str(user.id),
             "is_active": user.is_active,
@@ -82,16 +86,25 @@ class CustomJWTAuthentication(JWTAuthentication):
         return generate_jwt(data, self.secret, self.lifetime_seconds)
 
 
-jwt_authentication = CustomJWTAuthentication(
-    secret=settings.API_TOKEN_SECRET_KEY,
-    lifetime_seconds=settings.API_TOKEN_LIFETIME,
-    tokenUrl="auth/jwt/login",
-)
+bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 
+
+def get_jwt_strategy() -> JWTStrategy:
+    return CustomJWTStrategy(
+        secret=settings.API_TOKEN_SECRET_KEY,
+        lifetime_seconds=settings.API_TOKEN_LIFETIME,
+    )
+
+
+auth_backend = AuthenticationBackend(
+    name="jwt",
+    transport=bearer_transport,
+    get_strategy=get_jwt_strategy,
+)
 
 fastapi_users = FastAPIUsers(
     get_user_manager,
-    [jwt_authentication],
+    [auth_backend],
     User,
     UserCreate,
     UserUpdate,

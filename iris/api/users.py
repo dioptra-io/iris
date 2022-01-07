@@ -3,10 +3,10 @@ from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from httpx_oauth.clients.github import GitHubOAuth2
 
 from iris.api.authentication import (
+    auth_backend,
     current_superuser,
     current_verified_user,
     fastapi_users,
-    jwt_authentication,
 )
 from iris.api.dependencies import get_settings, get_storage, get_user_db
 from iris.commons.models import ExternalServices, Paginated, User, UserDB
@@ -18,7 +18,7 @@ settings = get_settings()
 
 # Authentication routes
 router.include_router(
-    fastapi_users.get_auth_router(jwt_authentication),
+    fastapi_users.get_auth_router(auth_backend),
     prefix="/auth/jwt",
     tags=["Authentication"],
 )
@@ -30,7 +30,9 @@ github_oauth_client = GitHubOAuth2(
     settings.API_OAUTH_GITHUB_CLIENT_ID, settings.API_OAUTH_GITHUB_CLIENT_SECRET
 )
 router.include_router(
-    fastapi_users.get_oauth_router(github_oauth_client, settings.API_TOKEN_SECRET_KEY),
+    fastapi_users.get_oauth_router(
+        github_oauth_client, auth_backend, settings.API_TOKEN_SECRET_KEY
+    ),
     prefix="/auth/github",
     tags=["Authentication"],
 )

@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import jwt
 import pytest
-from fastapi_users.authentication.jwt import JWTLoginResponse
+from fastapi_users.authentication.transport.bearer import BearerResponse
 
 from iris.commons.models.user import User
 from tests.assertions import assert_status_code, cast_response
@@ -60,7 +60,7 @@ async def test_login(make_client, api_settings):
     response = client.post(
         "/auth/jwt/login", data=dict(username=email, password="password")
     )
-    token = cast_response(response, JWTLoginResponse)
+    token = cast_response(response, BearerResponse)
     assert token.token_type == "bearer"
     decoded = jwt.decode(
         token.access_token,

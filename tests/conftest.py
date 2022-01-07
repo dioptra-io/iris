@@ -6,7 +6,6 @@ from pathlib import Path
 import boto3
 import pytest
 import redis as pyredis
-from dramatiq import Worker
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, create_engine
@@ -17,7 +16,7 @@ from iris.api.authentication import (
     current_superuser,
     current_verified_user,
 )
-from iris.api.dependencies import get_session, get_settings
+from iris.api.dependencies import get_settings
 from iris.api.main import app
 from iris.api.settings import APISettings
 from iris.commons.clickhouse import ClickHouse
@@ -25,7 +24,7 @@ from iris.commons.models.base import Base
 from iris.commons.redis import Redis
 from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
-from iris.worker import WorkerSettings, broker
+from iris.worker import WorkerSettings
 
 pytest.register_assert_rewrite("tests.assertions")
 pytest_plugins = ["tests.fixtures.models", "tests.fixtures.storage"]
@@ -124,42 +123,15 @@ def storage(settings, logger):
     return Storage(settings, logger)
 
 
-@pytest.fixture()
-def stub_broker(settings):
-    # See https://dramatiq.io/guide.html#unit-testing.
-    broker.emit_after("process_boot")
-    broker.flush_all()
-    return broker
-
-
-@pytest.fixture()
-def stub_worker():
-    # See https://dramatiq.io/guide.html#unit-testing.
-    worker = Worker(broker, worker_timeout=100)
-    worker.start()
-    yield worker
-    worker.stop()
-
-
 @pytest.fixture
 def make_client(engine, settings):
     def _make_client(user=None):
-        # We need to override `get_session` since we use an in-memory engine for testing
-        # and by default the API would instantiate a separate engine.
-        # Note that we use the same *engine* but a different *session* in order to avoid
-        # SQLAlchemy caching and be able to test against changes in object properties.
-        def get_session_override():
-            with Session(engine) as session:
-                yield session
-
         if user and user.is_active:
             app.dependency_overrides[current_active_user] = lambda: user
         if user and user.is_active and user.is_verified:
             app.dependency_overrides[current_verified_user] = lambda: user
         if user and user.is_active and user.is_verified and user.is_superuser:
             app.dependency_overrides[current_superuser] = lambda: user
-
-        app.dependency_overrides[get_session] = get_session_override
         app.dependency_overrides[get_settings] = lambda: APISettings(**settings.dict())
         return TestClient(app)
 

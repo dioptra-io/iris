@@ -18,12 +18,8 @@ def get_logger():
     return Adapter(base_logger, dict(component="api"))
 
 
-# TODO: Find how to make encode/database compatible with both
-#  FastAPI-Users and SQLModel. In the meantime we use SQLAlchemy synchronous API.
-def get_engine(settings=Depends(get_settings)):
-    return settings.sqlalchemy_engine()
-
-
+# TODO: Use SQLAlchemy async engine/session for both FastAPI-Users and SQLModel.
+# Wait for FastAPI-Users support for SQLModel?
 def get_session(settings=Depends(get_settings)):
     with Session(settings.sqlalchemy_engine()) as session:
         yield session
