@@ -29,11 +29,6 @@ from iris.worker import WorkerSettings
 pytest.register_assert_rewrite("tests.assertions")
 pytest_plugins = ["tests.fixtures.models", "tests.fixtures.storage"]
 
-# Iris tests requires XXXX
-# Each test runs on a dedicated namespace (redis namespace, bucket prefixes, SQLite database, CH databse, ...)
-# To keep the result of each test runs, set IRIS_TEST_CLEANUP=0
-
-
 def should_cleanup():
     return os.environ.get("IRIS_TEST_CLEANUP", "") != "0"
 
