@@ -99,14 +99,14 @@ class Measurement(MeasurementBase, table=True):
         cls,
         session: Session,
         *,
-        tag: Optional[str] = None,
+        tags: List[str] = None,
         user_id: Optional[str] = None,
         offset: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List["Measurement"]:
         query = select(Measurement).offset(offset).limit(limit)
-        if tag:
-            query = query.where(Measurement.tags.contains([tag]))
+        if tags:
+            query = query.where(Measurement.tags.contains(tags))
         if user_id:
             query = query.where(Measurement.user_id == user_id)
         return session.exec(query).all()
@@ -116,12 +116,12 @@ class Measurement(MeasurementBase, table=True):
         cls,
         session: Session,
         *,
-        tag: Optional[str] = None,
+        tags: List[str] = None,
         user_id: Optional[str] = None,
     ) -> int:
         query = select(func.count(Measurement.uuid))  # type: ignore
-        if tag:
-            query = query.where(Measurement.tags.contains([tag]))
+        if tags:
+            query = query.where(Measurement.tags.contains(tags))
         if user_id:
             query = query.where(Measurement.user_id == user_id)
         return int(session.exec(query).one())

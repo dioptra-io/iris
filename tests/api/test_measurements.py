@@ -48,12 +48,13 @@ def test_get_measurements(make_client, make_measurement, make_user, session):
         make_measurement(user_id=str(user.id)),
         make_measurement(user_id=str(user.id)),
         make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(uuid4())),
     ]
     add_and_refresh(session, measurements)
 
     expected = Paginated[MeasurementRead](
-        count=len(measurements),
-        results=MeasurementRead.from_measurements(measurements),
+        count=len(measurements[:-1]),
+        results=MeasurementRead.from_measurements(measurements[:-1]),
     )
     assert_response(client.get("/measurements"), expected)
 
@@ -74,6 +75,25 @@ def test_get_measurements_with_tag(make_client, make_measurement, make_user, ses
         results=MeasurementRead.from_measurements(measurements[2:3]),
     )
     assert_response(client.get("/measurements", params={"tag": "mytag"}), expected)
+
+
+def test_get_measurements_public(make_client, make_measurement, make_user, session):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurements = [
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id), tags=["public"]),
+        make_measurement(user_id=str(uuid4()), tags=["public"]),
+    ]
+    add_and_refresh(session, measurements)
+
+    expected = Paginated[MeasurementRead](
+        count=len(measurements[2:]),
+        results=MeasurementRead.from_measurements(measurements[2:]),
+    )
+    assert_response(client.get("/measurements/public"), expected)
 
 
 async def test_get_measurement(

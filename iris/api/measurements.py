@@ -34,7 +34,9 @@ router = APIRouter()
 def assert_measurement_visibility(
     measurement: Optional[Measurement], user: UserDB
 ) -> Measurement:
-    if not measurement or measurement.user_id != str(user.id):
+    if not measurement or (
+        "public" not in measurement.tags and measurement.user_id != str(user.id)
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
@@ -87,10 +89,35 @@ async def get_measurements(
     session: Session = Depends(get_session),
 ):
     assert_probing_enabled(user)
-    count = Measurement.count(session, tag=tag, user_id=str(user.id))
+    tags = []
+    if tag:
+        tags.append(tag)
+    count = Measurement.count(session, tags=tags, user_id=str(user.id))
     measurements = Measurement.all(
-        session, tag=tag, user_id=str(user.id), offset=offset, limit=limit
+        session, tags=tags, user_id=str(user.id), offset=offset, limit=limit
     )
+    measurements_ = MeasurementRead.from_measurements(measurements)
+    return Paginated.from_results(request.url, measurements_, count, offset, limit)
+
+
+@router.get(
+    "/public",
+    response_model=Paginated[MeasurementRead],
+    summary="Get all public measurements.",
+)
+async def get_measurements_public(
+    request: Request,
+    tag: Optional[str] = None,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=0, le=200),
+    _user: UserDB = Depends(current_verified_user),
+    session: Session = Depends(get_session),
+):
+    tags = ["public"]
+    if tag:
+        tags.append(tag)
+    count = Measurement.count(session, tags=tags)
+    measurements = Measurement.all(session, tags=tags, offset=offset, limit=limit)
     measurements_ = MeasurementRead.from_measurements(measurements)
     return Paginated.from_results(request.url, measurements_, count, offset, limit)
 
