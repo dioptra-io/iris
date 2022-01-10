@@ -16,8 +16,7 @@ RUN poetry config virtualenvs.in-project true
 COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
 
-# The API imports the worker (for dramatiq) so it also needs its dependencies.
-RUN poetry install --no-root --no-dev --extras "api worker" \
+RUN poetry install --no-root --no-dev \
     && rm -rf /root/.cache/*
 
 FROM docker.io/library/ubuntu:20.04

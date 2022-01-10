@@ -16,7 +16,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install poetry
-          poetry install --extras "agent api worker"
+          poetry install
       - name: Run tests
         run: sudo env CI=1 $(poetry env info -p)/bin/pytest --cov=iris --cov-report xml iris tests
       - uses: codecov/codecov-action@v2

@@ -22,27 +22,27 @@ python = "^3.8"
 aioboto3 = "^9.2.0"
 aiofiles = "^0.8.0"
 aioredis = "^2.0.0"
-asgiref = {optional = true, version = "^3.2.7"}
+asgiref = "^3.2.7"
 asyncpg = "^0.25.0"
 async-timeout = "^4.0.1"
 diamond-miner = "^0.5.4"
-dramatiq = {extras = ["redis", "watch"], optional = true, version = "^1.12.1"}
+dramatiq = {extras = ["redis", "watch"], version = "^1.12.1"}
 email-validator = "^1.1.3"
-fastapi = {optional = true, version = "^0.70.0"}
+fastapi = "^0.70.0"
 fastapi-users = {extras = ["sqlalchemy2", "oauth"], version = "^9.2.0"}
 httpx = "^0.21.3"
-gunicorn = {optional = true, version = "^20.1.0"}
+gunicorn = "^20.1.0"
 psycopg2 = "^2.9.3"
-pycaracal = {optional = true, version = "^0.6.2"}
+pycaracal = "^0.6.2"
 pydantic = "^1.8.2"
-python-jose = {extras = ["cryptography"], optional = true, version = "^3.3.0"}
-python-multipart = {optional = true, version = "^0.0.5"}
-pytricia = {optional = true, version = "^1.0.2"}
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+python-multipart = "^0.0.5"
+pytricia = "^1.0.2"
 SQLAlchemy-Utils = "^0.37.8"
 sqlmodel = "^0.0.6"
-starlette_exporter = {optional = true, version = "^0.11.0"}
+starlette_exporter = "^0.11.0"
 tenacity = "^8.0.1"
-uvicorn = {optional = true, version = "^0.16.0"}
+uvicorn = "^0.16.0"
 zstandard = "^0.16.0"
 
 [tool.poetry.dev-dependencies]
@@ -60,25 +60,6 @@ pytest-asyncio = "^0.16.0"
 pytest-cov = "^3.0.0"
 pytest-clarity = "^1.0.1"
 types-aiofiles = "^0.8.2"
-
-[tool.poetry.extras]
-agent = [
-    "pycaracal",
-]
-api = [
-    "asgiref",
-    "dramatiq",
-    "fastapi",
-    "gunicorn",
-    "python-jose",
-    "python-multipart",
-    "starlette_exporter",
-    "uvicorn"
-]
-worker = [
-    "dramatiq",
-    "pytricia"
-]
 
 [tool.pytest.ini_options]
 addopts = "--capture=no --doctest-modules --ignore=alembic --ignore=iris_data --strict-markers --verbosity=2"

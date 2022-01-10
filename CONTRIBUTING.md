@@ -24,7 +24,7 @@ To be able to access them from your own machine, you need to add the following e
 
 ```bash
 # Create the virtual environment (only once)
-poetry install --extras "api agent worker"
+poetry install
 # Launch the external services
 docker compose up --detach traefik clickhouse minio postgres redis
 # Seed the database
