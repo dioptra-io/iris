@@ -7,7 +7,11 @@ Thanks for contributing ! Here is some guidelines to make your life easier durin
 You need to add this to your hosts file:
 ```
 127.0.0.1 api.docker.localhost
+127.0.0.1 clickhouse.docker.localhost
+127.0.0.1 minio.docker.localhost
 127.0.0.1 minio-console.docker.localhost
+127.0.0.1 postgres.docker.localhost
+127.0.0.1 redis.docker.localhost
 127.0.0.1 traefik.docker.localhost
 ```
 
