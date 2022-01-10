@@ -29,6 +29,7 @@ from iris.worker import WorkerSettings
 pytest.register_assert_rewrite("tests.assertions")
 pytest_plugins = ["tests.fixtures.models", "tests.fixtures.storage"]
 
+
 def should_cleanup():
     return os.environ.get("IRIS_TEST_CLEANUP", "") != "0"
 
