@@ -5,6 +5,7 @@ import pytest
 from iris.commons.models.agent import Agent, AgentState
 from iris.commons.models.pagination import Paginated
 from tests.assertions import assert_response, assert_status_code
+from tests.helpers import register_agent
 
 pytestmark = pytest.mark.asyncio
 
@@ -31,9 +32,7 @@ async def test_get_agents(make_client, make_user, make_agent_parameters, redis):
     ]
 
     for agent in agents:
-        await redis.register_agent(agent.uuid, 5)
-        await redis.set_agent_parameters(agent.uuid, agent.parameters)
-        await redis.set_agent_state(agent.uuid, agent.state)
+        await register_agent(redis, agent.uuid, agent.parameters, agent.state)
 
     # TODO: Add more agents and handle unordered comparisons.
     assert_response(
@@ -53,15 +52,10 @@ async def test_get_agent_not_found(make_client, make_user):
 
 async def test_get_agent(make_client, make_user, make_agent_parameters, redis):
     client = make_client(make_user(probing_enabled=True))
-
     agent = Agent(
         uuid=str(uuid4()),
         parameters=make_agent_parameters(),
         state=AgentState.Idle,
     )
-
-    await redis.register_agent(agent.uuid, 5)
-    await redis.set_agent_parameters(agent.uuid, agent.parameters)
-    await redis.set_agent_state(agent.uuid, agent.state)
-
+    await register_agent(redis, agent.uuid, agent.parameters, agent.state)
     assert_response(client.get(f"/agents/{agent.uuid}"), agent)

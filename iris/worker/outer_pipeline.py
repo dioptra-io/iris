@@ -4,10 +4,8 @@ from logging import LoggerAdapter
 from pathlib import Path
 from typing import List, Optional
 
-from sqlmodel import Session
-
 from iris.commons.clickhouse import ClickHouse
-from iris.commons.models import MeasurementAgent, Round, Tool, ToolParameters
+from iris.commons.models import Round, Tool, ToolParameters
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, next_round_key
 from iris.commons.utils import unwrap
@@ -23,7 +21,6 @@ class OuterPipelineResult:
 async def outer_pipeline(
     clickhouse: ClickHouse,
     storage: Storage,
-    session: Session,
     redis: Redis,
     logger: LoggerAdapter,
     measurement_uuid: str,
@@ -56,17 +53,6 @@ async def outer_pipeline(
 
     logger.info("Retrieve agent information from redis")
     agent_parameters = unwrap(await redis.get_agent_parameters(agent_uuid))
-
-    logger.info("Retrieve probing statistics from redis")
-    if probing_statistics := await redis.get_measurement_stats(
-        measurement_uuid, agent_uuid
-    ):
-        # TODO: Avoid direct database access from the pipeline.
-        logger.info("Store probing statistics into the database")
-        ma = unwrap(MeasurementAgent.get(session, measurement_uuid, agent_uuid))
-        ma.append_probing_statistics(session, probing_statistics)
-        logger.info("Remove probing statistics from redis")
-        await redis.delete_measurement_stats(measurement_uuid, agent_uuid)
 
     logger.info("Download target file from object storage")
     targets_filepath = await storage.download_file_to(

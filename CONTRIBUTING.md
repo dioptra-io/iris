@@ -38,6 +38,12 @@ poetry run python -m iris.worker
 The API documentation will be available at `http://127.0.0.1:8000/docs`.
 
 ##
+```bash
+mkdir iris_data
+alembic revision --autogenerate -m "migration description"
+# Inspect file in alembic/versions/
+alembic upgrade head
+```
 
 TODO: Document how to run with an IDE / debugger.
 TODO: `env PYTHONDEVMODE=1 PYTHONTRACEMALLOC=1`

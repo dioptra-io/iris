@@ -1,5 +1,3 @@
-import json
-
 import pydantic
 import sqlmodel
 from sqlalchemy import func, types
@@ -20,38 +18,28 @@ class BaseSQLModel(sqlmodel.SQLModel, registry=registry(metadata=Base.metadata))
     """
 
 
-class JSONType(types.TypeDecorator):
+class PydanticType(types.TypeDecorator):
     """
-    Custom JSON type that supports Pydantic models.
+    Custom JSON type for Pydantic models.
     >>> from iris.commons.test import TestModel
-    >>> t1 = JSONType()
-    >>> v1 = {"a": 1}
+    >>> t1 = PydanticType(TestModel)
+    >>> v1 = TestModel(a=1)
     >>> t1.process_result_value(t1.process_bind_param(v1, None), None)
-    {'a': 1}
-    >>> t2 = JSONType(TestModel)
-    >>> v2 = TestModel(a=1)
-    >>> t2.process_result_value(t2.process_bind_param(v2, None), None)
     TestModel(a=1)
     """
 
     impl = types.Unicode
     cache_ok = True
 
-    def __init__(self, klass=None, *args, **kwargs):
+    def __init__(self, klass, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.klass = klass
 
     def process_bind_param(self, value, dialect):
-        try:
-            return value.json()
-        except AttributeError:
-            return json.dumps(value)
+        return value.json()
 
     def process_result_value(self, value, dialect):
-        if self.klass:
-            return self.klass.parse_raw(value)
-        else:
-            return json.loads(value)
+        return self.klass.parse_raw(value)
 
 
 class ListType(types.TypeDecorator):

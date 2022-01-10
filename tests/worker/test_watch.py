@@ -6,7 +6,7 @@ from iris.commons.models.agent import AgentState
 from iris.commons.models.round import Round
 from iris.commons.storage import results_key
 from iris.worker.watch import check_agent, clean_results, find_results
-from tests.helpers import upload_file
+from tests.helpers import register_agent, upload_file
 
 pytestmark = pytest.mark.asyncio
 
@@ -20,9 +20,7 @@ async def test_check_agent_offline(redis, make_agent_parameters):
 
 async def test_check_agent_online(redis, make_agent_parameters):
     agent_uuid = str(uuid4())
-    await redis.register_agent(agent_uuid, 10)
-    await redis.set_agent_parameters(agent_uuid, make_agent_parameters())
-    await redis.set_agent_state(agent_uuid, AgentState.Working)
+    await register_agent(redis, agent_uuid, make_agent_parameters(), AgentState.Working)
     assert await check_agent(redis=redis, agent_uuid=agent_uuid, trials=3, interval=0.1)
 
 

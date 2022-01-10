@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import pytest
 
@@ -12,9 +13,8 @@ from iris.commons.models.measurement_agent import (
 )
 from iris.commons.utils import cancel_task
 from iris.worker.watch import watch_measurement_agent_
-from tests.api.test_measurements import upload_target_file
-from tests.assertions import APIResponseError, assert_status_code, cast_response
-from tests.helpers import superuser
+from tests.assertions import APIResponseError, cast_response
+from tests.helpers import create_user_buckets, superuser, upload_target_file
 
 pytestmark = pytest.mark.asyncio
 
@@ -53,14 +53,13 @@ async def test_e2e(
             )
         ],
     )
+    await create_user_buckets(storage, user)
     await upload_target_file(storage, user, "targets.csv", ["1.0.0.0/24,icmp,8,32,6"])
-    # TODO: Best place to create the test buckets?
-    await storage.create_bucket(storage.archive_bucket(str(user.id)))
+
     response = client.post("/measurements/", data=body.json())
-    assert_status_code(response, 201)
     measurement = cast_response(response, MeasurementReadWithAgents)
 
-    # TODO: Explain why we do this instead of using dramatiq.
+    # Emulate dramatiq and launch the watchers
     tasks = [
         asyncio.create_task(
             watch_measurement_agent_(
@@ -69,9 +68,15 @@ async def test_e2e(
         )
         for agent in measurement.agents
     ]
+
+    # Wait for the watchers to complete and terminate the agent
     await asyncio.gather(*tasks)
     await cancel_task(agent_task)
 
+    # Fetch the measurement
     response = client.get(f"/measurements/{measurement.uuid}")
     measurement = cast_response(response, MeasurementReadWithAgents)
     assert measurement.state == MeasurementAgentState.Finished
+    assert measurement.start_time
+    assert measurement.end_time > measurement.start_time
+    assert len(json.loads(measurement.agents[0].probing_statistics)) > 0

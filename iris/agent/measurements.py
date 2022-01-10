@@ -75,7 +75,7 @@ async def do_measurement(
         prober_statistics = dict(prober_statistics)
 
     if is_not_canceled:
-        logger.info("Upload probing statistics in Redis")
+        logger.info("Upload probing statistics to Redis")
         statistics = ProbingStatistics(
             round=request.round,
             start_time=probing_start_time,

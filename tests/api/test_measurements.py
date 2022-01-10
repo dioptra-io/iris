@@ -1,6 +1,3 @@
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from typing import List
 from uuid import uuid4
 
 import pytest
@@ -19,37 +16,16 @@ from iris.commons.models.measurement_agent import (
     MeasurementAgentState,
 )
 from iris.commons.models.pagination import Paginated
-from iris.commons.models.user import User
-from iris.commons.storage import Storage, targets_key
 from tests.assertions import assert_response, assert_status_code, cast_response
-from tests.helpers import add_and_refresh
+from tests.helpers import (
+    add_and_refresh,
+    archive_target_file,
+    create_user_buckets,
+    register_agent,
+    upload_target_file,
+)
 
 pytestmark = pytest.mark.asyncio
-
-
-# TODO: Move to helpers?
-async def upload_target_file(
-    storage: Storage, user: User, filename: str, content: List[str]
-):
-    await storage.create_bucket(storage.targets_bucket(str(user.id)))
-    with TemporaryDirectory() as directory:
-        file = Path(directory) / filename
-        file.write_text("\n".join(content))
-        await storage.upload_file(
-            storage.targets_bucket(str(user.id)), filename, str(file)
-        )
-
-
-async def archive_target_file(
-    storage: Storage, user: User, measurement_uuid: str, agent_uuid: str, filename: str
-):
-    await storage.create_bucket(storage.archive_bucket(str(user.id)))
-    await storage.copy_file_to_bucket(
-        storage.targets_bucket(str(user.id)),
-        storage.archive_bucket(str(user.id)),
-        filename,
-        targets_key(measurement_uuid, agent_uuid),
-    )
 
 
 def test_get_measurements_probing_not_enabled(make_client, make_user):
@@ -142,7 +118,7 @@ async def test_get_measurement_agent_target(
     measurement_agent = measurement.agents[0]
     add_and_refresh(session, [measurement])
 
-    await storage.create_bucket(storage.archive_bucket(str(user.id)))
+    await create_user_buckets(storage, user)
     await upload_target_file(
         storage, user, measurement_agent.target_file, ["0.0.0.0/0,icmp,8,32,6"]
     )
@@ -221,19 +197,19 @@ async def test_post_measurement_uuid(
     user = make_user(probing_enabled=True)
     client = make_client(user)
     agent_uuid = str(uuid4())
-    await redis.register_agent(agent_uuid, 5)
-    await redis.set_agent_parameters(agent_uuid, make_agent_parameters())
-    await redis.set_agent_state(agent_uuid, AgentState.Idle)
+    await register_agent(redis, agent_uuid, make_agent_parameters(), AgentState.Idle)
+    await create_user_buckets(storage, user)
+    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv")],
     )
-    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
-    # TODO: Best place to create the test buckets?
-    await storage.create_bucket(storage.archive_bucket(str(user.id)))
     response = client.post("/measurements/", data=body.json())
     assert_status_code(response, 201)
-    # TODO: Assert response object
+    result = cast_response(response, MeasurementReadWithAgents)
+    assert result.state == MeasurementAgentState.Created
+    assert not result.start_time
+    assert not result.end_time
 
 
 async def test_post_measurement_tag(
@@ -242,19 +218,21 @@ async def test_post_measurement_tag(
     user = make_user(probing_enabled=True)
     client = make_client(user)
     agent_uuid = str(uuid4())
-    await redis.register_agent(agent_uuid, 5)
-    await redis.set_agent_parameters(agent_uuid, make_agent_parameters(tags=["tag1"]))
-    await redis.set_agent_state(agent_uuid, AgentState.Idle)
+    await register_agent(
+        redis, agent_uuid, make_agent_parameters(tags=["tag1"]), AgentState.Idle
+    )
+    await create_user_buckets(storage, user)
+    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(tag="tag1", target_file="targets.csv")],
     )
-    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
-    # TODO: Best place to create the test buckets?
-    await storage.create_bucket(storage.archive_bucket(str(user.id)))
     response = client.post("/measurements/", data=body.json())
     assert_status_code(response, 201)
-    # TODO: Assert response object
+    result = cast_response(response, MeasurementReadWithAgents)
+    assert result.state == MeasurementAgentState.Created
+    assert not result.start_time
+    assert not result.end_time
 
 
 async def test_post_measurement_duplicate(
@@ -263,9 +241,11 @@ async def test_post_measurement_duplicate(
     user = make_user(probing_enabled=True)
     client = make_client(user)
     agent_uuid = str(uuid4())
-    await redis.register_agent(agent_uuid, 5)
-    await redis.set_agent_parameters(agent_uuid, make_agent_parameters(tags=["tag1"]))
-    await redis.set_agent_state(agent_uuid, AgentState.Idle)
+    await register_agent(
+        redis, agent_uuid, make_agent_parameters(tags=["tag1"]), AgentState.Idle
+    )
+    await create_user_buckets(storage, user)
+    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[
@@ -273,9 +253,6 @@ async def test_post_measurement_duplicate(
             MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv"),
         ],
     )
-    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
-    # TODO: Best place to create the test buckets?
-    await storage.create_bucket(storage.archive_bucket(str(user.id)))
     response = client.post("/measurements/", data=body.json())
     assert_status_code(response, 400)
     assert "Multiple assignment of key" in response.text

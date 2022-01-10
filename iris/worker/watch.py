@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from typing import Optional
 
 import dramatiq
@@ -77,6 +78,7 @@ async def watch_measurement_agent_(
         # 4.a. If the measurement was just created, do not wait for results.
         if ma.state == MeasurementAgentState.Created:
             ma.set_state(session, MeasurementAgentState.Ongoing)
+            ma.set_start_time(session, datetime.utcnow())
         # 4.b. Otherwise, check if a results file is available on S3.
         elif ma.state == MeasurementAgentState.Ongoing:
             results_filename = await find_results(storage, measurement_uuid, agent_uuid)
@@ -85,12 +87,17 @@ async def watch_measurement_agent_(
                 await asyncio.sleep(settings.WORKER_WATCH_INTERVAL)
                 continue
 
+        if probing_statistics := await redis.get_measurement_stats(
+            measurement_uuid, agent_uuid
+        ):
+            ma.append_probing_statistics(session, probing_statistics)
+            await redis.delete_measurement_stats(measurement_uuid, agent_uuid)
+
         # TODO: Create a null tool that does nothing that would allow to test the full pipeline.
         # This tool would generate 3 dummy rounds.
         result = await outer_pipeline(
             clickhouse=clickhouse,
             storage=storage,
-            session=session,
             redis=redis,
             logger=logger,
             measurement_uuid=measurement_uuid,
@@ -110,6 +117,7 @@ async def watch_measurement_agent_(
 
         if not result:
             ma.set_state(session, MeasurementAgentState.Finished)
+            ma.set_end_time(session, datetime.utcnow())
             break
 
         await redis.publish(

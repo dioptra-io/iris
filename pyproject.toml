@@ -81,7 +81,7 @@ worker = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--capture=no --doctest-modules --strict-markers --verbosity=2"
+addopts = "--capture=no --doctest-modules --ignore=alembic --strict-markers --verbosity=2"
 filterwarnings = [
     "ignore::DeprecationWarning:aioboto3.*:",
     "ignore::DeprecationWarning:aiofiles.*:",

@@ -1,13 +1,14 @@
 import enum
+import json
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import root_validator
 from sqlalchemy import Column, Enum
 from sqlmodel import Field, Relationship, Session
 
 from iris.commons.models.agent import AgentParameters
-from iris.commons.models.base import BaseSQLModel, JSONType
+from iris.commons.models.base import BaseSQLModel, PydanticType
 from iris.commons.models.diamond_miner import ProbingStatistics, ToolParameters
 
 if TYPE_CHECKING:
@@ -30,7 +31,7 @@ class MeasurementAgentState(enum.Enum):
 class MeasurementAgentBase(BaseSQLModel):
     tool_parameters: ToolParameters = Field(
         ToolParameters(),
-        sa_column=Column(JSONType(ToolParameters)),
+        sa_column=Column(PydanticType(ToolParameters)),
         title="Tool parameters",
     )
     probing_rate: Optional[int] = Field(None, title="Probing rate")
@@ -52,7 +53,7 @@ class MeasurementAgentCreate(MeasurementAgentBase):
 class MeasurementAgentRead(MeasurementAgentBase):
     agent_uuid: str
     agent_parameters: AgentParameters
-    probing_statistics: List[ProbingStatistics]
+    probing_statistics: str
     state: MeasurementAgentState
 
 
@@ -67,11 +68,15 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
     )
     agent_uuid: str = Field(primary_key=True)
     agent_parameters: AgentParameters = Field(
-        sa_column=Column(JSONType(AgentParameters))
+        sa_column=Column(PydanticType(AgentParameters))
     )
-    probing_statistics: List[ProbingStatistics] = Field(
-        default_factory=list, sa_column=Column(JSONType())
-    )
+    # HACK: for some reasons SQLModel does not persist lists of Pydantic models.
+    # So we set the column as str and manually encode/decode.
+    # A cleaner solution would be to store them in a dedicated table
+    # and add the associated relationships.
+    # But this requires a composite foreign key (measurement_uuid, agent_uuid)
+    # => how to do this with SQLModel?
+    probing_statistics: str = Field(default="[]")
     start_time: Optional[datetime] = Field(default=None)
     end_time: Optional[datetime] = Field(default=None)
     state: MeasurementAgentState = Field(
@@ -88,11 +93,27 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
     def append_probing_statistics(
         self, session: Session, statistics: ProbingStatistics
     ):
-        self.probing_statistics.append(statistics)
+        # HACK: See comment on `probing_statistics` column.
+        probing_statistics = json.loads(self.probing_statistics)
+        statistics_ = statistics.dict()
+        statistics_["start_time"] = statistics.start_time.isoformat()
+        statistics_["end_time"] = statistics.end_time.isoformat()
+        probing_statistics.append(statistics_)
+        self.probing_statistics = json.dumps(probing_statistics)
         session.add(self)
         session.commit()
 
     def set_state(self, session: Session, state: MeasurementAgentState):
         self.state = state
+        session.add(self)
+        session.commit()
+
+    def set_start_time(self, session: Session, t: datetime):
+        self.start_time = t
+        session.add(self)
+        session.commit()
+
+    def set_end_time(self, session: Session, t: datetime):
+        self.end_time = t
         session.add(self)
         session.commit()

@@ -81,7 +81,7 @@ class CommonSettings(BaseSettings):
     REDIS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     REDIS_TIMEOUT_RANDOM_MAX: int = 5  # in seconds
 
-    STREAM_LOGGING_LEVEL: int = logging.DEBUG
+    STREAM_LOGGING_LEVEL: int = logging.INFO
 
     SQLALCHEMY_DATABASE_URL: str = "sqlite:///iris_data/iris.sqlite3"
     sqlalchemy_engine_: Optional[Engine] = None

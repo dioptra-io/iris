@@ -47,6 +47,7 @@ async def consumer(
 
 async def main(settings=AgentSettings()):
     """Main agent function."""
+    # TODO: Do not set logging level is run from tests (make two separate main functions?)
     logging.basicConfig(level=settings.STREAM_LOGGING_LEVEL)
     logger = Adapter(
         base_logger, dict(component="agent", agent_uuid=settings.AGENT_UUID)
