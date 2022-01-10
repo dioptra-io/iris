@@ -2,10 +2,12 @@
 
 Thanks for contributing ! Here is some guidelines to make your life easier during the development process.
 
-## Preparation
+## Prerequisites
+
+To develop on Iris you need a Python 3.8+ interpreter and Docker.
 
 Iris services and their dependencies are hosted behind a Traefik reverse-proxy.
-To be able to access them from your own machine, you need to add the following entries to `/etc/hosts`:
+To be able to access them from your own machine, you need to add the following entries to [`/etc/hosts`](file:///etc/hosts):
 ```
 127.0.0.1 api.docker.localhost
 127.0.0.1 clickhouse.docker.localhost
@@ -26,7 +28,7 @@ poetry install --extras "api agent worker"
 # Launch the external services
 docker compose up --detach traefik clickhouse minio postgres redis
 # Seed the database
-alembic upgrade head
+poetry run alembic upgrade head
 # Launch Iris
 poetry run python -m iris.api
 poetry run python -m iris.agent
@@ -43,7 +45,7 @@ The API documentation will be available on http://127.0.0.1:8000/docs.
 # Launch Iris and the external services
 docker-compose up --detach --build
 # Seed the database
-alembic upgrade head
+poetry run alembic upgrade head
 # Stop Iris and the external services
 docker-compose down
 ```
