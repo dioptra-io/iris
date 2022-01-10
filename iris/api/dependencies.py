@@ -1,11 +1,11 @@
-import databases
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session
 
 from iris.api.settings import APISettings
 from iris.commons.logger import Adapter, base_logger
-from iris.commons.models import OAuthAccount, UserDB, UserTable
+from iris.commons.models import OAuthAccountTable, UserDB, UserTable
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 
@@ -25,6 +25,11 @@ def get_session(settings=Depends(get_settings)):
         yield session
 
 
+async def get_async_session(settings=Depends(get_settings)):
+    async with AsyncSession(settings.sqlalchemy_async_engine()) as session:
+        yield session
+
+
 async def get_redis(settings=Depends(get_settings), logger=Depends(get_logger)):
     client = await settings.redis_client()
     try:
@@ -33,11 +38,8 @@ async def get_redis(settings=Depends(get_settings), logger=Depends(get_logger)):
         await client.close()
 
 
-def get_user_db(settings=Depends(get_settings)):
-    db = databases.Database(settings.SQLALCHEMY_DATABASE_URL)
-    yield SQLAlchemyUserDatabase(
-        UserDB, db, UserTable.__table__, OAuthAccount.__table__
-    )
+def get_user_db(session=Depends(get_async_session)):
+    yield SQLAlchemyUserDatabase(UserDB, session, UserTable, OAuthAccountTable)
 
 
 def get_storage(settings=Depends(get_settings), logger=Depends(get_logger)):

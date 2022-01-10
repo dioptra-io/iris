@@ -58,6 +58,7 @@ class MeasurementAgentRead(MeasurementAgentBase):
 
 
 class MeasurementAgent(MeasurementAgentBase, table=True):
+    __tablename__ = "measurement_agent"
     measurement: "Measurement" = Relationship(back_populates="agents")
     # This is optional so that we can create a MeasurementAgent without
     # specifying the measurement_uuid and let SQLModel do it for us.

@@ -4,7 +4,7 @@ Thanks for contributing ! Here is some guidelines to make your life easier durin
 
 ## Preparation
 
-You may need to add this to your hosts file:
+You need to add this to your hosts file:
 ```
 127.0.0.1 api.docker.localhost
 127.0.0.1 minio-console.docker.localhost
@@ -28,7 +28,7 @@ The API documentation will be available at `http://api.docker.localhost/docs`.
 For easier debugging, you can run also run the code directly on your machine.
 
 ```bash
-docker compose up --detach traefik clickhouse minio redis
+docker compose up --detach traefik clickhouse minio postgres redis
 poetry install --extras "api agent worker"
 poetry run python -m iris.api
 poetry run python -m iris.agent

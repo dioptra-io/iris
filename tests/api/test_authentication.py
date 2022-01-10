@@ -6,19 +6,9 @@ from fastapi_users.authentication.transport.bearer import BearerResponse
 
 from iris.commons.models.user import User
 from tests.assertions import assert_status_code, cast_response
+from tests.helpers import register_user
 
 pytestmark = pytest.mark.asyncio
-
-
-# TODO: Move to helpers?
-async def register_user(client, **kwargs):
-    default = dict(
-        email=f"{uuid4()}@example.org",
-        password="password",
-        firstname="firstname",
-        lastname="lastname",
-    )
-    return client.post("/auth/register", json={**default, **kwargs})
 
 
 async def test_register(make_client):

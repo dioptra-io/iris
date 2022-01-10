@@ -2,8 +2,8 @@ import pytest
 
 from iris.commons.models.pagination import Paginated
 from iris.commons.models.user import ExternalServices, User
-from tests.api.test_authentication import register_user
 from tests.assertions import assert_response, assert_status_code, cast_response
+from tests.helpers import register_user
 
 pytestmark = pytest.mark.asyncio
 

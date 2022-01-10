@@ -29,7 +29,7 @@ from iris.commons.models.target import Target, TargetSummary
 from iris.commons.models.user import (
     CustomCreateUpdateDictModel,
     ExternalServices,
-    OAuthAccount,
+    OAuthAccountTable,
     User,
     UserCreate,
     UserDB,
@@ -62,7 +62,7 @@ __all__ = (
     "TargetSummary",
     "Target",
     "UserTable",
-    "OAuthAccount",
+    "OAuthAccountTable",
     "CustomCreateUpdateDictModel",
     "User",
     "UserCreate",

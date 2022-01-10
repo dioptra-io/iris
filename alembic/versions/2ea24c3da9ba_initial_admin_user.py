@@ -1,8 +1,8 @@
-"""default_admin_user
+"""initial admin user
 
-Revision ID: a53e82c0e024
-Revises: 6993e94933a2
-Create Date: 2022-01-07 12:09:26.353973
+Revision ID: 2ea24c3da9ba
+Revises: 16e55815e691
+Create Date: 2022-01-10 17:00:33.649009
 
 """
 import asyncio
@@ -18,10 +18,13 @@ from iris.commons.models import UserTable
 from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
 
-revision = "a53e82c0e024"
-down_revision = "6993e94933a2"
+revision = "2ea24c3da9ba"
+down_revision = "16e55815e691"
 branch_labels = None
 depends_on = None
+
+# TODO?
+# https://fastapi-users.github.io/fastapi-users/cookbook/create-user-programmatically/
 
 settings = CommonSettings()
 storage = Storage(settings, logging.getLogger(__name__))

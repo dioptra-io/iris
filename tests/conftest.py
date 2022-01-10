@@ -1,13 +1,13 @@
 import logging
 import os
 import secrets
-from pathlib import Path
 
 import boto3
 import pytest
 import redis as pyredis
 from fastapi.testclient import TestClient
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import text
+from sqlalchemy_utils import create_database, database_exists, drop_database
 from sqlmodel import Session, create_engine
 
 from iris.agent.settings import AgentSettings
@@ -43,6 +43,7 @@ def logger():
 def settings():
     namespace = secrets.token_hex(nbytes=4)
     print(f"@{namespace}", end=" ")
+    # Redis has 16 databases by default, we use the last one for testing.
     return CommonSettings(
         AWS_PUBLIC_RESOURCES=["arn:aws:s3:::test-public-exports/*"],
         AWS_S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
@@ -52,10 +53,9 @@ def settings():
         CLICKHOUSE_URL="http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
         CLICKHOUSE_TIMEOUT=0,
         REDIS_NAMESPACE=f"iris-test-{namespace}",
-        # Redis has 16 databases by default, we use the last one for testing.
         REDIS_URL="redis://default:redispass@redis.docker.localhost?db=15",
         REDIS_TIMEOUT=0,
-        SQLALCHEMY_DATABASE_URL=f"sqlite:///iris-test-{namespace}.sqlite3",
+        DATABASE_URL=f"postgresql://iris:iris@postgres.docker.localhost/iris-test-{namespace}",
     )
 
 
@@ -91,12 +91,9 @@ def clickhouse(settings, logger):
 
 @pytest.fixture
 def engine(settings):
-    # See https://sqlmodel.tiangolo.com/tutorial/fastapi/tests/.
-    engine = create_engine(
-        settings.SQLALCHEMY_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    engine = create_engine(settings.DATABASE_URL)
+    if not database_exists(engine.url):
+        create_database(engine.url)
     Base.metadata.create_all(engine)
     return engine
 
@@ -147,11 +144,25 @@ def cleanup_redis():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def cleanup_sqlite():
+def cleanup_database():
     yield
     if should_cleanup():
-        for file in Path().glob("iris-test-*.sqlite3"):
-            file.unlink()
+        # TODO: Cleanup/simplify this code.
+        engine = create_engine("postgresql://iris:iris@postgres.docker.localhost")
+        with engine.connect() as conn:
+            databases = conn.execute(
+                text(
+                    """
+                        SELECT datname
+                        FROM pg_database
+                        WHERE datistemplate = false AND datname LIKE 'iris-test-%'
+                    """
+                )
+            ).all()
+        for (database,) in databases:
+            drop_database(
+                f"postgresql://iris:iris@postgres.docker.localhost/{database}"
+            )
 
 
 @pytest.fixture(autouse=True, scope="session")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from httpx_oauth.clients.github import GitHubOAuth2
+from sqlalchemy import func, select
+from sqlmodel import Session
 
 from iris.api.authentication import (
     auth_backend,
@@ -8,8 +9,8 @@ from iris.api.authentication import (
     current_verified_user,
     fastapi_users,
 )
-from iris.api.dependencies import get_settings, get_storage, get_user_db
-from iris.commons.models import ExternalServices, Paginated, User, UserDB
+from iris.api.dependencies import get_session, get_settings, get_storage
+from iris.commons.models import ExternalServices, Paginated, User, UserDB, UserTable
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -56,16 +57,18 @@ async def get_users(
     filter_verified: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
     _user: UserDB = Depends(current_superuser),
+    session: Session = Depends(get_session),
 ):
-    query = user_db.users.select()
+    count_query = select(func.count(UserTable.id))
+    user_query = select(UserTable).offset(offset).limit(limit)
     if filter_verified:
-        query = query.where(not UserDB.is_verified)
-    users = await user_db.database.fetch_all(query)
-    # TODO: Proper SQL limit/offset
-    #  => override SQLAlchemyUserDatabase with .all()/.count()?
-    return Paginated.from_results(request.url, users, len(users), offset, limit)
+        count_query = count_query.where(not UserTable.is_verified)
+        user_query = user_query.where(not UserTable.is_verified)
+    count = session.execute(count_query).one()[0]
+    users = session.execute(user_query).fetchall()
+    users_db = [UserDB.from_orm(x[0]) for x in users]
+    return Paginated.from_results(request.url, users_db, count, offset, limit)
 
 
 @router.get(

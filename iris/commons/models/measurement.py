@@ -3,10 +3,11 @@ from typing import List, Optional
 from uuid import uuid4
 
 from pydantic import root_validator
-from sqlalchemy import Enum
+from sqlalchemy import Enum, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Column, Field, Relationship, Session, func, select
 
-from iris.commons.models.base import BaseSQLModel, ListType
+from iris.commons.models.base import BaseSQLModel
 from iris.commons.models.diamond_miner import Tool
 from iris.commons.models.measurement_agent import (
     MeasurementAgent,
@@ -18,9 +19,11 @@ from iris.commons.utils import cast
 
 
 class MeasurementBase(BaseSQLModel):
-    tool: Tool = Field(sa_column=Column(Enum(Tool)), title="Probing tool")
+    tool: Tool = Field(
+        sa_column=Column(Enum(Tool, native_enum=False)), title="Probing tool"
+    )
     tags: List[str] = Field(
-        default_factory=list, sa_column=Column(ListType()), title="Tags"
+        default_factory=list, sa_column=Column(ARRAY(String)), title="Tags"
     )
 
 
@@ -103,7 +106,7 @@ class Measurement(MeasurementBase, table=True):
     ) -> List["Measurement"]:
         query = select(Measurement).offset(offset).limit(limit)
         if tag:
-            query = query.where(Measurement.tags.contains(tag))
+            query = query.where(Measurement.tags.contains([tag]))
         if user_id:
             query = query.where(Measurement.user_id == user_id)
         return session.exec(query).all()
@@ -118,7 +121,7 @@ class Measurement(MeasurementBase, table=True):
     ) -> int:
         query = select(func.count(Measurement.uuid))  # type: ignore
         if tag:
-            query = query.where(Measurement.tags.contains(tag))
+            query = query.where(Measurement.tags.contains([tag]))
         if user_id:
             query = query.where(Measurement.user_id == user_id)
         return int(session.exec(query).one())

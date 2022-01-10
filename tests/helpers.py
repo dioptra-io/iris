@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List
+from uuid import uuid4
 
 import pytest
 
@@ -74,3 +75,13 @@ async def register_agent(
     await redis.register_agent(uuid, 5)
     await redis.set_agent_parameters(uuid, parameters)
     await redis.set_agent_state(uuid, state)
+
+
+async def register_user(client, **kwargs):
+    default = dict(
+        email=f"{uuid4()}@example.org",
+        password="password",
+        firstname="firstname",
+        lastname="lastname",
+    )
+    return client.post("/auth/register", json={**default, **kwargs})

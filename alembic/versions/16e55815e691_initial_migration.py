@@ -1,20 +1,22 @@
-"""Initial migration
+"""initial migration
 
-Revision ID: 6993e94933a2
+Revision ID: 16e55815e691
 Revises:
-Create Date: 2022-01-07 12:04:08.486071
+Create Date: 2022-01-10 16:58:43.962071
 
 """
 import fastapi_users_db_sqlalchemy
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
+from sqlalchemy.dialects import postgresql
 
-# revision identifiers, used by Alembic.
-import iris
 import iris.commons.models.base
 from alembic import op
 
-revision = "6993e94933a2"
+# revision identifiers, used by Alembic.
+from iris.commons.models import AgentParameters, ToolParameters
+
+revision = "16e55815e691"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -26,10 +28,17 @@ def upgrade():
         "measurement",
         sa.Column(
             "tool",
-            sa.Enum("DiamondMiner", "Yarrp", "Ping", "Probes", name="tool"),
+            sa.Enum(
+                "DiamondMiner",
+                "Yarrp",
+                "Ping",
+                "Probes",
+                name="tool",
+                native_enum=False,
+            ),
             nullable=True,
         ),
-        sa.Column("tags", iris.commons.models.base.ListType(), nullable=True),
+        sa.Column("tags", postgresql.ARRAY(sa.String()), nullable=True),
         sa.Column("uuid", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("user_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.PrimaryKeyConstraint("uuid"),
@@ -50,14 +59,17 @@ def upgrade():
     )
     op.create_index(op.f("ix_user_email"), "user", ["email"], unique=True)
     op.create_table(
-        "measurementagent",
+        "measurement_agent",
         sa.Column(
-            "tool_parameters", iris.commons.models.base.PydanticType(), nullable=True
+            "tool_parameters",
+            iris.commons.models.base.PydanticType(ToolParameters),
+            nullable=True,
         ),
         sa.Column(
-            "agent_parameters", iris.commons.models.base.PydanticType(), nullable=True
+            "agent_parameters",
+            iris.commons.models.base.PydanticType(AgentParameters),
+            nullable=True,
         ),
-        sa.Column("probing_statistics", sa.String(), nullable=True),
         sa.Column(
             "state",
             sa.Enum(
@@ -76,6 +88,9 @@ def upgrade():
             "measurement_uuid", sqlmodel.sql.sqltypes.AutoString(), nullable=True
         ),
         sa.Column("agent_uuid", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column(
+            "probing_statistics", sqlmodel.sql.sqltypes.AutoString(), nullable=True
+        ),
         sa.Column("start_time", sa.DateTime(), nullable=True),
         sa.Column("end_time", sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(
@@ -117,7 +132,7 @@ def downgrade():
     op.drop_index(op.f("ix_oauth_account_oauth_name"), table_name="oauth_account")
     op.drop_index(op.f("ix_oauth_account_account_id"), table_name="oauth_account")
     op.drop_table("oauth_account")
-    op.drop_table("measurementagent")
+    op.drop_table("measurement_agent")
     op.drop_index(op.f("ix_user_email"), table_name="user")
     op.drop_table("user")
     op.drop_table("measurement")

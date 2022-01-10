@@ -7,18 +7,20 @@ from fastapi_users_db_sqlalchemy import (
     SQLAlchemyBaseUserTable,
 )
 from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy.orm import relationship
 
 from iris.commons.models.base import Base, BaseModel
 
 
 class UserTable(Base, SQLAlchemyBaseUserTable):
+    oauth_accounts = relationship("OAuthAccountTable")
     firstname: str = Column(String, nullable=False)
     lastname: str = Column(String, nullable=False)
     probing_enabled = Column(Boolean, nullable=False, default=False)
     probing_limit = Column(Integer, nullable=True, default=0)
 
 
-class OAuthAccount(SQLAlchemyBaseOAuthAccountTable, Base):
+class OAuthAccountTable(SQLAlchemyBaseOAuthAccountTable, Base):
     pass
 
 

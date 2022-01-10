@@ -6,6 +6,7 @@ from typing import List, Optional
 import aioredis
 from pydantic import BaseSettings
 from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import Engine
 from tenacity import retry
 from tenacity.before_sleep import before_sleep_log
@@ -83,18 +84,25 @@ class CommonSettings(BaseSettings):
 
     STREAM_LOGGING_LEVEL: int = logging.INFO
 
-    SQLALCHEMY_DATABASE_URL: str = "sqlite:///iris_data/iris.sqlite3"
+    DATABASE_URL: str = "postgresql://iris:iris@postgres.docker.localhost/iris"
     sqlalchemy_engine_: Optional[Engine] = None
+    sqlalchemy_async_engine_: Optional[Engine] = None
 
     def sqlalchemy_engine(self) -> Engine:
         if not self.sqlalchemy_engine_:
             self.sqlalchemy_engine_ = create_engine(
-                self.SQLALCHEMY_DATABASE_URL,
-                connect_args={"check_same_thread": False},
+                self.DATABASE_URL, echo=True, future=True
+            )
+        return self.sqlalchemy_engine_
+
+    def sqlalchemy_async_engine(self) -> Engine:
+        if not self.sqlalchemy_async_engine_:
+            self.sqlalchemy_async_engine_ = create_async_engine(
+                self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
                 echo=True,
                 future=True,
             )
-        return self.sqlalchemy_engine_
+        return self.sqlalchemy_async_engine_
 
     async def redis_client(self) -> aioredis.Redis:
         redis: aioredis.Redis = await aioredis.from_url(

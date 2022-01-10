@@ -7,6 +7,7 @@ services:
     command:
       - "--api.dashboard=true"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.postgres.address=:5432"
       - "--entrypoints.redis.address=:6379"
       - "--entrypoints.clickhouse.address=:9000"
       - "--providers.docker"
@@ -16,6 +17,7 @@ services:
       - "traefik.http.routers.traefik.service=api@internal"
     ports:
       - "80:80"
+      - "5432:5432"
       - "6379:6379"
       - "9000:9000"
     volumes:
@@ -27,6 +29,7 @@ services:
           - "clickhouse.docker.localhost"
           - "minio.docker.localhost"
           - "minio-console.docker.localhost"
+          - "postgres.docker.localhost"
           - "redis.docker.localhost"
 
   # Control-Plane & Data-Plane
@@ -48,14 +51,23 @@ services:
       - "./configuration/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh"
     #   - "./volumes/clickhouse:/var/lib/clickhouse"
 
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: iris
+      POSTGRES_PASSWORD: iris
+    labels:
+      - traefik.tcp.routers.postgres.entrypoints=postgres
+      - traefik.tcp.routers.postgres.rule=HostSNI(`*`)
+      - traefik.tcp.routers.postgres.service=postgres
+      - traefik.tcp.services.postgres.loadbalancer.server.port=5432
+
   redis:
     image: docker.io/library/redis:6
     command: "redis-server --requirepass redispass"
     labels:
       - "traefik.tcp.routers.redis.entrypoints=redis"
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
-    # volumes:
-    #   - "./volumes/redis:/data"
 
   minio:
     image: docker.io/minio/minio:latest
@@ -71,8 +83,6 @@ services:
       - "traefik.http.routers.minio-console.rule=Host(`minio-console.docker.localhost`)"
       - "traefik.http.routers.minio-console.service=minio-console"
       - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
-    # volumes:
-    #   - "./volumes/minio:/data"
 
   # Iris
   agent:
