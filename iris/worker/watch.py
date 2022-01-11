@@ -117,7 +117,6 @@ async def watch_measurement_agent_(
 
         if not result:
             ma.set_state(session, MeasurementAgentState.Finished)
-            ma.set_end_time(session, datetime.utcnow())
             break
 
         await redis.publish(
@@ -131,6 +130,10 @@ async def watch_measurement_agent_(
         )
 
     logger.info("Done watching measurement agent in state %s, cleaning...", ma.state)
+
+    if not ma.end_time:
+        ma.set_end_time(session, datetime.utcnow())
+
     await clean_results(
         measurement_uuid=measurement_uuid,
         agent_uuid=agent_uuid,

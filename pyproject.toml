@@ -22,6 +22,8 @@ python = "^3.8"
 aioboto3 = "^9.2.0"
 aiofiles = "^0.8.0"
 aioredis = "^2.0.0"
+# We make alembic a runtime dependency so that is available in the Docker images.
+alembic = "^1.7.5"
 asgiref = "^3.2.7"
 asyncpg = "^0.25.0"
 async-timeout = "^4.0.1"
@@ -46,7 +48,6 @@ uvicorn = "^0.16.0"
 zstandard = "^0.16.0"
 
 [tool.poetry.dev-dependencies]
-alembic = "^1.7.5"
 black = "^21.11b1"
 boto3-stubs = "^1.20.31"
 bumpversion = "^0.6.0"

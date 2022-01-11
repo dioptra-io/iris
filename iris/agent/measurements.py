@@ -105,12 +105,3 @@ async def do_measurement(
         logger.info("Empty local targets directory")
         shutil.rmtree(settings.AGENT_TARGETS_DIR_PATH)
         settings.AGENT_TARGETS_DIR_PATH.mkdir()
-
-        if request.probe_filename:
-            logger.info("Remove prefix file from S3")
-            await storage.soft_delete(
-                storage.measurement_agent_bucket(
-                    measurement_agent.measurement_uuid, measurement_agent.agent_uuid
-                ),
-                request.probe_filename,
-            )
