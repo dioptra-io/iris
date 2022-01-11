@@ -30,25 +30,14 @@ The API documentation will be available on http://api.docker.localhost/docs.
 ## Users
 
 By default, a single admin user is created with the email `admin@example.org` and the password `admin`.
-To change its password, run: XXX.
-
-### Capabilities
-
-To change a user capabilities: TODO with psql.
-
-At this point a user is created but it's not verified and don't have probing capabilities.
-It's not possible to add these capababilities without first having an admin user.  So we need to change the user's role in the database.
-We can use docker compose to make this change.
+To change its email and/or password, run:
 ```bash
-docker compose exec api sqlite3 iris_data/iris.sqlite3 'UPDATE user SET is_verified = true, probing_enabled = true, probing_limit = none WHERE email = "user@example.com"'
+# Login and retrieve the JWT access token
+curl -X POST -F 'username=admin@example.org' -F 'password=admin' http://api.docker.localhost/auth/jwt/login
+export TOKEN="copy access_token here"
+# Patch the user
+curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"email": "new@example.org", "password": "newpassword"}' http://api.docker.localhost/users/me
 ```
-
-Now the user has the ability to do measurements, but you probably may want it to be an admin.
-```bash
-docker compose exec api sqlite3 iris_data/iris.sqlite3 'UPDATE user SET is_superuser = true WHERE email = "user@example.com"'
-```
-
-That's it, a super user is created. This user can perform measurements, patch any other users and even promote them admin.
 
 ## Configuration
 
