@@ -93,6 +93,6 @@ def split_compressed_file(
                         outf.close()
                     outf = open(f"{output_prefix}_{chunk}", "w")
                 else:
-                    outf.write(chunk)
+                    outf.write(chunk)  # type: ignore
             if outf:
                 outf.close()

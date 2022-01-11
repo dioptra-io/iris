@@ -3,9 +3,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
-    build-essential \
-    python3-dev \
-    python3-pip \
+        build-essential \
+        python3-dev \
+        python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -16,8 +16,7 @@ RUN poetry config virtualenvs.in-project true
 COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
 
-# The API imports the worker (for dramatiq) so it also needs its dependencies.
-RUN poetry install --no-root --no-dev --extras "api worker" \
+RUN poetry install --no-root --no-dev \
     && rm -rf /root/.cache/*
 
 FROM docker.io/library/ubuntu:20.04
@@ -27,10 +26,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
-    ca-certificates \
-    python3 \
-    tzdata \
-    sqlite3 \
+        ca-certificates \
+        python3 \
+        tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

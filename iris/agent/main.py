@@ -1,89 +1,66 @@
 import asyncio
+import logging
 import socket
 import time
-import traceback
-from logging import Logger
 
 import aioredis
 
 from iris import __version__
-from iris.agent.measurements import measurement
+from iris.agent.measurements import do_measurement
 from iris.agent.settings import AgentSettings
-from iris.agent.ttl import find_exit_ttl
-from iris.commons.logger import create_logger
-from iris.commons.redis import AgentRedis
-from iris.commons.schemas.agents import AgentParameters, AgentState
-from iris.commons.schemas.measurements import MeasurementState
+from iris.agent.ttl import find_exit_ttl_with_mtr
+from iris.commons.logger import Adapter, base_logger, log_traceback
+from iris.commons.models import AgentParameters, AgentState, MeasurementRoundRequest
+from iris.commons.redis import Redis
 from iris.commons.storage import Storage
-from iris.commons.utils import get_ipv4_address, get_ipv6_address
+from iris.commons.utils import cancel_task, get_ipv4_address, get_ipv6_address
 
 
-async def heartbeat(redis: AgentRedis) -> None:
+async def heartbeat(agent_uuid: str, redis: Redis) -> None:
     """Periodically register the agent."""
     while True:
-        await redis.register(30)
+        await redis.register_agent(agent_uuid, 30)
         await asyncio.sleep(5)
 
 
-async def producer(redis: AgentRedis, queue: asyncio.Queue, logger: Logger) -> None:
-    """Consume tasks from a Redis channel and put them on a queue."""
-    while True:
-        logger.info(f"{redis.uuid} :: Waiting for requests...")
-        logger.info(f"{redis.uuid} :: Measurements in queue: {queue.qsize()}")
-        request = await redis.subscribe()
-        await queue.put(request)
-
-
 async def consumer(
-    redis: AgentRedis,
+    redis: Redis,
     storage: Storage,
     settings: AgentSettings,
     queue: asyncio.Queue,
-    logger: Logger,
 ) -> None:
     """Consume tasks from the queue and run measurements."""
     while True:
-        request = await queue.get()
-        logger_prefix = f"{request.measurement.uuid} :: {redis.uuid} ::"
-
-        measurement_state = await redis.get_measurement_state(request.measurement.uuid)
-        if measurement_state in [
-            MeasurementState.Canceled,
-            MeasurementState.Unknown,
-        ]:
-            logger.warning(f"{logger_prefix} The measurement has been canceled")
-            continue
-
-        logger.info(f"{logger_prefix} Set agent state to `working`")
-        await redis.set_agent_state(AgentState.Working)
-
-        logger.info(f"{logger_prefix} Set measurement state to `ongoing`")
-        await redis.set_measurement_state(
-            request.measurement.uuid, MeasurementState.Ongoing
+        request: MeasurementRoundRequest = await queue.get()
+        logger = Adapter(
+            base_logger,
+            dict(
+                component="agent",
+                measurement_uuid=request.measurement_agent.measurement_uuid,
+                agent_uuid=request.measurement_agent.agent_uuid,
+            ),
         )
-
-        logger.info(f"{logger_prefix} Launch measurement procedure")
-        await measurement(settings, request, logger, redis, storage)
-
-        logger.info(f"{logger_prefix} Set agent state to `idle`")
-        await redis.set_agent_state(AgentState.Idle)
+        await redis.set_agent_state(settings.AGENT_UUID, AgentState.Working)
+        await do_measurement(settings, request, logger, redis, storage)
+        await redis.set_agent_state(settings.AGENT_UUID, AgentState.Idle)
 
 
-async def main():
+async def main(settings=AgentSettings()):
     """Main agent function."""
-    settings = AgentSettings()
-    logger = create_logger(settings)
-    redis = AgentRedis(
-        await settings.redis_client(), settings, logger, settings.AGENT_UUID
+    # TODO: Do not set logging level is run from tests (make two separate main functions?)
+    logging.basicConfig(level=settings.STREAM_LOGGING_LEVEL)
+    logger = Adapter(
+        base_logger, dict(component="agent", agent_uuid=settings.AGENT_UUID)
     )
+    redis = Redis(await settings.redis_client(), settings, logger)
     storage = Storage(settings, logger)
 
     settings.AGENT_RESULTS_DIR_PATH.mkdir(parents=True, exist_ok=True)
     settings.AGENT_TARGETS_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
     if settings.AGENT_MIN_TTL < 0:
-        settings.AGENT_MIN_TTL = find_exit_ttl(
-            logger, settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2
+        settings.AGENT_MIN_TTL = find_exit_ttl_with_mtr(
+            settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2, logger=logger
         )
 
     while True:
@@ -91,13 +68,14 @@ async def main():
             await redis.client.ping()
             break
         except aioredis.exceptions.ConnectionError:
-            print("Waiting for redis...")
+            logger.info("Waiting for redis...")
             time.sleep(1)
 
     tasks = []
     try:
-        await redis.set_agent_state(AgentState.Idle)
+        await redis.set_agent_state(settings.AGENT_UUID, AgentState.Idle)
         await redis.set_agent_parameters(
+            settings.AGENT_UUID,
             AgentParameters(
                 version=__version__,
                 hostname=socket.gethostname(),
@@ -105,28 +83,28 @@ async def main():
                 ipv6_address=get_ipv6_address(),
                 min_ttl=settings.AGENT_MIN_TTL,
                 max_probing_rate=settings.AGENT_MAX_PROBING_RATE,
-                agent_tags=settings.AGENT_TAGS,
-            )
+                tags=settings.AGENT_TAGS,
+            ),
         )
 
         queue = asyncio.Queue()
         tasks = [
-            asyncio.create_task(heartbeat(redis)),
-            asyncio.create_task(producer(redis, queue, logger)),
-            asyncio.create_task(consumer(redis, storage, settings, queue, logger)),
+            asyncio.create_task(heartbeat(settings.AGENT_UUID, redis)),
+            asyncio.create_task(consumer(redis, storage, settings, queue)),
+            asyncio.create_task(redis.subscribe(settings.AGENT_UUID, queue)),
         ]
         await asyncio.gather(*tasks)
 
-    except Exception as exception:
-        traceback_content = traceback.format_exc()
-        for line in traceback_content.splitlines():
-            logger.critical(f"{settings.AGENT_UUID} :: {line}")
-        raise exception
+    except asyncio.CancelledError:
+        pass
+
+    except Exception as e:
+        log_traceback(logger)
+        raise e
 
     finally:
         for task in tasks:
-            task.cancel()
-        await redis.delete_agent_state()
-        await redis.delete_agent_parameters()
-        await redis.deregister()
-        await redis.disconnect()
+            await cancel_task(task)
+        await redis.delete_agent_state(settings.AGENT_UUID)
+        await redis.delete_agent_parameters(settings.AGENT_UUID)
+        await redis.unregister_agent(settings.AGENT_UUID)

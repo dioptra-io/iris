@@ -1,27 +1,25 @@
-"""Users operations."""
-
-import databases
 from fastapi import APIRouter, Depends, Query, Request
 from httpx_oauth.clients.github import GitHubOAuth2
+from sqlalchemy import func, select
+from sqlmodel import Session
 
 from iris.api.authentication import (
+    auth_backend,
     current_superuser,
     current_verified_user,
     fastapi_users,
-    jwt_authentication,
 )
-from iris.api.dependencies import get_sqlalchemy, get_storage, settings
-from iris.api.pagination import ListPagination
-from iris.commons.schemas.paging import Paginated
-from iris.commons.schemas.users import StorageCredentials, User, UserDB
+from iris.api.dependencies import get_session, get_settings, get_storage
+from iris.commons.models import ExternalServices, Paginated, User, UserDB, UserTable
 from iris.commons.storage import Storage
 
 router = APIRouter()
+settings = get_settings()
 
 
 # Authentication routes
 router.include_router(
-    fastapi_users.get_auth_router(jwt_authentication),
+    fastapi_users.get_auth_router(auth_backend),
     prefix="/auth/jwt",
     tags=["Authentication"],
 )
@@ -33,7 +31,9 @@ github_oauth_client = GitHubOAuth2(
     settings.API_OAUTH_GITHUB_CLIENT_ID, settings.API_OAUTH_GITHUB_CLIENT_SECRET
 )
 router.include_router(
-    fastapi_users.get_oauth_router(github_oauth_client, settings.API_TOKEN_SECRET_KEY),
+    fastapi_users.get_oauth_router(
+        github_oauth_client, auth_backend, settings.API_TOKEN_SECRET_KEY
+    ),
     prefix="/auth/github",
     tags=["Authentication"],
 )
@@ -56,34 +56,39 @@ async def get_users(
     request: Request,
     filter_verified: bool = False,
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=0, le=200),
-    user: UserDB = Depends(current_superuser),
-    sqlalchemy: databases.Database = Depends(get_sqlalchemy),
+    limit: int = Query(20, ge=0, le=200),
+    _user: UserDB = Depends(current_superuser),
+    session: Session = Depends(get_session),
 ):
-    """Get all users."""
-    where_clause = "WHERE is_verified = false" if filter_verified else ""
-    users = await sqlalchemy.fetch_all(f"SELECT * FROM user {where_clause}")
-    users = [User(**dict(user)) for user in users]
-    querier = ListPagination(users, request, offset, limit)
-    return await querier.query()
+    count_query = select(func.count(UserTable.id))
+    user_query = select(UserTable).offset(offset).limit(limit)
+    if filter_verified:
+        count_query = count_query.where(not UserTable.is_verified)
+        user_query = user_query.where(not UserTable.is_verified)
+    count = session.execute(count_query).one()[0]
+    users = session.execute(user_query).fetchall()
+    users_db = [UserDB.from_orm(x[0]) for x in users]
+    return Paginated.from_results(request.url, users_db, count, offset, limit)
 
 
-# TODO: Integrate with FastAPI users?
 @router.get(
-    "/users/me/s3",
-    response_model=StorageCredentials,
-    summary="Get S3 credentials",
+    "/users/me/services",
+    response_model=ExternalServices,
+    summary="Get external services credentials",
     tags=["Users"],
 )
-async def get_users_s3_credentials(
-    user: UserDB = Depends(current_verified_user),
+async def get_user_services(
     storage: Storage = Depends(get_storage),
+    _user: UserDB = Depends(current_verified_user),
 ):
-    credentials = await storage.generate_temporary_credentials()
-    return StorageCredentials(
+    s3_credentials = await storage.generate_temporary_credentials()
+    return ExternalServices(
+        chproxy_url=settings.CHPROXY_PUBLIC_URL,
+        chproxy_username=settings.CHPROXY_PUBLIC_USERNAME,
+        chproxy_password=settings.CHPROXY_PUBLIC_PASSWORD,
         s3_host=settings.AWS_S3_HOST,
-        s3_access_key_expiration=credentials["Expiration"],
-        s3_access_key_id=credentials["AccessKeyId"],
-        s3_secret_access_key=credentials["SecretAccessKey"],
-        s3_session_token=credentials["SessionToken"],
+        s3_access_key_expiration=s3_credentials["Expiration"],
+        s3_access_key_id=s3_credentials["AccessKeyId"],
+        s3_secret_access_key=s3_credentials["SecretAccessKey"],
+        s3_session_token=s3_credentials["SessionToken"],
     )
