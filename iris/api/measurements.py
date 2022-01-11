@@ -23,6 +23,7 @@ from iris.commons.models import (
     MeasurementAgentRead,
     MeasurementAgentState,
     MeasurementCreate,
+    MeasurementPatch,
     MeasurementRead,
     MeasurementReadWithAgents,
     Paginated,
@@ -250,6 +251,38 @@ async def get_measurement(
 ):
     assert_probing_enabled(user)
     measurement = Measurement.get(session, str(measurement_uuid))
+    measurement = assert_measurement_visibility(measurement, user)
+    return MeasurementReadWithAgents.from_measurement(measurement)
+
+
+@router.patch(
+    "/{measurement_uuid}",
+    response_model=MeasurementReadWithAgents,
+    summary="Patch measurement specified by UUID.",
+)
+async def patch_measurement(
+    measurement_uuid: UUID,
+    measurement_body: MeasurementPatch = Body(
+        ...,
+        example={
+            "tags": ["test"],
+        },
+    ),
+    user: UserDB = Depends(current_verified_user),
+    session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
+):
+    assert_probing_enabled(user)
+
+    if settings.TAG_PUBLIC in measurement_body.tags:
+        assert_tag_public_enabled(user)
+
+    if any(
+        tag.startswith(settings.TAG_COLLECTION_PREFIX) for tag in measurement_body.tags
+    ):
+        assert_tag_reseverd_enabled(user)
+
+    measurement = Measurement.patch(session, str(measurement_uuid), measurement_body)
     measurement = assert_measurement_visibility(measurement, user)
     return MeasurementReadWithAgents.from_measurement(measurement)
 

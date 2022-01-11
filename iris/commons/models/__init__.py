@@ -12,6 +12,7 @@ from iris.commons.models.measurement import (
     Measurement,
     MeasurementBase,
     MeasurementCreate,
+    MeasurementPatch,
     MeasurementRead,
     MeasurementReadWithAgents,
 )
@@ -48,6 +49,7 @@ __all__ = (
     "ProbingStatistics",
     "MeasurementBase",
     "MeasurementCreate",
+    "MeasurementPatch",
     "MeasurementRead",
     "MeasurementReadWithAgents",
     "Measurement",

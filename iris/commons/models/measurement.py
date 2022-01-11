@@ -3,7 +3,7 @@ from typing import List, Optional
 from uuid import uuid4
 
 from pydantic import root_validator
-from sqlalchemy import Enum, String
+from sqlalchemy import Enum, String, update
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Column, Field, Relationship, Session, func, select
 
@@ -85,6 +85,12 @@ class MeasurementRead(MeasurementBase):
         return [cls.from_measurement(m) for m in ms]
 
 
+class MeasurementPatch(BaseSQLModel):
+    tags: List[str] = Field(
+        default_factory=list, sa_column=Column(ARRAY(String)), title="Tags"
+    )
+
+
 class MeasurementReadWithAgents(MeasurementRead):
     agents: List[MeasurementAgentRead]
 
@@ -128,4 +134,17 @@ class Measurement(MeasurementBase, table=True):
 
     @classmethod
     def get(cls, session: Session, uuid: str) -> Optional["Measurement"]:
+        return session.get(Measurement, uuid)
+
+    @classmethod
+    def patch(
+        cls, session: Session, uuid: str, measurement_body: "MeasurementCreate"
+    ) -> Optional["Measurement"]:
+        tags = measurement_body.tags
+        if not tags:
+            return session.get(Measurement, uuid)
+
+        stmt = update(Measurement).where(Measurement.uuid == uuid).values(tags=tags)
+        session.execute(stmt)
+        session.commit()
         return session.get(Measurement, uuid)
