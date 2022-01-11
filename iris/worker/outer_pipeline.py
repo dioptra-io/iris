@@ -36,6 +36,7 @@ async def outer_pipeline(
     results_key: Optional[str],
     user_id: str,
     max_open_files: int,
+    tag_public: str,
     debug_mode: bool = False,
 ) -> Optional[OuterPipelineResult]:
     """
@@ -87,8 +88,7 @@ async def outer_pipeline(
             next_round = next_round.next_round(tool_parameters.global_max_ttl)
     logger.info("%s => %s", previous_round, next_round)
 
-    # TODO: Use settings.TAG_PUBLIC instead of hard-coded "public".
-    if "public" in measurement_tags:
+    if tag_public in measurement_tags:
         await clickhouse.grant_public_access(measurement_uuid, agent_uuid)
 
     probes_filepath = working_directory / next_round_key(next_round)

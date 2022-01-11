@@ -63,8 +63,8 @@ async def get_users(
     count_query = select(func.count(UserTable.id))
     user_query = select(UserTable).offset(offset).limit(limit)
     if filter_verified:
-        count_query = count_query.where(not UserTable.is_verified)
-        user_query = user_query.where(not UserTable.is_verified)
+        count_query = count_query.where(UserTable.is_verified != True)  # noqa: E712
+        user_query = user_query.where(UserTable.is_verified != True)  # noqa: E712
     count = session.execute(count_query).one()[0]
     users = session.execute(user_query).fetchall()
     users_db = [UserDB.from_orm(x[0]) for x in users]

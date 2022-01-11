@@ -138,11 +138,11 @@ class Measurement(MeasurementBase, table=True):
 
     @classmethod
     def patch(
-        cls, session: Session, uuid: str, measurement_body: "MeasurementCreate"
-    ) -> Optional["Measurement"]:
+        cls, session: Session, uuid: str, measurement_body: "MeasurementPatch"
+    ) -> None:
         tags = measurement_body.tags
         if not tags:
-            return session.get(Measurement, uuid)
+            return
 
         stmt = update(Measurement).where(Measurement.uuid == uuid).values(tags=tags)
         session.execute(stmt)
