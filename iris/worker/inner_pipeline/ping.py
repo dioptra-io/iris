@@ -50,8 +50,6 @@ async def ping_inner_pipeline(
         tool_parameters.prefix_len_v4,
         tool_parameters.prefix_len_v6,
     )
-    if "public" in measurement_tags:
-        await clickhouse.grant_public_access(measurement_uuid, agent_uuid)
 
     if results_filepath:
         await clickhouse.insert_csv(measurement_uuid, agent_uuid, results_filepath)

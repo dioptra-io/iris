@@ -124,3 +124,19 @@ def assert_probing_enabled(user: UserDB):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You must have probing enabled to access this resource",
         )
+
+
+def assert_tag_reseverd_enabled(user: UserDB):
+    if not user.tag_reserved_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot use reserved tags",
+        )
+
+
+def assert_tag_public_enabled(user: UserDB):
+    if not user.tag_public_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot use public tag",
+        )

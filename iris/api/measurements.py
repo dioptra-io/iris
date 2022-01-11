@@ -6,8 +6,14 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlmodel import Session
 
-from iris.api.authentication import assert_probing_enabled, current_verified_user
-from iris.api.dependencies import get_redis, get_session, get_storage
+from iris.api.authentication import (
+    assert_probing_enabled,
+    assert_tag_public_enabled,
+    assert_tag_reseverd_enabled,
+    current_verified_user,
+)
+from iris.api.dependencies import get_redis, get_session, get_settings, get_storage
+from iris.api.settings import APISettings
 from iris.api.validator import target_file_validator
 from iris.commons.models import (
     Agent,
@@ -112,8 +118,9 @@ async def get_measurements_public(
     limit: int = Query(20, ge=0, le=200),
     _user: UserDB = Depends(current_verified_user),
     session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
 ):
-    tags = ["public"]
+    tags = [settings.TAG_PUBLIC]
     if tag:
         tags.append(tag)
     count = Measurement.count(session, tags=tags)
@@ -145,9 +152,19 @@ async def post_measurement(
     user: UserDB = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
 ):
     assert_probing_enabled(user)
+
+    if settings.TAG_PUBLIC in measurement_body.tags:
+        assert_tag_public_enabled(user)
+
+    if any(
+        tag.startswith(settings.TAG_COLLECTION_PREFIX) for tag in measurement_body.tags
+    ):
+        assert_tag_reseverd_enabled(user)
+
     active_agents = await redis.get_agents_by_uuid()
 
     agents: Dict[str, MeasurementAgentCreate] = {}

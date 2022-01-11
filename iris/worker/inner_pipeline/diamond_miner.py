@@ -58,10 +58,6 @@ async def diamond_miner_inner_pipeline(
         tool_parameters.prefix_len_v6,
     )
 
-    # TODO parametrize public tag name
-    if "public" in measurement_tags:
-        await clickhouse.grant_public_access(measurement_uuid, agent_uuid)
-
     if results_filepath:
         await clickhouse.insert_csv(measurement_uuid, agent_uuid, results_filepath)
         await clickhouse.insert_prefixes(measurement_uuid, agent_uuid)
