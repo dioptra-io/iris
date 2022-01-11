@@ -25,7 +25,5 @@ jobs:
         with:
           file: ./dockerfiles/${{ matrix.image }}.dockerfile
           image: dioptra-io/iris/${{ matrix.image }}
-          registry: registry.gitlab.com
-          username: ${{ secrets.GITLAB_REGISTRY_USERNAME }}
-          password: ${{ secrets.GITLAB_REGISTRY_PASSWORD }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           # platforms: linux/amd64,linux/arm64
