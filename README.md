@@ -9,7 +9,6 @@ Think of it as a project similar to [CAIDA Ark](https://www.caida.org/projects/a
 - Handle multi-round measurements, such as [diamond-miner](https://github.com/dioptra-io/diamond-miner) IP tracing measurements.
 - Handle both centralized computation on a powerful server, and distributed probing on smaller agents.
 - Can tolerate the temporary loss of agents, database or control-plane.
-- Support IPv6 and IPv4 measurements.
 
 To start using Iris, please visit our [website](https://iris.dioptra.io).
 
