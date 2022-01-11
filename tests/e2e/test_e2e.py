@@ -1,5 +1,4 @@
 import asyncio
-import json
 
 import pytest
 
@@ -79,4 +78,4 @@ async def test_e2e(
     assert measurement.state == MeasurementAgentState.Finished
     assert measurement.start_time
     assert measurement.end_time > measurement.start_time
-    assert len(json.loads(measurement.agents[0].probing_statistics)) > 0
+    assert len(measurement.agents[0].probing_statistics) > 0

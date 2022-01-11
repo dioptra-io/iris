@@ -3,9 +3,8 @@ from typing import List, Optional
 from uuid import uuid4
 
 from pydantic import root_validator
-from sqlalchemy import Enum, String, update
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlmodel import Column, Field, Relationship, Session, func, select
+from sqlmodel import Column, Enum, Field, Relationship, Session, String, func, select
 
 from iris.commons.models.base import BaseSQLModel
 from iris.commons.models.diamond_miner import Tool
@@ -86,9 +85,7 @@ class MeasurementRead(MeasurementBase):
 
 
 class MeasurementPatch(BaseSQLModel):
-    tags: List[str] = Field(
-        default_factory=list, sa_column=Column(ARRAY(String)), title="Tags"
-    )
+    tags: List[str] = Field(default_factory=list, title="Tags")
 
 
 class MeasurementReadWithAgents(MeasurementRead):
@@ -136,14 +133,7 @@ class Measurement(MeasurementBase, table=True):
     def get(cls, session: Session, uuid: str) -> Optional["Measurement"]:
         return session.get(Measurement, uuid)
 
-    @classmethod
-    def patch(
-        cls, session: Session, uuid: str, measurement_body: "MeasurementPatch"
-    ) -> None:
-        tags = measurement_body.tags
-        if not tags:
-            return
-
-        stmt = update(Measurement).where(Measurement.uuid == uuid).values(tags=tags)
-        session.execute(stmt)
+    def set_tags(self, session: Session, tags: List[str]) -> None:
+        self.tags = tags
+        session.add(self)
         session.commit()

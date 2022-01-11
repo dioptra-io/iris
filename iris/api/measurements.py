@@ -273,8 +273,10 @@ async def patch_measurement(
 ):
     assert_probing_enabled(user)
     assert_tag_enabled(user, measurement_body)
-
-    Measurement.patch(session, str(measurement_uuid), measurement_body)
+    measurement = Measurement.get(session, str(measurement_uuid))
+    assert_measurement_visibility(measurement, user, settings)
+    if tags := measurement_body.tags:
+        measurement.set_tags(session, tags)
     return await get_measurement(
         measurement_uuid=measurement_uuid,
         user=user,

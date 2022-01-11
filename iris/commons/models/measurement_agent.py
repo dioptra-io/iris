@@ -1,11 +1,10 @@
 import enum
-import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from pydantic import root_validator
-from sqlalchemy import Column, Enum
-from sqlmodel import Field, Relationship, Session
+from sqlalchemy.dialects.postgresql import JSON
+from sqlmodel import Column, Enum, Field, Relationship, Session, update
 
 from iris.commons.models.agent import AgentParameters
 from iris.commons.models.base import BaseSQLModel, PydanticType
@@ -53,7 +52,7 @@ class MeasurementAgentCreate(MeasurementAgentBase):
 class MeasurementAgentRead(MeasurementAgentBase):
     agent_uuid: str
     agent_parameters: AgentParameters
-    probing_statistics: str
+    probing_statistics: dict
     state: MeasurementAgentState
 
 
@@ -72,12 +71,12 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
         sa_column=Column(PydanticType(AgentParameters))
     )
     # HACK: for some reasons SQLModel does not persist lists of Pydantic models.
-    # So we set the column as str and manually encode/decode.
+    # So we set the column as dict and manually encode/decode.
     # A cleaner solution would be to store them in a dedicated table
     # and add the associated relationships.
     # But this requires a composite foreign key (measurement_uuid, agent_uuid)
     # => how to do this with SQLModel?
-    probing_statistics: str = Field(default="[]")
+    probing_statistics: dict = Field(default_factory=dict, sa_column=Column(JSON))
     start_time: Optional[datetime] = Field(default=None)
     end_time: Optional[datetime] = Field(default=None)
     state: MeasurementAgentState = Field(
@@ -95,13 +94,17 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
         self, session: Session, statistics: ProbingStatistics
     ):
         # HACK: See comment on `probing_statistics` column.
-        probing_statistics = json.loads(self.probing_statistics)
         statistics_ = statistics.dict()
         statistics_["start_time"] = statistics.start_time.isoformat()
         statistics_["end_time"] = statistics.end_time.isoformat()
-        probing_statistics.append(statistics_)
-        self.probing_statistics = json.dumps(probing_statistics)
-        session.add(self)
+        self.probing_statistics[str(statistics.round)] = statistics_
+        query = (
+            update(MeasurementAgent)
+            .where(MeasurementAgent.measurement_uuid == self.measurement_uuid)
+            .where(MeasurementAgent.agent_uuid == self.agent_uuid)
+            .values(probing_statistics=self.probing_statistics)
+        )
+        session.execute(query)
         session.commit()
 
     def set_state(self, session: Session, state: MeasurementAgentState):
