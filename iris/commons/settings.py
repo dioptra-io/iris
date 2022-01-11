@@ -6,7 +6,7 @@ from typing import List, Optional
 import aioredis
 from pydantic import BaseSettings
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.future import Engine
 from tenacity import retry
 from tenacity.before_sleep import before_sleep_log
@@ -86,7 +86,7 @@ class CommonSettings(BaseSettings):
 
     DATABASE_URL: str = "postgresql://iris:iris@postgres.docker.localhost/iris"
     sqlalchemy_engine_: Optional[Engine] = None
-    sqlalchemy_async_engine_: Optional[Engine] = None
+    sqlalchemy_async_engine_: Optional[AsyncEngine] = None
 
     def sqlalchemy_engine(self) -> Engine:
         if not self.sqlalchemy_engine_:
@@ -98,7 +98,7 @@ class CommonSettings(BaseSettings):
             )
         return self.sqlalchemy_engine_
 
-    def sqlalchemy_async_engine(self) -> Engine:
+    def sqlalchemy_async_engine(self) -> AsyncEngine:
         if not self.sqlalchemy_async_engine_:
             self.sqlalchemy_async_engine_ = create_async_engine(
                 self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
