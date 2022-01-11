@@ -1,5 +1,6 @@
 """Measurements operations."""
 import asyncio
+from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID
 
@@ -359,6 +360,7 @@ async def delete_measurement_agent(
 
     await redis.cancel_measurement_agent(str(measurement_uuid), str(agent_uuid))
     measurement_agent.state = MeasurementAgentState.Canceled
+    measurement_agent.end_time = datetime.utcnow()
     session.add(measurement_agent)
     session.commit()
     return measurement_agent

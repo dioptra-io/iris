@@ -172,8 +172,15 @@ async def test_delete_measurement(
         agent.state = MeasurementAgentState.Canceled
 
     # DELETE should be idempotent
-    assert_response(client.delete(f"/measurements/{measurement.uuid}"), expected)
-    assert_response(client.delete(f"/measurements/{measurement.uuid}"), expected)
+    assert_status_code(client.delete(f"/measurements/{measurement.uuid}"), 200)
+    assert_status_code(client.delete(f"/measurements/{measurement.uuid}"), 200)
+
+    actual = cast_response(
+        client.delete(f"/measurements/{measurement.uuid}"), MeasurementReadWithAgents
+    )
+    assert actual.creation_time
+    assert not actual.start_time
+    assert actual.end_time
 
 
 async def test_delete_measurement_not_found(
