@@ -97,7 +97,7 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
         statistics_ = statistics.dict()
         statistics_["start_time"] = statistics.start_time.isoformat()
         statistics_["end_time"] = statistics.end_time.isoformat()
-        self.probing_statistics[str(statistics.round)] = statistics_
+        self.probing_statistics[statistics.round.encode()] = statistics_
         query = (
             update(MeasurementAgent)
             .where(MeasurementAgent.measurement_uuid == self.measurement_uuid)
