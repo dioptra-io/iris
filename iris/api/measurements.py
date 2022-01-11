@@ -6,8 +6,13 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlmodel import Session
 
-from iris.api.authentication import assert_probing_enabled, current_verified_user
-from iris.api.dependencies import get_redis, get_session, get_storage
+from iris.api.authentication import (
+    assert_probing_enabled,
+    assert_tag_enabled,
+    current_verified_user,
+)
+from iris.api.dependencies import get_redis, get_session, get_settings, get_storage
+from iris.api.settings import APISettings
 from iris.api.validator import target_file_validator
 from iris.commons.models import (
     Agent,
@@ -17,6 +22,7 @@ from iris.commons.models import (
     MeasurementAgentRead,
     MeasurementAgentState,
     MeasurementCreate,
+    MeasurementPatch,
     MeasurementRead,
     MeasurementReadWithAgents,
     Paginated,
@@ -32,10 +38,13 @@ router = APIRouter()
 
 
 def assert_measurement_visibility(
-    measurement: Optional[Measurement], user: UserDB
+    measurement: Optional[Measurement],
+    user: UserDB,
+    settings: APISettings,
 ) -> Measurement:
     if not measurement or (
-        "public" not in measurement.tags and measurement.user_id != str(user.id)
+        settings.TAG_PUBLIC not in measurement.tags
+        and measurement.user_id != str(user.id)
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -112,8 +121,9 @@ async def get_measurements_public(
     limit: int = Query(20, ge=0, le=200),
     _user: UserDB = Depends(current_verified_user),
     session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
 ):
-    tags = ["public"]
+    tags = [settings.TAG_PUBLIC]
     if tag:
         tags.append(tag)
     count = Measurement.count(session, tags=tags)
@@ -146,8 +156,11 @@ async def post_measurement(
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
+    settings: APISettings = Depends(get_settings),
 ):
     assert_probing_enabled(user)
+    assert_tag_enabled(user, measurement_body)
+
     active_agents = await redis.get_agents_by_uuid()
 
     agents: Dict[str, MeasurementAgentCreate] = {}
@@ -217,7 +230,10 @@ async def post_measurement(
         watch_measurement_agent.send(measurement.uuid, unwrap(agent.uuid))
 
     return await get_measurement(
-        measurement_uuid=UUID(measurement.uuid), user=user, session=session
+        measurement_uuid=UUID(measurement.uuid),
+        user=user,
+        session=session,
+        settings=settings,
     )
 
 
@@ -230,11 +246,41 @@ async def get_measurement(
     measurement_uuid: UUID,
     user: UserDB = Depends(current_verified_user),
     session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
 ):
     assert_probing_enabled(user)
     measurement = Measurement.get(session, str(measurement_uuid))
-    measurement = assert_measurement_visibility(measurement, user)
+    measurement = assert_measurement_visibility(measurement, user, settings)
     return MeasurementReadWithAgents.from_measurement(measurement)
+
+
+@router.patch(
+    "/{measurement_uuid}",
+    response_model=MeasurementReadWithAgents,
+    summary="Patch measurement specified by UUID.",
+)
+async def patch_measurement(
+    measurement_uuid: UUID,
+    measurement_body: MeasurementPatch = Body(
+        ...,
+        example={
+            "tags": ["test"],
+        },
+    ),
+    user: UserDB = Depends(current_verified_user),
+    session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
+):
+    assert_probing_enabled(user)
+    assert_tag_enabled(user, measurement_body)
+
+    Measurement.patch(session, str(measurement_uuid), measurement_body)
+    return await get_measurement(
+        measurement_uuid=measurement_uuid,
+        user=user,
+        session=session,
+        settings=settings,
+    )
 
 
 @router.get(
@@ -266,9 +312,10 @@ async def delete_measurement(
     user: UserDB = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
 ):
     measurement = Measurement.get(session, str(measurement_uuid))
-    measurement = assert_measurement_visibility(measurement, user)
+    measurement = assert_measurement_visibility(measurement, user, settings)
     aws = [
         delete_measurement_agent(
             measurement_uuid=UUID(agent.measurement_uuid),
@@ -281,7 +328,10 @@ async def delete_measurement(
     ]
     await asyncio.gather(*aws)
     return await get_measurement(
-        measurement_uuid=measurement_uuid, user=user, session=session
+        measurement_uuid=measurement_uuid,
+        user=user,
+        session=session,
+        settings=settings,
     )
 
 
@@ -302,6 +352,9 @@ async def delete_measurement_agent(
         session, str(measurement_uuid), str(agent_uuid)
     )
     measurement_agent = assert_measurement_agent_visibility(measurement_agent, user)
+    if measurement_agent.measurement.user_id != str(user.id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
     await redis.cancel_measurement_agent(str(measurement_uuid), str(agent_uuid))
     measurement_agent.state = MeasurementAgentState.Canceled
     session.add(measurement_agent)

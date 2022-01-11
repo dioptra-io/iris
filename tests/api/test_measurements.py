@@ -84,8 +84,8 @@ def test_get_measurements_public(make_client, make_measurement, make_user, sessi
     measurements = [
         make_measurement(user_id=str(user.id)),
         make_measurement(user_id=str(user.id)),
-        make_measurement(user_id=str(user.id), tags=["public"]),
-        make_measurement(user_id=str(uuid4()), tags=["public"]),
+        make_measurement(user_id=str(user.id), tags=["!public"]),
+        make_measurement(user_id=str(uuid4()), tags=["!public"]),
     ]
     add_and_refresh(session, measurements)
 
@@ -184,6 +184,75 @@ async def test_delete_measurement_not_found(
     assert_status_code(client.delete(f"/measurements/{uuid4()}"), 404)
 
 
+async def test_patch_measurement(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    response_before_patch = client.get(f"/measurements/{measurement.uuid}").json()
+    assert measurement.tags == response_before_patch["tags"]
+
+    response_after_patch = client.patch(
+        f"/measurements/{measurement.uuid}", json={"tags": ["test"]}
+    ).json()
+    assert response_after_patch["tags"] == ["test"]
+
+
+async def test_patch_measurement_public_tag_disallowed(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    response = client.patch(
+        f"/measurements/{measurement.uuid}", json={"tags": ["!public"]}
+    )
+    assert_status_code(response, 403)
+    assert "You cannot use public tag" in response.text
+
+
+async def test_patch_measurement_reserved_tag_disallowed(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    response = client.patch(
+        f"/measurements/{measurement.uuid}", json={"tags": ["collection:test"]}
+    )
+    assert_status_code(response, 403)
+    assert "You cannot use reserved tags" in response.text
+
+
+async def test_patch_measurement_no_tag_in_body(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    response_before_patch = client.get(f"/measurements/{measurement.uuid}").json()
+    assert measurement.tags == response_before_patch["tags"]
+
+    response_after_patch = client.patch(
+        f"/measurements/{measurement.uuid}", json={"toto": ["test"]}
+    ).json()
+
+    assert measurement.tags == response_after_patch["tags"]
+
+
 async def test_post_measurement_unknown_uuid(make_client, make_user):
     client = make_client(make_user(probing_enabled=True))
     body = MeasurementCreate(
@@ -206,6 +275,30 @@ async def test_post_measurement_unknown_tag(make_client, make_user):
     response = client.post("/measurements/", data=body.json())
     assert_status_code(response, 404)
     assert "No agents associated with tag" in response.text
+
+
+async def test_post_measurement_public_tag_disallowed(make_client, make_user):
+    client = make_client(make_user(probing_enabled=True))
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        tags=["!public"],
+        agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 403)
+    assert "You cannot use public tag" in response.text
+
+
+async def test_post_measurement_reserved_tag_disallowed(make_client, make_user):
+    client = make_client(make_user(probing_enabled=True))
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        tags=["collection:test"],
+        agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 403)
+    assert "You cannot use reserved tags" in response.text
 
 
 # TODO: test_post_measurement_unknown_target_file

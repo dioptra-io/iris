@@ -82,6 +82,9 @@ class CommonSettings(BaseSettings):
     REDIS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
     REDIS_TIMEOUT_RANDOM_MAX: int = 5  # in seconds
 
+    TAG_PUBLIC: str = "!public"
+    TAG_COLLECTION_PREFIX: str = "collection:"
+
     STREAM_LOGGING_LEVEL: int = logging.INFO
 
     DATABASE_URL: str = "postgresql://iris:iris@postgres.docker.localhost/iris"

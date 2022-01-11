@@ -17,7 +17,7 @@ class AgentParameters(BaseModel):
     version: str
     hostname: str
     ipv4_address: Optional[IPv4Address] = Field(title="IPv4 address")
-    ipv6_address: Optional[IPv6Address] = Field(title="IPv4 address")
+    ipv6_address: Optional[IPv6Address] = Field(title="IPv6 address")
     min_ttl: NonNegativeInt = Field(
         title="Minimum TTL",
         description="Minimum TTL allowed by the agent",

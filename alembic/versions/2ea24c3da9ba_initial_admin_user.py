@@ -11,10 +11,10 @@ from uuid import UUID
 
 # revision identifiers, used by Alembic.
 from fastapi_users.password import get_password_hash
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from alembic import op
-from iris.commons.models import UserTable
 from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
 
@@ -46,30 +46,28 @@ def delete_buckets(user_id):
     asyncio.run(delete_buckets_())
 
 
+user_id = UUID("fb2ebc52-7685-41cc-926a-880e6a939ee2")
+
+
 def upgrade():
     bind = op.get_bind()
     session = Session(bind=bind)
-    user = UserTable(
-        id=UUID("fb2ebc52-7685-41cc-926a-880e6a939ee2"),
-        firstname="admin",
-        lastname="admin",
-        email="admin@example.org",
-        hashed_password=get_password_hash("admin"),
-        is_active=True,
-        is_verified=True,
-        is_superuser=True,
-        probing_enabled=1,
-        probing_limit=1_000_000,
+    session.execute(
+        text(
+            f"""
+            INSERT INTO public.user (id, firstname, lastname, email, hashed_password, is_active, is_verified, is_superuser, probing_enabled, probing_limit)
+            VALUES ('{user_id}', 'admin', 'admin', 'admin@example.org', '{get_password_hash("admin")}', true, true, true, true, 1000000)
+            """
+        ),
+        # {"id": str(user_id), "hashed_password": get_password_hash("admin")},
     )
-    session.add(user)
     session.commit()
-    create_buckets(user.id)
+    create_buckets(user_id)
 
 
 def downgrade():
     bind = op.get_bind()
     session = Session(bind=bind)
-    user = session.get(UserTable, UUID("fb2ebc52-7685-41cc-926a-880e6a939ee2"))
-    session.delete(user)
+    session.execute(f"DELETE FROM public.user WHERE id = {user_id}")
     session.commit()
-    delete_buckets(user.id)
+    delete_buckets(user_id)

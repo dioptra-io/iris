@@ -79,6 +79,7 @@ def upgrade():
                 "Finished",
                 "Ongoing",
                 name="measurementagentstate",
+                native_enum=False,
             ),
             nullable=True,
         ),
