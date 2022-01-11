@@ -1,5 +1,7 @@
 *
+!alembic/
 !iris/
 !statics/
+!alembic.ini
 !poetry.lock
 !pyproject.toml

@@ -28,6 +28,7 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         ca-certificates \
+        libpq5 \
         mtr \
         python3 \
         tzdata \

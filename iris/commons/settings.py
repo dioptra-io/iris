@@ -91,7 +91,10 @@ class CommonSettings(BaseSettings):
     def sqlalchemy_engine(self) -> Engine:
         if not self.sqlalchemy_engine_:
             self.sqlalchemy_engine_ = create_engine(
-                self.DATABASE_URL, echo=True, future=True
+                self.DATABASE_URL,
+                connect_args=dict(connect_timeout=5),
+                echo=True,
+                future=True,
             )
         return self.sqlalchemy_engine_
 
@@ -99,6 +102,7 @@ class CommonSettings(BaseSettings):
         if not self.sqlalchemy_async_engine_:
             self.sqlalchemy_async_engine_ = create_async_engine(
                 self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
+                connect_args=dict(command_timeout=5, timeout=5),
                 echo=True,
                 future=True,
             )

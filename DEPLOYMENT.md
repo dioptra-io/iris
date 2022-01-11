@@ -21,8 +21,8 @@ First, add the following entry to [`/etc/hosts`](file:///etc/hosts):
 Then run the stack and seed the database:
 ```bash
 docker-compose up --build --detach
-pip install alembic
-alembic upgrade head
+# Mount alembic.ini and alembic/ inside the container:
+docker-compose exec api .venv/bin/alembic upgrade head
 ```
 
 The API documentation will be available on http://api.docker.localhost/docs.
