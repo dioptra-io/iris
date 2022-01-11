@@ -77,6 +77,7 @@ class UserDB(User, models.BaseUserDB):
 
 class ExternalServices(BaseModel):
     chproxy_url: str
+    chproxy_database: str
     chproxy_username: str
     chproxy_password: str
     s3_host: str
