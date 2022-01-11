@@ -10,11 +10,11 @@ Think of it as a project similar to [CAIDA Ark](https://www.caida.org/projects/a
 - Handle both centralized computation on a powerful server, and distributed probing on smaller agents.
 - Can tolerate the temporary loss of agents, database or control-plane.
 
-To start using Iris, please visit our [website](https://iris.dioptra.io).
+We offer a public instance of Iris, as well as public measurement data, on [iris.dioptra.io](https://iris.dioptra.io).
 
 ## 🚀 Deployment
 
-See [DEPLOYMENT](DEPLOYMENT.md) for more information about how to deploy Iris on your own infrastructure.
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for more information about how to deploy Iris on your own infrastructure.
 
 ## 📚 Publications
 
@@ -23,7 +23,7 @@ See [DEPLOYMENT](DEPLOYMENT.md) for more information about how to deploy Iris on
 
 ## ✏️ Contributing
 
-See [CONTRIBUTING](CONTRIBUTING.md) for more information about how to contribute to this project.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for more information about how to contribute to this project.
 
 
 ## 🧑‍💻 Authors
