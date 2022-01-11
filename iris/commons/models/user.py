@@ -18,8 +18,8 @@ class UserTable(Base, SQLAlchemyBaseUserTable):
     lastname: str = Column(String, nullable=False)
     probing_enabled = Column(Boolean, nullable=False, default=False)
     probing_limit = Column(Integer, nullable=True, default=0)
-    tag_reserved_allowed = Column(Boolean, nullable=False, default=False)
-    tag_public_allowed = Column(Boolean, nullable=False, default=False)
+    allow_tag_reserved = Column(Boolean, nullable=False, default=False)
+    allow_tag_public = Column(Boolean, nullable=False, default=False)
 
 
 class OAuthAccountTable(SQLAlchemyBaseOAuthAccountTable, Base):
@@ -36,10 +36,10 @@ class CustomCreateUpdateDictModel(models.BaseModel):
                 "is_active",
                 "is_verified",
                 "oauth_accounts",
-                "probing_enabled",  # Custom field
-                "probing_limit",  # Custom field
-                "tag_reserved_allowed",
-                "tag_public_allowed",
+                "probing_enabled",
+                "probing_limit",
+                "allow_tag_reserved",
+                "allow_tag_public",
             },
         )
 
@@ -49,8 +49,8 @@ class User(models.BaseUser, models.BaseOAuthAccountMixin):
     lastname: str = "string"
     probing_enabled: bool = False
     probing_limit: Optional[int] = 0
-    tag_reserved_allowed: bool = False
-    tag_public_allowed: bool = False
+    allow_tag_reserved: bool = False
+    allow_tag_public: bool = False
 
 
 class UserCreate(CustomCreateUpdateDictModel, models.BaseUserCreate):
@@ -58,8 +58,8 @@ class UserCreate(CustomCreateUpdateDictModel, models.BaseUserCreate):
     lastname: str = "string"
     probing_enabled: bool = False
     probing_limit: Optional[int] = 0
-    tag_reserved_allowed: bool = False
-    tag_public_allowed: bool = False
+    allow_tag_reserved: bool = False
+    allow_tag_public: bool = False
 
 
 class UserUpdate(CustomCreateUpdateDictModel, models.BaseUserUpdate):
@@ -67,8 +67,8 @@ class UserUpdate(CustomCreateUpdateDictModel, models.BaseUserUpdate):
     lastname: str = "string"
     probing_enabled: bool = False
     probing_limit: Optional[int] = 0
-    tag_reserved_allowed: bool = False
-    tag_public_allowed: bool = False
+    allow_tag_reserved: bool = False
+    allow_tag_public: bool = False
 
 
 class UserDB(User, models.BaseUserDB):

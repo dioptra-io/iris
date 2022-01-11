@@ -127,7 +127,7 @@ def assert_probing_enabled(user: UserDB):
 
 
 def assert_tag_reseverd_enabled(user: UserDB):
-    if not user.tag_reserved_allowed:
+    if not user.allow_tag_reserved:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You cannot use reserved tags",
@@ -135,7 +135,7 @@ def assert_tag_reseverd_enabled(user: UserDB):
 
 
 def assert_tag_public_enabled(user: UserDB):
-    if not user.tag_public_allowed:
+    if not user.allow_tag_public:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You cannot use public tag",
