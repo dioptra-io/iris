@@ -58,6 +58,7 @@ class MeasurementCreate(MeasurementBase):
 
 class MeasurementRead(MeasurementBase):
     uuid: str = Field(title="UUID")
+    creation_time: datetime
     start_time: Optional[datetime]
     end_time: Optional[datetime]
     state: MeasurementAgentState = Field(title="State")
@@ -94,6 +95,7 @@ class MeasurementReadWithAgents(MeasurementRead):
 
 class Measurement(MeasurementBase, table=True):
     uuid: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    creation_time: datetime = Field(default_factory=lambda: datetime.utcnow())
     user_id: str
     agents: List[MeasurementAgent] = Relationship(back_populates="measurement")
 
@@ -107,7 +109,12 @@ class Measurement(MeasurementBase, table=True):
         offset: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List["Measurement"]:
-        query = select(Measurement).offset(offset).limit(limit)
+        query = (
+            select(Measurement)
+            .offset(offset)
+            .limit(limit)
+            .order_by(Measurement.creation_time)
+        )
         if tags:
             query = query.where(Measurement.tags.contains(tags))
         if user_id:
