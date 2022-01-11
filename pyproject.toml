@@ -71,6 +71,18 @@ filterwarnings = [
     "ignore::DeprecationWarning:urllib3.*:",
 ]
 
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+# Disabled due to fastapi_users reexports
+# implicit_reexport = false
+strict_equality = true
+strict_optional = true
+warn_redundant_casts = true
+warn_return_any = true
+# warn_unreachable = true
+warn_unused_ignores = true
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
