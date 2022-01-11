@@ -147,4 +147,3 @@ class Measurement(MeasurementBase, table=True):
         stmt = update(Measurement).where(Measurement.uuid == uuid).values(tags=tags)
         session.execute(stmt)
         session.commit()
-        return session.get(Measurement, uuid)
