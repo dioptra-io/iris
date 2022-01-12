@@ -160,7 +160,7 @@ async def post_measurement(
     settings: APISettings = Depends(get_settings),
 ):
     assert_probing_enabled(user)
-    assert_tag_enabled(user, measurement_body)
+    assert_tag_enabled(user, settings, measurement_body)
 
     active_agents = await redis.get_agents_by_uuid()
 
@@ -273,7 +273,7 @@ async def patch_measurement(
     settings: APISettings = Depends(get_settings),
 ):
     assert_probing_enabled(user)
-    assert_tag_enabled(user, measurement_body)
+    assert_tag_enabled(user, settings, measurement_body)
     measurement = Measurement.get(session, str(measurement_uuid))
     assert_measurement_visibility(measurement, user, settings)
     if tags := measurement_body.tags:

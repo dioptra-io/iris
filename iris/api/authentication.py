@@ -14,21 +14,21 @@ from fastapi_users.jwt import generate_jwt
 from starlette import status
 
 from iris.api.dependencies import get_settings, get_storage, get_user_db
+from iris.api.settings import APISettings
 from iris.commons.models import User, UserCreate, UserDB, UserUpdate
 from iris.commons.storage import Storage
-
-# TODO: DI for settings in this module?
-settings = get_settings()
 
 
 class UserManager(BaseUserManager[UserCreate, UserDB]):
     user_db_model = UserDB
-    reset_password_token_secret = settings.API_TOKEN_SECRET_KEY
-    verification_token_secret = settings.API_TOKEN_SECRET_KEY
 
-    def __init__(self, user_db, storage):
+    def __init__(
+        self, user_db, storage, reset_password_token_secret, verification_token_secret
+    ):
         super().__init__(user_db)
         self.storage = storage
+        self.reset_password_token_secret = reset_password_token_secret
+        self.verification_token_secret = verification_token_secret
 
     async def on_after_register(self, user: UserDB, request: Optional[Request] = None):
         """
@@ -66,13 +66,6 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
         await self.storage.delete_bucket(self.storage.targets_bucket(str(user.id)))
 
 
-async def get_user_manager(
-    user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
-    storage: Storage = Depends(get_storage),
-):
-    yield UserManager(user_db, storage=storage)
-
-
 class CustomJWTStrategy(JWTStrategy):
     async def write_token(self, user: UserDB) -> str:
         data = {
@@ -86,14 +79,27 @@ class CustomJWTStrategy(JWTStrategy):
         return generate_jwt(data, self.secret, self.lifetime_seconds)
 
 
-bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+async def get_user_manager(
+    user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
+    settings: APISettings = Depends(get_settings),
+    storage: Storage = Depends(get_storage),
+):
+    yield UserManager(
+        user_db,
+        storage=storage,
+        reset_password_token_secret=settings.API_TOKEN_SECRET_KEY,
+        verification_token_secret=settings.API_TOKEN_SECRET_KEY,
+    )
 
 
-def get_jwt_strategy() -> JWTStrategy:
+def get_jwt_strategy(settings: APISettings = Depends(get_settings)) -> JWTStrategy:
     return CustomJWTStrategy(
         secret=settings.API_TOKEN_SECRET_KEY,
         lifetime_seconds=settings.API_TOKEN_LIFETIME,
     )
+
+
+bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 
 
 auth_backend = AuthenticationBackend(
@@ -126,7 +132,7 @@ def assert_probing_enabled(user: UserDB):
         )
 
 
-def assert_tag_enabled(user: UserDB, measurement_body):
+def assert_tag_enabled(user: UserDB, settings: APISettings, measurement_body):
     if settings.TAG_PUBLIC in measurement_body.tags:
         assert_tag_public_enabled(user)
 

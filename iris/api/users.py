@@ -15,7 +15,6 @@ from iris.commons.models import ExternalServices, Paginated, User, UserDB, UserT
 from iris.commons.storage import Storage
 
 router = APIRouter()
-settings = get_settings()
 
 
 # Authentication routes
@@ -27,6 +26,9 @@ router.include_router(
 router.include_router(
     fastapi_users.get_register_router(), prefix="/auth", tags=["Authentication"]
 )
+
+# TODO: Can we DI settings for GitHubOAuth2?
+settings = APISettings()
 
 github_oauth_client = GitHubOAuth2(
     settings.API_OAUTH_GITHUB_CLIENT_ID, settings.API_OAUTH_GITHUB_CLIENT_SECRET
