@@ -16,7 +16,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url=None,
     contact={
-        "name": "Dioptra",
+        "name": "Iris",
         "url": "https://iris.dioptra.io",
         "email": "iris@dioptra.io",
     },
