@@ -19,9 +19,7 @@ from iris.commons.utils import cast
 
 
 class MeasurementBase(BaseSQLModel):
-    tool: Tool = Field(
-        sa_column=Column(Enum(Tool, native_enum=False)), title="Probing tool"
-    )
+    tool: Tool = Field(sa_column=Column(Enum(Tool, native_enum=False)), title="Tool")
     tags: List[str] = Field(
         default_factory=list, sa_column=Column(ARRAY(String)), title="Tags"
     )

@@ -125,7 +125,7 @@ async def diamond_miner_inner_pipeline(
             url=database_url,
             measurement_id=measurement_id,
             previous_round=previous_round.number,
-            target_epsilon=tool_parameters.failure_rate,
+            target_epsilon=tool_parameters.failure_probability,
             adaptive_eps=True,
         )
 

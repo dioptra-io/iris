@@ -28,8 +28,10 @@ class ToolParameters(BaseModel):
     )
     destination_port: int = Field(33434, title="Destination port", gt=0, lt=65_536)
     max_round: int = Field(10, title="Maximum round", gt=0, lt=256)
-    failure_rate: float = Field(
-        0.05, title="Diamond-Miner failure rate", description="Ignored for other tools"
+    failure_probability: float = Field(
+        0.05,
+        title="Diamond-Miner failure probability",
+        description="Ignored for other tools",
     )
     flow_mapper: FlowMapper = Field(FlowMapper.RandomFlowMapper, title="Flow mapper")
     flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(
@@ -41,14 +43,14 @@ class ToolParameters(BaseModel):
         0,
         ge=0,
         le=255,
-        title="Global Min TTL",
+        title="Global minimum TTL",
         description="Do not set. Overridden by the API",
     )
     global_max_ttl: int = Field(
         255,
         ge=0,
         le=255,
-        title="Global Max TTL",
+        title="Global maximum TTL",
         description="Do not set. Overridden by the API",
     )
 
