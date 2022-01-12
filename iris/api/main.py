@@ -45,7 +45,7 @@ async def startup_event():
     if settings.API_CORS_ALLOW_ORIGIN:
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=[settings.API_CORS_ALLOW_ORIGIN],
+            allow_origins=settings.API_CORS_ALLOW_ORIGIN.split(","),
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],

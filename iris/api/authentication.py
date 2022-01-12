@@ -7,13 +7,20 @@ from fastapi_users import BaseUserManager, FastAPIUsers
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
+    CookieTransport,
     JWTStrategy,
 )
+from fastapi_users.authentication.strategy import DatabaseStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import generate_jwt
 from starlette import status
 
-from iris.api.dependencies import get_settings, get_storage, get_user_db
+from iris.api.dependencies import (
+    get_access_token_db,
+    get_settings,
+    get_storage,
+    get_user_db,
+)
 from iris.api.settings import APISettings
 from iris.commons.models import User, UserCreate, UserDB, UserUpdate
 from iris.commons.storage import Storage
@@ -92,6 +99,12 @@ async def get_user_manager(
     )
 
 
+def get_database_strategy(
+    access_token_db=Depends(get_access_token_db),
+):
+    return DatabaseStrategy(access_token_db, lifetime_seconds=3600)
+
+
 def get_jwt_strategy(settings: APISettings = Depends(get_settings)) -> JWTStrategy:
     return CustomJWTStrategy(
         secret=settings.API_TOKEN_SECRET_KEY,
@@ -99,10 +112,22 @@ def get_jwt_strategy(settings: APISettings = Depends(get_settings)) -> JWTStrate
     )
 
 
+# TODO: DI for cookie settings?
+settings = APISettings()
+
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+cookie_transport = CookieTransport(
+    cookie_domain=settings.API_COOKIE_DOMAIN,
+    cookie_samesite=settings.API_COOKIE_SAMESITE,
+)
 
+cookie_auth_backend = AuthenticationBackend(
+    name="cookie",
+    transport=cookie_transport,
+    get_strategy=get_database_strategy,
+)
 
-auth_backend = AuthenticationBackend(
+jwt_auth_backend = AuthenticationBackend(
     name="jwt",
     transport=bearer_transport,
     get_strategy=get_jwt_strategy,
@@ -110,7 +135,7 @@ auth_backend = AuthenticationBackend(
 
 fastapi_users = FastAPIUsers(
     get_user_manager,
-    [auth_backend],
+    [cookie_auth_backend, jwt_auth_backend],
     User,
     UserCreate,
     UserUpdate,

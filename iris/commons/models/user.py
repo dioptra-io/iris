@@ -2,18 +2,15 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi_users import models
-from fastapi_users_db_sqlalchemy import (
-    SQLAlchemyBaseOAuthAccountTable,
-    SQLAlchemyBaseUserTable,
-)
+from fastapi_users.authentication.strategy import BaseAccessToken
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
+from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyBaseAccessTokenTable
 from sqlalchemy import Boolean, Column, Integer, String
-from sqlalchemy.orm import relationship
 
 from iris.commons.models.base import Base, BaseModel
 
 
 class UserTable(Base, SQLAlchemyBaseUserTable):
-    oauth_accounts = relationship("OAuthAccountTable")
     firstname: str = Column(String, nullable=False)
     lastname: str = Column(String, nullable=False)
     probing_enabled = Column(Boolean, nullable=False, default=False)
@@ -22,7 +19,11 @@ class UserTable(Base, SQLAlchemyBaseUserTable):
     allow_tag_public = Column(Boolean, nullable=False, default=False)
 
 
-class OAuthAccountTable(SQLAlchemyBaseOAuthAccountTable, Base):
+class AccessToken(BaseAccessToken):
+    pass
+
+
+class AccessTokenTable(SQLAlchemyBaseAccessTokenTable, Base):
     pass
 
 
@@ -44,7 +45,7 @@ class CustomCreateUpdateDictModel(models.BaseModel):
         )
 
 
-class User(models.BaseUser, models.BaseOAuthAccountMixin):
+class User(models.BaseUser):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False

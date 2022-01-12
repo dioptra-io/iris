@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, Query, Request
-from httpx_oauth.clients.github import GitHubOAuth2
 from sqlalchemy import func, select
 from sqlmodel import Session
 
 from iris.api.authentication import (
-    auth_backend,
+    cookie_auth_backend,
     current_superuser,
     current_verified_user,
     fastapi_users,
+    jwt_auth_backend,
 )
 from iris.api.dependencies import get_session, get_settings, get_storage
 from iris.api.settings import APISettings
@@ -19,26 +19,17 @@ router = APIRouter()
 
 # Authentication routes
 router.include_router(
-    fastapi_users.get_auth_router(auth_backend),
+    fastapi_users.get_auth_router(cookie_auth_backend),
+    prefix="/auth/cookie",
+    tags=["Authentication"],
+)
+router.include_router(
+    fastapi_users.get_auth_router(jwt_auth_backend),
     prefix="/auth/jwt",
     tags=["Authentication"],
 )
 router.include_router(
     fastapi_users.get_register_router(), prefix="/auth", tags=["Authentication"]
-)
-
-# TODO: Can we DI settings for GitHubOAuth2?
-settings = APISettings()
-
-github_oauth_client = GitHubOAuth2(
-    settings.API_OAUTH_GITHUB_CLIENT_ID, settings.API_OAUTH_GITHUB_CLIENT_SECRET
-)
-router.include_router(
-    fastapi_users.get_oauth_router(
-        github_oauth_client, auth_backend, settings.API_TOKEN_SECRET_KEY
-    ),
-    prefix="/auth/github",
-    tags=["Authentication"],
 )
 
 # Users routes
