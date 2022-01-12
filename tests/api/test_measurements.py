@@ -52,9 +52,13 @@ def test_get_measurements(make_client, make_measurement, make_user, session):
     ]
     add_and_refresh(session, measurements)
 
+    # We expect only the measurements of our user
+    measurements = sorted(
+        measurements[:-1], key=lambda x: x.creation_time, reverse=True
+    )
     expected = Paginated[MeasurementRead](
-        count=len(measurements[:-1]),
-        results=MeasurementRead.from_measurements(measurements[:-1]),
+        count=len(measurements),
+        results=MeasurementRead.from_measurements(measurements),
     )
     assert_response(client.get("/measurements"), expected)
 
@@ -89,9 +93,11 @@ def test_get_measurements_public(make_client, make_measurement, make_user, sessi
     ]
     add_and_refresh(session, measurements)
 
+    # We expect only the public measurements
+    measurements = sorted(measurements[2:], key=lambda x: x.creation_time, reverse=True)
     expected = Paginated[MeasurementRead](
-        count=len(measurements[2:]),
-        results=MeasurementRead.from_measurements(measurements[2:]),
+        count=len(measurements),
+        results=MeasurementRead.from_measurements(measurements),
     )
     assert_response(client.get("/measurements/public"), expected)
 

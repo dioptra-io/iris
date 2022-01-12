@@ -3,6 +3,7 @@ from typing import List, Optional
 from uuid import uuid4
 
 from pydantic import root_validator
+from sqlalchemy import desc
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Column, Enum, Field, Relationship, Session, String, func, select
 
@@ -113,7 +114,7 @@ class Measurement(MeasurementBase, table=True):
             select(Measurement)
             .offset(offset)
             .limit(limit)
-            .order_by(Measurement.creation_time)
+            .order_by(desc(Measurement.creation_time))
         )
         if tags:
             query = query.where(Measurement.tags.contains(tags))
