@@ -37,32 +37,32 @@ class Storage:
     @property
     def aws_settings(self):
         return {
-            "aws_access_key_id": self.settings.AWS_ACCESS_KEY_ID,
-            "aws_secret_access_key": self.settings.AWS_SECRET_ACCESS_KEY,
-            "aws_session_token": self.settings.AWS_SESSION_TOKEN,
-            "endpoint_url": self.settings.AWS_S3_HOST,
-            "region_name": self.settings.AWS_REGION_NAME,
+            "aws_access_key_id": self.settings.S3_ACCESS_KEY_ID,
+            "aws_secret_access_key": self.settings.S3_SECRET_ACCESS_KEY,
+            "aws_session_token": self.settings.S3_SESSION_TOKEN,
+            "endpoint_url": self.settings.S3_HOST,
+            "region_name": self.settings.S3_REGION_NAME,
         }
 
     def archive_bucket(self, user_id: str) -> str:
-        return self.settings.AWS_S3_ARCHIVE_BUCKET_PREFIX + user_id
+        return self.settings.S3_ARCHIVE_BUCKET_PREFIX + user_id
 
     def targets_bucket(self, user_id: str) -> str:
-        return self.settings.AWS_S3_TARGETS_BUCKET_PREFIX + user_id
+        return self.settings.S3_TARGETS_BUCKET_PREFIX + user_id
 
     @staticmethod
     def measurement_agent_bucket(measurement_uuid: str, agent_uuid: str) -> str:
         # TODO: Prefix?
         return f"{measurement_uuid[:18]}-{agent_uuid[:18]}"
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def get_measurement_buckets(self) -> List[str]:
         session = aioboto3.Session()
         async with session.client("s3", **self.aws_settings) as s3:
             response = await s3.list_buckets()
             return [x["Name"] for x in response["Buckets"]]
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def create_bucket(self, bucket: str) -> None:
         """Create a bucket."""
         self.logger.info("Creating bucket %s", bucket)
@@ -73,14 +73,14 @@ class Storage:
             except s3.exceptions.BucketAlreadyOwnedByYou:
                 pass
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def delete_bucket(self, bucket: str) -> None:
         """Delete a bucket."""
         session = aioboto3.Session()
         async with session.client("s3", **self.aws_settings) as s3:
             await s3.delete_bucket(Bucket=bucket)
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def bucket_exists(self, bucket: str) -> bool:
         """Delete a bucket."""
         session = aioboto3.Session()
@@ -119,7 +119,7 @@ class Storage:
                         raise
         return targets
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def get_all_files(self, bucket: str) -> List[Dict]:
         """Get all files inside a bucket."""
         return await self.get_all_files_no_retry(bucket)
@@ -151,7 +151,7 @@ class Storage:
             ).replace(tzinfo=datetime.timezone.utc),
         }
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def get_file(
         self, bucket: str, filename: str, retrieve_content: bool = True
     ) -> Dict:
@@ -160,7 +160,7 @@ class Storage:
             bucket, filename, retrieve_content=retrieve_content
         )
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def upload_file(
         self,
         bucket: str,
@@ -181,7 +181,7 @@ class Storage:
             extraargs = {"Metadata": metadata} if metadata else None
             await s3.upload_fileobj(fd, bucket, filename, ExtraArgs=extraargs)
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def download_file(
         self, bucket: str, filename: str, output_path: Union[Path, str]
     ) -> None:
@@ -206,7 +206,7 @@ class Storage:
             res: Dict = await s3.delete_object(Bucket=bucket, Key=filename)
             return res
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def delete_file_no_check(self, bucket: str, filename: str) -> bool:
         """Delete a file with no check that it exists."""
         session = aioboto3.Session()
@@ -215,7 +215,7 @@ class Storage:
         status_code: int = response["ResponseMetadata"]["HTTPStatusCode"]
         return status_code == 204
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def delete_all_files_from_bucket(self, bucket: str) -> None:
         """Delete all files from a bucket."""
         session = aioboto3.Session()
@@ -228,7 +228,7 @@ class Storage:
         if not is_deleted:
             self.logger.error(f"Impossible to remove file `{filename}` from S3")
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def copy_file_to_bucket(
         self, bucket_src: str, bucket_dest: str, filename_src: str, filename_dst: str
     ) -> None:
@@ -240,7 +240,7 @@ class Storage:
                 {"Bucket": bucket_src, "Key": filename_src}, filename_dst
             )
 
-    @fault_tolerant(CommonSettings.storage_retry)
+    @fault_tolerant
     async def generate_temporary_credentials(self) -> Dict:
         session = aioboto3.Session()
         policy = dict(
@@ -248,8 +248,8 @@ class Storage:
             Statement=[
                 dict(
                     Effect="Allow",
-                    Action=self.settings.AWS_PUBLIC_ACTIONS,
-                    Resource=self.settings.AWS_PUBLIC_RESOURCES,
+                    Action=self.settings.S3_PUBLIC_ACTIONS,
+                    Resource=self.settings.S3_PUBLIC_RESOURCES,
                 )
             ],
         )

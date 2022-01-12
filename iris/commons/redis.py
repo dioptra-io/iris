@@ -51,27 +51,27 @@ class Redis:
     def ns(self) -> str:
         return self.settings.REDIS_NAMESPACE
 
-    @fault_tolerant(CommonSettings.redis_retry)
+    @fault_tolerant
     async def exists(self, *names: str) -> int:
         names_ = [f"{self.ns}:{name}" for name in names]
         count: int = await self.client.exists(*names_)
         return count
 
-    @fault_tolerant(CommonSettings.redis_retry)
+    @fault_tolerant
     async def keys(self, pattern: str) -> List[str]:
         keys: List[str] = await self.client.keys(f"{self.ns}:{pattern}")
         return keys
 
-    @fault_tolerant(CommonSettings.redis_retry)
+    @fault_tolerant
     async def get(self, name: str) -> str:
         value: str = await self.client.get(f"{self.ns}:{name}")
         return value
 
-    @fault_tolerant(CommonSettings.redis_retry)
+    @fault_tolerant
     async def set(self, name: str, value: str, **kwargs) -> None:
         await self.client.set(f"{self.ns}:{name}", value, **kwargs)
 
-    @fault_tolerant(CommonSettings.redis_retry)
+    @fault_tolerant
     async def delete(self, *names: str) -> None:
         names_ = [f"{self.ns}:{name}" for name in names]
         await self.client.delete(*names_)
@@ -138,7 +138,7 @@ class Redis:
             )
         return None
 
-    @fault_tolerant(CommonSettings.redis_retry)
+    @fault_tolerant
     async def check_agent(self, uuid: str) -> bool:
         if not await self.exists(agent_heartbeat_key(uuid)):
             return False

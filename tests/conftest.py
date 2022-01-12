@@ -45,17 +45,15 @@ def settings():
     print(f"@{namespace}", end=" ")
     # Redis has 16 databases by default, we use the last one for testing.
     return CommonSettings(
-        AWS_PUBLIC_RESOURCES=["arn:aws:s3:::test-public-exports/*"],
-        AWS_S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
-        AWS_S3_TARGETS_BUCKET_PREFIX=f"targets-test-{namespace}-",
-        AWS_TIMEOUT=0,
         CLICKHOUSE_PUBLIC_USER="public",
         CLICKHOUSE_URL="http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
-        CLICKHOUSE_TIMEOUT=0,
+        DATABASE_URL=f"postgresql://iris:iris@postgres.docker.localhost/iris-test-{namespace}",
+        S3_PUBLIC_RESOURCES=["arn:aws:s3:::test-public-exports/*"],
+        S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
+        S3_TARGETS_BUCKET_PREFIX=f"targets-test-{namespace}-",
         REDIS_NAMESPACE=f"iris-test-{namespace}",
         REDIS_URL="redis://default:redispass@redis.docker.localhost?db=15",
-        REDIS_TIMEOUT=0,
-        DATABASE_URL=f"postgresql://iris:iris@postgres.docker.localhost/iris-test-{namespace}",
+        RETRY_TIMEOUT=-1,
     )
 
 

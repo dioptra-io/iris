@@ -50,7 +50,7 @@ class ClickHouse:
     settings: CommonSettings
     logger: LoggerAdapter
 
-    @fault_tolerant(CommonSettings.database_retry)
+    @fault_tolerant
     async def call(
         self,
         query: str,
@@ -95,7 +95,7 @@ class ClickHouse:
             except HTTPStatusError as e:
                 raise QueryError(r.content) from e
 
-    @fault_tolerant(CommonSettings.database_retry)
+    @fault_tolerant
     async def execute(self, query: Query, measurement_id_: str, **kwargs: Any):
         return query.execute(self.settings.CLICKHOUSE_URL, measurement_id_, **kwargs)
 
@@ -184,7 +184,7 @@ class ClickHouse:
             )
         await aiofiles.os.rmdir(split_dir)
 
-    @fault_tolerant(CommonSettings.database_retry)
+    @fault_tolerant
     async def insert_links(self, measurement_uuid: str, agent_uuid: str) -> None:
         """Insert the links in the links' table from the flow view."""
         measurement_id_ = measurement_id(measurement_uuid, agent_uuid)
@@ -203,7 +203,7 @@ class ClickHouse:
             concurrent_requests=8,
         )
 
-    @fault_tolerant(CommonSettings.database_retry)
+    @fault_tolerant
     async def insert_prefixes(self, measurement_uuid: str, agent_uuid: str) -> None:
         """Insert the invalid prefixes in the prefix table."""
         measurement_id_ = measurement_id(measurement_uuid, agent_uuid)

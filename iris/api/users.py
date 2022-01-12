@@ -90,7 +90,7 @@ async def get_user_services(
         chproxy_url=settings.CHPROXY_PUBLIC_URL,
         chproxy_username=settings.CHPROXY_PUBLIC_USERNAME,
         chproxy_password=settings.CHPROXY_PUBLIC_PASSWORD,
-        s3_host=settings.AWS_S3_HOST,
+        s3_host=settings.S3_HOST,
         s3_access_key_expiration=s3_credentials["Expiration"],
         s3_access_key_id=s3_credentials["AccessKeyId"],
         s3_secret_access_key=s3_credentials["SecretAccessKey"],

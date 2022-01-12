@@ -11,50 +11,29 @@ from sqlalchemy.future import Engine
 from tenacity import retry
 from tenacity.before_sleep import before_sleep_log
 from tenacity.stop import stop_after_delay
-from tenacity.wait import wait_exponential, wait_random
+from tenacity.wait import wait_random
 
 
-def fault_tolerant(retry_):
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(self, *args, **kwargs):
-            # Retrieve logger and settings objects from
-            # the instance to which the function belongs.
-            parent = self
-            return await retry_(parent.settings, parent.logger)(func)(
-                self, *args, **kwargs
-            )
+def fault_tolerant(func):
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        settings: CommonSettings = self.settings
+        if settings.RETRY_TIMEOUT < 0:
+            return await func(self, *args, **kwargs)
+        return await retry(
+            before_sleep=(before_sleep_log(self.logger, logging.ERROR)),
+            stop=stop_after_delay(settings.RETRY_TIMEOUT),
+            wait=wait_random(
+                settings.RETRY_TIMEOUT_RANDOM_MIN,
+                settings.RETRY_TIMEOUT_RANDOM_MAX,
+            ),
+        )(func)(self, *args, **kwargs)
 
-        return wrapper
-
-    return decorator
+    return wrapper
 
 
 class CommonSettings(BaseSettings):
     """Common settings."""
-
-    AWS_S3_HOST: str = "http://minio.docker.localhost"
-    AWS_ACCESS_KEY_ID: str = "minioadmin"
-    AWS_SECRET_ACCESS_KEY: str = "minioadmin"
-    AWS_SESSION_TOKEN: Optional[str] = None
-    AWS_REGION_NAME: str = "local"
-    AWS_S3_ARCHIVE_BUCKET_PREFIX = "archive-"
-    AWS_S3_TARGETS_BUCKET_PREFIX = "targets-"
-    AWS_PUBLIC_ACTIONS: List[str] = [
-        "s3:GetBucketLocation",
-        "s3:GetObject",
-        "s3:ListBucket",
-    ]
-    AWS_PUBLIC_RESOURCES: List[str] = [
-        "arn:aws:s3:::public-exports",
-        "arn:aws:s3:::public-exports/*",
-    ]
-    AWS_TIMEOUT: int = 2 * 60 * 60  # in seconds
-    AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
-    AWS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
-    AWS_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
-    AWS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
-    AWS_TIMEOUT_RANDOM_MAX: int = 10 * 60  # in seconds
 
     CHPROXY_PUBLIC_URL: str = ""
     CHPROXY_PUBLIC_USERNAME: str = ""
@@ -62,32 +41,44 @@ class CommonSettings(BaseSettings):
 
     CLICKHOUSE_URL: str = "http://iris:iris@clickhouse.docker.localhost/?database=iris"
     CLICKHOUSE_PUBLIC_USER: Optional[str] = None
-    CLICKHOUSE_TIMEOUT: int = 2 * 60 * 60  # in seconds
-    CLICKHOUSE_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
-    CLICKHOUSE_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
-    CLICKHOUSE_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
-    CLICKHOUSE_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
-    CLICKHOUSE_TIMEOUT_RANDOM_MAX: int = 60  # in seconds
     CLICKHOUSE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
     CLICKHOUSE_STORAGE_POLICY: str = "default"
     CLICKHOUSE_ARCHIVE_VOLUME: str = "default"
     CLICKHOUSE_ARCHIVE_INTERVAL: timedelta = timedelta(days=15)
 
+    DATABASE_URL: str = "postgresql://iris:iris@postgres.docker.localhost/iris"
+
     REDIS_NAMESPACE: str = "iris"
     REDIS_URL: str = "redis://default:redispass@redis.docker.localhost"
-    REDIS_TIMEOUT: int = 2 * 60 * 60  # in seconds
-    REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS: int = 60  # in seconds
-    REDIS_TIMEOUT_EXPONENTIAL_MIN: int = 1  # in seconds
-    REDIS_TIMEOUT_EXPONENTIAL_MAX: int = 15 * 60  # in seconds
-    REDIS_TIMEOUT_RANDOM_MIN: int = 0  # in seconds
-    REDIS_TIMEOUT_RANDOM_MAX: int = 5  # in seconds
+
+    RETRY_TIMEOUT: int = 2 * 60 * 60  # seconds, set to -1 to disable tenacity
+    RETRY_TIMEOUT_RANDOM_MIN: int = 0  # seconds
+    RETRY_TIMEOUT_RANDOM_MAX: int = 10 * 60  # seconds
+
+    S3_HOST: str = "http://minio.docker.localhost"
+    S3_ACCESS_KEY_ID: str = "minioadmin"
+    S3_SECRET_ACCESS_KEY: str = "minioadmin"
+    S3_SESSION_TOKEN: Optional[str] = None
+    S3_REGION_NAME: str = "local"
+
+    S3_ARCHIVE_BUCKET_PREFIX = "archive-"
+    S3_TARGETS_BUCKET_PREFIX = "targets-"
+
+    S3_PUBLIC_ACTIONS: List[str] = [
+        "s3:GetBucketLocation",
+        "s3:GetObject",
+        "s3:ListBucket",
+    ]
+    S3_PUBLIC_RESOURCES: List[str] = [
+        "arn:aws:s3:::public-exports",
+        "arn:aws:s3:::public-exports/*",
+    ]
+
+    STREAM_LOGGING_LEVEL: int = logging.INFO
 
     TAG_PUBLIC: str = "!public"
     TAG_COLLECTION_PREFIX: str = "collection:"
 
-    STREAM_LOGGING_LEVEL: int = logging.INFO
-
-    DATABASE_URL: str = "postgresql://iris:iris@postgres.docker.localhost/iris"
     sqlalchemy_engine_: Optional[Engine] = None
     sqlalchemy_async_engine_: Optional[AsyncEngine] = None
 
@@ -116,48 +107,3 @@ class CommonSettings(BaseSettings):
             self.REDIS_URL, decode_responses=True
         )
         return redis
-
-    def database_retry(self, logger):
-        return retry(
-            stop=stop_after_delay(self.CLICKHOUSE_TIMEOUT),
-            wait=wait_exponential(
-                multiplier=self.CLICKHOUSE_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-                min=self.CLICKHOUSE_TIMEOUT_EXPONENTIAL_MIN,
-                max=self.CLICKHOUSE_TIMEOUT_EXPONENTIAL_MAX,
-            )
-            + wait_random(
-                self.CLICKHOUSE_TIMEOUT_RANDOM_MIN,
-                self.CLICKHOUSE_TIMEOUT_RANDOM_MAX,
-            ),
-            before_sleep=(before_sleep_log(logger, logging.ERROR)),
-        )
-
-    def redis_retry(self, logger):
-        return retry(
-            stop=stop_after_delay(self.REDIS_TIMEOUT),
-            wait=wait_exponential(
-                multiplier=self.REDIS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-                min=self.REDIS_TIMEOUT_EXPONENTIAL_MIN,
-                max=self.REDIS_TIMEOUT_EXPONENTIAL_MAX,
-            )
-            + wait_random(
-                self.REDIS_TIMEOUT_RANDOM_MIN,
-                self.REDIS_TIMEOUT_RANDOM_MAX,
-            ),
-            before_sleep=(before_sleep_log(logger, logging.ERROR)),
-        )
-
-    def storage_retry(self, logger):
-        return retry(
-            stop=stop_after_delay(self.AWS_TIMEOUT),
-            wait=wait_exponential(
-                multiplier=self.AWS_TIMEOUT_EXPONENTIAL_MULTIPLIERS,
-                min=self.AWS_TIMEOUT_EXPONENTIAL_MIN,
-                max=self.AWS_TIMEOUT_EXPONENTIAL_MAX,
-            )
-            + wait_random(
-                self.AWS_TIMEOUT_RANDOM_MIN,
-                self.AWS_TIMEOUT_RANDOM_MAX,
-            ),
-            before_sleep=(before_sleep_log(logger, logging.ERROR)),
-        )

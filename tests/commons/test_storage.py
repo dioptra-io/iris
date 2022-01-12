@@ -165,9 +165,9 @@ async def test_generate_credentials(settings, storage, make_tmp_file):
     await upload_file(storage, bucket, tmp_file)
 
     r = await storage.generate_temporary_credentials()
-    settings.AWS_ACCESS_KEY_ID = r["AccessKeyId"]
-    settings.AWS_SECRET_ACCESS_KEY = r["SecretAccessKey"]
-    settings.AWS_SESSION_TOKEN = r["SessionToken"]
+    settings.S3_ACCESS_KEY_ID = r["AccessKeyId"]
+    settings.S3_SECRET_ACCESS_KEY = r["SecretAccessKey"]
+    settings.S3_SESSION_TOKEN = r["SessionToken"]
     user_storage = Storage(settings, logging.getLogger(__name__))
 
     files = await user_storage.get_all_files(bucket)
