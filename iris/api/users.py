@@ -1,5 +1,3 @@
-from urllib import parse
-
 from fastapi import APIRouter, Depends, Query, Request
 from httpx_oauth.clients.github import GitHubOAuth2
 from sqlalchemy import func, select
@@ -12,6 +10,7 @@ from iris.api.authentication import (
     fastapi_users,
 )
 from iris.api.dependencies import get_session, get_settings, get_storage
+from iris.api.settings import APISettings
 from iris.commons.models import ExternalServices, Paginated, User, UserDB, UserTable
 from iris.commons.storage import Storage
 
@@ -80,16 +79,13 @@ async def get_users(
     tags=["Users"],
 )
 async def get_user_services(
+    settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
     _user: UserDB = Depends(current_verified_user),
 ):
     s3_credentials = await storage.generate_temporary_credentials()
-    clickhouse_database = dict(
-        parse.parse_qsl(parse.urlsplit(settings.CLICKHOUSE_URL).query)
-    ).get("database")
     return ExternalServices(
         chproxy_url=settings.CHPROXY_PUBLIC_URL,
-        chproxy_database=clickhouse_database if settings.CHPROXY_PUBLIC_URL else "",
         chproxy_username=settings.CHPROXY_PUBLIC_USERNAME,
         chproxy_password=settings.CHPROXY_PUBLIC_PASSWORD,
         s3_host=settings.AWS_S3_HOST,
