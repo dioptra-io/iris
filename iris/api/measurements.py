@@ -92,6 +92,7 @@ def unfold_agent(
 )
 async def get_measurements(
     request: Request,
+    state: Optional[MeasurementAgentState] = None,
     tag: Optional[str] = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
@@ -102,9 +103,14 @@ async def get_measurements(
     tags = []
     if tag:
         tags.append(tag)
-    count = Measurement.count(session, tags=tags, user_id=str(user.id))
+    count = Measurement.count(session, state=state, tags=tags, user_id=str(user.id))
     measurements = Measurement.all(
-        session, tags=tags, user_id=str(user.id), offset=offset, limit=limit
+        session,
+        state=state,
+        tags=tags,
+        user_id=str(user.id),
+        offset=offset,
+        limit=limit,
     )
     measurements_ = MeasurementRead.from_measurements(measurements)
     return Paginated.from_results(request.url, measurements_, count, offset, limit)
@@ -117,6 +123,7 @@ async def get_measurements(
 )
 async def get_measurements_public(
     request: Request,
+    state: Optional[MeasurementAgentState] = None,
     tag: Optional[str] = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
@@ -127,8 +134,10 @@ async def get_measurements_public(
     tags = [settings.TAG_PUBLIC]
     if tag:
         tags.append(tag)
-    count = Measurement.count(session, tags=tags)
-    measurements = Measurement.all(session, tags=tags, offset=offset, limit=limit)
+    count = Measurement.count(session, state=state, tags=tags)
+    measurements = Measurement.all(
+        session, state=state, tags=tags, offset=offset, limit=limit
+    )
     measurements_ = MeasurementRead.from_measurements(measurements)
     return Paginated.from_results(request.url, measurements_, count, offset, limit)
 

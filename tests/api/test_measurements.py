@@ -63,6 +63,34 @@ def test_get_measurements(make_client, make_measurement, make_user, session):
     assert_response(client.get("/measurements"), expected)
 
 
+def test_get_measurements_with_state(
+    make_client, make_measurement, make_measurement_agent, make_user, session
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurements = [
+        make_measurement(
+            user_id=str(user.id),
+            agents=[make_measurement_agent(state=MeasurementAgentState.Created)],
+        ),
+        make_measurement(
+            user_id=str(user.id),
+            agents=[make_measurement_agent(state=MeasurementAgentState.Finished)],
+        ),
+    ]
+    add_and_refresh(session, measurements)
+
+    expected = Paginated[MeasurementRead](
+        count=1,
+        results=MeasurementRead.from_measurements(measurements[1:2]),
+    )
+    assert_response(
+        client.get("/measurements", params={"state": "finished"}),
+        expected,
+    )
+
+
 def test_get_measurements_with_tag(make_client, make_measurement, make_user, session):
     user = make_user(probing_enabled=True)
     client = make_client(user)

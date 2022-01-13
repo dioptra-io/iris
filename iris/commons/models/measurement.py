@@ -103,6 +103,7 @@ class Measurement(MeasurementBase, table=True):
         cls,
         session: Session,
         *,
+        state: Optional[MeasurementAgentState] = None,
         tags: List[str] = None,
         user_id: Optional[str] = None,
         offset: Optional[int] = None,
@@ -114,6 +115,8 @@ class Measurement(MeasurementBase, table=True):
             .limit(limit)
             .order_by(desc(Measurement.creation_time))
         )
+        if state:
+            query = query.where(Measurement.agents.any(state=state))
         if tags:
             query = query.where(Measurement.tags.contains(tags))
         if user_id:
@@ -125,10 +128,13 @@ class Measurement(MeasurementBase, table=True):
         cls,
         session: Session,
         *,
+        state: Optional[MeasurementAgentState] = None,
         tags: List[str] = None,
         user_id: Optional[str] = None,
     ) -> int:
         query = select(func.count(Measurement.uuid))  # type: ignore
+        if state:
+            query = query.where(Measurement.agents.any(state=state))
         if tags:
             query = query.where(Measurement.tags.contains(tags))
         if user_id:
