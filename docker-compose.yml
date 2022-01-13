@@ -49,7 +49,6 @@ services:
     volumes:
       - "./configuration/clickhouse/users.d:/etc/clickhouse-server/users.d:ro"
       - "./configuration/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh"
-    #   - "./volumes/clickhouse:/var/lib/clickhouse"
 
   postgres:
     image: postgres
@@ -64,7 +63,7 @@ services:
 
   redis:
     image: docker.io/library/redis:6
-    command: "redis-server --requirepass redispass"
+    command: "redis-server --requirepass iris"
     labels:
       - "traefik.tcp.routers.redis.entrypoints=redis"
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
@@ -114,6 +113,7 @@ services:
     depends_on:
       - clickhouse
       - minio
+      - postgres
       - redis
 
   worker:
@@ -127,4 +127,5 @@ services:
     depends_on:
       - clickhouse
       - minio
+      - postgres
       - redis
