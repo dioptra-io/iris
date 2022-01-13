@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from iris.api.authentication import assert_probing_enabled, current_verified_user
-from iris.api.dependencies import get_redis
+from iris.commons.dependencies import get_redis
 from iris.commons.models import Agent, Paginated, UserDB
 from iris.commons.redis import Redis
 

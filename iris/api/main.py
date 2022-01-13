@@ -6,7 +6,7 @@ from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
 from iris.api import agents, measurements, targets, users
-from iris.api.dependencies import get_settings
+from iris.commons.dependencies import get_settings
 
 app = FastAPI(
     title="Iris",

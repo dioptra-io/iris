@@ -9,8 +9,8 @@ from iris.api.authentication import (
     fastapi_users,
     jwt_auth_backend,
 )
-from iris.api.dependencies import get_session, get_settings, get_storage
 from iris.api.settings import APISettings
+from iris.commons.dependencies import get_session, get_settings, get_storage
 from iris.commons.models import ExternalServices, Paginated, User, UserDB, UserTable
 from iris.commons.storage import Storage
 

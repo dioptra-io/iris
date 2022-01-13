@@ -16,10 +16,10 @@ from iris.api.authentication import (
     current_superuser,
     current_verified_user,
 )
-from iris.api.dependencies import get_settings
 from iris.api.main import app
 from iris.api.settings import APISettings
 from iris.commons.clickhouse import ClickHouse
+from iris.commons.dependencies import get_settings
 from iris.commons.models.base import Base
 from iris.commons.redis import Redis
 from iris.commons.settings import CommonSettings
@@ -52,7 +52,7 @@ def settings():
         S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
         S3_TARGETS_BUCKET_PREFIX=f"targets-test-{namespace}-",
         REDIS_NAMESPACE=f"iris-test-{namespace}",
-        REDIS_URL="redis://default:redispass@redis.docker.localhost?db=15",
+        REDIS_URL="redis://default:iris@redis.docker.localhost?db=15",
         RETRY_TIMEOUT=-1,
     )
 
@@ -134,9 +134,7 @@ def make_client(engine, settings):
 def cleanup_redis():
     yield
     if should_cleanup():
-        redis_ = pyredis.from_url(
-            "redis://default:redispass@redis.docker.localhost?db=15"
-        )
+        redis_ = pyredis.from_url("redis://default:iris@redis.docker.localhost?db=15")
         redis_.flushdb()
         redis_.close()
 

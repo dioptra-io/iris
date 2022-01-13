@@ -12,9 +12,9 @@ from iris.api.authentication import (
     assert_tag_enabled,
     current_verified_user,
 )
-from iris.api.dependencies import get_redis, get_session, get_settings, get_storage
 from iris.api.settings import APISettings
 from iris.api.validator import target_file_validator
+from iris.commons.dependencies import get_redis, get_session, get_settings, get_storage
 from iris.commons.models import (
     Agent,
     Measurement,

@@ -17,7 +17,7 @@ def get_settings():
 
 
 def get_logger():
-    return Adapter(base_logger, dict(component="api"))
+    return Adapter(base_logger, dict(component="commons"))
 
 
 # TODO: Use SQLAlchemy async engine/session for both FastAPI-Users and SQLModel.
@@ -32,20 +32,20 @@ async def get_async_session(settings=Depends(get_settings)):
         yield session
 
 
+def get_access_token_db(session=Depends(get_async_session)):
+    return SQLAlchemyAccessTokenDatabase(AccessToken, session, AccessTokenTable)
+
+
+def get_user_db(session=Depends(get_async_session)):
+    return SQLAlchemyUserDatabase(UserDB, session, UserTable)
+
+
 async def get_redis(settings=Depends(get_settings), logger=Depends(get_logger)):
     client = await settings.redis_client()
     try:
         yield Redis(client, settings, logger)
     finally:
         await client.close()
-
-
-def get_user_db(session=Depends(get_async_session)):
-    yield SQLAlchemyUserDatabase(UserDB, session, UserTable)
-
-
-async def get_access_token_db(session=Depends(get_async_session)):
-    yield SQLAlchemyAccessTokenDatabase(AccessToken, session, AccessTokenTable)
 
 
 def get_storage(settings=Depends(get_settings), logger=Depends(get_logger)):

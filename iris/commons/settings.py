@@ -14,24 +14,6 @@ from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
 
 
-def fault_tolerant(func):
-    @wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        settings: CommonSettings = self.settings
-        if settings.RETRY_TIMEOUT < 0:
-            return await func(self, *args, **kwargs)
-        return await retry(
-            before_sleep=(before_sleep_log(self.logger, logging.ERROR)),
-            stop=stop_after_delay(settings.RETRY_TIMEOUT),
-            wait=wait_random(
-                settings.RETRY_TIMEOUT_RANDOM_MIN,
-                settings.RETRY_TIMEOUT_RANDOM_MAX,
-            ),
-        )(func)(self, *args, **kwargs)
-
-    return wrapper
-
-
 class CommonSettings(BaseSettings):
     """Common settings."""
 
@@ -49,7 +31,7 @@ class CommonSettings(BaseSettings):
     DATABASE_URL: str = "postgresql://iris:iris@postgres.docker.localhost/iris"
 
     REDIS_NAMESPACE: str = "iris"
-    REDIS_URL: str = "redis://default:redispass@redis.docker.localhost"
+    REDIS_URL: str = "redis://default:iris@redis.docker.localhost"
 
     RETRY_TIMEOUT: int = 2 * 60 * 60  # seconds, set to -1 to disable tenacity
     RETRY_TIMEOUT_RANDOM_MIN: int = 0  # seconds
@@ -107,3 +89,21 @@ class CommonSettings(BaseSettings):
             self.REDIS_URL, decode_responses=True
         )
         return redis
+
+
+def fault_tolerant(func):
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        settings: CommonSettings = self.settings
+        if settings.RETRY_TIMEOUT < 0:
+            return await func(self, *args, **kwargs)
+        return await retry(
+            before_sleep=(before_sleep_log(self.logger, logging.ERROR)),
+            stop=stop_after_delay(settings.RETRY_TIMEOUT),
+            wait=wait_random(
+                settings.RETRY_TIMEOUT_RANDOM_MIN,
+                settings.RETRY_TIMEOUT_RANDOM_MAX,
+            ),
+        )(func)(self, *args, **kwargs)
+
+    return wrapper

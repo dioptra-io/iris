@@ -15,13 +15,13 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import generate_jwt
 from starlette import status
 
-from iris.api.dependencies import (
+from iris.api.settings import APISettings
+from iris.commons.dependencies import (
     get_access_token_db,
     get_settings,
     get_storage,
     get_user_db,
 )
-from iris.api.settings import APISettings
 from iris.commons.models import User, UserCreate, UserDB, UserUpdate
 from iris.commons.storage import Storage
 

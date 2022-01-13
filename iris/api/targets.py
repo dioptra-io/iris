@@ -17,7 +17,7 @@ from iris.api.authentication import (
     current_superuser,
     current_verified_user,
 )
-from iris.api.dependencies import get_storage
+from iris.commons.dependencies import get_storage
 from iris.commons.models import Paginated, Target, TargetSummary, UserDB
 from iris.commons.storage import Storage
 
