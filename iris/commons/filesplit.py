@@ -76,6 +76,7 @@ def split_compressed_file(
     lines_per_file: int,
     *,
     max_estimate_lines: int = DEFAULT_ESTIMATE_MAX_LINES,
+    skip_lines: int = 0,
 ):
     with open(input_file, "rb") as f:
         ctx = ZstdDecompressor()
@@ -87,6 +88,8 @@ def split_compressed_file(
         with ctx.stream_reader(f) as stream:
             wrapper = TextIOWrapper(stream)
             outf = None
+            for _ in range(skip_lines):
+                next(wrapper)
             for chunk in split_stream(wrapper, "\n", split_size):
                 if isinstance(chunk, int):
                     if outf:

@@ -156,6 +156,7 @@ class ClickHouse:
             str(split_dir / "splitted_"),
             self.settings.CLICKHOUSE_PARALLEL_CSV_MAX_LINE,
             max_estimate_lines=10_000,
+            skip_lines=1,
         )
 
         files = list(split_dir.glob("*"))
@@ -165,7 +166,7 @@ class ClickHouse:
         self.logger.info("Number of concurrent processes: %s", concurrency)
 
         def insert(file):
-            query = f"INSERT INTO {results_table(measurement_id(measurement_uuid, agent_uuid))} FORMAT CSVWithNames"
+            query = f"INSERT INTO {results_table(measurement_id(measurement_uuid, agent_uuid))} FORMAT CSV"
             r = httpx.post(
                 self.settings.CLICKHOUSE_URL,
                 content=iter_file(file),
