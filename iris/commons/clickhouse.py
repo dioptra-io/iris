@@ -151,6 +151,7 @@ class ClickHouse:
         split_dir = csv_filepath.with_suffix(".split")
         split_dir.mkdir(exist_ok=True)
 
+        self.logger.info("Split CSV file")
         split_compressed_file(
             str(csv_filepath),
             str(split_dir / "splitted_"),
