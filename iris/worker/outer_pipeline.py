@@ -67,10 +67,6 @@ async def outer_pipeline(
             results_key,
             working_directory,
         )
-        logger.info("Delete results file from object storage")
-        await storage.soft_delete(
-            storage.measurement_agent_bucket(measurement_uuid, agent_uuid), results_key
-        )
     else:
         results_filepath = None
 
@@ -109,6 +105,15 @@ async def outer_pipeline(
         max_open_files=max_open_files,
     )
     n_probes_to_send = await inner_pipeline_for_tool[tool](**inner_pipeline_kwargs)
+
+    if results_key:
+        # NOTE: We delete after the inner pipeline, so that if the pipeline fails,
+        # the file will still be present on the object storage and the worker will
+        # restart the outer pipeline.
+        logger.info("Delete results file from object storage")
+        await storage.soft_delete(
+            storage.measurement_agent_bucket(measurement_uuid, agent_uuid), results_key
+        )
 
     if next_round.number > tool_parameters.max_round:
         # NOTE: We stop if we reached the maximum number of rounds.
