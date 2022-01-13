@@ -81,7 +81,8 @@ async def test_post_target(make_client, make_user, storage, tmp_path):
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "targets.csv"
     filepath.write_text("1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20")
-    response = client.post("/targets/", files={"target_file": filepath.open("rb")})
+    with filepath.open("rb") as f:
+        response = client.post("/targets/", files={"target_file": f})
     assert_status_code(response, 201)
     target = cast_response(response, Target)
     assert target.content == []
@@ -94,9 +95,9 @@ async def test_post_target_invalid_extension(make_client, make_user, storage, tm
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "targets.txt"
     filepath.write_text("1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20")
-    assert_status_code(
-        client.post("/targets/", files={"target_file": filepath.open("rb")}), 412
-    )
+    with filepath.open("rb") as f:
+        response = client.post("/targets/", files={"target_file": f})
+    assert_status_code(response, 412)
 
 
 async def test_post_target_invalid_content(make_client, make_user, storage, tmp_path):
@@ -105,9 +106,9 @@ async def test_post_target_invalid_content(make_client, make_user, storage, tmp_
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "targets.csv"
     filepath.write_text("abcd")
-    assert_status_code(
-        client.post("/targets/", files={"target_file": filepath.open("rb")}), 412
-    )
+    with filepath.open("rb") as f:
+        response = client.post("/targets/", files={"target_file": f})
+    assert_status_code(response, 412)
 
 
 async def test_post_probes(make_client, make_user, storage, tmp_path):
@@ -116,9 +117,8 @@ async def test_post_probes(make_client, make_user, storage, tmp_path):
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "probes.csv"
     filepath.write_text("8.8.8.8,24000,0,32,icmp")
-    response = client.post(
-        "/targets/probes", files={"target_file": filepath.open("rb")}
-    )
+    with filepath.open("rb") as f:
+        response = client.post("/targets/probes", files={"target_file": f})
     assert_status_code(response, 201)
     target = cast_response(response, Target)
     assert target.content == []
@@ -131,9 +131,9 @@ async def test_post_probes_invalid_extension(make_client, make_user, storage, tm
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "probes.txt"
     filepath.write_text("8.8.8.8,24000,0,32,icmp")
-    assert_status_code(
-        client.post("/targets/probes", files={"target_file": filepath.open("rb")}), 412
-    )
+    with filepath.open("rb") as f:
+        response = client.post("/targets/probes", files={"target_file": f})
+    assert_status_code(response, 412)
 
 
 async def test_post_probes_invalid_content(make_client, make_user, storage, tmp_path):
@@ -142,9 +142,9 @@ async def test_post_probes_invalid_content(make_client, make_user, storage, tmp_
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "probes.csv"
     filepath.write_text("abcd")
-    assert_status_code(
-        client.post("/targets/probes", files={"target_file": filepath.open("rb")}), 412
-    )
+    with filepath.open("rb") as f:
+        response = client.post("/targets/probes", files={"target_file": f})
+    assert_status_code(response, 412)
 
 
 @pytest.mark.parametrize(

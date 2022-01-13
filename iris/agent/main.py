@@ -9,6 +9,7 @@ from iris import __version__
 from iris.agent.measurements import do_measurement
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl_with_mtr
+from iris.commons.dependencies import get_redis_context
 from iris.commons.logger import Adapter, base_logger, log_traceback
 from iris.commons.models import AgentParameters, AgentState, MeasurementRoundRequest
 from iris.commons.redis import Redis
@@ -52,9 +53,14 @@ async def main(settings=AgentSettings()):
     logger = Adapter(
         base_logger, dict(component="agent", agent_uuid=settings.AGENT_UUID)
     )
-    redis = Redis(await settings.redis_client(), settings, logger)
     storage = Storage(settings, logger)
+    async with get_redis_context(settings, logger) as redis:
+        await main_with_deps(logger, redis, settings, storage)
 
+
+async def main_with_deps(
+    logger: Adapter, redis: Redis, settings: AgentSettings, storage: Storage
+):
     settings.AGENT_RESULTS_DIR_PATH.mkdir(parents=True, exist_ok=True)
     settings.AGENT_TARGETS_DIR_PATH.mkdir(parents=True, exist_ok=True)
 

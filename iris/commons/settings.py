@@ -3,11 +3,7 @@ from datetime import timedelta
 from functools import wraps
 from typing import List, Optional
 
-import aioredis
 from pydantic import BaseSettings
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-from sqlalchemy.future import Engine
 from tenacity import retry
 from tenacity.before_sleep import before_sleep_log
 from tenacity.stop import stop_after_delay
@@ -60,35 +56,6 @@ class CommonSettings(BaseSettings):
 
     TAG_PUBLIC: str = "!public"
     TAG_COLLECTION_PREFIX: str = "collection:"
-
-    sqlalchemy_engine_: Optional[Engine] = None
-    sqlalchemy_async_engine_: Optional[AsyncEngine] = None
-
-    def sqlalchemy_engine(self) -> Engine:
-        if not self.sqlalchemy_engine_:
-            self.sqlalchemy_engine_ = create_engine(
-                self.DATABASE_URL,
-                connect_args=dict(connect_timeout=5),
-                echo=True,
-                future=True,
-            )
-        return self.sqlalchemy_engine_
-
-    def sqlalchemy_async_engine(self) -> AsyncEngine:
-        if not self.sqlalchemy_async_engine_:
-            self.sqlalchemy_async_engine_ = create_async_engine(
-                self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
-                connect_args=dict(command_timeout=5, timeout=5),
-                echo=True,
-                future=True,
-            )
-        return self.sqlalchemy_async_engine_
-
-    async def redis_client(self) -> aioredis.Redis:
-        redis: aioredis.Redis = await aioredis.from_url(
-            self.REDIS_URL, decode_responses=True
-        )
-        return redis
 
 
 def fault_tolerant(func):

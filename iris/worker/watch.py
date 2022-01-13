@@ -6,6 +6,11 @@ import dramatiq
 from sqlmodel import Session
 
 from iris.commons.clickhouse import ClickHouse
+from iris.commons.dependencies import (
+    get_engine_context,
+    get_redis_context,
+    get_session_context,
+)
 from iris.commons.logger import Adapter, base_logger
 from iris.commons.models import (
     MeasurementAgent,
@@ -39,12 +44,33 @@ async def watch_measurement_agent_(
             component="worker", measurement_uuid=measurement_uuid, agent_uuid=agent_uuid
         ),
     )
-
     clickhouse = ClickHouse(settings, logger)
-    redis = Redis(await settings.redis_client(), settings, logger)
-    session = Session(settings.sqlalchemy_engine())
     storage = Storage(settings, logger)
+    async with get_redis_context(settings, logger) as redis:
+        with get_engine_context(settings) as engine:
+            with get_session_context(engine) as session:
+                await watch_measurement_agent_with_deps(
+                    measurement_uuid,
+                    agent_uuid,
+                    clickhouse,
+                    logger,
+                    redis,
+                    settings,
+                    session,
+                    storage,
+                )
 
+
+async def watch_measurement_agent_with_deps(
+    measurement_uuid: str,
+    agent_uuid: str,
+    clickhouse: ClickHouse,
+    logger: Adapter,
+    redis: Redis,
+    settings: WorkerSettings,
+    session: Session,
+    storage: Storage,
+):
     ma = MeasurementAgent.get(session, measurement_uuid, agent_uuid)
     if not ma:
         logger.error("Measurement not found")

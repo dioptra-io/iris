@@ -1,5 +1,7 @@
 from logging.config import fileConfig
 
+from sqlalchemy import create_engine
+
 from alembic import context
 from iris.commons.models import Base
 from iris.commons.settings import CommonSettings
@@ -54,7 +56,7 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    connectable = settings.sqlalchemy_engine()
+    connectable = create_engine(settings.DATABASE_URL)
     # connectable = engine_from_config(
     #     config.get_section(config.config_ini_section),
     #     prefix="sqlalchemy.",

@@ -2,6 +2,7 @@ import logging
 import os
 import secrets
 
+import aioredis
 import boto3
 import pytest
 import redis as pyredis
@@ -98,7 +99,7 @@ def engine(settings):
 
 @pytest.fixture
 async def redis(settings, logger):
-    client = await settings.redis_client()
+    client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
     yield Redis(client, settings, logger)
     await client.close()
 
