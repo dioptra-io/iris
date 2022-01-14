@@ -9,17 +9,17 @@ from iris.api import agents, measurements, targets, users
 from iris.commons.dependencies import get_settings
 
 app = FastAPI(
-    title="Iris",
-    description="Resilient Internet-scale measurement system.",
+    title="🕸️ Iris",
+    description="""
+Iris is a system to coordinate complex network measurements from multiple vantage points.<br/>
+For more information, please visit our website at [iris.dioptra.io](https://iris.dioptra.io)
+or browse the source code on [GitHub](https://github.com/dioptra-io/iris).
+""",
     version=__version__,
     openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url=None,
-    contact={
-        "name": "Iris",
-        "url": "https://iris.dioptra.io",
-        "email": "iris@dioptra.io",
-    },
+    contact={"email": "contact@dioptra.io"},
 )
 
 
