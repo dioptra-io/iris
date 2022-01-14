@@ -28,7 +28,7 @@ async def test_get_status(
 
     # Create a measurement
     await create_user_buckets(storage, user)
-    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
+    await upload_target_file(storage, user, "targets.csv")
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv")],

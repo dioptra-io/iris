@@ -246,7 +246,7 @@ async def test_patch_measurement(
 async def test_patch_measurement_public_tag_disallowed(
     make_client, make_measurement, make_user, redis, session, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user(allow_tag_public=False, probing_enabled=True)
     client = make_client(user)
 
     measurement = make_measurement(user_id=str(user.id))
@@ -262,7 +262,7 @@ async def test_patch_measurement_public_tag_disallowed(
 async def test_patch_measurement_reserved_tag_disallowed(
     make_client, make_measurement, make_user, redis, session, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user(allow_tag_reserved=False, probing_enabled=True)
     client = make_client(user)
 
     measurement = make_measurement(user_id=str(user.id))
@@ -319,7 +319,7 @@ async def test_post_measurement_unknown_tag(make_client, make_user):
 
 
 async def test_post_measurement_public_tag_disallowed(make_client, make_user):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user(allow_tag_public=False, probing_enabled=True))
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         tags=["!public"],
@@ -331,7 +331,7 @@ async def test_post_measurement_public_tag_disallowed(make_client, make_user):
 
 
 async def test_post_measurement_reserved_tag_disallowed(make_client, make_user):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user(allow_tag_reserved=False, probing_enabled=True))
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         tags=["collection:test"],
@@ -353,7 +353,7 @@ async def test_post_measurement_uuid(
     agent_uuid = str(uuid4())
     await register_agent(redis, agent_uuid, make_agent_parameters(), AgentState.Idle)
     await create_user_buckets(storage, user)
-    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
+    await upload_target_file(storage, user, "targets.csv")
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv")],
@@ -376,7 +376,7 @@ async def test_post_measurement_tag(
         redis, agent_uuid, make_agent_parameters(tags=["tag1"]), AgentState.Idle
     )
     await create_user_buckets(storage, user)
-    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
+    await upload_target_file(storage, user, "targets.csv")
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(tag="tag1", target_file="targets.csv")],
@@ -399,7 +399,7 @@ async def test_post_measurement_duplicate(
         redis, agent_uuid, make_agent_parameters(tags=["tag1"]), AgentState.Idle
     )
     await create_user_buckets(storage, user)
-    await upload_target_file(storage, user, "targets.csv", ["0.0.0.0/0,icmp,8,32,6"])
+    await upload_target_file(storage, user, "targets.csv")
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         agents=[

@@ -60,13 +60,20 @@ async def archive_target_file(
 
 
 async def upload_target_file(
-    storage: Storage, user: User, filename: str, content: List[str]
+    storage: Storage,
+    user: User,
+    filename: str,
+    content: List[str] = ("0.0.0.0/0,icmp,8,32,6",),
+    is_probes_file: bool = False,
 ):
     with TemporaryDirectory() as directory:
         file = Path(directory) / filename
         file.write_text("\n".join(content))
+        metadata = {}
+        if is_probes_file:
+            metadata = dict(is_probes_file="True")
         await storage.upload_file(
-            storage.targets_bucket(str(user.id)), filename, str(file)
+            storage.targets_bucket(str(user.id)), filename, str(file), metadata
         )
 
 
