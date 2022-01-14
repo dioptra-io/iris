@@ -43,7 +43,8 @@ def botocore_exception_handler(request, exc):
 
 @app.on_event("startup")
 async def startup_event():
-    settings = get_settings()
+    # Use overridden get_settings when running tests:
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
     if settings.API_CORS_ALLOW_ORIGIN:
         app.add_middleware(
             CORSMiddleware,

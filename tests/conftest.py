@@ -60,7 +60,10 @@ def settings():
 
 @pytest.fixture
 def api_settings(settings):
-    return APISettings(**settings.dict())
+    return APISettings(
+        API_CORS_ALLOW_ORIGIN="https://example.org",
+        **settings.dict(),
+    )
 
 
 @pytest.fixture
@@ -116,7 +119,7 @@ def storage(settings, logger):
 
 
 @pytest.fixture
-def make_client(engine, settings):
+def make_client(engine, api_settings):
     def _make_client(user=None):
         if user and user.is_active:
             app.dependency_overrides[current_active_user] = lambda: user
@@ -124,7 +127,7 @@ def make_client(engine, settings):
             app.dependency_overrides[current_verified_user] = lambda: user
         if user and user.is_active and user.is_verified and user.is_superuser:
             app.dependency_overrides[current_superuser] = lambda: user
-        app.dependency_overrides[get_settings] = lambda: APISettings(**settings.dict())
+        app.dependency_overrides[get_settings] = lambda: api_settings
         return TestClient(app)
 
     yield _make_client
