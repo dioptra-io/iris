@@ -2,9 +2,20 @@ from uuid import uuid4
 
 import pytest
 
+from iris.commons.clickhouse import QueryError
 from iris.commons.test import compress_file
 
 pytestmark = pytest.mark.asyncio
+
+
+async def test_call(clickhouse):
+    rows = await clickhouse.call("SELECT 1 AS one")
+    assert rows == [{"one": 1}]
+
+
+async def test_call_error(clickhouse):
+    with pytest.raises(QueryError, match="Missing columns"):
+        await clickhouse.call("SELECT invalid")
 
 
 async def test_insert_results(clickhouse, tmp_path):

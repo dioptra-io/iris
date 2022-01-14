@@ -55,9 +55,7 @@ class ClickHouse:
         self,
         query: str,
         *,
-        database: Optional[str] = None,
         params: Optional[dict] = None,
-        values: Optional[list] = None,
         timeout=(1, 60),
     ) -> List[dict]:
         # TODO: Cleanup this code and move to a dedicated package?
@@ -67,18 +65,11 @@ class ClickHouse:
         if params:
             query_params = {f"param_{k}": v for k, v in params.items()}
 
-        if values:
-            for value in values:
-                content += json.dumps(value, default=str) + "\n"
-
         params_ = {
             "default_format": "JSONEachRow",
             "query": query,
             **query_params,
         }
-
-        if database:
-            params_["database"] = database
 
         async with httpx.AsyncClient() as client:
             r = await client.post(
