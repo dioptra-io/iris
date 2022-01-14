@@ -56,7 +56,13 @@ def make_measurement(make_measurement_agent):
 @pytest.fixture
 def make_user():
     def _make_user(**kwargs):
-        default = dict(email="user@example.org", is_active=True, is_verified=True)
+        default = dict(
+            email="user@example.org",
+            allow_tag_public=True,
+            allow_tag_reserved=True,
+            is_active=True,
+            is_verified=True,
+        )
         return User(**{**default, **kwargs})
 
     return _make_user
