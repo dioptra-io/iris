@@ -2,14 +2,16 @@ from pathlib import Path
 
 from iris.commons.settings import CommonSettings
 
+HOUR_MS = 60 * 60 * 1000  # 1 hour in milliseconds
+
 
 class WorkerSettings(CommonSettings):
     """Worker specific settings."""
 
     WORKER_RESULTS_DIR_PATH: Path = Path("iris_data/worker/results")
 
-    WORKER_TIME_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)
-    WORKER_MESSAGE_AGE_LIMIT: int = 60 * 60 * 1000  # seconds (1hour)
+    WORKER_TIME_LIMIT: int = 48 * HOUR_MS  # milliseconds
+    WORKER_MESSAGE_AGE_LIMIT: int = 168 * HOUR_MS  # milliseconds
 
     WORKER_SANITY_CHECK_RETRIES: int = 3
     WORKER_SANITY_CHECK_INTERVAL: float = 1  # seconds
