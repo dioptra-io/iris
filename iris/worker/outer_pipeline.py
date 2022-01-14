@@ -111,7 +111,7 @@ async def outer_pipeline(
         # the file will still be present on the object storage and the worker will
         # restart the outer pipeline.
         logger.info("Delete results file from object storage")
-        await storage.soft_delete(
+        await storage.delete_file_no_check(
             storage.measurement_agent_bucket(measurement_uuid, agent_uuid), results_key
         )
 

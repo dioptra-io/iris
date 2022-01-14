@@ -18,7 +18,7 @@ jobs:
           pip install poetry
           poetry install
       - name: Run tests
-        run: sudo env CI=1 $(poetry env info -p)/bin/pytest --cov=iris --cov-report xml iris tests
+        run: sudo env CI=1 $(poetry env info -p)/bin/pytest --cov=iris --cov-report=xml --log-cli-level=INFO
       - uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

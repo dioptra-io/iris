@@ -3,7 +3,7 @@ import pytest
 from iris.commons.models.round import Round
 
 
-def test_round_decode():
+def test_round_decode_encode():
     round = Round(number=1, limit=5, offset=0)
     assert Round.decode(round.encode()) == round
 
@@ -13,25 +13,43 @@ def test_round_decode_invalid():
         Round.decode("abcd")
 
 
-def test_round_from_filename():
-    round = Round.decode(
-        "81484af7-6776-42a7-80fd-cb23b73855f8_results_1:0:0.csv.zst_00"
-    )
-    assert round.number == 1
-    assert round.limit == 0
-    assert round.offset == 0
+@pytest.mark.parametrize(
+    "filename,expected",
+    [
+        (
+            "81484af7-6776-42a7-80fd-cb23b73855f8_results_1:0:0.csv.zst_00",
+            Round(number=1, limit=0, offset=0),
+        ),
+        (
+            "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47_results_2:6:8.csv",
+            Round(number=2, limit=6, offset=8),
+        ),
+        (
+            "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47_next_round_csv_4:3:5.csv",
+            Round(number=4, limit=3, offset=5),
+        ),
+    ],
+)
+def test_round_from_filename(filename, expected):
+    assert Round.decode(filename) == expected
 
-    round = Round.decode("ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47_results_2:6:8.csv")
-    assert round.number == 2
-    assert round.limit == 6
-    assert round.offset == 8
 
-    round = Round.decode(
-        "ddd8541d-b4f5-42ce-b163-e3e9bfcd0a47_next_round_csv_4:3:5.csv"
-    )
-    assert round.number == 4
-    assert round.limit == 3
-    assert round.offset == 5
+def test_round_str():
+    round = Round(number=1, limit=5, offset=0)
+    assert str(round) == "Round#1.0"
+
+
+@pytest.mark.parametrize(
+    "round,min_ttl,max_ttl",
+    [
+        (Round(number=1, limit=0, offset=0), 1, 255),
+        (Round(number=1, limit=5, offset=0), 1, 5),
+        (Round(number=1, limit=5, offset=1), 6, 10),
+    ],
+)
+def test_round_ttl(round, min_ttl, max_ttl):
+    assert round.min_ttl == min_ttl
+    assert round.max_ttl == max_ttl
 
 
 def test_next_round():

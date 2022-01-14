@@ -223,11 +223,6 @@ class Storage:
             b = await s3.Bucket(bucket)
             await b.objects.all().delete()
 
-    async def soft_delete(self, bucket: str, filename: str) -> None:
-        is_deleted = await self.delete_file_no_check(bucket, filename)
-        if not is_deleted:
-            self.logger.error(f"Impossible to remove file `{filename}` from S3")
-
     @fault_tolerant
     async def copy_file_to_bucket(
         self, bucket_src: str, bucket_dest: str, filename_src: str, filename_dst: str

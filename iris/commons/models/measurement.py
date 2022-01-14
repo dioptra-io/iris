@@ -138,14 +138,14 @@ class Measurement(MeasurementBase, table=True):
     def start_time(self):
         try:
             return min(x.start_time for x in self.agents)
-        except TypeError:
+        except (TypeError, ValueError):
             return None
 
     @property
     def end_time(self):
         try:
-            return min(x.end_time for x in self.agents)
-        except TypeError:
+            return max(x.end_time for x in self.agents)
+        except (TypeError, ValueError):
             return None
 
     @property

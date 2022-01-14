@@ -19,7 +19,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-aioboto3 = "^9.2.0"
+aioboto3 = "^9.3.1"
 aiofiles = "^0.8.0"
 aioredis = "^2.0.0"
 # We make alembic a runtime dependency so that is available in the Docker images.
@@ -28,7 +28,7 @@ asgiref = "^3.2.7"
 asyncpg = "^0.25.0"
 async-timeout = "^4.0.1"
 diamond-miner = "^0.5.4"
-dramatiq = {extras = ["redis", "watch"], version = "^1.12.1"}
+dramatiq = {extras = ["redis", "watch"], version = "^1.12.2"}
 email-validator = "^1.1.3"
 fastapi = "^0.71.0"
 fastapi-users = {extras = ["sqlalchemy2", "oauth"], version = "^9.2.1"}
@@ -49,15 +49,15 @@ zstandard = "^0.16.0"
 
 [tool.poetry.dev-dependencies]
 black = "^21.11b1"
-boto3-stubs = "^1.20.31"
+boto3-stubs = "^1.20.35"
 bumpversion = "^0.6.0"
-coverage = "^6.2"
+coverage = {extras = ["toml"], version = "^6.2"}
 flake8 = "^4.0.1"
 isort = "^5.10.1"
 mypy = "^0.931"
 pre-commit = "^2.16.0"
 pytest = "^6.2.5"
-pytest-asyncio = "^0.16.0"
+pytest-asyncio = "^0.17.0"
 pytest-cov = "^3.0.0"
 pytest-clarity = "^1.0.1"
 types-aiofiles = "^0.8.2"
@@ -82,6 +82,13 @@ warn_redundant_casts = true
 warn_return_any = true
 # warn_unreachable = true
 warn_unused_ignores = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "if TYPE_CHECKING:$",
+    "if __name__ == \"__main__\":$",
+    "pass$"
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -7,9 +7,10 @@ from uuid import uuid4
 
 import pytest
 
-from iris.commons.models import AgentParameters, AgentState, User
+from iris.commons.models import AgentParameters, AgentState, User, UserTable
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
+from tests.assertions import cast_response
 
 skipci = pytest.mark.skipif(
     "CI" in os.environ, reason="this test is not supported on GitHub actions"
@@ -77,11 +78,19 @@ async def register_agent(
     await redis.set_agent_state(uuid, state)
 
 
-async def register_user(client, **kwargs):
+def register_user(client, cast=True, **kwargs):
     default = dict(
         email=f"{uuid4()}@example.org",
         password="password",
         firstname="firstname",
         lastname="lastname",
     )
-    return client.post("/auth/register", json={**default, **kwargs})
+    response = client.post("/auth/register", json={**default, **kwargs})
+    return cast_response(response, User) if cast else response
+
+
+def verify_user(session, user_id):
+    user = session.get(UserTable, user_id)
+    user.is_verified = True
+    session.add(user)
+    session.commit()
