@@ -61,7 +61,7 @@ def settings():
 @pytest.fixture
 def api_settings(settings):
     return APISettings(
-        API_CORS_ALLOW_ORIGIN="https://example.org",
+        API_CORS_ALLOW_ORIGIN="https://example.org,http://localhost:8000",
         **settings.dict(),
     )
 
