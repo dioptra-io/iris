@@ -1,11 +1,12 @@
 """API Entrypoint."""
 import botocore.exceptions
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.status import HTTP_404_NOT_FOUND
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
-from iris.api import agents, measurements, targets, users
+from iris.api import agents, measurements, status, targets, users
 from iris.commons.dependencies import get_settings
 
 app = FastAPI(
@@ -30,12 +31,13 @@ app.include_router(users.router)
 app.include_router(agents.router, prefix="/agents", tags=["Agents"])
 app.include_router(targets.router, prefix="/targets", tags=["Targets"])
 app.include_router(measurements.router, prefix="/measurements", tags=["Measurements"])
+app.include_router(status.router, prefix="/status", tags=["Status"])
 
 
 @app.exception_handler(botocore.exceptions.ClientError)
 def botocore_exception_handler(request, exc):
     if exc.response["Error"]["Code"] == "NoSuchKey":
-        return Response(status_code=status.HTTP_404_NOT_FOUND)
+        return Response(status_code=HTTP_404_NOT_FOUND)
     raise exc
 
 

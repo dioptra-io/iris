@@ -64,20 +64,9 @@ class MeasurementRead(MeasurementBase):
 
     @classmethod
     def from_measurement(cls, m: "Measurement") -> "MeasurementRead":
-        try:
-            start_time = min(x.start_time for x in m.agents)
-        except TypeError:
-            start_time = None
-        try:
-            end_time = min(x.end_time for x in m.agents)
-        except TypeError:
-            end_time = None
-        agents_state = {x.state for x in m.agents}
-        if len(agents_state) == 1:
-            state = agents_state.pop()
-        else:
-            state = MeasurementAgentState.Ongoing
-        return cast(cls, m, start_time=start_time, end_time=end_time, state=state)
+        # TODO: Try to get rid of this by having Pydantic/SQLModel take into account
+        # computed properties (@property).
+        return cast(cls, m, start_time=m.start_time, end_time=m.end_time, state=m.state)
 
     @classmethod
     def from_measurements(cls, ms: List["Measurement"]) -> List["MeasurementRead"]:
@@ -144,6 +133,27 @@ class Measurement(MeasurementBase, table=True):
     @classmethod
     def get(cls, session: Session, uuid: str) -> Optional["Measurement"]:
         return session.get(Measurement, uuid)
+
+    @property
+    def start_time(self):
+        try:
+            return min(x.start_time for x in self.agents)
+        except TypeError:
+            return None
+
+    @property
+    def end_time(self):
+        try:
+            return min(x.end_time for x in self.agents)
+        except TypeError:
+            return None
+
+    @property
+    def state(self):
+        agents_state = {x.state for x in self.agents}
+        if len(agents_state) == 1:
+            return agents_state.pop()
+        return MeasurementAgentState.Ongoing
 
     def set_tags(self, session: Session, tags: List[str]) -> None:
         self.tags = tags
