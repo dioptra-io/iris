@@ -97,6 +97,7 @@ services:
     depends_on:
       - minio
       - redis
+      - traefik
 
   api:
     build:
@@ -115,6 +116,7 @@ services:
       - minio
       - postgres
       - redis
+      - traefik
 
   worker:
     build:
@@ -129,3 +131,4 @@ services:
       - minio
       - postgres
       - redis
+      - traefik
