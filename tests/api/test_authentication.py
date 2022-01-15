@@ -1,13 +1,10 @@
 from uuid import uuid4
 
 import jwt
-import pytest
 from fastapi_users.authentication.transport.bearer import BearerResponse
 
 from tests.assertions import assert_status_code, cast_response
 from tests.helpers import register_user
-
-pytestmark = pytest.mark.asyncio
 
 
 async def test_register(make_client):

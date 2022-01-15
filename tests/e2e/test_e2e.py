@@ -15,8 +15,6 @@ from iris.worker.watch import watch_measurement_agent_
 from tests.assertions import APIResponseError, cast_response
 from tests.helpers import create_user_buckets, superuser, upload_target_file
 
-pytestmark = pytest.mark.asyncio
-
 
 @superuser
 async def test_e2e(

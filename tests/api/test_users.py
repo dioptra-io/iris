@@ -1,11 +1,7 @@
-import pytest
-
 from iris.commons.models.pagination import Paginated
 from iris.commons.models.user import ExternalServices, User
 from tests.assertions import assert_response, assert_status_code, cast_response
 from tests.helpers import register_user, verify_user
-
-pytestmark = pytest.mark.asyncio
 
 
 async def test_get_users_not_superuser(make_client, make_user):

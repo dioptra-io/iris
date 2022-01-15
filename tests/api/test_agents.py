@@ -1,13 +1,9 @@
 from uuid import uuid4
 
-import pytest
-
 from iris.commons.models.agent import Agent, AgentState
 from iris.commons.models.pagination import Paginated
 from tests.assertions import assert_response, assert_status_code
 from tests.helpers import register_agent
-
-pytestmark = pytest.mark.asyncio
 
 
 def test_get_agents_probing_not_enabled(make_client, make_user):

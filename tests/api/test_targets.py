@@ -8,8 +8,6 @@ from iris.commons.models.target import Target, TargetSummary
 from tests.assertions import assert_response, assert_status_code, cast_response
 from tests.helpers import FakeUploadFile, upload_file
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_get_targets_probing_not_enabled(make_client, make_user):
     client = make_client(make_user(probing_enabled=False))

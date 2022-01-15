@@ -1,7 +1,5 @@
 from uuid import uuid4
 
-import pytest
-
 from iris.commons.models import Target
 from iris.commons.models.agent import AgentState
 from iris.commons.models.diamond_miner import Tool
@@ -24,8 +22,6 @@ from tests.helpers import (
     register_agent,
     upload_target_file,
 )
-
-pytestmark = pytest.mark.asyncio
 
 
 def test_get_measurements_probing_not_enabled(make_client, make_user):

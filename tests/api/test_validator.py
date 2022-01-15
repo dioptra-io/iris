@@ -5,8 +5,6 @@ from iris.api.validator import target_file_validator
 from iris.commons.models import Tool
 from tests.helpers import create_user_buckets, upload_target_file
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_probes_not_found(make_user, storage):
     user = make_user(is_superuser=True)

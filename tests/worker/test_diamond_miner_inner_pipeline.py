@@ -1,13 +1,9 @@
 from uuid import uuid4
 
-import pytest
-
 from iris.commons.models.diamond_miner import ToolParameters
 from iris.commons.models.round import Round
 from iris.commons.test import compress_file, decompress_file
 from iris.worker.inner_pipeline import diamond_miner_inner_pipeline
-
-pytestmark = pytest.mark.asyncio
 
 targets_content = "1.0.0.0/23,icmp,0,32,6\n2001::/63,icmp6,0,32,6"
 

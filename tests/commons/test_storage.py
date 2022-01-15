@@ -6,8 +6,6 @@ import pytest
 from iris.commons.storage import Storage
 from tests.helpers import upload_file
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_create_bucket(storage, make_bucket):
     bucket = make_bucket()

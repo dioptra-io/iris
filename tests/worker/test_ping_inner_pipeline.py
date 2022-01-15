@@ -1,13 +1,9 @@
 from uuid import uuid4
 
-import pytest
-
 from iris.commons.models.diamond_miner import ToolParameters
 from iris.commons.models.round import Round
 from iris.commons.test import decompress_file
 from iris.worker.inner_pipeline.ping import ping_inner_pipeline
-
-pytestmark = pytest.mark.asyncio
 
 
 async def test_ping_inner_pipeline(clickhouse, logger, tmp_path):

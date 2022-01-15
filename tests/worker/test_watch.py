@@ -1,14 +1,10 @@
 from uuid import uuid4
 
-import pytest
-
 from iris.commons.models.agent import AgentState
 from iris.commons.models.round import Round
 from iris.commons.storage import results_key
 from iris.worker.watch import check_agent, clean_results, find_results
 from tests.helpers import register_agent, upload_file
-
-pytestmark = pytest.mark.asyncio
 
 
 async def test_check_agent_offline(redis, make_agent_parameters):

@@ -64,6 +64,7 @@ types-aiofiles = "^0.8.2"
 
 [tool.pytest.ini_options]
 addopts = "--capture=no --doctest-modules --ignore=alembic --ignore=iris_data --strict-markers --verbosity=2"
+asyncio_mode = "auto"
 filterwarnings = [
     "ignore::DeprecationWarning:aioboto3.*:",
     "ignore::DeprecationWarning:aiofiles.*:",

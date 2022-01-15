@@ -1,7 +1,5 @@
 from uuid import uuid4
 
-import pytest
-
 from iris.commons.models import (
     AgentState,
     MeasurementAgentCreate,
@@ -12,8 +10,6 @@ from iris.commons.models import (
 from iris.commons.models.status import Status
 from tests.assertions import cast_response
 from tests.helpers import create_user_buckets, register_agent, upload_target_file
-
-pytestmark = pytest.mark.asyncio
 
 
 async def test_get_status(

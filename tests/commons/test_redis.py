@@ -1,14 +1,10 @@
 import asyncio
 from uuid import uuid4
 
-import pytest
-
 from iris.commons.models.agent import Agent, AgentState
 from iris.commons.models.measurement_round_request import MeasurementRoundRequest
 from iris.commons.models.round import Round
 from iris.commons.utils import cancel_task
-
-pytestmark = pytest.mark.asyncio
 
 
 async def test_redis_get_agents_empty(redis):
