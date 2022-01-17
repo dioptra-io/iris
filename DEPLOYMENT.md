@@ -21,7 +21,6 @@ First, add the following entry to [`/etc/hosts`](file:///etc/hosts):
 Then run the stack and seed the database:
 ```bash
 docker-compose up --build --detach
-# Mount alembic.ini and alembic/ inside the container:
 docker-compose exec api .venv/bin/alembic upgrade head
 ```
 
