@@ -7,7 +7,8 @@ import sqlmodel
 class BaseModel(pydantic.BaseModel):
     class Config:
         allow_mutation = False
-        extra = pydantic.Extra.forbid
+        # Temporary disabled to ease the migration to Iris 1.0
+        # extra = pydantic.Extra.forbid
         json_encoders = {UUID: lambda v: str(v)}
 
 
