@@ -60,11 +60,11 @@ class CommonSettings(BaseSettings):
 
 def fault_tolerant(func):
     @wraps(func)
-    async def wrapper(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         settings: CommonSettings = self.settings
         if settings.RETRY_TIMEOUT < 0:
-            return await func(self, *args, **kwargs)
-        return await retry(
+            return func(self, *args, **kwargs)
+        return retry(
             before_sleep=(before_sleep_log(self.logger, logging.ERROR)),
             stop=stop_after_delay(settings.RETRY_TIMEOUT),
             wait=wait_random(
