@@ -3,7 +3,12 @@ from uuid import uuid4
 from iris.commons.models.agent import AgentState
 from iris.commons.models.round import Round
 from iris.commons.storage import results_key
-from iris.worker.watch import check_agent, clean_results, find_results
+from iris.worker.watch import (
+    check_agent,
+    clean_results,
+    find_results,
+    watch_measurement_agent_,
+)
 from tests.helpers import register_agent, upload_file
 
 
@@ -61,3 +66,8 @@ async def test_clean_results(storage, make_tmp_file):
         measurement_uuid=measurement_uuid, agent_uuid=agent_uuid, storage=storage
     )
     assert not await storage.bucket_exists(bucket)
+
+
+async def test_watch_measurement_not_found(caplog, engine, worker_settings):
+    await watch_measurement_agent_(str(uuid4()), str(uuid4()), worker_settings)
+    assert "Measurement not found" in caplog.text
