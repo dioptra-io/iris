@@ -28,18 +28,31 @@ async def test_insert_results(clickhouse, tmp_path):
 1640006077,1,::ffff:172.17.0.2,::,24000,0,5,0,::ffff:62.40.124.69,1,0,0,254,35,"[]",28524,1
 """
     )
-    compress_file(results_file, results_file.with_suffix(".csv.zst"))
+    results_file = compress_file(results_file)
 
     assert (
         await clickhouse.create_tables(measurement_uuid, agent_uuid, 24, 64, drop=True)
         is None
     )
     assert (
-        await clickhouse.insert_csv(
-            measurement_uuid, agent_uuid, results_file.with_suffix(".csv.zst")
-        )
-        is None
+        await clickhouse.insert_csv(measurement_uuid, agent_uuid, results_file) is None
     )
     assert await clickhouse.insert_prefixes(measurement_uuid, agent_uuid) is None
     assert await clickhouse.insert_links(measurement_uuid, agent_uuid) is None
     assert await clickhouse.grant_public_access(measurement_uuid, agent_uuid) is None
+
+
+async def test_insert_results_invalid(clickhouse, tmp_path):
+    measurement_uuid = str(uuid4())
+    agent_uuid = str(uuid4())
+
+    results_file = tmp_path / "results.csv"
+    results_file.write_text("zzz\nzzz")
+    results_file = compress_file(results_file)
+
+    assert (
+        await clickhouse.create_tables(measurement_uuid, agent_uuid, 24, 64, drop=True)
+        is None
+    )
+    with pytest.raises(QueryError):
+        await clickhouse.insert_csv(measurement_uuid, agent_uuid, results_file)
