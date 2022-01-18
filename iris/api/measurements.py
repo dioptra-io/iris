@@ -53,6 +53,7 @@ def assert_measurement_visibility(
     if not measurement or (
         settings.TAG_PUBLIC not in measurement.tags
         and measurement.user_id != str(user.id)
+        and not user.is_superuser
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -63,7 +64,9 @@ def assert_measurement_visibility(
 def assert_measurement_agent_visibility(
     measurement_agent: Optional[MeasurementAgent], user: UserDB
 ) -> MeasurementAgent:
-    if not measurement_agent or measurement_agent.measurement.user_id != str(user.id):
+    if not measurement_agent or (
+        measurement_agent.measurement.user_id != str(user.id) and not user.is_superuser
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement agent not found"
         )
@@ -101,21 +104,28 @@ async def get_measurements(
     request: Request,
     state: Optional[MeasurementAgentState] = None,
     tag: Optional[str] = None,
+    only_mine: bool = True,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
     user: UserDB = Depends(current_verified_user),
     session: Session = Depends(get_session),
 ):
     assert_probing_enabled(user)
+    if not only_mine and not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to fetch measurements from other users.",
+        )
     tags = []
     if tag:
         tags.append(tag)
-    count = Measurement.count(session, state=state, tags=tags, user_id=str(user.id))
+    user_id = str(user.id) if only_mine else None
+    count = Measurement.count(session, state=state, tags=tags, user_id=user_id)
     measurements = Measurement.all(
         session,
         state=state,
         tags=tags,
-        user_id=str(user.id),
+        user_id=user_id,
         offset=offset,
         limit=limit,
     )
@@ -320,11 +330,15 @@ async def get_measurement_agent_target(
     measurement_uuid: UUID,
     agent_uuid: UUID,
     user: UserDB = Depends(current_verified_user),
+    session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
 ):
     assert_probing_enabled(user)
+    measurement = Measurement.get(session, str(measurement_uuid))
+    measurement = assert_measurement_visibility(measurement, user, settings)
     target_file = await storage.get_file_no_retry(
-        storage.archive_bucket(str(user.id)),
+        storage.archive_bucket(measurement.user_id),
         targets_key(str(measurement_uuid), str(agent_uuid)),
     )
     return Target.from_s3(target_file)
