@@ -22,6 +22,7 @@ async def get_status(
     agents = await redis.get_agents()
     agents_by_state = Counter(a.state for a in agents)
     buckets = await storage.get_measurement_buckets()
+    # TODO: Optimize this. Perform the aggregation in-db?
     measurements = Measurement.all(session)
     measurements_by_state = Counter(m.state for m in measurements)
     return Status(
