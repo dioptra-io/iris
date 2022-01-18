@@ -156,10 +156,13 @@ async def main():
                     new_ma.start_time = None
                     new_ma.end_time = None
                 new_mas.append(new_ma)
+            new_tags = measurement["tags"] + [MIGRATION_TAG]
+            if "exhaustive.saturday.json" in new_tags:
+                new_tags += ["!public", "collection:exhaustive"]
             new_measurement = Measurement(
                 uuid=measurement["uuid"],
                 tool=Tool(measurement["tool"]),
-                tags=measurement["tags"] + [MIGRATION_TAG],
+                tags=new_tags,
                 creation_time=datetime.datetime.fromisoformat(
                     measurement["start_time"]
                 ),
