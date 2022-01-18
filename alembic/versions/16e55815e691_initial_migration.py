@@ -8,9 +8,9 @@ Create Date: 2022-01-10 16:58:43.962071
 import fastapi_users_db_sqlalchemy
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
+from sqlalchemy import types
 from sqlalchemy.dialects import postgresql
 
-import iris.commons.models.base
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -20,6 +20,21 @@ revision = "16e55815e691"
 down_revision = None
 branch_labels = None
 depends_on = None
+
+
+class PydanticType(types.TypeDecorator):
+    impl = types.Unicode
+    cache_ok = True
+
+    def __init__(self, klass, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.klass = klass
+
+    def process_bind_param(self, value, dialect):
+        return value.json()
+
+    def process_result_value(self, value, dialect):
+        return self.klass.parse_raw(value)
 
 
 def upgrade():
@@ -62,12 +77,12 @@ def upgrade():
         "measurement_agent",
         sa.Column(
             "tool_parameters",
-            iris.commons.models.base.PydanticType(ToolParameters),
+            PydanticType(ToolParameters),
             nullable=True,
         ),
         sa.Column(
             "agent_parameters",
-            iris.commons.models.base.PydanticType(AgentParameters),
+            PydanticType(AgentParameters),
             nullable=True,
         ),
         sa.Column(

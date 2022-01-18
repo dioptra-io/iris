@@ -19,32 +19,21 @@ depends_on = None
 
 
 def upgrade():
-    op.alter_column(
-        "measurement_agent",
-        "agent_parameters",
-        existing_type=sqlmodel.sql.sqltypes.AutoString(),
-        type_=JSON(),
-        postgresql_using="agent_parameters::json",
-    )
-    op.alter_column(
-        "measurement_agent",
-        "tool_parameters",
-        existing_type=sqlmodel.sql.sqltypes.AutoString(),
-        type_=JSON(),
-        postgresql_using="tool_parameters::json",
-    )
+    for column in ["agent_parameters", "tool_parameters"]:
+        op.alter_column(
+            "measurement_agent",
+            column,
+            existing_type=sqlmodel.sql.sqltypes.AutoString(),
+            type_=JSON(),
+            postgresql_using=f"{column}::json",
+        )
 
 
 def downgrade():
-    op.alter_column(
-        "measurement_agent",
-        "agent_parameters",
-        existing_type=JSON(),
-        type_=sqlmodel.sql.sqltypes.AutoString(),
-    )
-    op.alter_column(
-        "measurement_agent",
-        "tool_parameters",
-        existing_type=JSON(),
-        type_=sqlmodel.sql.sqltypes.AutoString(),
-    )
+    for column in ["agent_parameters", "tool_parameters"]:
+        op.alter_column(
+            "measurement_agent",
+            column,
+            existing_type=JSON(),
+            type_=sqlmodel.sql.sqltypes.AutoString(),
+        )

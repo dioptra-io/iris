@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from pydantic import root_validator
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Enum, Field, Relationship, Session, update
 
 from iris.commons.models.agent import AgentParameters
@@ -77,7 +77,7 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
     # and add the associated relationships.
     # But this requires a composite foreign key (measurement_uuid, agent_uuid)
     # => how to do this with SQLModel?
-    probing_statistics: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    probing_statistics: dict = Field(default_factory=dict, sa_column=Column(JSONB))
     start_time: Optional[datetime] = Field(default=None)
     end_time: Optional[datetime] = Field(default=None)
     state: MeasurementAgentState = Field(

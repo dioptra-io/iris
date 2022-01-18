@@ -14,6 +14,7 @@ from iris.commons.models import UserDB, UserTable
 from iris.commons.models.user import AccessToken, AccessTokenTable
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
+from iris.commons.utils import json_serializer
 
 
 def get_settings():
@@ -30,6 +31,7 @@ def get_engine(settings=Depends(get_settings)):
         settings.DATABASE_URL,
         connect_args=dict(connect_timeout=5),
         future=True,
+        json_serializer=json_serializer,
     )
     yield engine
     engine.dispose()

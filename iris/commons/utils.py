@@ -1,4 +1,5 @@
 import asyncio
+import json
 import socket
 from ipaddress import IPv4Address, IPv6Address
 from typing import Callable, Optional, TypeVar
@@ -31,6 +32,14 @@ def cast(to: Callable[..., BaseModel], from_: BaseModel, **extra) -> T:
 def unwrap(value: Optional[T]) -> T:
     assert value, "unexpected None value"
     return value
+
+
+def json_serializer(obj):
+    try:
+        # Try Pydantic `.json()` first.
+        return obj.json()
+    except AttributeError:
+        return json.dumps(obj)
 
 
 def get_ipv4_address(host="8.8.8.8", port=80) -> IPv4Address:

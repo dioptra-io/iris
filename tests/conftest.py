@@ -25,6 +25,7 @@ from iris.commons.models.base import Base
 from iris.commons.redis import Redis
 from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
+from iris.commons.utils import json_serializer
 from iris.worker import WorkerSettings
 
 pytest.register_assert_rewrite("tests.assertions")
@@ -93,7 +94,7 @@ def clickhouse(settings, logger):
 
 @pytest.fixture
 def engine(settings):
-    engine = create_engine(settings.DATABASE_URL)
+    engine = create_engine(settings.DATABASE_URL, json_serializer=json_serializer)
     if not database_exists(engine.url):
         create_database(engine.url)
     Base.metadata.create_all(engine)
