@@ -171,11 +171,12 @@ async def watch_measurement_agent_with_deps(
 async def check_agent(
     redis: Redis, agent_uuid: str, trials: int, interval: float
 ) -> bool:
-    checks = []
     for _ in range(trials):
-        checks.append(await redis.check_agent(agent_uuid))
+        if await redis.check_agent(agent_uuid):
+            return True
         await asyncio.sleep(interval)
-    return any(checks)
+    else:
+        return False
 
 
 async def clean_results(
