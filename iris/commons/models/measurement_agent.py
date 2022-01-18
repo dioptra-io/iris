@@ -65,6 +65,7 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
         default=None,
         primary_key=True,
         foreign_key="measurement.uuid",
+        nullable=False,
     )
     agent_uuid: str = Field(primary_key=True)
     agent_parameters: AgentParameters = Field(

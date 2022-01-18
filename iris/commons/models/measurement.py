@@ -19,7 +19,9 @@ from iris.commons.utils import cast
 
 
 class MeasurementBase(BaseSQLModel):
-    tool: Tool = Field(sa_column=Column(Enum(Tool, native_enum=False)), title="Tool")
+    tool: Tool = Field(
+        sa_column=Column(Enum(Tool, native_enum=False), nullable=False), title="Tool"
+    )
     tags: List[str] = Field(
         default_factory=list, sa_column=Column(ARRAY(String)), title="Tags"
     )
@@ -82,9 +84,13 @@ class MeasurementReadWithAgents(MeasurementRead):
 
 
 class Measurement(MeasurementBase, table=True):
-    uuid: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    creation_time: datetime = Field(default_factory=lambda: datetime.utcnow())
-    user_id: str
+    uuid: str = Field(
+        default_factory=lambda: str(uuid4()), primary_key=True, nullable=False
+    )
+    creation_time: datetime = Field(
+        default_factory=lambda: datetime.utcnow(), nullable=False
+    )
+    user_id: str  # TODO: FK constraint with UserTable?
     agents: List[MeasurementAgent] = Relationship(back_populates="measurement")
 
     @classmethod
