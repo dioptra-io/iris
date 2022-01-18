@@ -5,110 +5,83 @@ services:
   traefik:
     image: docker.io/library/traefik:2.5
     command:
-      - "--api=true"
-      - "--api.insecure=true"
+      - "--api.dashboard=true"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.postgres.address=:5432"
       - "--entrypoints.redis.address=:6379"
+      - "--entrypoints.clickhouse.address=:9000"
       - "--providers.docker"
-      - "--providers.docker.exposedbydefault=false"
+    labels:
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.docker.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
     ports:
       - "80:80"
+      - "5432:5432"
       - "6379:6379"
+      - "9000:9000"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       default:
         aliases:
-          - "cadvisor.docker.localhost"
-          - "grafana.docker.localhost"
-          - "iris.docker.localhost"
-          - "loki.docker.localhost"
+          - "api.docker.localhost"
+          - "clickhouse.docker.localhost"
           - "minio.docker.localhost"
-          - "prometheus.docker.localhost"
+          - "minio-console.docker.localhost"
+          - "postgres.docker.localhost"
+          - "redis.docker.localhost"
 
   # Control-Plane & Data-Plane
   clickhouse:
     image: ${CLICKHOUSE_IMAGE:-docker.io/yandex/clickhouse-server:21}
-    ports:
-      - "9000:9000"
+    labels:
+      # ClickHouse HTTP (8123)
+      - traefik.http.routers.clickhouse-http.entrypoints=web
+      - traefik.http.routers.clickhouse-http.rule=Host(`clickhouse.docker.localhost`)
+      - traefik.http.routers.clickhouse-http.service=clickhouse-http
+      - traefik.http.services.clickhouse-http.loadbalancer.server.port=8123
+      # ClickHouse Native (9000)
+      - traefik.tcp.routers.clickhouse-tcp.entrypoints=clickhouse
+      - traefik.tcp.routers.clickhouse-tcp.rule=HostSNI(`*`)
+      - traefik.tcp.routers.clickhouse-tcp.service=clickhouse-tcp
+      - traefik.tcp.services.clickhouse-tcp.loadbalancer.server.port=9000
     volumes:
-      - "./volumes/clickhouse:/var/lib/clickhouse"
+      - "./configuration/clickhouse/users.d:/etc/clickhouse-server/users.d:ro"
+      - "./configuration/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh"
+
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: iris
+      POSTGRES_PASSWORD: iris
+    labels:
+      - traefik.tcp.routers.postgres.entrypoints=postgres
+      - traefik.tcp.routers.postgres.rule=HostSNI(`*`)
+      - traefik.tcp.routers.postgres.service=postgres
+      - traefik.tcp.services.postgres.loadbalancer.server.port=5432
 
   redis:
     image: docker.io/library/redis:6
-    command: "redis-server --requirepass redispass"
+    command: "redis-server --requirepass iris"
     labels:
-      - "traefik.enable=true"
       - "traefik.tcp.routers.redis.entrypoints=redis"
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
-    volumes:
-      - "./volumes/redis:/data"
 
   minio:
     image: docker.io/minio/minio:latest
-    command: "server /data"
-    environment:
-      MINIO_ACCESS_KEY: "minioadmin"
-      MINIO_SECRET_KEY: "minioadmin"
+    command: "server /data --console-address :9001"
     labels:
-      - "traefik.enable=true"
+      # API
       - "traefik.http.routers.minio.entrypoints=web"
       - "traefik.http.routers.minio.rule=Host(`minio.docker.localhost`)"
-    volumes:
-      - "./volumes/minio:/data"
-
-  # Monitoring
-  cadvisor:
-    image: gcr.io/google-containers/cadvisor:latest
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.cadvisor.entrypoints=web"
-      - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.docker.localhost`)"
-    volumes:
-      - "/:/rootfs:ro"
-      - "/sys:/sys:ro"
-      - "/var/lib/docker/:/var/lib/docker:ro"
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-
-  node-exporter:
-    image: docker.io/prom/node-exporter:latest
-
-  prometheus:
-    image: docker.io/prom/prometheus:latest
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=365d"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.entrypoints=web"
-      - "traefik.http.routers.prometheus.rule=Host(`prometheus.docker.localhost`)"
-    volumes:
-      - "./configuration/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml"
-      - "./volumes/prometheus:/prometheus"
-
-  grafana:
-    image: docker.io/grafana/grafana:latest
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.entrypoints=web"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.docker.localhost`)"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-    volumes:
-      - "./volumes/grafana:/var/lib/grafana"
-
-  loki:
-    image: docker.io/grafana/loki:latest
-    command: "-config.file=/etc/loki/loki.yaml"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.loki.entrypoints=web"
-      - "traefik.http.routers.loki.rule=Host(`loki.docker.localhost`)"
-      - "traefik.http.routers.loki.middlewares=loki@docker"
-      - "traefik.http.middlewares.loki.basicauth.users=admin:$$2y$$05$$oi6zVY1Gm57OPyPn3QdzdODPbaTeAEc12bWaa.GD.Biuno49bAg26"
-    volumes:
-      - "./configuration/loki/loki.dev.yml:/etc/loki/loki.yaml"
-      - "./volumes/loki:/loki"
+      - "traefik.http.routers.minio.service=minio"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
+      # Console
+      - "traefik.http.routers.minio-console.entrypoints=web"
+      - "traefik.http.routers.minio-console.rule=Host(`minio-console.docker.localhost`)"
+      - "traefik.http.routers.minio-console.service=minio-console"
+      - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
 
   # Iris
   agent:
@@ -118,57 +91,44 @@ services:
     environment:
       AGENT_CARACAL_INTEGRITY_CHECK: "false" # In order to test from Docker for Mac
       AGENT_DEBUG_MODE: "true"
-      AGENT_MAX_PROBING_RATE: "100"
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
-      REDIS_URL: "redis://default:redispass@redis"
+      AGENT_MAX_PROBING_RATE: ${AGENT_MAX_PROBING_RATE:-100}
     volumes:
-      - "./iris:/app/iris"
+      - "./iris:/app/iris:ro"
     depends_on:
       - minio
       - redis
+      - traefik
 
   api:
     build:
       context: .
       dockerfile: "./dockerfiles/iris-api.dockerfile"
     environment:
-      API_CORS_ALLOW_ORIGIN: "http://localhost:8081"
-      API_ADMIN_USERNAME: "admin"
-      API_ADMIN_EMAIL: "admin@iris.docker.localhost"
-      API_ADMIN_HASHED_PASSWORD: "$$2b$$12$$DOA6t1HC4zlT/AqFgQcrzuxwcTVAV2HuyZrzxORdBDxhctmMfIbUi"
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
+      API_CORS_ALLOW_ORIGIN: "http://localhost:8080"
       GUNICORN_CMD_ARGS: "--workers 1"
-      REDIS_URL: "redis://default:redispass@redis"
-      SQLMODEL_DATABASE_URL: "sqlite:////db/iris.sqlite3"
     labels:
-      - "traefik.enable=true"
       - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.routers.api.rule=Host(`iris.docker.localhost`)"
+      - "traefik.http.routers.api.rule=Host(`api.docker.localhost`)"
     volumes:
-      - "./iris:/app/iris"
-      - "./volumes/iris:/db"
+      - "./iris:/app/iris:ro"
     depends_on:
-    - clickhouse
-    - minio
-    - redis
+      - clickhouse
+      - minio
+      - postgres
+      - redis
+      - traefik
 
   worker:
     build:
       context: .
       dockerfile: "./dockerfiles/iris-worker.dockerfile"
     environment:
-      AWS_S3_HOST: "http://minio.docker.localhost"
-      AWS_ACCESS_KEY_ID: "minioadmin"
-      AWS_SECRET_ACCESS_KEY: "minioadmin"
-      REDIS_URL: "redis://default:redispass@redis"
       WORKER_DEBUG_MODE: "true"
     volumes:
-      - "./iris:/app/iris"
+      - "./iris:/app/iris:ro"
     depends_on:
       - clickhouse
       - minio
+      - postgres
       - redis
+      - traefik

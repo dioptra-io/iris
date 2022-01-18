@@ -1,161 +1,189 @@
 import logging
-import subprocess
-from datetime import datetime
-from ipaddress import IPv4Address, IPv6Address
-from uuid import uuid4
+import os
+import secrets
 
-import fakeredis.aioredis
+import aioredis
+import boto3
 import pytest
+import redis as pyredis
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from sqlalchemy import text
+from sqlalchemy_utils import create_database, database_exists, drop_database
+from sqlmodel import Session, create_engine
 
-from iris.api.dependencies import get_database, get_redis
-from iris.api.main import app
-from iris.api.security import get_current_active_user
-from iris.commons.database import Database
-from iris.commons.redis import AgentRedis, Redis
-from iris.commons.schemas.public import (
-    Agent,
-    AgentParameters,
-    AgentState,
-    ProbingStatistics,
-    Profile,
-    Round,
+from iris.agent.settings import AgentSettings
+from iris.api.authentication import (
+    current_active_user,
+    current_superuser,
+    current_verified_user,
 )
+from iris.api.main import app
+from iris.api.settings import APISettings
+from iris.commons.clickhouse import ClickHouse
+from iris.commons.dependencies import get_settings
+from iris.commons.models.base import Base
+from iris.commons.redis import Redis
 from iris.commons.settings import CommonSettings
+from iris.commons.storage import Storage
+from iris.commons.utils import json_serializer
+from iris.worker import WorkerSettings
+
+pytest.register_assert_rewrite("tests.assertions")
+pytest_plugins = ["tests.fixtures.models", "tests.fixtures.storage"]
+
+
+def should_cleanup():
+    return os.environ.get("IRIS_TEST_CLEANUP", "") != "0"
 
 
 @pytest.fixture
-def agent():
-    return Agent(
-        uuid=uuid4(),
-        parameters=AgentParameters(
-            version="0.1.0",
-            hostname="localhost",
-            ipv4_address=IPv4Address("127.0.0.1"),
-            ipv6_address=IPv6Address("::1"),
-            min_ttl=1,
-            max_probing_rate=1000,
-            agent_tags=["test"],
-        ),
-        state=AgentState.Idle,
-    )
+def logger():
+    return logging.getLogger(__name__)
 
 
 @pytest.fixture
-def user():
-    user = Profile(
-        username="test",
-        email="foo.bar@mail.com",
-        is_active=True,
-        is_admin=True,
-        quota=1000,
-        hashed_password="$2y$12$seiW.kzNc9NFRlpQpyeKie.PUJGhAtxn6oGPB.XfgnmTKx8Y9XCve",
-    )
-    return user
-
-
-@pytest.fixture
-def statistics():
-    return ProbingStatistics(
-        round=Round(number=1, limit=10, offset=0),
-        start_time=datetime.utcnow(),
-        end_time=datetime.utcnow(),
-        filtered_low_ttl=0,
-        filtered_high_ttl=0,
-        filtered_prefix_excl=0,
-        filtered_prefix_not_incl=0,
-        probes_read=240,
-        packets_sent=240,
-        packets_failed=0,
-        packets_received=72,
-        packets_received_invalid=0,
-        pcap_received=240,
-        pcap_dropped=0,
-        pcap_interface_dropped=0,
-    )
-
-
-@pytest.fixture(scope="session")
-def s3_server():
-    # We cannot use moto decorators directly since they are synchronous.
-    # Instead we launch moto_server in a separate process, this is similar
-    # to what is done by aiobotocore and aioboto3 for testing.
-    p = subprocess.Popen(
-        ["moto_server", "--host", "127.0.0.1", "--port", "3000", "s3"],
-        stderr=subprocess.PIPE,
-    )
-    p.stderr.readline()  # Wait for moto_server to start
-    try:
-        yield "http://127.0.0.1:3000"
-    finally:
-        p.terminate()
-
-
-@pytest.fixture(scope="function")
-def common_settings(s3_server):
-    # The `function` scope ensures that the settings are reset before every test.
+def settings():
+    namespace = secrets.token_hex(nbytes=4)
+    print(f"@{namespace}", end=" ")
+    # Redis has 16 databases by default, we use the last one for testing.
     return CommonSettings(
-        AWS_S3_HOST=s3_server,
-        AWS_TIMEOUT=0,
-        DATABASE_HOST="localhost",
-        DATABASE_NAME="iris_test",
-        DATABASE_TIMEOUT=0,
-        REDIS_TIMEOUT=0,
+        CLICKHOUSE_PUBLIC_USER="public",
+        CLICKHOUSE_URL="http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
+        DATABASE_URL=f"postgresql://iris:iris@postgres.docker.localhost/iris-test-{namespace}",
+        S3_PUBLIC_RESOURCES=["arn:aws:s3:::test-public-exports/*"],
+        S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
+        S3_TARGETS_BUCKET_PREFIX=f"targets-test-{namespace}-",
+        REDIS_NAMESPACE=f"iris-test-{namespace}",
+        REDIS_URL="redis://default:iris@redis.docker.localhost?db=15",
+        RETRY_TIMEOUT=-1,
     )
 
 
-@pytest.fixture(scope="function")
-async def database(common_settings):
-    database = Database(common_settings, logging.getLogger(__name__))
-    await database.create_database()
-    return database
-
-
-@pytest.fixture(scope="function")
-async def redis_client():
-    return fakeredis.aioredis.FakeRedis(decode_responses=True)
-
-
-@pytest.fixture(scope="function")
-def redis(common_settings, redis_client):
-    return Redis(redis_client, common_settings, logging.getLogger(__name__))
-
-
-@pytest.fixture(scope="function")
-def agent_redis(common_settings, redis_client, agent):
-    return AgentRedis(
-        redis_client, common_settings, logging.getLogger(__name__), agent.uuid
+@pytest.fixture
+def api_settings(settings):
+    return APISettings(
+        API_CORS_ALLOW_ORIGIN="https://example.org,http://localhost:8000",
+        **settings.dict(),
     )
 
 
-@pytest.fixture(scope="function")
-def api_client_factory(common_settings, redis_client):
-    def api_client(override_user, klass=AsyncClient):
-        async def override_get_redis():
-            yield Redis(redis_client, common_settings, logging.getLogger(__name__))
-
-        app.dependency_overrides = {
-            get_database: lambda: Database(
-                common_settings, logging.getLogger(__name__)
-            ),
-            get_redis: override_get_redis,
-        }
-
-        if override_user:
-            app.dependency_overrides[get_current_active_user] = lambda: override_user
-
-        client = klass(app=app, base_url="http://testserver")
-        return client
-
-    return api_client
+@pytest.fixture
+def agent_settings(settings, tmp_path):
+    return AgentSettings(
+        **settings.dict(),
+        AGENT_CARACAL_SNIFFER_WAIT_TIME=1,
+        AGENT_MIN_TTL=0,
+        AGENT_RESULTS_DIR_PATH=tmp_path / "agent_results",
+        AGENT_TARGETS_DIR_PATH=tmp_path / "agent_targets",
+    )
 
 
-@pytest.fixture(scope="function")
-def api_client(api_client_factory, user):
-    return api_client_factory(override_user=user, klass=AsyncClient)
+@pytest.fixture
+def worker_settings(settings, tmp_path):
+    return WorkerSettings(
+        **settings.dict(),
+        WORKER_RESULTS_DIR_PATH=tmp_path / "worker_results",
+        WORKER_MAX_OPEN_FILES=128,
+    )
 
 
-@pytest.fixture(scope="function")
-def api_client_sync(api_client_factory, user):
-    return api_client_factory(override_user=user, klass=TestClient)
+@pytest.fixture
+def clickhouse(settings, logger):
+    return ClickHouse(settings, logger)
+
+
+@pytest.fixture
+def engine(settings):
+    engine = create_engine(settings.DATABASE_URL, json_serializer=json_serializer)
+    if not database_exists(engine.url):
+        create_database(engine.url)
+    Base.metadata.create_all(engine)
+    return engine
+
+
+@pytest.fixture
+async def redis(settings, logger):
+    client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    yield Redis(client, settings, logger)
+    await client.close()
+
+
+@pytest.fixture
+def session(engine):
+    with Session(engine) as session:
+        yield session
+
+
+@pytest.fixture
+def storage(settings, logger):
+    return Storage(settings, logger)
+
+
+@pytest.fixture
+def make_client(engine, api_settings):
+    def _make_client(user=None):
+        if user and user.is_active:
+            app.dependency_overrides[current_active_user] = lambda: user
+        if user and user.is_active and user.is_verified:
+            app.dependency_overrides[current_verified_user] = lambda: user
+        if user and user.is_active and user.is_verified and user.is_superuser:
+            app.dependency_overrides[current_superuser] = lambda: user
+        app.dependency_overrides[get_settings] = lambda: api_settings
+        return TestClient(app)
+
+    yield _make_client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def cleanup_redis():
+    yield
+    if should_cleanup():
+        redis_ = pyredis.from_url("redis://default:iris@redis.docker.localhost?db=15")
+        redis_.flushdb()
+        redis_.close()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def cleanup_database():
+    yield
+    if should_cleanup():
+        # TODO: Cleanup/simplify this code.
+        engine = create_engine("postgresql://iris:iris@postgres.docker.localhost")
+        with engine.connect() as conn:
+            databases = conn.execute(
+                text(
+                    """
+                        SELECT datname
+                        FROM pg_database
+                        WHERE datistemplate = false AND datname LIKE 'iris-test-%'
+                    """
+                )
+            ).all()
+        for (database,) in databases:
+            drop_database(
+                f"postgresql://iris:iris@postgres.docker.localhost/{database}"
+            )
+
+
+@pytest.fixture(autouse=True, scope="session")
+def cleanup_s3():
+    yield
+    if should_cleanup():
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id="minioadmin",
+            aws_secret_access_key="minioadmin",
+            endpoint_url="http://minio.docker.localhost",
+        )
+        buckets = s3.list_buckets()
+        buckets = [x["Name"] for x in buckets["Buckets"]]
+        for bucket in buckets:
+            if "test-" in bucket:
+                objects = s3.list_objects_v2(Bucket=bucket)
+                if objects["KeyCount"]:
+                    objects = [{"Key": x["Key"]} for x in objects.get("Contents", [])]
+                    s3.delete_objects(Bucket=bucket, Delete=dict(Objects=objects))
+                s3.delete_bucket(Bucket=bucket)
+        # https://github.com/boto/botocore/pull/1810
+        s3._endpoint.http_session._manager.clear()

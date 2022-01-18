@@ -3,50 +3,39 @@
 import asyncio
 from multiprocessing import Process
 from pathlib import Path
-from typing import Dict, Optional
-from uuid import UUID
+from typing import Dict
 
-from diamond_miner.generators import probe_generator_by_flow
-from pycaracal import cast_addr, make_probe, prober, set_log_level
+from pycaracal import prober, set_log_level
 
 from iris.agent.settings import AgentSettings
-from iris.commons.redis import AgentRedis
-from iris.commons.schemas.public import MeasurementState
+from iris.commons.redis import Redis
 
 
-async def watcher(
-    process: Process, settings: AgentSettings, measurement_uuid: UUID, redis: AgentRedis
+async def watch_cancellation(
+    redis: Redis,
+    process: Process,
+    measurement_uuid: str,
+    agent_uuid: str,
+    interval: float,
 ) -> bool:
-    """Watch the prober execution and stop it according to the measurement state."""
+    """Kill the prober process if the measurement agent is cancelled."""
     while process.is_alive():
-        measurement_state = await redis.get_measurement_state(measurement_uuid)
-        if measurement_state in [
-            MeasurementState.Canceled,
-            MeasurementState.Unknown,
-        ]:
+        if await redis.measurement_agent_cancelled(measurement_uuid, agent_uuid):
             process.kill()
             return False
-        await asyncio.sleep(settings.AGENT_STOPPER_REFRESH)
+        await asyncio.sleep(interval)
     return True
 
 
 def probe(
     settings: AgentSettings,
+    probes_filepath: Path,
     results_filepath: Path,
     round_number: int,
     probing_rate: int,
     prober_statistics: Dict,
-    gen_parameters: Optional[Dict] = None,
-    probes_filepath: Optional[Path] = None,
 ) -> None:
     """Probing interface."""
-
-    # Check the input parameters
-    if gen_parameters is None and probes_filepath is None:
-        raise ValueError(
-            "Must have either `gen_parameters` or `probes_filepath` parameter"
-        )
-
     # Cap the probing rate if superior to the maximum probing rate
     measurement_probing_rate = (
         probing_rate
@@ -55,7 +44,7 @@ def probe(
     )
 
     # This set the log level of the C++ logger (spdlog).
-    # This allow the logs to be filtered in C++ (fast)
+    # This allows the logs to be filtered in C++ (fast)
     # before being forwarded to the (slower) Python logger.
     set_log_level(settings.AGENT_CARACAL_LOGGING_LEVEL)
 
@@ -72,31 +61,7 @@ def probe(
     if settings.AGENT_CARACAL_EXCLUDE_PATH is not None:
         config.set_prefix_excl_file(str(settings.AGENT_CARACAL_EXCLUDE_PATH))
 
-    if gen_parameters:
-        # Map generator tuples to pycaracal Probes
-        # * protocol is "icmp", "icmp6", or "udp",
-        #   this is different from before where we only had "icmp" or "udp"!
-        # * cast_addr converts an IPv4/IPv6 object, or an IPv6 as an integer
-        #   to an in6_addr struct in C.
-        gen = probe_generator_by_flow(**gen_parameters)
-        gen = (
-            make_probe(
-                cast_addr(dst_addr),
-                src_port,
-                dst_port,
-                ttl,
-                protocol,
-            )
-            for dst_addr, src_port, dst_port, ttl, protocol in gen
-        )
-
-        # Use the prober generator
-        prober_stats, sniffer_stats, pcap_stats = prober.probe(config, gen)
-    else:
-        # In case of round > 1, use a probes file
-        prober_stats, sniffer_stats, pcap_stats = prober.probe(
-            config, str(probes_filepath)
-        )
+    prober_stats, sniffer_stats, pcap_stats = prober.probe(config, str(probes_filepath))
 
     # Populate the statistics
     prober_statistics["probes_read"] = prober_stats.read

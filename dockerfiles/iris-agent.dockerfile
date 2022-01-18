@@ -4,6 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         build-essential \
+        libpq-dev \
         python3-dev \
         python3-pip \
     && rm -rf /var/lib/apt/lists/*
@@ -16,16 +17,18 @@ RUN poetry config virtualenvs.in-project true
 COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
 
-RUN poetry install --no-root --no-dev --extras agent \
+RUN poetry install --no-root --no-dev \
     && rm -rf /root/.cache/*
 
 FROM docker.io/library/ubuntu:20.04
 LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         ca-certificates \
+        libpq5 \
         mtr \
         python3 \
         tzdata \
@@ -34,14 +37,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY iris iris
-COPY iris/agent/main.py main.py
 COPY --from=builder /app/.venv .venv
-
-RUN mkdir targets
-RUN mkdir results
-
 COPY statics/excluded_prefixes statics/excluded_prefixes
-COPY statics/index.html statics/index.html
 
-EXPOSE 80
-CMD ["sh", "-c", "/app/.venv/bin/python3 -m http.server -d statics/ 80 & /app/.venv/bin/python3 -u main.py"]
+CMD ["/app/.venv/bin/python3", "-m", "iris.agent"]

@@ -1,556 +1,408 @@
-import uuid
-from datetime import datetime
+from uuid import uuid4
 
-import pytest
-
-from iris.api.dependencies import get_redis, get_storage
-from iris.api.measurements import verify_quota
-from iris.api.security import get_current_active_user
-from iris.commons.database import Replies, agents, measurements
-from iris.commons.schemas.public import (
-    FlowMapper,
+from iris.commons.models import Target
+from iris.commons.models.agent import AgentState
+from iris.commons.models.diamond_miner import Tool
+from iris.commons.models.measurement import (
     Measurement,
-    MeasurementAgent,
-    MeasurementAgentPostBody,
-    MeasurementAgentSpecific,
-    MeasurementPostBody,
-    MeasurementState,
-    MeasurementSummary,
-    Paginated,
-    Reply,
-    Tool,
-    ToolParameters,
+    MeasurementCreate,
+    MeasurementRead,
+    MeasurementReadWithAgents,
 )
-from tests.helpers import async_mock, fake_redis_factory, fake_storage_factory, override
+from iris.commons.models.measurement_agent import (
+    MeasurementAgentCreate,
+    MeasurementAgentState,
+)
+from iris.commons.models.pagination import Paginated
+from tests.assertions import assert_response, assert_status_code, cast_response
+from tests.helpers import (
+    add_and_refresh,
+    archive_target_file,
+    create_user_buckets,
+    register_agent,
+    upload_target_file,
+)
 
 
-class FakeSend(object):
-    def send(*args, **kwargs):
-        pass
+def test_get_measurements_probing_not_enabled(make_client, make_user):
+    client = make_client(make_user(probing_enabled=False))
+    assert_status_code(client.get("/measurements"), 403)
 
 
-target23 = {
-    "key": "test.csv",
-    "size": 42,
-    "content": "8.8.8.0/23,icmp,2,32",
-    "last_modified": datetime(2021, 9, 20, 13, 20, 26),
-    "metadata": None,
-}
-
-target25 = {
-    "key": "test.csv",
-    "size": 42,
-    "content": "8.8.8.0/25,icmp,2,32",
-    "last_modified": datetime(2021, 9, 20, 13, 20, 26),
-    "metadata": None,
-}
-
-target_probes = {
-    "key": "probes.csv",
-    "size": 42,
-    "content": "8.8.8.8,24000,33434,32,icmp",
-    "last_modified": datetime(2021, 9, 20, 13, 20, 26),
-    "metadata": {"is_probes_file": "True"},
-}
-
-
-@pytest.fixture(scope="function")
-def measurement1():
-    return Measurement(
-        uuid=uuid.uuid4(),
-        username="test",
-        state=MeasurementState.Unknown,
-        tool=Tool.DiamondMiner,
-        agents=[],
-        tags=["test"],
-        start_time=datetime.utcnow(),
-        end_time=datetime.utcnow(),
+def test_get_measurements_empty(make_client, make_user):
+    client = make_client(make_user(probing_enabled=True))
+    assert_response(
+        client.get("/measurements"), Paginated[Measurement](count=0, results=[])
     )
 
 
-@pytest.fixture(scope="function")
-def measurement_agent1(agent, statistics):
-    return MeasurementAgent(
-        uuid=agent.uuid,
-        state=MeasurementState.Unknown,
-        specific=MeasurementAgentSpecific(
-            target_file="test.csv",
-            target_file_content=["8.8.8.0/23,icmp,2,32"],
-            probing_rate=None,
-            tool_parameters=ToolParameters(
-                initial_source_port=24000,
-                destination_port=33434,
-                flow_mapper=FlowMapper.IntervalFlowMapper,
-                flow_mapper_kwargs={},
-                max_round=5,
-                n_flow_ids=6,
-                global_min_ttl=0,
-                global_max_ttl=255,
-            ),
-        ),
-        parameters=agent.parameters,
-        probing_statistics=[statistics],
+def test_get_measurements(make_client, make_measurement, make_user, session):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurements = [
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(uuid4())),
+    ]
+    add_and_refresh(session, measurements)
+
+    # We expect only the measurements of our user
+    measurements = sorted(
+        measurements[:-1], key=lambda x: x.creation_time, reverse=True
     )
-
-
-# --- GET /measurements ---
-
-
-def test_get_measurements_empty(api_client_sync, monkeypatch):
-    monkeypatch.setattr(measurements, "all", async_mock([]))
-    monkeypatch.setattr(measurements, "all_count", async_mock(0))
-    response = api_client_sync.get("/measurements")
-    assert Paginated[MeasurementSummary](**response.json()) == Paginated(
-        count=0, results=[]
+    expected = Paginated[MeasurementRead](
+        count=len(measurements),
+        results=MeasurementRead.from_measurements(measurements),
     )
+    assert_response(client.get("/measurements"), expected)
 
 
-def test_get_measurements(api_client_sync, monkeypatch):
-    measurements_ = [
-        Measurement(
-            uuid=uuid.uuid4(),
-            username="test",
-            state=MeasurementState.Finished,
-            tool=Tool.DiamondMiner,
-            agents=[],
-            tags=[],
-            start_time=datetime.utcnow(),
-            end_time=datetime.utcnow(),
+def test_get_measurements_with_state(
+    make_client, make_measurement, make_measurement_agent, make_user, session
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurements = [
+        make_measurement(
+            user_id=str(user.id),
+            agents=[make_measurement_agent(state=MeasurementAgentState.Created)],
         ),
-        Measurement(
-            uuid=uuid.uuid4(),
-            username="test",
-            state=MeasurementState.Finished,
-            tool=Tool.DiamondMiner,
-            agents=[],
-            tags=[],
-            start_time=datetime.utcnow(),
-            end_time=datetime.utcnow(),
-        ),
-        Measurement(
-            uuid=uuid.uuid4(),
-            username="test",
-            state=MeasurementState.Finished,
-            tool=Tool.DiamondMiner,
-            agents=[],
-            tags=[],
-            start_time=datetime.utcnow(),
-            end_time=datetime.utcnow(),
+        make_measurement(
+            user_id=str(user.id),
+            agents=[make_measurement_agent(state=MeasurementAgentState.Finished)],
         ),
     ]
+    add_and_refresh(session, measurements)
 
-    measurements_ = sorted(measurements_, key=lambda x: x.start_time, reverse=True)
-    summaries = [
-        MeasurementSummary(**x.dict(exclude={"agents", "username"}))
-        for x in measurements_
+    expected = Paginated[MeasurementRead](
+        count=1,
+        results=MeasurementRead.from_measurements(measurements[1:2]),
+    )
+    assert_response(
+        client.get("/measurements", params={"state": "finished"}),
+        expected,
+    )
+
+
+def test_get_measurements_with_tag(make_client, make_measurement, make_user, session):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurements = [
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id), tags=["mytag"]),
     ]
+    add_and_refresh(session, measurements)
 
-    async def all(self, user, offset, limit, tag=None):
-        return measurements_[offset : offset + limit]  # noqa : E203
-
-    override(
-        api_client_sync,
-        get_redis,
-        fake_redis_factory(measurement_state=MeasurementState.Finished),
+    expected = Paginated[MeasurementRead](
+        count=1,
+        results=MeasurementRead.from_measurements(measurements[2:3]),
     )
-    monkeypatch.setattr(measurements, "all", all)
-    monkeypatch.setattr(measurements, "all_count", async_mock(3))
-
-    # No (offset, limit)
-    response = api_client_sync.get("/measurements")
-    assert Paginated[MeasurementSummary](**response.json()) == Paginated(
-        count=3, results=summaries
-    )
-
-    # All inclusive (0, 100)
-    response = api_client_sync.get("/measurements?offset=0&limit=100")
-    assert Paginated[MeasurementSummary](**response.json()) == Paginated(
-        count=3, results=summaries
-    )
-
-    # First result (0, 1)
-    response = api_client_sync.get("/measurements?offset=0&limit=1")
-    assert Paginated[MeasurementSummary](**response.json()) == Paginated(
-        count=3,
-        next="http://testserver/measurements/?limit=1&offset=1",
-        results=summaries[:1],
-    )
-
-    # Middle result (1, 1)
-    response = api_client_sync.get("/measurements?offset=1&limit=1")
-    assert Paginated[MeasurementSummary](**response.json()) == Paginated(
-        count=3,
-        next="http://testserver/measurements/?limit=1&offset=2",
-        previous="http://testserver/measurements/?limit=1",
-        results=summaries[1:2],
-    )
-
-    # Last result (2, 1)
-    response = api_client_sync.get("/measurements?offset=2&limit=1")
-    assert Paginated[MeasurementSummary](**response.json()) == Paginated(
-        count=3,
-        previous="http://testserver/measurements/?limit=1&offset=1",
-        results=summaries[2:3],
-    )
+    assert_response(client.get("/measurements", params={"tag": "mytag"}), expected)
 
 
-# --- POST /measurements/ ---
+def test_get_measurements_public(make_client, make_measurement, make_user, session):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
 
-
-@pytest.mark.asyncio
-async def test_verify_quota():
-    assert await verify_quota("8.8.8.0/23,icmp,2,32", 24, 64, 2) is True
-    assert await verify_quota("8.8.8.0/23,icmp,2,32", 24, 64, 1) is False
-    assert await verify_quota("8.8.8.0/24", 32, 128, 256) is True
-    assert await verify_quota("8.8.8.0/24", 32, 128, 255) is False
-
-
-def test_post_measurement(api_client_sync, agent, monkeypatch):
-    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    for tool in Tool:
-        if tool == Tool.Probes:
-            continue
-        body = MeasurementPostBody(
-            tool=Tool(tool),
-            agents=[
-                MeasurementAgentPostBody(
-                    uuid=agent.uuid,
-                    target_file="test.csv",
-                    tool_parameters=ToolParameters(
-                        n_flow_ids=6 if tool == Tool.DiamondMiner else 1,
-                        prefix_len_v4=32 if tool == Tool.Ping else 24,
-                        prefix_len_v6=128 if tool == Tool.Ping else 64,
-                    ),
-                )
-            ],
-        )
-        response = api_client_sync.post("/measurements/", data=body.json())
-        assert response.status_code == 201
-
-
-def test_post_measurement_probes(api_client_sync, agent, monkeypatch):
-    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
-    override(api_client_sync, get_storage, fake_storage_factory([target_probes]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-
-    body = MeasurementPostBody(
-        tool=Tool.Probes,
-        agents=[
-            MeasurementAgentPostBody(
-                uuid=agent.uuid,
-                target_file="test.csv",
-                tool_parameters=ToolParameters(
-                    n_flow_ids=1,
-                    prefix_len_v4=32,
-                    prefix_len_v6=128,
-                ),
-            )
-        ],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 201
-
-
-def test_post_measurement_quota_exceeded(api_client_sync, agent, user, monkeypatch):
-    user = user.copy(update={"is_admin": False, "quota": 0})
-    override(api_client_sync, get_current_active_user, lambda: user)
-    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    body = MeasurementPostBody(
-        tool=Tool.DiamondMiner,
-        agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 403
-
-
-def test_post_measurement_diamond_miner_invalid_prefix_length(
-    api_client_sync, agent, monkeypatch
-):
-    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
-    override(api_client_sync, get_storage, fake_storage_factory([target25]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    body = MeasurementPostBody(
-        tool=Tool.DiamondMiner,
-        agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 403
-
-
-def test_post_measurement_agent_tag(api_client_sync, agent, monkeypatch):
-    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    body = MeasurementPostBody(
-        tool=Tool.DiamondMiner,
-        agents=[MeasurementAgentPostBody(tag="test", target_file="test.csv")],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 201
-
-
-def test_post_measurement_with_agent_not_found(api_client_sync, monkeypatch):
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    body = MeasurementPostBody(
-        tool=Tool.DiamondMiner,
-        agents=[
-            MeasurementAgentPostBody(
-                uuid=uuid.UUID("6f4ed428-8de6-460e-9e19-6e6173776550"),
-                target_file="test.csv",
-            )
-        ],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 404
-    assert response.json() == {
-        "detail": "No agent associated with UUID 6f4ed428-8de6-460e-9e19-6e6173776550"
-    }
-
-
-def test_post_measurement_tag_not_found(api_client_sync, monkeypatch):
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    body = MeasurementPostBody(
-        tool=Tool.DiamondMiner,
-        agents=[MeasurementAgentPostBody(tag="toto", target_file="test.csv")],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 404
-    assert response.json() == {"detail": "No agent associated with tag toto"}
-
-
-def test_post_measurement_agent_multiple_definition(
-    api_client_sync, agent, monkeypatch
-):
-    override(api_client_sync, get_redis, fake_redis_factory(agent=agent))
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    body = MeasurementPostBody(
-        tool=Tool.DiamondMiner,
-        agents=[
-            MeasurementAgentPostBody(tag="test", target_file="test.csv"),
-            MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv"),
-        ],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 400
-    assert response.json() == {"detail": f"Multiple definition of agent `{agent.uuid}`"}
-
-
-def test_post_measurement_target_file_not_found(api_client_sync, agent, monkeypatch):
-    override(api_client_sync, get_storage, fake_storage_factory([]))
-    monkeypatch.setattr("iris.api.measurements.hook", FakeSend())
-    body = MeasurementPostBody(
-        tool=Tool.DiamondMiner,
-        agents=[MeasurementAgentPostBody(uuid=agent.uuid, target_file="test.csv")],
-    )
-    response = api_client_sync.post("/measurements/", data=body.json())
-    assert response.status_code == 404
-
-
-# --- GET /measurements/{measurement_uuid} ---
-
-
-def test_get_measurement_by_uuid(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
-):
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr(agents, "all", async_mock([measurement_agent1]))
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    expected = measurement1.copy(update={"agents": [measurement_agent1]})
-    response = api_client_sync.get(f"/measurements/{measurement1.uuid}")
-    assert Measurement(**response.json()) == expected
-
-
-def test_get_measurement_by_uuid_waiting(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
-):
-    override(
-        api_client_sync,
-        get_redis,
-        fake_redis_factory(measurement_state=MeasurementState.Waiting),
-    )
-    override(api_client_sync, get_storage, fake_storage_factory([target23]))
-    monkeypatch.setattr(agents, "all", async_mock([measurement_agent1]))
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    expected = measurement1.copy(
-        update={
-            "state": MeasurementState.Waiting,
-            "agents": [
-                measurement_agent1.copy(update={"state": MeasurementState.Waiting})
-            ],
-        }
-    )
-    response = api_client_sync.get(f"/measurements/{measurement1.uuid}")
-    assert Measurement(**response.json()).dict() == expected.dict()
-
-
-def test_get_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
-    monkeypatch.setattr(measurements, "get", async_mock(None))
-    measurement_uuid = str(uuid.uuid4())
-    response = api_client_sync.get(f"/measurements/{measurement_uuid}")
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Measurement not found"}
-
-
-def test_get_measurement_by_uuid_invalid_input(api_client_sync):
-    response = api_client_sync.get("/measurements/test")
-    assert response.status_code == 422
-
-
-# -- DELETE /measurements/{measurement_uuid}/{agent_uuid} ---
-
-
-def test_delete_measurement_by_uuid(api_client_sync, monkeypatch):
-    override(
-        api_client_sync,
-        get_redis,
-        fake_redis_factory(measurement_state=MeasurementState.Ongoing),
-    )
-    monkeypatch.setattr(measurements, "get", async_mock({"uuid": "uuid"}))
-    measurement_uuid = str(uuid.uuid4())
-    response = api_client_sync.delete(f"/measurements/{measurement_uuid}")
-    assert response.json() == {"uuid": measurement_uuid, "action": "canceled"}
-
-
-def test_delete_measurement_by_uuid_not_found(api_client_sync, monkeypatch):
-    monkeypatch.setattr(measurements, "get", async_mock(None))
-    measurement_uuid = str(uuid.uuid4())
-    response = api_client_sync.delete(f"/measurements/{measurement_uuid}")
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Measurement not found"}
-
-
-def test_delete_measurement_by_uuid_already_finished(api_client_sync, monkeypatch):
-    override(api_client_sync, get_redis, fake_redis_factory())
-    monkeypatch.setattr(measurements, "get", async_mock({"uuid": "uuid"}))
-    measurement_uuid = str(uuid.uuid4())
-    response = api_client_sync.delete(f"/measurements/{measurement_uuid}")
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Measurement already finished"}
-
-
-# --- GET /measurements/{measurement_uuid}/{agent_uuid} ---
-
-
-def test_get_measurement_results(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
-):
-    measurement_uuid = str(uuid.uuid4())
-    agent_uuid = str(uuid.uuid4())
-    results = [
-        {
-            "probe_protocol": "icmp",
-            "probe_src_addr": "::ffff:ac12:b",
-            "probe_dst_addr": "::ffff:84e3:7b81",
-            "probe_src_port": 24000,
-            "probe_dst_port": 34334,
-            "probe_ttl": 78,
-            "quoted_ttl": 9,
-            "reply_src_addr": "::ffff:869d:fe0a",
-            "reply_protocol": "udp",
-            "reply_icmp_type": 11,
-            "reply_icmp_code": 0,
-            "reply_ttl": 37,
-            "reply_size": 56,
-            "reply_mpls_labels": [1],
-            "rtt": 1280.2,
-            "round": 1,
-        }
+    measurements = [
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id)),
+        make_measurement(user_id=str(user.id), tags=["!public"]),
+        make_measurement(user_id=str(uuid4()), tags=["!public"]),
     ]
+    add_and_refresh(session, measurements)
 
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(
-        agents,
-        "get",
-        async_mock(
-            measurement_agent1.copy(update={"state": MeasurementState.Finished})
-        ),
+    # We expect only the public measurements
+    measurements = sorted(measurements[2:], key=lambda x: x.creation_time, reverse=True)
+    expected = Paginated[MeasurementRead](
+        count=len(measurements),
+        results=MeasurementRead.from_measurements(measurements),
     )
-    monkeypatch.setattr(Replies, "exists", async_mock(True))
-    monkeypatch.setattr(Replies, "all", async_mock(results))
-    monkeypatch.setattr(Replies, "all_count", async_mock(1))
-
-    response = api_client_sync.get(
-        f"/results/{measurement_uuid}/{agent_uuid}/replies/0.0.0.0"
-    )
-    assert Paginated[Reply](**response.json()) == Paginated(count=1, results=results)
+    assert_response(client.get("/measurements/public"), expected)
 
 
-def test_get_measurement_results_table_not_exists(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
+async def test_get_measurement(
+    make_client, make_measurement, make_user, redis, session, storage
 ):
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(
-        agents,
-        "get",
-        async_mock(
-            measurement_agent1.copy(update={"state": MeasurementState.Finished})
-        ),
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    assert_response(
+        client.get(f"/measurements/{measurement.uuid}"),
+        MeasurementReadWithAgents.from_measurement(measurement),
     )
-    monkeypatch.setattr(Replies, "exists", async_mock(0))
-    response = api_client_sync.get(
-        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
-    )
-    assert Paginated[Reply](**response.json()) == Paginated(count=0, results=[])
 
 
-def test_get_measurement_results_not_finished(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
+async def test_get_measurement_other_user(
+    make_client, make_measurement, make_user, redis, session, storage
 ):
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(
-        agents,
-        "get",
-        async_mock(measurement_agent1.copy(update={"state": MeasurementState.Ongoing})),
-    )
-    response = api_client_sync.get(
-        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
-    )
-    assert response.status_code == 412
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    measurement = make_measurement(user_id=str(uuid4()))
+    add_and_refresh(session, [measurement])
+    assert_status_code(client.get(f"/measurements/{measurement.uuid}"), 404)
 
 
-def test_get_measurement_results_no_agent(
-    api_client_sync, measurement1, measurement_agent1, monkeypatch
+async def test_get_measurement_not_found(
+    make_client, make_measurement, make_user, redis, session, storage
 ):
-    monkeypatch.setattr(measurements, "get", async_mock(measurement1))
-    monkeypatch.setattr(agents, "get", async_mock(None))
+    client = make_client(make_user(probing_enabled=True))
+    assert_status_code(client.get(f"/measurements/{uuid4()}"), 404)
 
-    response = api_client_sync.get(
-        f"/results/{measurement1.uuid}/{measurement_agent1.uuid}/replies/0.0.0.0"
+
+async def test_get_measurement_agent_target(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    measurement_agent = measurement.agents[0]
+    add_and_refresh(session, [measurement])
+
+    await create_user_buckets(storage, user)
+    await upload_target_file(
+        storage, user, measurement_agent.target_file, ["0.0.0.0/0,icmp,8,32,6"]
     )
-    assert response.status_code == 404
-    assert response.json() == {
-        "detail": (
-            f"The agent `{measurement_agent1.uuid}` "
-            f"did not participate to measurement `{measurement1.uuid}`"
-        )
-    }
-
-
-def test_get_measurement_result_not_found(api_client_sync, monkeypatch):
-    monkeypatch.setattr(measurements, "get", async_mock(None))
-    response = api_client_sync.get(
-        f"/results/{uuid.uuid4()}/{uuid.uuid4()}/replies/0.0.0.0"
+    await archive_target_file(
+        storage,
+        user,
+        measurement_agent.measurement_uuid,
+        measurement_agent.agent_uuid,
+        measurement_agent.target_file,
     )
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Measurement not found"}
 
-
-def test_get_measurement_results_invalid_measurement_uuid(api_client_sync):
-    response = api_client_sync.get(
-        f"/results/invalid_uuid/{uuid.uuid4()}/replies/0.0.0.0"
+    response = client.get(
+        f"/measurements/{measurement_agent.measurement_uuid}/{measurement_agent.agent_uuid}/target"
     )
-    assert response.status_code == 422
+    target = cast_response(response, Target)
+    assert target.content == ["0.0.0.0/0,icmp,8,32,6"]
 
 
-def test_get_measurement_results_invalid_agent_uuid(api_client_sync):
-    response = api_client_sync.get(
-        f"/results/{uuid.uuid4()}/invalid_uuid/replies/0.0.0.0"
+async def test_delete_measurement(
+    make_client, make_measurement, make_user, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    expected = MeasurementReadWithAgents.from_measurement(measurement)
+    expected.state = MeasurementAgentState.Canceled
+    for agent in expected.agents:
+        agent.state = MeasurementAgentState.Canceled
+
+    # DELETE should be idempotent
+    assert_status_code(client.delete(f"/measurements/{measurement.uuid}"), 200)
+    assert_status_code(client.delete(f"/measurements/{measurement.uuid}"), 200)
+
+    actual = cast_response(
+        client.delete(f"/measurements/{measurement.uuid}"), MeasurementReadWithAgents
     )
-    assert response.status_code == 422
+    assert actual.creation_time
+    assert not actual.start_time
+    assert actual.end_time
+
+
+async def test_delete_measurement_not_found(
+    make_client, make_measurement, make_user, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    assert_status_code(client.delete(f"/measurements/{uuid4()}"), 404)
+
+
+async def test_patch_measurement(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    response_before_patch = client.get(f"/measurements/{measurement.uuid}").json()
+    assert measurement.tags == response_before_patch["tags"]
+
+    response_after_patch = client.patch(
+        f"/measurements/{measurement.uuid}", json={"tags": ["test"]}
+    ).json()
+    assert response_after_patch["tags"] == ["test"]
+
+
+async def test_patch_measurement_public_tag_disallowed(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(allow_tag_public=False, probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    response = client.patch(
+        f"/measurements/{measurement.uuid}", json={"tags": ["!public"]}
+    )
+    assert_status_code(response, 403)
+    assert "You cannot use public tag" in response.text
+
+
+async def test_patch_measurement_reserved_tag_disallowed(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(allow_tag_reserved=False, probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    response = client.patch(
+        f"/measurements/{measurement.uuid}", json={"tags": ["collection:test"]}
+    )
+    assert_status_code(response, 403)
+    assert "You cannot use reserved tags" in response.text
+
+
+async def test_patch_measurement_no_tag_in_body(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    response_before_patch = client.get(f"/measurements/{measurement.uuid}").json()
+    assert measurement.tags == response_before_patch["tags"]
+
+    response_after_patch = client.patch(
+        f"/measurements/{measurement.uuid}", json={"toto": ["test"]}
+    ).json()
+
+    assert measurement.tags == response_after_patch["tags"]
+
+
+async def test_post_measurement_unknown_uuid(make_client, make_user):
+    client = make_client(make_user(probing_enabled=True))
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        tags=[],
+        agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 404)
+    assert "No agent associated with UUID" in response.text
+
+
+async def test_post_measurement_unknown_tag(make_client, make_user):
+    client = make_client(make_user(probing_enabled=True))
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        tags=[],
+        agents=[MeasurementAgentCreate(tag="unknown", target_file="targets.csv")],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 404)
+    assert "No agents associated with tag" in response.text
+
+
+async def test_post_measurement_public_tag_disallowed(make_client, make_user):
+    client = make_client(make_user(allow_tag_public=False, probing_enabled=True))
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        tags=["!public"],
+        agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 403)
+    assert "You cannot use public tag" in response.text
+
+
+async def test_post_measurement_reserved_tag_disallowed(make_client, make_user):
+    client = make_client(make_user(allow_tag_reserved=False, probing_enabled=True))
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        tags=["collection:test"],
+        agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 403)
+    assert "You cannot use reserved tags" in response.text
+
+
+# TODO: test_post_measurement_unknown_target_file
+
+
+async def test_post_measurement_uuid(
+    make_client, make_user, make_agent_parameters, redis, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    agent_uuid = str(uuid4())
+    await register_agent(redis, agent_uuid, make_agent_parameters(), AgentState.Idle)
+    await create_user_buckets(storage, user)
+    await upload_target_file(storage, user, "targets.csv")
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        agents=[MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv")],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 201)
+    result = cast_response(response, MeasurementReadWithAgents)
+    assert result.state == MeasurementAgentState.Created
+    assert not result.start_time
+    assert not result.end_time
+
+
+async def test_post_measurement_tag(
+    make_client, make_user, make_agent_parameters, redis, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    agent_uuid = str(uuid4())
+    await register_agent(
+        redis, agent_uuid, make_agent_parameters(tags=["tag1"]), AgentState.Idle
+    )
+    await create_user_buckets(storage, user)
+    await upload_target_file(storage, user, "targets.csv")
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        agents=[MeasurementAgentCreate(tag="tag1", target_file="targets.csv")],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 201)
+    result = cast_response(response, MeasurementReadWithAgents)
+    assert result.state == MeasurementAgentState.Created
+    assert not result.start_time
+    assert not result.end_time
+
+
+async def test_post_measurement_duplicate(
+    make_client, make_user, make_agent_parameters, redis, storage
+):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    agent_uuid = str(uuid4())
+    await register_agent(
+        redis, agent_uuid, make_agent_parameters(tags=["tag1"]), AgentState.Idle
+    )
+    await create_user_buckets(storage, user)
+    await upload_target_file(storage, user, "targets.csv")
+    body = MeasurementCreate(
+        tool=Tool.DiamondMiner,
+        agents=[
+            MeasurementAgentCreate(tag="tag1", target_file="targets.csv"),
+            MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv"),
+        ],
+    )
+    response = client.post("/measurements/", data=body.json())
+    assert_status_code(response, 400)
+    assert "Multiple assignment of key" in response.text

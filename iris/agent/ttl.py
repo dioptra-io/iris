@@ -1,6 +1,9 @@
 import csv
 import io
 import subprocess
+from typing import List, Optional
+
+from iris.commons.logger import base_logger
 
 
 def build_cmd(d):
@@ -11,45 +14,36 @@ def build_cmd(d):
             yield str(v)
 
 
-def mtr(logger, destination, **kwargs):
+def mtr(destination, logger=base_logger, **kwargs):
     cmd = ["mtr", *build_cmd(kwargs), destination]
     try:
-        logger.info("%s", " ".join(cmd))
+        logger.info(" ".join(cmd))
         result = subprocess.run(cmd, capture_output=True, check=True)
         return result.stdout.decode("utf-8")
     except subprocess.CalledProcessError as e:
-        print(e.stdout.decode("utf-8"))
-        print(e.stderr.decode("utf-8"))
+        logger.error(e.stdout.decode("utf-8"))
+        logger.error(e.stderr.decode("utf-8"))
         raise
 
 
-def find_exit_ttl(logger, destination, min_ttl):
-    """Find the first TTL which is not in the source AS."""
-    logger.info(f"Finding exit TTL towards {destination}...")
-
+def find_exit_ttl_from_output(
+    output: str,
+    min_ttl: int,
+    *,
+    excluded: Optional[List[str]] = None,
+    logger=base_logger,
+) -> Optional[int]:
     # Ensure that the exit TTL is never in one of these networks.
     # This can be useful if a spurious/invalid ASN appears
     # before the true "gateway" ASN.
-    excluded = [
-        None,
-        "AS???",
-        "AS2200",  # Renater
-    ]
+    excluded = [None, "AS???"] + (excluded or [])  # type: ignore
 
-    out = mtr(
-        logger,
-        str(destination),
-        aslookup=True,
-        csv=True,
-        gracetime=1,
-        no_dns=True,
-        report_cycles=1,
-    )
-    reader = csv.DictReader(io.StringIO(out))
+    reader = csv.DictReader(io.StringIO(str(output)))
     hops = {int(row["Hop"]): row for row in reader}
 
     if not hops:
-        logger.error("No response from MTR")
+        logger.info("No response from MTR")
+        return None
 
     # (current asn, first TTL where it appeared)
     curr_asn = (None, 0)
@@ -60,14 +54,34 @@ def find_exit_ttl(logger, destination, min_ttl):
 
     for ttl in range(min_ttl, max_ttl + 1):
         asn = hops.get(ttl, {}).get("Asn")
-        if asn not in excluded:
+        if asn not in excluded:  # type: ignore
             if not curr_asn[0]:
-                curr_asn = (asn, ttl)
+                curr_asn = (asn, ttl)  # type: ignore
             elif curr_asn[0] != asn:
                 curr_asn = (asn, ttl)
                 break
 
-    exit_ttl = max(min_ttl, curr_asn[1])
-    logger.info("Exit TTL: %s", exit_ttl)
+    return max(min_ttl, curr_asn[1])
 
-    return exit_ttl
+
+def find_exit_ttl_with_mtr(
+    destination: str,
+    min_ttl: int,
+    *,
+    excluded: Optional[List[str]] = None,
+    logger=base_logger,
+) -> Optional[int]:
+    """Find the first TTL which is not in the source AS."""
+    logger.info("Finding exit TTL towards %s...", destination)
+    output = mtr(
+        destination,
+        logger=logger,
+        aslookup=True,
+        csv=True,
+        gracetime=1,
+        no_dns=True,
+        report_cycles=1,
+    )
+    return find_exit_ttl_from_output(
+        output=output, min_ttl=min_ttl, excluded=excluded, logger=logger
+    )

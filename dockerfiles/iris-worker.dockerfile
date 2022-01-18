@@ -4,6 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         build-essential \
+        libpq-dev \
         python3-dev \
         python3-pip \
     && rm -rf /var/lib/apt/lists/*
@@ -16,32 +17,24 @@ RUN poetry config virtualenvs.in-project true
 COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
 
-RUN poetry install --no-root --no-dev --extras worker \
+RUN poetry install --no-root --no-dev \
     && rm -rf /root/.cache/*
 
 FROM docker.io/library/ubuntu:20.04
 LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
-        binutils \
         ca-certificates \
-        curl \
+        libpq5 \
         python3 \
         tzdata \
-        zstd \
     && rm -rf /var/lib/apt/lists/*
-
-RUN curl --location --output /usr/bin/clickhouse \
-        "https://builds.clickhouse.tech/master/$(arch | sed s/x86_64/amd64/)/clickhouse" \
-    && strip /usr/bin/clickhouse \
-    && chmod +x /usr/bin/clickhouse
 
 WORKDIR /app
 COPY iris iris
 COPY --from=builder /app/.venv .venv
 
-RUN mkdir results
-
-CMD ["/app/.venv/bin/dramatiq", "iris.worker.hook"]
+CMD ["/app/.venv/bin/python3", "-m", "iris.worker"]

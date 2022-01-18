@@ -1,238 +1,202 @@
-import datetime
-import tempfile
+from uuid import uuid4
 
 import pytest
 
-from iris.api.dependencies import get_storage
 from iris.api.targets import verify_probe_target_file, verify_target_file
-from iris.commons.schemas.public import Paginated, Target, TargetSummary
-from tests.helpers import fake_storage_factory, override
-
-target1 = {
-    "key": "test",
-    "size": 42,
-    "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
-    "last_modified": "2021-09-20 13:57:00.429000+00:00",
-    "metadata": None,
-}
+from iris.commons.models.pagination import Paginated
+from iris.commons.models.target import Target, TargetSummary
+from tests.assertions import assert_response, assert_status_code, cast_response
+from tests.helpers import FakeUploadFile, upload_file
 
 
-# --- GET /targets ---
+async def test_get_targets_probing_not_enabled(make_client, make_user):
+    client = make_client(make_user(probing_enabled=False))
+    assert_status_code(client.get("/targets"), 403)
 
 
-@pytest.mark.asyncio
-async def test_get_targets(api_client):
-    override(api_client, get_storage, fake_storage_factory([target1]))
-    async with api_client as c:
-        response = await c.get("/targets")
-        assert Paginated[TargetSummary](**response.json()) == Paginated(
-            count=1,
-            results=[
-                TargetSummary(
-                    key="test",
-                    last_modified=datetime.datetime(
-                        2021, 9, 20, 13, 57, 0, 429000, tzinfo=datetime.timezone.utc
-                    ),
-                ),
-            ],
-        )
-
-
-@pytest.mark.asyncio
-async def test_get_targets_empty(api_client):
-    override(api_client, get_storage, fake_storage_factory([]))
-    async with api_client as c:
-        response = await c.get("/targets")
-        assert Paginated[TargetSummary](**response.json()) == Paginated(
-            count=0, results=[]
-        )
-
-
-# --- GET /targets/{key} ---
-
-
-target_prefix = {
-    "key": "test",
-    "size": 42,
-    "content": "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
-    "last_modified": datetime.datetime(
-        2021, 9, 20, 13, 20, 26, tzinfo=datetime.timezone.utc
-    ),
-    "metadata": None,
-}
-
-
-@pytest.mark.asyncio
-async def test_get_targets_by_key(api_client):
-    override(api_client, get_storage, fake_storage_factory([target_prefix]))
-    async with api_client as c:
-        response = await c.get("/targets/test")
-        assert Target(**response.json()) == Target(
-            key="test",
-            size=42,
-            content=["1.1.1.0/24,icmp,2,32", "2.2.2.0/24,udp,5,20"],
-            last_modified=datetime.datetime(
-                2021, 9, 20, 13, 20, 26, tzinfo=datetime.timezone.utc
-            ),
-        )
-
-
-target_probes = {
-    "key": "probes.csv",
-    "size": 42,
-    "content": "8.8.8.8,24000,33434,32,icmp",
-    "last_modified": datetime.datetime(
-        2021, 9, 20, 13, 20, 26, tzinfo=datetime.timezone.utc
-    ),
-    "metadata": {"is_probes_file": "True"},
-}
-
-
-@pytest.mark.asyncio
-async def test_get_probes_targets_by_key(api_client):
-    override(api_client, get_storage, fake_storage_factory([target_probes]))
-    async with api_client as c:
-        response = await c.get("/targets/test")
-        assert Target(**response.json()) == Target(
-            key="probes.csv",
-            size=42,
-            content=["8.8.8.8,24000,33434,32,icmp"],
-            last_modified=datetime.datetime(
-                2021, 9, 20, 13, 20, 26, tzinfo=datetime.timezone.utc
-            ),
-        )
-
-
-@pytest.mark.asyncio
-async def test_get_targets_by_key_not_found(api_client):
-    override(api_client, get_storage, fake_storage_factory([]))
-    async with api_client as c:
-        response = await c.get("/targets/test")
-        assert response.status_code == 404
-
-
-# --- POST /targets ---
-
-
-@pytest.mark.asyncio
-async def test_verify_prefixes_list_file():
-    class FileContainer:
-        def __init__(self):
-            self.file = tempfile.SpooledTemporaryFile()
-
-        def register(self, content):
-            self.file = tempfile.SpooledTemporaryFile()
-            self.file.write(content)
-            self.file.seek(0)
-
-    file_container = FileContainer()
-
-    # Test with empty file
-    file_container.register(b"")
-    assert await verify_target_file(file_container) is False
-
-    # Test with adhequate file
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20")
-    assert await verify_target_file(file_container) is True
-
-    # Test with inadhequate file
-    file_container.register(b"1.1.1.1\ntest\n2.2.2.0/24")
-    assert await verify_target_file(file_container) is False
-
-    # Test with bad protocol
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,tcp,5,20")
-    assert await verify_target_file(file_container) is False
-
-    # Test with bad ttl
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,test,20")
-    assert await verify_target_file(file_container) is False
-
-    # Test with bad ttl
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,2,test")
-    assert await verify_target_file(file_container) is False
-
-    # Test with invalid ttl
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,test,500")
-    assert await verify_target_file(file_container) is False
-
-    # Test with invalid ttl
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,0,test")
-    assert await verify_target_file(file_container) is False
-
-    # Test with invalid ttl
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,icmp,-5,test")
-    assert await verify_target_file(file_container) is False
-
-    # Test with adhequate file with one trailing lines
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20\n")
-    assert await verify_target_file(file_container) is True
-
-    # Test with adhequate file with multiple trailing lines
-    file_container.register(b"1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20\n\n")
-    assert await verify_target_file(file_container) is False
-
-
-# -- POST /targets/probes
-
-
-@pytest.mark.asyncio
-async def test_verify_probes_list_file():
-    class FileContainer:
-        def __init__(self):
-            self.file = tempfile.SpooledTemporaryFile()
-
-        def register(self, content):
-            self.file = tempfile.SpooledTemporaryFile()
-            self.file.write(content)
-            self.file.seek(0)
-
-    file_container = FileContainer()
-
-    # Test with adhequate file
-    file_container.register(
-        b"8.8.8.8,24000,33434,32,icmp\n2001:4860:4860::8888,24000,33434,32,icmp"
+async def test_get_targets_empty(make_client, make_user, storage):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    await storage.create_bucket(storage.targets_bucket(str(user.id)))
+    assert_response(
+        client.get("/targets"), Paginated[TargetSummary](count=0, results=[])
     )
-    assert await verify_probe_target_file(file_container) is True
-
-    # Test with a value of 0 for port
-    file_container.register(b"8.8.8.8,24000,0,32,icmp")
-    assert await verify_probe_target_file(file_container) is True
-
-    # Test with invalid destination address
-    file_container.register(b"8.8.453.8,24000,33434,32,icmp")
-    assert await verify_probe_target_file(file_container) is False
-
-    # Test with invalid protocol
-    file_container.register(b"8.8.8.8,24000,33434,32,icmt")
-    assert await verify_probe_target_file(file_container) is False
 
 
-# --- DELETE /targets/{key} ---
+async def test_get_targets(make_client, make_user, make_tmp_file, storage):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    bucket = storage.targets_bucket(str(user.id))
+    tmp_file = make_tmp_file()
+    await storage.create_bucket(bucket)
+    await upload_file(storage, bucket, tmp_file)
+    result = cast_response(client.get("/targets"), Paginated[TargetSummary])
+    assert result.count == 1
+    assert result.results[0].key == tmp_file["name"]
 
 
-@pytest.mark.asyncio
-async def test_delete_targets_by_key(api_client):
-    override(api_client, get_storage, fake_storage_factory([target1]))
-    async with api_client as c:
-        response = await c.delete("/targets/test")
-        assert response.json() == {"key": "test", "action": "delete"}
+async def test_get_target(make_client, make_user, make_tmp_file, storage):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    bucket = storage.targets_bucket(str(user.id))
+    tmp_file = make_tmp_file()
+    await storage.create_bucket(bucket)
+    await upload_file(storage, bucket, tmp_file)
+    result = cast_response(client.get(f"/targets/{tmp_file['name']}"), Target)
+    assert result.key == tmp_file["name"]
+    assert result.content == tmp_file["content"].splitlines()
+    assert result.size == len(tmp_file["content"])
 
 
-@pytest.mark.asyncio
-async def test_delete_targets_by_key_not_found(api_client):
-    override(api_client, get_storage, fake_storage_factory([]))
-    async with api_client as c:
-        response = await c.delete("/targets/test")
-        assert response.status_code == 404
+async def test_get_target_not_found(make_client, make_user, storage):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    bucket = storage.targets_bucket(str(user.id))
+    await storage.create_bucket(bucket)
+    assert_status_code(client.get(f"/targets/{uuid4()}"), 404)
 
 
-@pytest.mark.asyncio
-async def test_delete_targets_internal_error(api_client):
-    class FakeStorage:
-        async def delete_file_check_no_retry(*args, **kwargs):
-            return {"ResponseMetadata": {"HTTPStatusCode": 500}}
+async def test_delete_target(make_client, make_user, make_tmp_file, storage):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    bucket = storage.targets_bucket(str(user.id))
+    tmp_file = make_tmp_file()
+    await storage.create_bucket(bucket)
+    await upload_file(storage, bucket, tmp_file)
+    assert_status_code(client.delete(f"/targets/{tmp_file['name']}"), 204)
 
-    override(api_client, get_storage, lambda: FakeStorage())
-    async with api_client as c:
-        response = await c.delete("/targets/test")
-        assert response.status_code == 500
+
+async def test_delete_target_not_found(make_client, make_user, storage):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    await storage.create_bucket(storage.targets_bucket(str(user.id)))
+    assert_status_code(client.delete(f"/targets/{uuid4()}"), 404)
+
+
+async def test_post_target(make_client, make_user, storage, tmp_path):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    await storage.create_bucket(storage.targets_bucket(str(user.id)))
+    filepath = tmp_path / "targets.csv"
+    filepath.write_text("1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20")
+    with filepath.open("rb") as f:
+        response = client.post("/targets/", files={"target_file": f})
+    assert_status_code(response, 201)
+    target = cast_response(response, Target)
+    assert target.content == []
+    assert target.key == "targets.csv"
+
+
+async def test_post_target_invalid_extension(make_client, make_user, storage, tmp_path):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    await storage.create_bucket(storage.targets_bucket(str(user.id)))
+    filepath = tmp_path / "targets.txt"
+    filepath.write_text("1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20")
+    with filepath.open("rb") as f:
+        response = client.post("/targets/", files={"target_file": f})
+    assert_status_code(response, 412)
+
+
+async def test_post_target_invalid_content(make_client, make_user, storage, tmp_path):
+    user = make_user(probing_enabled=True)
+    client = make_client(user)
+    await storage.create_bucket(storage.targets_bucket(str(user.id)))
+    filepath = tmp_path / "targets.csv"
+    filepath.write_text("abcd")
+    with filepath.open("rb") as f:
+        response = client.post("/targets/", files={"target_file": f})
+    assert_status_code(response, 412)
+
+
+async def test_post_probes(make_client, make_user, storage, tmp_path):
+    user = make_user(probing_enabled=True, is_superuser=True)
+    client = make_client(user)
+    await storage.create_bucket(storage.targets_bucket(str(user.id)))
+    filepath = tmp_path / "probes.csv"
+    filepath.write_text("8.8.8.8,24000,0,32,icmp")
+    with filepath.open("rb") as f:
+        response = client.post("/targets/probes", files={"target_file": f})
+    assert_status_code(response, 201)
+    target = cast_response(response, Target)
+    assert target.content == []
+    assert target.key == "probes.csv"
+
+
+async def test_post_probes_invalid_extension(make_client, make_user, storage, tmp_path):
+    user = make_user(probing_enabled=True, is_superuser=True)
+    client = make_client(user)
+    await storage.create_bucket(storage.targets_bucket(str(user.id)))
+    filepath = tmp_path / "probes.txt"
+    filepath.write_text("8.8.8.8,24000,0,32,icmp")
+    with filepath.open("rb") as f:
+        response = client.post("/targets/probes", files={"target_file": f})
+    assert_status_code(response, 412)
+
+
+async def test_post_probes_invalid_content(make_client, make_user, storage, tmp_path):
+    user = make_user(probing_enabled=True, is_superuser=True)
+    client = make_client(user)
+    await storage.create_bucket(storage.targets_bucket(str(user.id)))
+    filepath = tmp_path / "probes.csv"
+    filepath.write_text("abcd")
+    with filepath.open("rb") as f:
+        response = client.post("/targets/probes", files={"target_file": f})
+    assert_status_code(response, 412)
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20",
+        "1.1.1.0/24,icmp,2,32\n2.2.2.0/24,udp,5,20\n",  # Trailing line
+    ],
+)
+def test_verify_target_file_valid(content):
+    assert verify_target_file(FakeUploadFile(content))
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "",  # Empty file
+        "1.1.1.1\ntest\n2.2.2.0/24",  # Invalid lines
+        "2.2.2.0/24,tcp,5,20",  # Invalid protocol
+        "2.2.2.0/24,icmp,test,20",  # Invalid min TTL
+        "2.2.2.0/24,icmp,-5,20",  # Invalid min TTL
+        "2.2.2.0/24,icmp,2,test",  # Invalid max TTL
+        "2.2.2.0/24,icmp,2,300",  # Invalid max TTL
+        "2.2.2.0/24,udp,5,20\n\n",  # Trailing lines
+    ],
+)
+def test_verify_target_file_invalid(content):
+    assert not verify_target_file(FakeUploadFile(content))
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "8.8.8.8,24000,33434,32,icmp\n2001:4860:4860::8888,24000,33434,32,icmp",
+        "8.8.8.8,24000,0,32,icmp",  # Port 0
+    ],
+)
+def test_verify_probe_target_file_valid(content):
+    assert verify_probe_target_file(FakeUploadFile(content))
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "",  # Empty file
+        "8.8.453.8,24000,33434,32,icmp",  # Invalid destination address
+        "8.8.8.8,24000,33434,32,icmt",  # Invalid protocol
+        "8.8.8.8,-1,33434,32,icmp",  # Invalid source port
+        "8.8.8.8,65536,33434,32,icmp",  # Invalid source port
+        "8.8.8.8,24000,-1,32,icmp",  # Invalid destination port
+        "8.8.8.8,24000,65536,32,icmp",  # Invalid destination port
+        "8.8.8.8,24000,33434,-1,icmp",  # Invalid TTL
+        "8.8.8.8,24000,33434,256,icmp",  # Invalid TTL
+    ],
+)
+def test_verify_probe_target_file_invalid(content):
+    assert not verify_probe_target_file(FakeUploadFile(content))
