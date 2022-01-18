@@ -39,7 +39,14 @@ async def test_insert_results(clickhouse, tmp_path):
     )
     assert await clickhouse.insert_prefixes(measurement_uuid, agent_uuid) is None
     assert await clickhouse.insert_links(measurement_uuid, agent_uuid) is None
-    assert await clickhouse.grant_public_access(measurement_uuid, agent_uuid) is None
+    assert (
+        await clickhouse.grant_public_access(measurement_uuid, agent_uuid, revoke=False)
+        is None
+    )
+    assert (
+        await clickhouse.grant_public_access(measurement_uuid, agent_uuid, revoke=True)
+        is None
+    )
 
 
 async def test_insert_results_invalid(clickhouse, tmp_path):

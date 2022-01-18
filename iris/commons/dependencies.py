@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlmodel import Session
 
 from iris.api.settings import APISettings
+from iris.commons.clickhouse import ClickHouse
 from iris.commons.logger import Adapter, base_logger
 from iris.commons.models import UserDB, UserTable
 from iris.commons.models.user import AccessToken, AccessTokenTable
@@ -66,6 +67,10 @@ def get_access_token_db(session=Depends(get_async_session)):
 
 def get_user_db(session=Depends(get_async_session)):
     return SQLAlchemyUserDatabase(UserDB, session, UserTable)
+
+
+def get_clickhouse(settings=Depends(get_settings), logger=Depends(get_logger)):
+    return ClickHouse(settings, logger)
 
 
 async def get_redis(settings=Depends(get_settings), logger=Depends(get_logger)):
