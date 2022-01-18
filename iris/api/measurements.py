@@ -204,6 +204,7 @@ async def post_measurement(
         global_min_ttl, global_max_ttl = await target_file_validator(
             storage,
             measurement_body.tool,
+            agent.tool_parameters,
             user,
             agent.target_file,
             agent.tool_parameters.prefix_len_v4,

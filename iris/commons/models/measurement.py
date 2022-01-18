@@ -38,15 +38,19 @@ class MeasurementCreate(MeasurementBase):
         agents: List[MeasurementAgentCreate] = values.get("agents")
         tool: Tool = values.get("tool")
         for agent in agents:
-            if tool == Tool.DiamondMiner:
+            if tool in (Tool.DiamondMiner, Tool.Yarrp):
                 # NOTE: We could use other values, but this would require to change
                 # the Diamond-Miner results schema which has a materialized column
                 # for the destination prefix which assumes /24 and /64 prefixes.
                 if agent.tool_parameters.prefix_len_v4 != 24:
-                    raise ValueError("`prefix_len_v4` must be 24 for diamond-miner")
+                    raise ValueError(
+                        "`prefix_len_v4` must be 24 for diamond-miner and yarrp"
+                    )
                 if agent.tool_parameters.prefix_len_v6 != 64:
-                    raise ValueError("`prefix_len_v6` must be 64 for diamond-miner")
-            if tool in [tool.Ping, tool.Probes]:
+                    raise ValueError(
+                        "`prefix_len_v6` must be 64 for diamond-miner and yarrp"
+                    )
+            if tool in (Tool.Ping, Tool.Probes):
                 # NOTE: Technically we could use a larger prefix length to allow
                 # the flow mapper to choose a random IP address inside the prefix,
                 # but users probably expect ping to target a specific IP address.

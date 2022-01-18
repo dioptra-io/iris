@@ -49,7 +49,7 @@ class User(models.BaseUser):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 0
+    probing_limit: Optional[int] = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = False
 
@@ -58,7 +58,7 @@ class UserCreate(CustomCreateUpdateDictModel, models.BaseUserCreate):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 0
+    probing_limit: Optional[int] = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = False
 
@@ -67,7 +67,7 @@ class UserUpdate(CustomCreateUpdateDictModel, models.BaseUserUpdate):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 0
+    probing_limit: Optional[int] = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = False
 

@@ -2,13 +2,15 @@ from diamond_miner.generators.standalone import count_prefixes
 from fastapi import HTTPException
 from starlette import status
 
-from iris.commons.models import Tool, UserDB
+from iris.commons.cost import estimate_cost_for_tool
+from iris.commons.models import Tool, ToolParameters, UserDB
 from iris.commons.storage import Storage
 
 
 async def target_file_validator(
     storage: Storage,
     tool: Tool,
+    tool_parameters: ToolParameters,
     user: UserDB,
     target_filename: str,
     prefix_len_v4: int,
@@ -68,6 +70,13 @@ async def target_file_validator(
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid prefixes length"
+        )
+
+    cost = estimate_cost_for_tool[tool](tool_parameters, target_file["content"].split())
+    if cost > user.probing_limit:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Cost ({cost}) > probing limit ({user.probing_limit})",
         )
 
     # Check protocol and min/max TTL

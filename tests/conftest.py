@@ -178,7 +178,7 @@ def cleanup_s3():
         buckets = s3.list_buckets()
         buckets = [x["Name"] for x in buckets["Buckets"]]
         for bucket in buckets:
-            if bucket.startswith("iris-test-"):
+            if "test-" in bucket:
                 objects = s3.list_objects_v2(Bucket=bucket)
                 if objects["KeyCount"]:
                     objects = [{"Key": x["Key"]} for x in objects.get("Contents", [])]
