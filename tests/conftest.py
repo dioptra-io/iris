@@ -50,9 +50,8 @@ def settings():
         CLICKHOUSE_PUBLIC_USER="public",
         CLICKHOUSE_URL="http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
         DATABASE_URL=f"postgresql://iris:iris@postgres.docker.localhost/iris-test-{namespace}",
+        S3_PREFIX=f"iris-test-{namespace}",
         S3_PUBLIC_RESOURCES=["arn:aws:s3:::test-public-exports/*"],
-        S3_ARCHIVE_BUCKET_PREFIX=f"archive-test-{namespace}-",
-        S3_TARGETS_BUCKET_PREFIX=f"targets-test-{namespace}-",
         REDIS_NAMESPACE=f"iris-test-{namespace}",
         REDIS_URL="redis://default:iris@redis.docker.localhost?db=15",
         RETRY_TIMEOUT=-1,
@@ -179,7 +178,7 @@ def cleanup_s3():
         buckets = s3.list_buckets()
         buckets = [x["Name"] for x in buckets["Buckets"]]
         for bucket in buckets:
-            if "test-" in bucket:
+            if bucket.startswith("iris-test-"):
                 objects = s3.list_objects_v2(Bucket=bucket)
                 if objects["KeyCount"]:
                     objects = [{"Key": x["Key"]} for x in objects.get("Contents", [])]

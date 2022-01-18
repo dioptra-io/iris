@@ -38,9 +38,7 @@ class CommonSettings(BaseSettings):
     S3_SECRET_ACCESS_KEY: str = "minioadmin"
     S3_SESSION_TOKEN: Optional[str] = None
     S3_REGION_NAME: str = "local"
-
-    S3_ARCHIVE_BUCKET_PREFIX = "archive-"
-    S3_TARGETS_BUCKET_PREFIX = "targets-"
+    S3_PREFIX = "iris"
 
     S3_PUBLIC_ACTIONS: List[str] = [
         "s3:GetBucketLocation",

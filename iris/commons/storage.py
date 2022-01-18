@@ -45,15 +45,13 @@ class Storage:
         }
 
     def archive_bucket(self, user_id: str) -> str:
-        return self.settings.S3_ARCHIVE_BUCKET_PREFIX + user_id
+        return f"{self.settings.S3_PREFIX}-archive-{user_id}"
 
     def targets_bucket(self, user_id: str) -> str:
-        return self.settings.S3_TARGETS_BUCKET_PREFIX + user_id
+        return f"{self.settings.S3_PREFIX}-targets-{user_id}"
 
-    @staticmethod
-    def measurement_agent_bucket(measurement_uuid: str, agent_uuid: str) -> str:
-        # TODO: Prefix?
-        return f"{measurement_uuid[:18]}-{agent_uuid[:18]}"
+    def measurement_agent_bucket(self, measurement_uuid: str, agent_uuid: str) -> str:
+        return f"{self.settings.S3_PREFIX}-{measurement_uuid[:18]}-{agent_uuid[:18]}"
 
     @fault_tolerant
     async def get_measurement_buckets(self) -> List[str]:
