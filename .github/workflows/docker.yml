@@ -1,14 +1,6 @@
 name: Docker
 
-on:
-  push:
-    # Build only on main and production branch commits for now
-    # to reduce private GitHub CI credits usage.
-    branches:
-      - main
-      - production
-    # pull_request:
-    #   branches: [ 'main' ]
+on: [push, pull_request]
 
 jobs:
   build:
