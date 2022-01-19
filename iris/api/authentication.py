@@ -94,21 +94,23 @@ async def get_user_manager(
     yield UserManager(
         user_db,
         storage=storage,
-        reset_password_token_secret=settings.API_TOKEN_SECRET_KEY,
-        verification_token_secret=settings.API_TOKEN_SECRET_KEY,
+        reset_password_token_secret=settings.API_JWT_SECRET_KEY,
+        verification_token_secret=settings.API_JWT_SECRET_KEY,
     )
 
 
 def get_database_strategy(
     access_token_db=Depends(get_access_token_db),
 ):
-    return DatabaseStrategy(access_token_db, lifetime_seconds=3600)
+    return DatabaseStrategy(
+        access_token_db, lifetime_seconds=settings.API_COOKIE_LIFETIME
+    )
 
 
 def get_jwt_strategy(settings: APISettings = Depends(get_settings)) -> JWTStrategy:
     return CustomJWTStrategy(
-        secret=settings.API_TOKEN_SECRET_KEY,
-        lifetime_seconds=settings.API_TOKEN_LIFETIME,
+        secret=settings.API_JWT_SECRET_KEY,
+        lifetime_seconds=settings.API_JWT_LIFETIME,
     )
 
 
