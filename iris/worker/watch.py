@@ -133,7 +133,8 @@ async def watch_measurement_agent_with_deps(
             sliding_window_stopping_condition=settings.WORKER_ROUND_1_STOPPING,
             tool=ma.measurement.tool,
             tool_parameters=ma.tool_parameters,
-            working_directory=settings.WORKER_RESULTS_DIR_PATH / measurement_uuid,
+            working_directory=settings.WORKER_RESULTS_DIR_PATH
+            / f"{measurement_uuid}_{agent_uuid}",
             targets_key=ma.target_file,
             results_key=results_filename,
             user_id=ma.measurement.user_id,
