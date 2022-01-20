@@ -1,6 +1,6 @@
 """API Entrypoint."""
 import botocore.exceptions
-from fastapi import FastAPI, Response
+from fastapi import Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -8,7 +8,8 @@ from starlette.status import HTTP_404_NOT_FOUND, HTTP_503_SERVICE_UNAVAILABLE
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from iris import __version__
-from iris.api import agents, measurements, status, targets, users
+from iris.api import agents, maintenance, measurements, status, targets, users
+from iris.api.authentication import current_superuser
 from iris.api.settings import APISettings
 from iris.commons.dependencies import get_settings
 
@@ -40,6 +41,12 @@ app.include_router(agents.router, prefix="/agents", tags=["Agents"])
 app.include_router(targets.router, prefix="/targets", tags=["Targets"])
 app.include_router(measurements.router, prefix="/measurements", tags=["Measurements"])
 app.include_router(status.router, prefix="/status", tags=["Status"])
+app.include_router(
+    maintenance.router,
+    prefix="/maintenance",
+    tags=["Maintenance"],
+    dependencies=[Depends(current_superuser)],
+)
 
 
 class ReadOnlyMiddleware(BaseHTTPMiddleware):
