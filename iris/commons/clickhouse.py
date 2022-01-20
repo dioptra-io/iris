@@ -171,6 +171,7 @@ class ClickHouse:
                 self.settings.CLICKHOUSE_URL,
                 content=iter_file(file),
                 params={"query": query},
+                timeout=httpx.Timeout(3600, connect=5),
             )
             os.remove(file)
             try:
