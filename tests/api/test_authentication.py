@@ -48,7 +48,7 @@ async def test_login(make_client, api_settings):
     assert token.token_type == "bearer"
     decoded = jwt.decode(
         token.access_token,
-        api_settings.API_TOKEN_SECRET_KEY,
+        api_settings.API_JWT_SECRET_KEY,
         algorithms=["HS256"],
         audience="fastapi-users:auth",
     )
