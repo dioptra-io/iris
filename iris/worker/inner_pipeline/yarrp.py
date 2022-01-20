@@ -34,6 +34,8 @@ async def yarrp_inner_pipeline(
 
     :returns: The number of probes written.
     """
+    # TODO: Cleanup the interaction with the diamond-miner pipeline:
+    # do not create table twices, do not set results_filepath to None.
     await clickhouse.create_tables(
         measurement_uuid,
         agent_uuid,
@@ -46,7 +48,7 @@ async def yarrp_inner_pipeline(
         await clickhouse.insert_prefixes(measurement_uuid, agent_uuid)
         await clickhouse.insert_links(measurement_uuid, agent_uuid)
 
-    if previous_round:
+    if next_round.number > 1:
         # Yarrp has only one round.
         return 0
 
@@ -59,7 +61,7 @@ async def yarrp_inner_pipeline(
         measurement_tags=measurement_tags,
         sliding_window_stopping_condition=sliding_window_stopping_condition,
         tool_parameters=tool_parameters,
-        results_filepath=results_filepath,
+        results_filepath=None,
         targets_filepath=targets_filepath,
         probes_filepath=probes_filepath,
         previous_round=previous_round,
