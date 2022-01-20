@@ -89,7 +89,7 @@ async def main_with_deps(
                 ipv6_address=get_ipv6_address(),
                 min_ttl=settings.AGENT_MIN_TTL,
                 max_probing_rate=settings.AGENT_MAX_PROBING_RATE,
-                tags=settings.AGENT_TAGS,
+                tags=settings.AGENT_TAGS.split(","),
             ),
         )
 
