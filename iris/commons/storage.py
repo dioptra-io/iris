@@ -78,6 +78,10 @@ class Storage:
         async with session.client("s3", **self.aws_settings) as s3:
             await s3.delete_bucket(Bucket=bucket)
 
+    async def delete_bucket_with_files(self, bucket: str) -> None:
+        await self.delete_all_files_from_bucket(bucket)
+        await self.delete_bucket(bucket)
+
     @fault_tolerant
     async def bucket_exists(self, bucket: str) -> bool:
         """Delete a bucket."""

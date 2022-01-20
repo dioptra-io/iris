@@ -3,12 +3,7 @@ from uuid import uuid4
 from iris.commons.models.agent import AgentState
 from iris.commons.models.round import Round
 from iris.commons.storage import results_key
-from iris.worker.watch import (
-    check_agent,
-    clean_results,
-    find_results,
-    watch_measurement_agent_,
-)
+from iris.worker.watch import check_agent, find_results, watch_measurement_agent_
 from tests.helpers import register_agent, upload_file
 
 
@@ -50,22 +45,6 @@ async def test_find_results_not_found(storage, make_tmp_file):
         storage=storage, measurement_uuid=measurement_uuid, agent_uuid=agent_uuid
     )
     assert not filename
-
-
-async def test_clean_results(storage, make_tmp_file):
-    measurement_uuid = str(uuid4())
-    agent_uuid = str(uuid4())
-    bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
-    await storage.create_bucket(bucket)
-
-    tmp_filename = results_key(Round(number=1, limit=10, offset=0))
-    tmp_file = make_tmp_file(tmp_filename)
-    await upload_file(storage, bucket, tmp_file)
-
-    await clean_results(
-        measurement_uuid=measurement_uuid, agent_uuid=agent_uuid, storage=storage
-    )
-    assert not await storage.bucket_exists(bucket)
 
 
 async def test_watch_measurement_not_found(caplog, engine, worker_settings):

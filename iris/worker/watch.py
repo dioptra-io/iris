@@ -1,4 +1,5 @@
 import asyncio
+import shutil
 from datetime import datetime
 from typing import Optional
 
@@ -77,6 +78,17 @@ async def watch_measurement_agent_with_deps(
         return
     logger.info("Watching measurement agent in state %s", ma.state)
 
+    logger.info("Ensure that the working directory exists")
+    working_directory = (
+        settings.WORKER_RESULTS_DIR_PATH / f"{measurement_uuid}__{agent_uuid}"
+    )
+    working_directory.mkdir(exist_ok=True, parents=True)
+
+    logger.info("Ensure that the measurement agent bucket exists")
+    await storage.create_bucket(
+        storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
+    )
+
     while True:
         # 1. Ensure that the MeasurementAgent instance is up-to-date.
         session.refresh(ma)
@@ -133,8 +145,7 @@ async def watch_measurement_agent_with_deps(
             sliding_window_stopping_condition=settings.WORKER_ROUND_1_STOPPING,
             tool=ma.measurement.tool,
             tool_parameters=ma.tool_parameters,
-            working_directory=settings.WORKER_RESULTS_DIR_PATH
-            / f"{measurement_uuid}_{agent_uuid}",
+            working_directory=working_directory,
             targets_key=ma.target_file,
             results_key=results_filename,
             user_id=ma.measurement.user_id,
@@ -162,11 +173,10 @@ async def watch_measurement_agent_with_deps(
     if not ma.end_time:
         ma.set_end_time(session, datetime.utcnow())
 
-    await clean_results(
-        measurement_uuid=measurement_uuid,
-        agent_uuid=agent_uuid,
-        storage=storage,
+    await storage.delete_bucket_with_files(
+        storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
     )
+    shutil.rmtree(working_directory)
 
 
 async def check_agent(
@@ -178,14 +188,6 @@ async def check_agent(
         await asyncio.sleep(interval)
     else:
         return False
-
-
-async def clean_results(
-    storage: Storage, measurement_uuid: str, agent_uuid: str
-) -> None:
-    bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
-    await storage.delete_all_files_from_bucket(bucket)
-    await storage.delete_bucket(bucket)
 
 
 async def find_results(

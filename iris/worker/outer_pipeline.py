@@ -44,14 +44,6 @@ async def outer_pipeline(
     """
     logger.info("Running outer pipeline with results key %s", results_key)
 
-    logger.info("Ensure that the working directory exists")
-    working_directory.mkdir(exist_ok=True, parents=True)
-
-    logger.info("Ensure the the measurement agent bucket exists")
-    await storage.create_bucket(
-        storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
-    )
-
     logger.info("Retrieve agent information from redis")
     agent_parameters = unwrap(await redis.get_agent_parameters(agent_uuid))
 
