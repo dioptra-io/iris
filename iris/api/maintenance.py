@@ -59,6 +59,7 @@ async def post_dramatiq_message(
     message = dict(
         queue_name=queue_name,
         actor_name=actor,
+        args=[],
         kwargs=kwargs,
         options=dict(redis_message_id=redis_message_id),
         message_id=message_id,
