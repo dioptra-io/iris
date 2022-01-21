@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request, status
 from fastapi_users import BaseUserManager, FastAPIUsers
 from fastapi_users.authentication import (
     AuthenticationBackend,
@@ -13,7 +13,6 @@ from fastapi_users.authentication import (
 from fastapi_users.authentication.strategy import DatabaseStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import generate_jwt
-from starlette import status
 
 from iris.api.settings import APISettings
 from iris.commons.dependencies import (

@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Union
 
 import aioboto3
-from botocore.exceptions import ClientError
 
 from iris.commons.models import Round
 from iris.commons.settings import CommonSettings, fault_tolerant
@@ -82,14 +81,6 @@ class Storage:
         await self.delete_all_files_from_bucket(bucket)
         await self.delete_bucket(bucket)
 
-    @fault_tolerant
-    async def bucket_exists(self, bucket: str) -> bool:
-        """Delete a bucket."""
-        session = aioboto3.Session()
-        async with session.resource("s3", **self.aws_settings) as s3:
-            bucket_ = await s3.Bucket(bucket)
-            return await bucket_.creation_date is not None
-
     async def get_all_files_no_retry(self, bucket: str) -> List[Dict]:
         """Get all files inside a bucket."""
         targets = []
@@ -97,28 +88,19 @@ class Storage:
         async with session.resource("s3", **self.aws_settings) as s3:
             b = await s3.Bucket(bucket)
             async for obj_summary in b.objects.all():
-                try:
-                    obj = await obj_summary.Object()
-                    targets.append(
-                        {
-                            "key": obj_summary.key,
-                            "size": await obj_summary.size,
-                            "metadata": await obj.metadata,
-                            "last_modified": datetime.datetime.fromisoformat(
-                                str(await obj_summary.last_modified)
-                            )
-                            .replace(microsecond=0)
-                            .replace(tzinfo=datetime.timezone.utc),
-                        }
-                    )
-                except ClientError as e:
-                    op = e.operation_name
-                    msg = e.response.get("Error", {}).get("Message", "")
-                    if op == "HeadObject" and msg == "Not Found":
-                        # The file was deleted during looping. Do nothing.
-                        pass
-                    else:
-                        raise
+                obj = await obj_summary.Object()
+                targets.append(
+                    {
+                        "key": obj_summary.key,
+                        "size": await obj_summary.size,
+                        "metadata": await obj.metadata,
+                        "last_modified": datetime.datetime.fromisoformat(
+                            str(await obj_summary.last_modified)
+                        )
+                        .replace(microsecond=0)
+                        .replace(tzinfo=datetime.timezone.utc),
+                    }
+                )
         return targets
 
     @fault_tolerant

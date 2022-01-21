@@ -69,6 +69,19 @@ async def test_targets_invalid_prefix_length(make_user, storage):
     assert "prefixes length" in e.value.detail
 
 
+async def test_targets_cost_too_high(make_user, storage):
+    user = make_user(probing_limit=0)
+    await create_user_buckets(storage, user)
+    await upload_target_file(
+        storage, user, "targets.csv", content=["0.0.0.0/0,icmp,0,32,6"]
+    )
+    with pytest.raises(HTTPException) as e:
+        await target_file_validator(
+            storage, Tool.Ping, ToolParameters(), user, "targets.csv", 24, 64
+        )
+    assert "probing limit" in e.value.detail
+
+
 async def test_targets_ping_udp(make_user, storage):
     user = make_user()
     await create_user_buckets(storage, user)

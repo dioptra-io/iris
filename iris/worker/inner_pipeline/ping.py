@@ -56,7 +56,7 @@ async def ping_inner_pipeline(
         await clickhouse.insert_prefixes(measurement_uuid, agent_uuid)
         await clickhouse.insert_links(measurement_uuid, agent_uuid)
 
-    if previous_round:
+    if next_round.number > 1:
         # Ping tool has only one round.
         return 0
 

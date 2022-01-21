@@ -10,8 +10,13 @@ PROBE_SIZE_GB = 100 / 1e9
 # TODO: Move this function to diamond-miner.
 def count_probes(targets: Iterable[str], prefix_len_v4: int, prefix_len_v6: int) -> int:
     """
-    >>> count_probes(["192.0.2.0/24,icmp,2,32,6"], 25, 64)
+    >>> count_probes(["192.0.2.0/23,icmp,2,32,6"], 24, 64)
     372
+    >>> count_probes(["2001:db8::/63,icmp,2,32,6"], 24, 64)
+    372
+    >>> count_probes(["2001:db8::/65,icmp,2,32,6"], 24, 64)
+    Traceback (most recent call last):
+    ValueError: prefix length must be <= 64
     """
     count = 0
     for target in targets:

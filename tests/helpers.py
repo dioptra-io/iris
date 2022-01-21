@@ -12,7 +12,7 @@ from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
 from tests.assertions import cast_response
 
-skipci = pytest.mark.skipif(
+xfailci = pytest.mark.xfail(
     "CI" in os.environ, reason="this test is not supported on GitHub actions"
 )
 

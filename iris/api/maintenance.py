@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from uuid import uuid4
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, status
 
 from iris.commons.dependencies import get_redis
 from iris.commons.redis import Redis
@@ -33,7 +33,7 @@ async def get_dramatiq_messages(queue: str, redis: Redis = Depends(get_redis)):
     return sorted(messages, key=lambda x: x["message_timestamp"], reverse=True)
 
 
-@router.post("/dq/{queue}/messages")
+@router.post("/dq/{queue}/messages", status_code=status.HTTP_201_CREATED)
 async def post_dramatiq_message(
     queue: str,
     actor: str = "watch_measurement_agent",
@@ -63,7 +63,9 @@ async def post_dramatiq_message(
     return format_message(message)
 
 
-@router.delete("/dq/{queue}/messages/{redis_message_id}")
+@router.delete(
+    "/dq/{queue}/messages/{redis_message_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_dramatiq_message(
     queue: str, redis_message_id: str, redis: Redis = Depends(get_redis)
 ):

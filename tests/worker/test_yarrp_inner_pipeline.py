@@ -3,10 +3,10 @@ from uuid import uuid4
 from iris.commons.models.diamond_miner import ToolParameters
 from iris.commons.models.round import Round
 from iris.commons.test import compress_file, decompress_file
-from iris.worker.inner_pipeline.ping import ping_inner_pipeline
+from iris.worker.inner_pipeline import yarrp_inner_pipeline
 
 
-async def test_ping_inner_pipeline(clickhouse, logger, tmp_path):
+async def test_yarrp_inner_pipeline(clickhouse, logger, tmp_path):
     measurement_uuid = str(uuid4())
     agent_uuid = str(uuid4())
     await clickhouse.create_tables(measurement_uuid, agent_uuid, 24, 64, drop=True)
@@ -15,7 +15,7 @@ async def test_ping_inner_pipeline(clickhouse, logger, tmp_path):
     targets_filepath = tmp_path / "targets.csv"
     targets_filepath.write_text("1.0.0.0/23,icmp,0,32,6")
 
-    n_probes = await ping_inner_pipeline(
+    n_probes = await yarrp_inner_pipeline(
         clickhouse=clickhouse,
         logger=logger,
         measurement_uuid=measurement_uuid,
@@ -34,10 +34,10 @@ async def test_ping_inner_pipeline(clickhouse, logger, tmp_path):
 
     probes_filepath = decompress_file(probes_filepath)
     probes = probes_filepath.read_text().split()
-    assert len(probes) == n_probes == 12
+    assert len(probes) == n_probes == 120
 
 
-async def test_ping_inner_pipeline_results(clickhouse, logger, tmp_path):
+async def test_yarrp_inner_pipeline_results(clickhouse, logger, tmp_path):
     measurement_uuid = str(uuid4())
     agent_uuid = str(uuid4())
     await clickhouse.create_tables(measurement_uuid, agent_uuid, 24, 64, drop=True)
@@ -54,7 +54,7 @@ async def test_ping_inner_pipeline_results(clickhouse, logger, tmp_path):
     targets_filepath = tmp_path / "targets.csv"
     targets_filepath.write_text("1.0.0.0/23,icmp,0,32,6")
 
-    n_probes = await ping_inner_pipeline(
+    n_probes = await yarrp_inner_pipeline(
         clickhouse=clickhouse,
         logger=logger,
         measurement_uuid=measurement_uuid,

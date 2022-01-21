@@ -1,6 +1,5 @@
 from diamond_miner.generators.standalone import count_prefixes
-from fastapi import HTTPException
-from starlette import status
+from fastapi import HTTPException, status
 
 from iris.commons.cost import estimate_cost_for_tool
 from iris.commons.models import Tool, ToolParameters, UserDB
