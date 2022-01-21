@@ -37,8 +37,8 @@ class ToolParameters(BaseModel):
     flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(
         {"seed": 42}, title="Flow mapper optional arguments"
     )
-    prefix_len_v4: int = Field(24, ge=0, le=32, title="Target prefix length")
-    prefix_len_v6: int = Field(64, ge=0, le=128, title="Target prefix length")
+    prefix_len_v4: int = Field(24, ge=0, le=32, title="Target prefix length (IPv4)")
+    prefix_len_v6: int = Field(64, ge=0, le=128, title="Target prefix length (IPv6)")
     global_min_ttl: int = Field(
         0,
         ge=0,
