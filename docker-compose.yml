@@ -90,7 +90,6 @@ services:
       dockerfile: "./dockerfiles/iris-agent.dockerfile"
     environment:
       AGENT_CARACAL_INTEGRITY_CHECK: "false" # In order to test from Docker for Mac
-      AGENT_MAX_PROBING_RATE: ${AGENT_MAX_PROBING_RATE:-100}
     volumes:
       - "./iris:/app/iris:ro"
     depends_on:
@@ -102,9 +101,6 @@ services:
     build:
       context: .
       dockerfile: "./dockerfiles/iris-api.dockerfile"
-    environment:
-      API_CORS_ALLOW_ORIGIN: "http://localhost:8080"
-      GUNICORN_CMD_ARGS: "--workers 1"
     labels:
       - "traefik.http.routers.api.entrypoints=web"
       - "traefik.http.routers.api.rule=Host(`api.docker.localhost`)"
