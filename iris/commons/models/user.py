@@ -5,18 +5,20 @@ from fastapi_users import models
 from fastapi_users.authentication.strategy import BaseAccessToken
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
 from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyBaseAccessTokenTable
-from sqlalchemy import Boolean, Column, Integer, String
+from pydantic import Field
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
 from iris.commons.models.base import Base, BaseModel
 
 
 class UserTable(Base, SQLAlchemyBaseUserTable):
-    firstname: str = Column(String, nullable=False)
-    lastname: str = Column(String, nullable=False)
+    firstname = Column(String, nullable=False)
+    lastname = Column(String, nullable=False)
     probing_enabled = Column(Boolean, nullable=False, default=False)
-    probing_limit = Column(Integer, nullable=True, default=0)
+    probing_limit = Column(Integer, nullable=True, default=1)
     allow_tag_reserved = Column(Boolean, nullable=False, default=False)
     allow_tag_public = Column(Boolean, nullable=False, default=False)
+    creation_time = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class AccessToken(BaseAccessToken):
@@ -52,6 +54,7 @@ class User(models.BaseUser):
     probing_limit: Optional[int] = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = False
+    creation_time: datetime = Field(default_factory=datetime.utcnow)
 
 
 class UserCreate(CustomCreateUpdateDictModel, models.BaseUserCreate):

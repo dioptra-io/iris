@@ -91,9 +91,7 @@ class Measurement(MeasurementBase, table=True):
     uuid: str = Field(
         default_factory=lambda: str(uuid4()), primary_key=True, nullable=False
     )
-    creation_time: datetime = Field(
-        default_factory=lambda: datetime.utcnow(), nullable=False
-    )
+    creation_time: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     user_id: str  # TODO: FK constraint with UserTable?
     agents: List[MeasurementAgent] = Relationship(back_populates="measurement")
 
