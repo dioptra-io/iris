@@ -90,7 +90,6 @@ services:
       dockerfile: "./dockerfiles/iris-agent.dockerfile"
     environment:
       AGENT_CARACAL_INTEGRITY_CHECK: "false" # In order to test from Docker for Mac
-      AGENT_DEBUG_MODE: "true"
       AGENT_MAX_PROBING_RATE: ${AGENT_MAX_PROBING_RATE:-100}
     volumes:
       - "./iris:/app/iris:ro"
@@ -122,8 +121,6 @@ services:
     build:
       context: .
       dockerfile: "./dockerfiles/iris-worker.dockerfile"
-    environment:
-      WORKER_DEBUG_MODE: "true"
     volumes:
       - "./iris:/app/iris:ro"
     depends_on:

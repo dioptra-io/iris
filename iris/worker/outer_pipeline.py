@@ -37,7 +37,6 @@ async def outer_pipeline(
     user_id: str,
     max_open_files: int,
     tag_public: str,
-    debug_mode: bool = False,
 ) -> Optional[OuterPipelineResult]:
     """
     Responsible to download/upload from object storage.
@@ -137,15 +136,14 @@ async def outer_pipeline(
             next_round=next_round, probes_key=probes_filepath.name
         )
 
-    if not debug_mode:
-        if targets_filepath:
-            logger.info("Remove local targets file")
-            targets_filepath.unlink(missing_ok=True)
-        if results_filepath:
-            logger.info("Remove local results file")
-            results_filepath.unlink(missing_ok=True)
-        if probes_filepath:
-            logger.info("Remove local probes file")
-            probes_filepath.unlink(missing_ok=True)
+    if targets_filepath:
+        logger.info("Remove local targets file")
+        targets_filepath.unlink(missing_ok=True)
+    if results_filepath:
+        logger.info("Remove local results file")
+        results_filepath.unlink(missing_ok=True)
+    if probes_filepath:
+        logger.info("Remove local probes file")
+        probes_filepath.unlink(missing_ok=True)
 
     return result

@@ -97,11 +97,10 @@ async def do_measurement(
     else:
         logger.warning("Measurement canceled")
 
-    if not settings.AGENT_DEBUG_MODE:
-        logger.info("Empty local results directory")
-        shutil.rmtree(settings.AGENT_RESULTS_DIR_PATH)
-        settings.AGENT_RESULTS_DIR_PATH.mkdir()
+    logger.info("Empty local results directory")
+    shutil.rmtree(settings.AGENT_RESULTS_DIR_PATH)
+    settings.AGENT_RESULTS_DIR_PATH.mkdir()
 
-        logger.info("Empty local targets directory")
-        shutil.rmtree(settings.AGENT_TARGETS_DIR_PATH)
-        settings.AGENT_TARGETS_DIR_PATH.mkdir()
+    logger.info("Empty local targets directory")
+    shutil.rmtree(settings.AGENT_TARGETS_DIR_PATH)
+    settings.AGENT_TARGETS_DIR_PATH.mkdir()

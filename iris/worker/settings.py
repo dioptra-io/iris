@@ -23,4 +23,3 @@ class WorkerSettings(CommonSettings):
     )
 
     WORKER_MAX_OPEN_FILES: int = 8192
-    WORKER_DEBUG_MODE: bool = False

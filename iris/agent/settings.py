@@ -34,4 +34,3 @@ class AgentSettings(CommonSettings):
     AGENT_RESULTS_DIR_PATH: Path = Path("iris_data/agent/results")
 
     AGENT_STOPPER_REFRESH: int = 1  # seconds
-    AGENT_DEBUG_MODE: bool = False

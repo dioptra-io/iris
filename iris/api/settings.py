@@ -18,7 +18,4 @@ class APISettings(CommonSettings):
     )
     API_JWT_LIFETIME: int = 3600  # seconds
 
-    API_OAUTH_GITHUB_CLIENT_ID: str = ""
-    API_OAUTH_GITHUB_CLIENT_SECRET: str = ""
-
     API_READ_ONLY: bool = False
