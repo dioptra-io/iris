@@ -1,6 +1,5 @@
 from uuid import uuid4
 
-import jwt
 from fastapi_users.authentication.transport.bearer import BearerResponse
 
 from tests.assertions import assert_status_code, cast_response
@@ -46,14 +45,3 @@ async def test_login(make_client, api_settings):
     )
     token = cast_response(response, BearerResponse)
     assert token.token_type == "bearer"
-    decoded = jwt.decode(
-        token.access_token,
-        api_settings.API_JWT_SECRET_KEY,
-        algorithms=["HS256"],
-        audience="fastapi-users:auth",
-    )
-    assert decoded["user_id"]
-    assert decoded["is_active"]
-    assert not decoded["is_verified"]
-    assert not decoded["is_superuser"]
-    assert not decoded["probing_enabled"]
