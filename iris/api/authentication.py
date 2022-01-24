@@ -12,7 +12,6 @@ from fastapi_users.authentication import (
 )
 from fastapi_users.authentication.strategy import DatabaseStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
-from fastapi_users.jwt import generate_jwt
 
 from iris.api.settings import APISettings
 from iris.commons.dependencies import (
@@ -72,19 +71,6 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
         await self.storage.delete_bucket(self.storage.targets_bucket(str(user.id)))
 
 
-class CustomJWTStrategy(JWTStrategy):
-    async def write_token(self, user: UserDB) -> str:
-        data = {
-            "user_id": str(user.id),
-            "is_active": user.is_active,
-            "is_verified": user.is_verified,
-            "is_superuser": user.is_superuser,
-            "probing_enabled": user.probing_enabled,
-            "aud": self.token_audience,
-        }
-        return generate_jwt(data, self.secret, self.lifetime_seconds)
-
-
 async def get_user_manager(
     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
     settings: APISettings = Depends(get_settings),
@@ -107,7 +93,7 @@ def get_database_strategy(
 
 
 def get_jwt_strategy(settings: APISettings = Depends(get_settings)) -> JWTStrategy:
-    return CustomJWTStrategy(
+    return JWTStrategy(
         secret=settings.API_JWT_SECRET_KEY,
         lifetime_seconds=settings.API_JWT_LIFETIME,
     )

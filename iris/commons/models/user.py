@@ -53,7 +53,7 @@ class User(models.BaseUser):
     probing_enabled: bool = False
     probing_limit: Optional[int] = 1
     allow_tag_reserved: bool = False
-    allow_tag_public: bool = False
+    allow_tag_public: bool = True
     creation_time: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -63,7 +63,7 @@ class UserCreate(CustomCreateUpdateDictModel, models.BaseUserCreate):
     probing_enabled: bool = False
     probing_limit: Optional[int] = 1
     allow_tag_reserved: bool = False
-    allow_tag_public: bool = False
+    allow_tag_public: bool = True
 
 
 class UserUpdate(CustomCreateUpdateDictModel, models.BaseUserUpdate):
@@ -72,7 +72,7 @@ class UserUpdate(CustomCreateUpdateDictModel, models.BaseUserUpdate):
     probing_enabled: bool = False
     probing_limit: Optional[int] = 1
     allow_tag_reserved: bool = False
-    allow_tag_public: bool = False
+    allow_tag_public: bool = True
 
 
 class UserDB(User, models.BaseUserDB):

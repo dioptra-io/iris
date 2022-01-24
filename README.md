@@ -1,7 +1,7 @@
 # 🕸️ Iris — An open-source internet measurement platform
 
 [![Coverage](https://img.shields.io/codecov/c/github/dioptra-io/iris?logo=codecov&logoColor=white)](https://app.codecov.io/gh/dioptra-io/iris)
-[![Tests](https://img.shields.io/github/workflow/status/dioptra-io/iris/Docker?logo=github&label=docker)](https://github.com/dioptra-io/iris/actions/workflows/docker.yml)
+[![Docker](https://img.shields.io/github/workflow/status/dioptra-io/iris/Docker?logo=github&label=docker)](https://github.com/dioptra-io/iris/actions/workflows/docker.yml)
 [![Tests](https://img.shields.io/github/workflow/status/dioptra-io/iris/Tests?logo=github&label=tests)](https://github.com/dioptra-io/iris/actions/workflows/quality.yml)
 
 Iris is a system to coordinate complex network measurements from multiple vantage points.  
