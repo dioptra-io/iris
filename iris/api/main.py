@@ -24,7 +24,7 @@ or browse the source code on [GitHub](https://github.com/dioptra-io/iris).
     openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url=None,
-    contact={"email": "contact@dioptra.io"},
+    contact={"email": "iris@dioptra.io"},
     # swagger_ui_parameters={
     #     "displayRequestDuration": True,
     #     "persistAuthorization": True,
