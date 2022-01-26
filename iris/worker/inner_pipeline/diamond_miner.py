@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 from diamond_miner import mappers
 from diamond_miner.generators import probe_generator_parallel
-from diamond_miner.insert import insert_mda_probe_counts_parallel, insert_probe_counts
+from diamond_miner.insert import insert_mda_probe_counts, insert_probe_counts
 from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.typing import FlowMapper
 
@@ -121,7 +121,7 @@ async def diamond_miner_inner_pipeline(
     else:
         assert previous_round, "round > 1 must have a previous round"
         logger.info("Insert MDA probe counts")
-        insert_mda_probe_counts_parallel(
+        insert_mda_probe_counts(
             url=database_url,
             measurement_id=measurement_id,
             previous_round=previous_round.number,
