@@ -1,11 +1,10 @@
 import asyncio
-from asyncio import Queue
+import random
 from dataclasses import dataclass
 from logging import LoggerAdapter
 from typing import Dict, List, Optional
 
 import aioredis
-import async_timeout
 
 from iris.commons.models import (
     Agent,
@@ -21,10 +20,6 @@ def agent_heartbeat_key(uuid: Optional[str]) -> str:
     return f"agent_heartbeat:{uuid or '*'}"
 
 
-def agent_listen_key(uuid: str) -> str:
-    return f"agent_listen:{uuid}"
-
-
 def agent_parameters_key(uuid: str) -> str:
     return f"agent_parameters:{uuid}"
 
@@ -33,12 +28,12 @@ def agent_state_key(uuid: str) -> str:
     return f"agent_state:{uuid}"
 
 
+def agent_queue_key(uuid: str) -> str:
+    return f"agent_queue:{uuid}"
+
+
 def measurement_stats_key(measurement_uuid: str, agent_uuid: str) -> str:
     return f"measurement_stats:{measurement_uuid}:{agent_uuid}"
-
-
-def measurement_agent_cancelled_key(measurement_uuid: str, agent_uuid: str) -> str:
-    return f"measurement_agent_cancelled:{measurement_uuid}:{agent_uuid}"
 
 
 @dataclass(frozen=True)
@@ -52,15 +47,15 @@ class Redis:
         return self.settings.REDIS_NAMESPACE
 
     @fault_tolerant
+    async def delete(self, *names: str) -> None:
+        names_ = [f"{self.ns}:{name}" for name in names]
+        await self.client.delete(*names_)
+
+    @fault_tolerant
     async def exists(self, *names: str) -> int:
         names_ = [f"{self.ns}:{name}" for name in names]
         count: int = await self.client.exists(*names_)
         return count
-
-    @fault_tolerant
-    async def keys(self, pattern: str) -> List[str]:
-        keys: List[str] = await self.client.keys(f"{self.ns}:{pattern}")
-        return keys
 
     @fault_tolerant
     async def get(self, name: str) -> str:
@@ -68,13 +63,29 @@ class Redis:
         return value
 
     @fault_tolerant
-    async def set(self, name: str, value: str, **kwargs) -> None:
-        await self.client.set(f"{self.ns}:{name}", value, **kwargs)
+    async def hdel(self, name: str, *keys: str) -> None:
+        await self.client.hdel(f"{self.ns}:{name}", *keys)
 
     @fault_tolerant
-    async def delete(self, *names: str) -> None:
-        names_ = [f"{self.ns}:{name}" for name in names]
-        await self.client.delete(*names_)
+    async def hget(self, name: str, key: str) -> Optional[str]:
+        return await self.client.hget(f"{self.ns}:{name}", key)
+
+    @fault_tolerant
+    async def hkeys(self, name: str) -> List[str]:
+        return await self.client.hkeys(f"{self.ns}:{name}")
+
+    @fault_tolerant
+    async def hset(self, name: str, key: str, value: str) -> None:
+        await self.client.hset(f"{self.ns}:{name}", key, value)
+
+    @fault_tolerant
+    async def keys(self, pattern: str) -> List[str]:
+        keys: List[str] = await self.client.keys(f"{self.ns}:{pattern}")
+        return keys
+
+    @fault_tolerant
+    async def set(self, name: str, value: str, **kwargs) -> None:
+        await self.client.set(f"{self.ns}:{name}", value, **kwargs)
 
     async def register_agent(self, uuid: str, ttl_seconds: int) -> None:
         self.logger.info("Registering agent for %s seconds", ttl_seconds)
@@ -169,46 +180,32 @@ class Redis:
         self.logger.info("Deleting measurement statistics")
         await self.delete(measurement_stats_key(measurement_uuid, agent_uuid))
 
-    async def cancel_measurement_agent(
+    async def get_random_request(
+        self, uuid: str, *, interval: float = 1.0
+    ) -> MeasurementRoundRequest:
+        """
+        Return a random request from the queue.
+        If the queue is empty, it will retry at the specified interval.
+        """
+        # TODO: Use HRANDFIELD when implement by aioredis.
+        while True:
+            if keys := await self.hkeys(agent_queue_key(uuid)):
+                value = await self.hget(agent_queue_key(uuid), random.choice(keys))
+                return MeasurementRoundRequest.parse_raw(value)
+            await asyncio.sleep(interval)
+
+    async def get_request(
         self, measurement_uuid: str, agent_uuid: str
-    ) -> None:
-        self.logger.info("Cancelling measurement agent")
-        await self.set(
-            measurement_agent_cancelled_key(measurement_uuid, agent_uuid), "true"
-        )
+    ) -> Optional[MeasurementRoundRequest]:
+        """Return the measurement request for the specified agent and measurement."""
+        if value := await self.hget(agent_queue_key(agent_uuid), measurement_uuid):
+            return MeasurementRoundRequest.parse_raw(value)
+        return None
 
-    async def measurement_agent_cancelled(
-        self, measurement_uuid: str, agent_uuid: str
-    ) -> bool:
-        count: int = await self.exists(
-            measurement_agent_cancelled_key(measurement_uuid, agent_uuid)
-        )
-        return count > 0
+    async def set_request(self, uuid: str, request: MeasurementRoundRequest) -> None:
+        """Set the measurement request for a specified agent and measurement."""
+        await self.hset(agent_queue_key(uuid), request.measurement_uuid, request.json())
 
-    async def publish(self, uuid: str, request: MeasurementRoundRequest) -> None:
-        self.logger.info("Publishing next measurement round request")
-        name = f"{self.ns}:{agent_listen_key(uuid)}"
-        await self.client.publish(name, request.json())
-
-    async def subscribe(self, uuid: str, queue: Queue) -> None:
-        self.logger.info("Subscribing to measurement round requests")
-        name = f"{self.ns}:{agent_listen_key(uuid)}"
-        psub = self.client.pubsub()
-        async with psub as p:
-            await p.subscribe(name)
-            while True:
-                try:
-                    async with async_timeout.timeout(1.0):
-                        message = await p.get_message(ignore_subscribe_messages=True)
-                        if message:
-                            self.logger.info("Received measurement request")
-                            request = MeasurementRoundRequest.parse_raw(message["data"])
-                            await queue.put(request)
-                            self.logger.info(
-                                "Queued measurement requests: %s", queue.qsize()
-                            )
-                        await asyncio.sleep(0.1)
-                except asyncio.TimeoutError:
-                    pass
-                except asyncio.CancelledError:
-                    return
+    async def delete_request(self, measurement_uuid: str, agent_uuid: str) -> None:
+        """Delete the measurement request for a specified agent and measurement."""
+        await self.hdel(agent_queue_key(agent_uuid), measurement_uuid)

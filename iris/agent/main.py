@@ -11,7 +11,7 @@ from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl_with_mtr
 from iris.commons.dependencies import get_redis_context
 from iris.commons.logger import Adapter, base_logger
-from iris.commons.models import AgentParameters, AgentState, MeasurementRoundRequest
+from iris.commons.models import AgentParameters, AgentState
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from iris.commons.utils import cancel_task, get_ipv4_address, get_ipv6_address
@@ -24,31 +24,26 @@ async def heartbeat(agent_uuid: str, redis: Redis) -> None:
         await asyncio.sleep(5)
 
 
-async def consumer(
-    redis: Redis,
-    storage: Storage,
-    settings: AgentSettings,
-    queue: asyncio.Queue,
-) -> None:
+async def consumer(redis: Redis, storage: Storage, settings: AgentSettings):
     """Consume tasks from the queue and run measurements."""
     while True:
-        request: MeasurementRoundRequest = await queue.get()
+        request = await redis.get_random_request(settings.AGENT_UUID)
         logger = Adapter(
             base_logger,
             dict(
                 component="agent",
-                measurement_uuid=request.measurement_agent.measurement_uuid,
-                agent_uuid=request.measurement_agent.agent_uuid,
+                measurement_uuid=request.measurement_uuid,
+                agent_uuid=settings.AGENT_UUID,
             ),
         )
         await redis.set_agent_state(settings.AGENT_UUID, AgentState.Working)
         await do_measurement(settings, request, logger, redis, storage)
         await redis.set_agent_state(settings.AGENT_UUID, AgentState.Idle)
+        await redis.delete_request(request.measurement_uuid, settings.AGENT_UUID)
 
 
 async def main(settings=AgentSettings()):
     """Main agent function."""
-    # TODO: Do not set logging level is run from tests (make two separate main functions?)
     logging.basicConfig(level=settings.STREAM_LOGGING_LEVEL)
     logger = Adapter(
         base_logger, dict(component="agent", agent_uuid=settings.AGENT_UUID)
@@ -93,11 +88,9 @@ async def main_with_deps(
             ),
         )
 
-        queue = asyncio.Queue()
         tasks = [
             asyncio.create_task(heartbeat(settings.AGENT_UUID, redis)),
-            asyncio.create_task(consumer(redis, storage, settings, queue)),
-            asyncio.create_task(redis.subscribe(settings.AGENT_UUID, queue)),
+            asyncio.create_task(consumer(redis, storage, settings)),
         ]
         await asyncio.gather(*tasks)
 

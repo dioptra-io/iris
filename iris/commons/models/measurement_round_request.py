@@ -1,11 +1,11 @@
-from iris.commons.models.base import BaseSQLModel
-from iris.commons.models.measurement import Measurement
-from iris.commons.models.measurement_agent import MeasurementAgent
+from typing import Optional
+
+from iris.commons.models.base import BaseModel
 from iris.commons.models.round import Round
 
 
-class MeasurementRoundRequest(BaseSQLModel):
-    measurement: Measurement
-    measurement_agent: MeasurementAgent
+class MeasurementRoundRequest(BaseModel):
+    measurement_uuid: str
     probe_filename: str
+    probing_rate: Optional[int]
     round: Round

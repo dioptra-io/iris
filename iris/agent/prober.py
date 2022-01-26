@@ -18,9 +18,9 @@ async def watch_cancellation(
     agent_uuid: str,
     interval: float,
 ) -> bool:
-    """Kill the prober process if the measurement agent is cancelled."""
+    """Kill the prober process if the measurement request is deleted."""
     while process.is_alive():
-        if await redis.measurement_agent_cancelled(measurement_uuid, agent_uuid):
+        if not await redis.get_request(measurement_uuid, agent_uuid):
             process.kill()
             return False
         await asyncio.sleep(interval)

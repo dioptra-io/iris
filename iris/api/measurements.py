@@ -394,7 +394,7 @@ async def delete_measurement_agent(
         session, str(measurement_uuid), str(agent_uuid)
     )
     measurement_agent = assert_measurement_agent_visibility(measurement_agent, user)
-    await redis.cancel_measurement_agent(str(measurement_uuid), str(agent_uuid))
+    await redis.delete_request(str(measurement_uuid), str(agent_uuid))
     measurement_agent.state = MeasurementAgentState.Canceled
     measurement_agent.end_time = datetime.utcnow()
     session.add(measurement_agent)

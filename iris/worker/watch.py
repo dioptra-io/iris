@@ -157,12 +157,12 @@ async def watch_measurement_agent_with_deps(
             ma.set_state(session, MeasurementAgentState.Finished)
             break
 
-        await redis.publish(
+        await redis.set_request(
             agent_uuid,
             MeasurementRoundRequest(
-                measurement=ma.measurement,
-                measurement_agent=ma,
+                measurement_uuid=ma.measurement_uuid,
                 probe_filename=result.probes_key,
+                probing_rate=ma.probing_rate,
                 round=result.next_round,
             ),
         )

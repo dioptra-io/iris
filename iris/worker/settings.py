@@ -13,7 +13,7 @@ class WorkerSettings(CommonSettings):
     WORKER_TIME_LIMIT: int = 48 * HOUR_MS  # milliseconds
     WORKER_MESSAGE_AGE_LIMIT: int = 168 * HOUR_MS  # milliseconds
 
-    WORKER_SANITY_CHECK_RETRIES: int = 3
+    WORKER_SANITY_CHECK_RETRIES: int = 300
     WORKER_SANITY_CHECK_INTERVAL: float = 1  # seconds
     WORKER_WATCH_INTERVAL: float = 2  # seconds
 
