@@ -32,7 +32,7 @@ def test_start_end_time(make_measurement, make_measurement_agent):
 
 def test_state_no_agents(make_measurement, make_measurement_agent):
     measurement = make_measurement(agents=[])
-    assert measurement.state == MeasurementAgentState.Ongoing
+    assert measurement.state == MeasurementAgentState.Finished
 
 
 def test_state_different(make_measurement, make_measurement_agent):

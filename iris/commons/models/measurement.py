@@ -159,8 +159,19 @@ class Measurement(MeasurementBase, table=True):
     @property
     def state(self):
         agents_state = {x.state for x in self.agents}
+        # If all the agents are in are the same state, return it.
         if len(agents_state) == 1:
             return agents_state.pop()
+        # If all the agents are in a terminal state, return Finished.
+        if agents_state.issubset(
+            {
+                MeasurementAgentState.AgentFailure,
+                MeasurementAgentState.Canceled,
+                MeasurementAgentState.Finished,
+            }
+        ):
+            return MeasurementAgentState.Finished
+        # Otherwise, return Ongoing.
         return MeasurementAgentState.Ongoing
 
     def set_tags(self, session: Session, tags: List[str]) -> None:
