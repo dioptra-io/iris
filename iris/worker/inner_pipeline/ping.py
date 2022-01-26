@@ -1,6 +1,6 @@
 from logging import Logger
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from diamond_miner.generators import probe_generator_parallel
 from diamond_miner.insert import insert_probe_counts
@@ -19,7 +19,6 @@ async def ping_inner_pipeline(
     measurement_uuid: str,
     agent_uuid: str,
     agent_min_ttl: int,
-    measurement_tags: List[str],
     # NOTE: Ideally the sliding window parameters would be tool parameters.
     # Iris shouldn't need to know about this feature.
     sliding_window_stopping_condition: int,

@@ -84,7 +84,6 @@ async def outer_pipeline(
         logger=logger,
         measurement_uuid=measurement_uuid,
         agent_uuid=agent_uuid,
-        measurement_tags=measurement_tags,
         agent_min_ttl=agent_parameters.min_ttl,
         sliding_window_stopping_condition=sliding_window_stopping_condition,
         tool_parameters=tool_parameters,
