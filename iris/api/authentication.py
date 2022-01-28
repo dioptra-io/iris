@@ -105,6 +105,7 @@ settings = APISettings()
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 cookie_transport = CookieTransport(
     cookie_domain=settings.API_COOKIE_DOMAIN,
+    cookie_max_age=settings.API_COOKIE_LIFETIME,
     cookie_samesite=settings.API_COOKIE_SAMESITE,
 )
 
