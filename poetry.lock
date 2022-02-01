@@ -1632,7 +1632,7 @@ sqlcipher = ["sqlcipher3-binary"]
 
 [[package]]
 name = "sqlalchemy-utils"
-version = "0.37.9"
+version = "0.38.2"
 description = "Various utility functions for SQLAlchemy."
 category = "main"
 optional = false
@@ -1893,7 +1893,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "538fdd73bcf76712661ad49e57f94d519516bc02bca64006a002155eea6a769f"
+content-hash = "82981f48b9f9e42cb1b180bf85d322d2ed6a1fcff7ee1347d01d6b74a6343f28"
 
 [metadata.files]
 aioboto3 = [
@@ -2984,8 +2984,8 @@ sqlalchemy = [
     {file = "SQLAlchemy-1.4.31.tar.gz", hash = "sha256:582b59d1e5780a447aada22b461e50b404a9dc05768da1d87368ad8190468418"},
 ]
 sqlalchemy-utils = [
-    {file = "SQLAlchemy-Utils-0.37.9.tar.gz", hash = "sha256:4667edbdcb1ece011076b69772ef524bfbb17cc97e03f11ee6b85d98e7741d61"},
-    {file = "SQLAlchemy_Utils-0.37.9-py3-none-any.whl", hash = "sha256:bb6f4da8ac044cb0dd4d0278b1fb434141a5ee9d1881c757a076830ddbb04160"},
+    {file = "SQLAlchemy-Utils-0.38.2.tar.gz", hash = "sha256:9e01d6d3fb52d3926fcd4ea4a13f3540701b751aced0316bff78264402c2ceb4"},
+    {file = "SQLAlchemy_Utils-0.38.2-py3-none-any.whl", hash = "sha256:622235b1598f97300e4d08820ab024f5219c9a6309937a8b908093f487b4ba54"},
 ]
 sqlalchemy2-stubs = [
     {file = "sqlalchemy2-stubs-0.0.2a19.tar.gz", hash = "sha256:2117c48ce5acfe33bf9c9bfce2a981632d931949e68fa313aa5c2a3bc980ca7a"},
