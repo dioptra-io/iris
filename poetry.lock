@@ -824,7 +824,7 @@ test = ["pytest (>=6.2.4,<7.0.0)", "pytest-cov (>=2.12.0,<4.0.0)", "mypy (==0.91
 
 [[package]]
 name = "fastapi-users"
-version = "9.2.2"
+version = "9.2.3"
 description = "Ready-to-use and customizable users management for FastAPI."
 category = "main"
 optional = false
@@ -832,7 +832,7 @@ python-versions = ">=3.7"
 
 [package.dependencies]
 email-validator = ">=1.1.0,<1.2"
-fastapi = ">=0.65.2,<0.72.0"
+fastapi = ">=0.65.2,<0.74.0"
 fastapi-users-db-sqlalchemy = {version = ">=2.0.0", optional = true, markers = "extra == \"sqlalchemy2\""}
 httpx-oauth = {version = ">=0.4,<0.5", optional = true, markers = "extra == \"oauth\""}
 makefun = ">=1.11.2,<1.14"
@@ -1893,7 +1893,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "82981f48b9f9e42cb1b180bf85d322d2ed6a1fcff7ee1347d01d6b74a6343f28"
+content-hash = "bfdf15b7395510e6927feaa16fe9f21d8898fee36c4b1bc7f103386d4a16e9cd"
 
 [metadata.files]
 aioboto3 = [
@@ -2172,9 +2172,6 @@ coverage = [
     {file = "coverage-6.3-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:2bc85664b06ba42d14bb74d6ddf19d8bfc520cb660561d2d9ce5786ae72f71b5"},
     {file = "coverage-6.3-cp310-cp310-win32.whl", hash = "sha256:27a94db5dc098c25048b0aca155f5fac674f2cf1b1736c5272ba28ead2fc267e"},
     {file = "coverage-6.3-cp310-cp310-win_amd64.whl", hash = "sha256:bde4aeabc0d1b2e52c4036c54440b1ad05beeca8113f47aceb4998bb7471e2c2"},
-    {file = "coverage-6.3-cp311-cp311-macosx_10_14_x86_64.whl", hash = "sha256:509c68c3e2015022aeda03b003dd68fa19987cdcf64e9d4edc98db41cfc45d30"},
-    {file = "coverage-6.3-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:e4ff163602c5c77e7bb4ea81ba5d3b793b4419f8acd296aae149370902cf4e92"},
-    {file = "coverage-6.3-cp311-cp311-win_amd64.whl", hash = "sha256:d1675db48490e5fa0b300f6329ecb8a9a37c29b9ab64fa9c964d34111788ca2d"},
     {file = "coverage-6.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:7eed8459a2b81848cafb3280b39d7d49950d5f98e403677941c752e7e7ee47cb"},
     {file = "coverage-6.3-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1b4285fde5286b946835a1a53bba3ad41ef74285ba9e8013e14b5ea93deaeafc"},
     {file = "coverage-6.3-cp37-cp37m-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:a4748349734110fd32d46ff8897b561e6300d8989a494ad5a0a2e4f0ca974fc7"},
@@ -2272,8 +2269,8 @@ fastapi = [
     {file = "fastapi-0.71.0.tar.gz", hash = "sha256:2b5ac0ae89c80b40d1dd4b2ea0bb1f78d7c4affd3644d080bf050f084759fff2"},
 ]
 fastapi-users = [
-    {file = "fastapi-users-9.2.2.tar.gz", hash = "sha256:59febb9302dd0590b6992343896437bd1941ec4c6726bf5abf9093d681a98f23"},
-    {file = "fastapi_users-9.2.2-py3-none-any.whl", hash = "sha256:b565d481ea2182f09eff0933f3263022f6d8595e4eaab70c1218a8028ed1bb41"},
+    {file = "fastapi-users-9.2.3.tar.gz", hash = "sha256:937c04597ba28ddc7a1d830faffa0cb75dbb066057cab7825f8f455a89668e24"},
+    {file = "fastapi_users-9.2.3-py3-none-any.whl", hash = "sha256:cec5ea57a6aaaaba3ddf1b30022b919e18081697047819934461b734a62c2f28"},
 ]
 fastapi-users-db-sqlalchemy = [
     {file = "fastapi-users-db-sqlalchemy-2.0.4.tar.gz", hash = "sha256:93bd5ba48f7a7e9fe43b62a48ad7c5ec5993c8230c6dafb61c341ceee811ebf1"},
