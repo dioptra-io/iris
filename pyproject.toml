@@ -23,7 +23,7 @@ aioboto3 = "^9.3.1"
 aiofiles = "^0.8.0"
 aioredis = "^2.0.0"
 # We make alembic a runtime dependency so that is available in the Docker images.
-alembic = "^1.7.5"
+alembic = "^1.7.6"
 asgiref = "^3.2.7"
 asyncpg = "^0.25.0"
 diamond-miner = "^0.7.1"
