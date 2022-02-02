@@ -63,6 +63,7 @@ class MeasurementCreate(MeasurementBase):
 
 class MeasurementRead(MeasurementBase):
     uuid: str = Field(title="UUID")
+    user_id: str = Field(title="User ID")
     creation_time: datetime
     start_time: Optional[datetime]
     end_time: Optional[datetime]
