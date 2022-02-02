@@ -29,7 +29,7 @@ asyncpg = "^0.25.0"
 diamond-miner = "^0.7.2"
 dramatiq = {extras = ["redis", "watch"], version = "^1.12.2"}
 email-validator = "^1.1.3"
-fastapi = "^0.71.0"
+fastapi = "^0.73.0"
 fastapi-users = {extras = ["sqlalchemy2", "oauth"], version = "^9.2.3"}
 httpx = "^0.21.3"
 gunicorn = "^20.1.0"

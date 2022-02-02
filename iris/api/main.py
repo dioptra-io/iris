@@ -25,11 +25,10 @@ or browse the source code on [GitHub](https://github.com/dioptra-io/iris).
     docs_url="/docs",
     redoc_url=None,
     contact={"email": "iris@dioptra.io"},
-    # swagger_ui_parameters={
-    #     "displayRequestDuration": True,
-    #     "persistAuthorization": True,
-    #     "tryItOutEnabled": True,
-    # },
+    swagger_ui_parameters={
+        "displayRequestDuration": True,
+        "tryItOutEnabled": True,
+    },
 )
 
 
