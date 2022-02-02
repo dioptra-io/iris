@@ -43,7 +43,7 @@ SQLAlchemy-Utils = "^0.38.2"
 sqlmodel = "^0.0.6"
 starlette_exporter = "^0.11.0"
 tenacity = "^8.0.1"
-uvicorn = "^0.17.0"
+uvicorn = "^0.17.1"
 zstandard = "^0.16.0"
 
 [tool.poetry.dev-dependencies]
