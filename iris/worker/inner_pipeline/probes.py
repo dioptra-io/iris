@@ -3,7 +3,7 @@ from logging import Logger
 from pathlib import Path
 from typing import Optional
 
-from zstandard import ZstdDecompressor
+from zstandard import ZstdCompressor
 
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.models import Round, ToolParameters
@@ -26,6 +26,7 @@ async def probes_inner_pipeline(
     probes_filepath: Path,
     previous_round: Optional[Round],
     next_round: Round,
+    max_open_files: int,
 ) -> int:
     """
     :returns: The number of probes written.
@@ -47,9 +48,9 @@ async def probes_inner_pipeline(
         # Probes tool has only one round.
         return 0
 
-    # Copy the target_file to the probes file.
+    # Copy the target file to the probes file.
     logger.info("Copy targets file to probes file")
-    ctx = ZstdDecompressor()
+    ctx = ZstdCompressor()
     with targets_filepath.open("rb") as inp:
         with probes_filepath.open("wb") as out:
             ctx.copy_stream(inp, out)
