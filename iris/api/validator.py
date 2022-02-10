@@ -68,10 +68,18 @@ async def target_file_validator(
         )
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid prefixes length"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid prefixes length"
         )
 
-    cost = estimate_cost_for_tool[tool](tool_parameters, target_file["content"].split())
+    try:
+        cost = estimate_cost_for_tool[tool](
+            tool_parameters, target_file["content"].split()
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid line"
+        )
+
     if cost > user.probing_limit:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -92,4 +100,5 @@ async def target_file_validator(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Tool `ping` only accessible with ICMP protocol",
             )
+
     return global_min_ttl, global_max_ttl

@@ -56,6 +56,19 @@ async def test_targets_not_found(make_user, storage):
     assert "file not found" in e.value.detail
 
 
+async def test_targets_missing_columns(make_user, storage):
+    user = make_user()
+    await create_user_buckets(storage, user)
+    await upload_target_file(
+        storage, user, "targets.csv", content=["0.0.0.0/24,icmp,8,32"]
+    )
+    with pytest.raises(HTTPException) as e:
+        await target_file_validator(
+            storage, Tool.Ping, ToolParameters(), user, "targets.csv", 24, 64
+        )
+    assert "Invalid line" in e.value.detail
+
+
 async def test_targets_invalid_prefix_length(make_user, storage):
     user = make_user()
     await create_user_buckets(storage, user)
