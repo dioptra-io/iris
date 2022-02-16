@@ -56,6 +56,10 @@ class MeasurementAgentRead(MeasurementAgentBase):
     state: MeasurementAgentState
 
 
+class MeasurementAgentReadLite(BaseSQLModel):
+    agent_uuid: str
+
+
 class MeasurementAgent(MeasurementAgentBase, table=True):
     __tablename__ = "measurement_agent"
     measurement: "Measurement" = Relationship(back_populates="agents")
