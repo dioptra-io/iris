@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlmodel import Session
@@ -12,6 +14,7 @@ from iris.api.authentication import (
 from iris.api.settings import APISettings
 from iris.commons.dependencies import get_session, get_settings, get_storage
 from iris.commons.models import ExternalServices, Paginated, User, UserDB, UserTable
+from iris.commons.models.user import AWSCredentials, ClickHouseCredentials
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -78,12 +81,18 @@ async def get_user_services(
 ):
     s3_credentials = await storage.generate_temporary_credentials()
     return ExternalServices(
-        chproxy_url=settings.CHPROXY_PUBLIC_URL,
-        chproxy_username=settings.CHPROXY_PUBLIC_USERNAME,
-        chproxy_password=settings.CHPROXY_PUBLIC_PASSWORD,
-        s3_host=settings.S3_ENDPOINT_URL,
-        s3_access_key_expiration=s3_credentials["Expiration"],
-        s3_access_key_id=s3_credentials["AccessKeyId"],
-        s3_secret_access_key=s3_credentials["SecretAccessKey"],
-        s3_session_token=s3_credentials["SessionToken"],
+        clickhouse=ClickHouseCredentials(
+            base_url=settings.CHPROXY_PUBLIC_BASE_URL,
+            database=settings.CHPROXY_PUBLIC_DATABASE,
+            username=settings.CHPROXY_PUBLIC_USERNAME,
+            password=settings.CHPROXY_PUBLIC_PASSWORD,
+        ),
+        clickhouse_expiration_time=datetime.utcnow() + timedelta(days=365),
+        s3=AWSCredentials(
+            aws_access_key_id=s3_credentials["AccessKeyId"],
+            aws_secret_access_key=s3_credentials["SecretAccessKey"],
+            aws_session_token=s3_credentials["SessionToken"],
+            endpoint_url=settings.S3_ENDPOINT_URL,
+        ),
+        s3_expiration_time=s3_credentials["Expiration"],
     )

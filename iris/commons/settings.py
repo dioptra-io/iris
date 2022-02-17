@@ -13,7 +13,8 @@ from tenacity.wait import wait_random
 class CommonSettings(BaseSettings):
     """Common settings."""
 
-    CHPROXY_PUBLIC_URL: str = ""
+    CHPROXY_PUBLIC_BASE_URL: str = ""
+    CHPROXY_PUBLIC_DATABASE: str = ""
     CHPROXY_PUBLIC_USERNAME: str = ""
     CHPROXY_PUBLIC_PASSWORD: str = ""
 
