@@ -33,16 +33,6 @@ class Storage:
     settings: CommonSettings
     logger: LoggerAdapter
 
-    @property
-    def aws_settings(self):
-        return {
-            "aws_access_key_id": self.settings.S3_ACCESS_KEY_ID,
-            "aws_secret_access_key": self.settings.S3_SECRET_ACCESS_KEY,
-            "aws_session_token": self.settings.S3_SESSION_TOKEN,
-            "endpoint_url": self.settings.S3_HOST,
-            "region_name": self.settings.S3_REGION_NAME,
-        }
-
     def archive_bucket(self, user_id: str) -> str:
         return f"{self.settings.S3_PREFIX}-archive-{user_id}"
 
@@ -55,7 +45,7 @@ class Storage:
     @fault_tolerant
     async def get_measurement_buckets(self) -> List[str]:
         session = aioboto3.Session()
-        async with session.client("s3", **self.aws_settings) as s3:
+        async with session.client("s3", **self.settings.s3) as s3:
             response = await s3.list_buckets()
             return [x["Name"] for x in response["Buckets"]]
 
@@ -64,7 +54,7 @@ class Storage:
         """Create a bucket."""
         self.logger.info("Creating bucket %s", bucket)
         session = aioboto3.Session()
-        async with session.client("s3", **self.aws_settings) as s3:
+        async with session.client("s3", **self.settings.s3) as s3:
             try:
                 await s3.create_bucket(Bucket=bucket)
             except s3.exceptions.BucketAlreadyOwnedByYou:
@@ -74,7 +64,7 @@ class Storage:
     async def delete_bucket(self, bucket: str) -> None:
         """Delete a bucket."""
         session = aioboto3.Session()
-        async with session.client("s3", **self.aws_settings) as s3:
+        async with session.client("s3", **self.settings.s3) as s3:
             await s3.delete_bucket(Bucket=bucket)
 
     async def delete_bucket_with_files(self, bucket: str) -> None:
@@ -85,7 +75,7 @@ class Storage:
         """Get all files inside a bucket."""
         targets = []
         session = aioboto3.Session()
-        async with session.resource("s3", **self.aws_settings) as s3:
+        async with session.resource("s3", **self.settings.s3) as s3:
             b = await s3.Bucket(bucket)
             async for obj_summary in b.objects.all():
                 obj = await obj_summary.Object()
@@ -113,7 +103,7 @@ class Storage:
     ) -> Dict:
         """Get file information from a bucket."""
         session = aioboto3.Session()
-        async with session.client("s3", **self.aws_settings) as s3:
+        async with session.client("s3", **self.settings.s3) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
 
             content = None
@@ -161,7 +151,7 @@ class Storage:
     ) -> None:
         """Upload a file in a bucket with no retry."""
         session = aioboto3.Session()
-        async with session.client("s3", **self.aws_settings) as s3:
+        async with session.client("s3", **self.settings.s3) as s3:
             extraargs = {"Metadata": metadata} if metadata else None
             await s3.upload_fileobj(fd, bucket, filename, ExtraArgs=extraargs)
 
@@ -171,7 +161,7 @@ class Storage:
     ) -> None:
         """Download a file in a bucket."""
         session = aioboto3.Session()
-        async with session.client("s3", **self.aws_settings) as s3:
+        async with session.client("s3", **self.settings.s3) as s3:
             with Path(output_path).open("wb") as fd:
                 await s3.download_fileobj(bucket, filename, fd)
 
@@ -183,7 +173,7 @@ class Storage:
     async def delete_file_check_no_retry(self, bucket: str, filename: str) -> Dict:
         """Delete a file with a check that it exists."""
         session = aioboto3.Session()
-        async with session.client("s3", **self.aws_settings) as s3:
+        async with session.client("s3", **self.settings.s3) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
                 await stream.read()
@@ -194,7 +184,7 @@ class Storage:
     async def delete_file_no_check(self, bucket: str, filename: str) -> bool:
         """Delete a file with no check that it exists."""
         session = aioboto3.Session()
-        async with session.client("s3", **self.aws_settings) as s3:
+        async with session.client("s3", **self.settings.s3) as s3:
             response = await s3.delete_object(Bucket=bucket, Key=filename)
         status_code: int = response["ResponseMetadata"]["HTTPStatusCode"]
         return status_code == 204
@@ -203,7 +193,7 @@ class Storage:
     async def delete_all_files_from_bucket(self, bucket: str) -> None:
         """Delete all files from a bucket."""
         session = aioboto3.Session()
-        async with session.resource("s3", **self.aws_settings) as s3:
+        async with session.resource("s3", **self.settings.s3) as s3:
             b = await s3.Bucket(bucket)
             await b.objects.all().delete()
 
@@ -213,7 +203,7 @@ class Storage:
     ) -> None:
         """Copy a file from a bucket to another."""
         session = aioboto3.Session()
-        async with session.resource("s3", **self.aws_settings) as s3:
+        async with session.resource("s3", **self.settings.s3) as s3:
             bucket_destination = await s3.Bucket(bucket_dest)
             await bucket_destination.copy(
                 {"Bucket": bucket_src, "Key": filename_src}, filename_dst
@@ -232,7 +222,7 @@ class Storage:
                 )
             ],
         )
-        async with session.client("sts", **self.aws_settings) as sts:
+        async with session.client("sts", **self.settings.s3) as sts:
             response = await sts.assume_role(
                 DurationSeconds=60 * 60 * 3,
                 Policy=json.dumps(policy),

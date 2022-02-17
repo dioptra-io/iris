@@ -48,7 +48,7 @@ def settings():
     # Redis has 16 databases by default, we use the last one for testing.
     return CommonSettings(
         CLICKHOUSE_PUBLIC_USER="public",
-        CLICKHOUSE_URL="http://iris:iris@clickhouse.docker.localhost/?database=iris_test",
+        CLICKHOUSE_DATABASE="iris_test",
         DATABASE_URL=f"postgresql://iris:iris@postgres.docker.localhost/iris-test-{namespace}",
         S3_PREFIX=f"iris-test-{namespace}",
         S3_PUBLIC_RESOURCES=["arn:aws:s3:::test-public-exports/*"],

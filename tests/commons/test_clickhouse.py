@@ -1,8 +1,8 @@
 from uuid import uuid4
 
 import pytest
+from pych_client.exceptions import ClickHouseException
 
-from iris.commons.clickhouse import QueryError
 from iris.commons.test import compress_file
 
 
@@ -12,7 +12,7 @@ async def test_call(clickhouse):
 
 
 async def test_call_error(clickhouse):
-    with pytest.raises(QueryError, match="Missing columns"):
+    with pytest.raises(ClickHouseException, match="Missing columns"):
         await clickhouse.call("SELECT invalid")
 
 
@@ -61,5 +61,5 @@ async def test_insert_results_invalid(clickhouse, tmp_path):
         await clickhouse.create_tables(measurement_uuid, agent_uuid, 24, 64, drop=True)
         is None
     )
-    with pytest.raises(QueryError):
+    with pytest.raises(ClickHouseException):
         await clickhouse.insert_csv(measurement_uuid, agent_uuid, results_file)
