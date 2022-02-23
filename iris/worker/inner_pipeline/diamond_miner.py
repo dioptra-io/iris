@@ -8,6 +8,7 @@ from diamond_miner.generators import probe_generator_parallel
 from diamond_miner.insert import insert_mda_probe_counts, insert_probe_counts
 from diamond_miner.queries import GetSlidingPrefixes
 from diamond_miner.typing import FlowMapper
+from pych_client import ClickHouseClient
 
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.models import Round, ToolParameters
@@ -40,7 +41,7 @@ async def diamond_miner_inner_pipeline(
 
     :returns: The number of probes written.
     """
-    database_url = clickhouse.settings.CLICKHOUSE_URL
+    client = ClickHouseClient(**clickhouse.settings.clickhouse)
     measurement_id = f"{measurement_uuid}__{agent_uuid}"
 
     flow_mapper_v4, flow_mapper_v6 = instantiate_flow_mappers(
@@ -95,7 +96,7 @@ async def diamond_miner_inner_pipeline(
                 window_max_ttl=previous_round.max_ttl,
                 stopping_condition=sliding_window_stopping_condition,
             )
-            for row in query.execute_iter(database_url, measurement_id):
+            for row in query.execute_iter(client, measurement_id):
                 addr_v6 = ip_address(row["probe_dst_prefix"])
                 if addr_v4 := addr_v6.ipv4_mapped:
                     prefix = f"{addr_v4}/{tool_parameters.prefix_len_v4}"
@@ -106,7 +107,7 @@ async def diamond_miner_inner_pipeline(
 
         logger.info("Insert probe counts")
         insert_probe_counts(
-            url=database_url,
+            client=client,
             measurement_id=measurement_id,
             round_=next_round.number,
             prefixes=prefixes,
@@ -121,7 +122,7 @@ async def diamond_miner_inner_pipeline(
         assert previous_round, "round > 1 must have a previous round"
         logger.info("Insert MDA probe counts")
         insert_mda_probe_counts(
-            url=database_url,
+            client=client,
             measurement_id=measurement_id,
             previous_round=previous_round.number,
             target_epsilon=tool_parameters.failure_probability,
@@ -131,7 +132,7 @@ async def diamond_miner_inner_pipeline(
     logger.info("Generate probes file")
     return probe_generator_parallel(
         filepath=probes_filepath,
-        url=database_url,
+        client=client,
         measurement_id=measurement_id,
         round_=next_round.number,
         mapper_v4=flow_mapper_v4,

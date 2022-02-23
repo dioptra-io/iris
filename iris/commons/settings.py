@@ -13,11 +13,15 @@ from tenacity.wait import wait_random
 class CommonSettings(BaseSettings):
     """Common settings."""
 
-    CHPROXY_PUBLIC_URL: str = ""
+    CHPROXY_PUBLIC_BASE_URL: str = ""
+    CHPROXY_PUBLIC_DATABASE: str = ""
     CHPROXY_PUBLIC_USERNAME: str = ""
     CHPROXY_PUBLIC_PASSWORD: str = ""
 
-    CLICKHOUSE_URL: str = "http://iris:iris@clickhouse.docker.localhost/?database=iris"
+    CLICKHOUSE_BASE_URL: str = "http://clickhouse.docker.localhost"
+    CLICKHOUSE_DATABASE: str = "iris"
+    CLICKHOUSE_USERNAME: str = "iris"
+    CLICKHOUSE_PASSWORD: str = "iris"
     CLICKHOUSE_PUBLIC_USER: Optional[str] = None
     CLICKHOUSE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
     CLICKHOUSE_STORAGE_POLICY: str = "default"
@@ -33,12 +37,12 @@ class CommonSettings(BaseSettings):
     RETRY_TIMEOUT_RANDOM_MIN: int = 0  # seconds
     RETRY_TIMEOUT_RANDOM_MAX: int = 10 * 60  # seconds
 
-    S3_HOST: str = "http://minio.docker.localhost"
+    S3_ENDPOINT_URL: str = "http://minio.docker.localhost"
     S3_ACCESS_KEY_ID: str = "minioadmin"
     S3_SECRET_ACCESS_KEY: str = "minioadmin"
     S3_SESSION_TOKEN: Optional[str] = None
     S3_REGION_NAME: str = "local"
-    S3_PREFIX = "iris"
+    S3_PREFIX: str = "iris"
 
     S3_PUBLIC_ACTIONS: List[str] = [
         "s3:GetBucketLocation",
@@ -54,6 +58,25 @@ class CommonSettings(BaseSettings):
 
     TAG_PUBLIC: str = "!public"
     TAG_COLLECTION_PREFIX: str = "collection:"
+
+    @property
+    def clickhouse(self):
+        return {
+            "base_url": self.CLICKHOUSE_BASE_URL,
+            "database": self.CLICKHOUSE_DATABASE,
+            "username": self.CLICKHOUSE_USERNAME,
+            "password": self.CLICKHOUSE_PASSWORD,
+        }
+
+    @property
+    def s3(self):
+        return {
+            "aws_access_key_id": self.S3_ACCESS_KEY_ID,
+            "aws_secret_access_key": self.S3_SECRET_ACCESS_KEY,
+            "aws_session_token": self.S3_SESSION_TOKEN,
+            "endpoint_url": self.S3_ENDPOINT_URL,
+            "region_name": self.S3_REGION_NAME,
+        }
 
 
 def fault_tolerant(func):

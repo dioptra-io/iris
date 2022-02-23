@@ -79,12 +79,22 @@ class UserDB(User, models.BaseUserDB):
     pass
 
 
+class AWSCredentials(BaseModel):
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    aws_session_token: str
+    endpoint_url: str
+
+
+class ClickHouseCredentials(BaseModel):
+    base_url: str
+    database: str
+    username: str
+    password: str
+
+
 class ExternalServices(BaseModel):
-    chproxy_url: str
-    chproxy_username: str
-    chproxy_password: str
-    s3_host: str
-    s3_access_key_expiration: datetime
-    s3_access_key_id: str
-    s3_secret_access_key: str
-    s3_session_token: str
+    clickhouse: ClickHouseCredentials
+    clickhouse_expiration_time: datetime
+    s3: AWSCredentials
+    s3_expiration_time: datetime

@@ -13,6 +13,7 @@ from iris.commons.models.measurement_agent import (
     MeasurementAgent,
     MeasurementAgentCreate,
     MeasurementAgentRead,
+    MeasurementAgentReadLite,
     MeasurementAgentState,
 )
 from iris.commons.utils import cast
@@ -63,10 +64,12 @@ class MeasurementCreate(MeasurementBase):
 
 class MeasurementRead(MeasurementBase):
     uuid: str = Field(title="UUID")
+    user_id: str = Field(title="User ID")
     creation_time: datetime
     start_time: Optional[datetime]
     end_time: Optional[datetime]
     state: MeasurementAgentState = Field(title="State")
+    agents: List[MeasurementAgentReadLite]
 
     @classmethod
     def from_measurement(cls, m: "Measurement") -> "MeasurementRead":

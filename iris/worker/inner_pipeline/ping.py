@@ -4,6 +4,7 @@ from typing import Optional
 
 from diamond_miner.generators import probe_generator_parallel
 from diamond_miner.insert import insert_probe_counts
+from pych_client import ClickHouseClient
 
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.models import Round, ToolParameters
@@ -33,7 +34,7 @@ async def ping_inner_pipeline(
     """
     :returns: The number of probes written.
     """
-    database_url = clickhouse.settings.CLICKHOUSE_URL
+    client = ClickHouseClient(**clickhouse.settings.clickhouse)
     measurement_id = f"{measurement_uuid}__{agent_uuid}"
 
     flow_mapper_v4, flow_mapper_v6 = instantiate_flow_mappers(
@@ -72,7 +73,7 @@ async def ping_inner_pipeline(
 
     logger.info("Insert probe counts")
     insert_probe_counts(
-        url=database_url,
+        client=client,
         measurement_id=measurement_id,
         round_=next_round.number,
         prefixes=prefixes,
@@ -85,7 +86,7 @@ async def ping_inner_pipeline(
     logger.info("Generate probes file")
     return probe_generator_parallel(
         filepath=probes_filepath,
-        url=database_url,
+        client=client,
         measurement_id=measurement_id,
         round_=next_round.number,
         mapper_v4=flow_mapper_v4,

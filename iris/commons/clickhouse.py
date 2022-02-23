@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -9,7 +8,6 @@ from pathlib import Path
 from typing import Any, Iterator, List, Optional
 
 import aiofiles.os
-import httpx
 from diamond_miner.queries import (
     CreateTables,
     DropTables,
@@ -22,7 +20,7 @@ from diamond_miner.queries import (
     results_table,
 )
 from diamond_miner.subsets import subsets_for
-from httpx import HTTPStatusError
+from pych_client import AsyncClickHouseClient, ClickHouseClient
 
 from iris.commons.filesplit import split_compressed_file
 from iris.commons.settings import CommonSettings, fault_tolerant
@@ -41,54 +39,22 @@ def measurement_id(measurement_uuid: str, agent_uuid: str) -> str:
     return f"{measurement_uuid}__{agent_uuid}"
 
 
-class QueryError(Exception):
-    pass
-
-
 @dataclass(frozen=True)
 class ClickHouse:
     settings: CommonSettings
     logger: LoggerAdapter
 
     @fault_tolerant
-    async def call(
-        self,
-        query: str,
-        *,
-        params: Optional[dict] = None,
-        timeout=(1, 60),
-    ) -> List[dict]:
-        # TODO: Cleanup this code and move to a dedicated package?
-        query_params = {}
-        content = ""
-
-        if params:
-            query_params = {f"param_{k}": v for k, v in params.items()}
-
-        params_ = {
-            "default_format": "JSONEachRow",
-            "query": query,
-            **query_params,
-        }
-
-        async with httpx.AsyncClient() as client:
-            r = await client.post(
-                url=self.settings.CLICKHOUSE_URL,
-                content=content,
-                params=params_,
-                timeout=timeout,
-            )
-            try:
-                r.raise_for_status()
-                if text := r.text.strip():
-                    return [json.loads(line) for line in text.split("\n")]
-                return []
-            except HTTPStatusError as e:
-                raise QueryError(r.content) from e
+    async def call(self, query: str, params: Optional[dict] = None) -> List[dict]:
+        async with AsyncClickHouseClient(**self.settings.clickhouse) as client:
+            return await client.json(query, params)
 
     @fault_tolerant
-    async def execute(self, query: Query, measurement_id_: str, **kwargs: Any):
-        return query.execute(self.settings.CLICKHOUSE_URL, measurement_id_, **kwargs)
+    async def execute(
+        self, query: Query, measurement_id_: str, **kwargs: Any
+    ) -> List[dict]:
+        with ClickHouseClient(**self.settings.clickhouse) as client:
+            return query.execute(client, measurement_id_, **kwargs)
 
     async def create_tables(
         self,
@@ -166,18 +132,13 @@ class ClickHouse:
         self.logger.info("Number of concurrent processes: %s", concurrency)
 
         def insert(file):
-            query = f"INSERT INTO {results_table(measurement_id(measurement_uuid, agent_uuid))} FORMAT CSV"
-            r = httpx.post(
-                self.settings.CLICKHOUSE_URL,
-                content=iter_file(file),
-                params={"query": query},
-                timeout=httpx.Timeout(3600, connect=5),
-            )
-            os.remove(file)
-            try:
-                r.raise_for_status()
-            except HTTPStatusError as e:
-                raise QueryError(r.content) from e
+            with ClickHouseClient(**self.settings.clickhouse) as client:
+                table = results_table(measurement_id(measurement_uuid, agent_uuid))
+                query = f"INSERT INTO {table} FORMAT CSV"
+                try:
+                    client.execute(query, data=iter_file(file))
+                finally:
+                    os.remove(file)
 
         loop = asyncio.get_running_loop()
         with ThreadPoolExecutor(concurrency) as pool:
@@ -194,16 +155,17 @@ class ClickHouse:
             "TRUNCATE {table:Identifier}",
             params={"table": links_table(measurement_id_)},
         )
-        query = InsertLinks()
-        subsets = subsets_for(query, self.settings.CLICKHOUSE_URL, measurement_id_)
-        # We limit the number of concurrent requests since this query
-        # uses a lot of memory (aggregation of the flows table).
-        query.execute_concurrent(
-            self.settings.CLICKHOUSE_URL,
-            measurement_id_,
-            subsets=subsets,
-            concurrent_requests=8,
-        )
+        with ClickHouseClient(**self.settings.clickhouse) as client:
+            query = InsertLinks()
+            subsets = subsets_for(query, client, measurement_id_)
+            # We limit the number of concurrent requests since this query
+            # uses a lot of memory (aggregation of the flows table).
+            query.execute_concurrent(
+                client,
+                measurement_id_,
+                subsets=subsets,
+                concurrent_requests=8,
+            )
 
     @fault_tolerant
     async def insert_prefixes(self, measurement_uuid: str, agent_uuid: str) -> None:
@@ -213,13 +175,14 @@ class ClickHouse:
             "TRUNCATE {table:Identifier}",
             params={"table": prefixes_table(measurement_id_)},
         )
-        query = InsertPrefixes()
-        subsets = subsets_for(query, self.settings.CLICKHOUSE_URL, measurement_id_)
-        # We limit the number of concurrent requests since this query
-        # uses a lot of memory.
-        query.execute_concurrent(
-            self.settings.CLICKHOUSE_URL,
-            measurement_id_,
-            subsets=subsets,
-            concurrent_requests=8,
-        )
+        with ClickHouseClient(**self.settings.clickhouse) as client:
+            query = InsertPrefixes()
+            subsets = subsets_for(query, client, measurement_id_)
+            # We limit the number of concurrent requests since this query
+            # uses a lot of memory.
+            query.execute_concurrent(
+                client,
+                measurement_id_,
+                subsets=subsets,
+                concurrent_requests=8,
+            )
