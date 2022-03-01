@@ -1293,14 +1293,14 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "pych-client"
-version = "0.2.6"
+version = "0.2.8"
 description = ""
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 
 [package.dependencies]
-httpx = ">=0.21.0,<0.22.0"
+httpx = ">=0.21.0"
 orjson = {version = ">=3.6.6,<4.0.0", optional = true, markers = "extra == \"orjson\""}
 
 [package.extras]
@@ -1906,7 +1906,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "5a41b10f7b6ab54b287c43bc465f7cc0739ee6470412d7a1f8e5cb011ecdb7d8"
+content-hash = "8889dcd7d999ea8ea154571cd7290180c7da3e8e75e253d5ab1cbd1edfced7ae"
 
 [metadata.files]
 aioboto3 = [
@@ -2807,8 +2807,8 @@ pycaracal = [
     {file = "pycaracal-0.7.5.tar.gz", hash = "sha256:bdb74d41df021d826c1b82e47cf59f1ab16b2eb68766e673e73074e08d06978e"},
 ]
 pych-client = [
-    {file = "pych-client-0.2.6.tar.gz", hash = "sha256:52a0cd7bbf54b6bcc978cefa6a083e9a88d07da8a52ce78526ea58323616c0c9"},
-    {file = "pych_client-0.2.6-py3-none-any.whl", hash = "sha256:59d8f8e5daa213861a03dcd74797a8079b2e671f290346f060559a009bbe929e"},
+    {file = "pych-client-0.2.8.tar.gz", hash = "sha256:3f090c640e7b0ec40ad9f707a4fa9b26928fc3118c6ae6a7dfa910031342ea0b"},
+    {file = "pych_client-0.2.8-py3-none-any.whl", hash = "sha256:78a1d603d3a260131f9758d041a09820f163d3b2e7a73f336497208c2f37cf6d"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.8.0-py2.py3-none-any.whl", hash = "sha256:720f8b39dde8b293825e7ff02c475f3077124006db4f440dcbc9a20b76548a20"},

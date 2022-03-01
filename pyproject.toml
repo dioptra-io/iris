@@ -34,7 +34,7 @@ fastapi-users = {extras = ["sqlalchemy2", "oauth"], version = "^9.2.4"}
 gunicorn = "^20.1.0"
 psycopg2 = "^2.9.3"
 pycaracal = "^0.7.5"
-pych-client = {extras = ["orjson"], version = "^0.2.6"}
+pych-client = {extras = ["orjson"], version = "^0.2.8"}
 pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 python-multipart = "^0.0.5"
