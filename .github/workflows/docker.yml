@@ -13,7 +13,7 @@ jobs:
           - iris-worker
     steps:
       - uses: actions/checkout@v2
-      - uses: dioptra-io/publish-docker-action@v1.1
+      - uses: dioptra-io/publish-docker-action@v1.3
         with:
           file: ./dockerfiles/${{ matrix.image }}.dockerfile
           image: dioptra-io/iris/${{ matrix.image }}

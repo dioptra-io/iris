@@ -276,7 +276,6 @@ async def get_measurement(
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
-    assert_probing_enabled(user)
     measurement = Measurement.get(session, str(measurement_uuid))
     measurement = assert_measurement_visibility(measurement, user, settings)
     return MeasurementReadWithAgents.from_measurement(measurement)

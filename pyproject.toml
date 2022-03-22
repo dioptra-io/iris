@@ -30,11 +30,11 @@ diamond-miner = "^0.8.0"
 dramatiq = {extras = ["redis", "watch"], version = "^1.12.2"}
 email-validator = "^1.1.3"
 fastapi = "^0.73.0"
-fastapi-users = {extras = ["sqlalchemy2", "oauth"], version = "^9.2.4"}
+fastapi-users = {extras = ["sqlalchemy2", "oauth"], version = "^9.2.5"}
 gunicorn = "^20.1.0"
 psycopg2 = "^2.9.3"
 pycaracal = "^0.7.5"
-pych-client = {extras = ["orjson"], version = "^0.2.6"}
+pych-client = {extras = ["orjson"], version = "^0.2.8"}
 pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 python-multipart = "^0.0.5"
@@ -49,7 +49,7 @@ zstandard = "^0.17.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1"
-boto3-stubs = "^1.20.46"
+boto3-stubs = "^1.21.9"
 bumpversion = "^0.6.0"
 coverage = {extras = ["toml"], version = "^6.3"}
 flake8 = "^4.0.1"
