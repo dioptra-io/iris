@@ -141,6 +141,21 @@ async def test_get_measurement(
     )
 
 
+async def test_get_measurement_verified_user(
+    make_client, make_measurement, make_user, redis, session, storage
+):
+    user = make_user(probing_enabled=False)
+    client = make_client(user)
+
+    measurement = make_measurement(user_id=str(user.id))
+    add_and_refresh(session, [measurement])
+
+    assert_response(
+        client.get(f"/measurements/{measurement.uuid}"),
+        MeasurementReadWithAgents.from_measurement(measurement),
+    )
+
+
 async def test_get_measurement_other_user(
     make_client, make_measurement, make_user, redis, session, storage
 ):
