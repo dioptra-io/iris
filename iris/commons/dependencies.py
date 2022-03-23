@@ -34,8 +34,10 @@ def get_engine(settings=Depends(get_settings)):
         future=True,
         json_serializer=json_serializer,
     )
-    yield engine
-    engine.dispose()
+    try:
+        yield engine
+    finally:
+        engine.dispose()
 
 
 async def get_async_engine(settings=Depends(get_settings)):
@@ -45,8 +47,10 @@ async def get_async_engine(settings=Depends(get_settings)):
         connect_args=dict(command_timeout=5, timeout=5),
         future=True,
     )
-    yield engine
-    await engine.dispose()
+    try:
+        yield engine
+    finally:
+        await engine.dispose()
 
 
 # TODO: Use SQLAlchemy async engine/session for both FastAPI-Users and SQLModel.
@@ -76,8 +80,10 @@ def get_clickhouse(settings=Depends(get_settings), logger=Depends(get_logger)):
 async def get_redis(settings=Depends(get_settings), logger=Depends(get_logger)):
     # TODO: Connection pooling.
     client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    yield Redis(client, settings, logger)
-    await client.close()
+    try:
+        yield Redis(client, settings, logger)
+    finally:
+        await client.close()
 
 
 def get_storage(settings=Depends(get_settings), logger=Depends(get_logger)):
