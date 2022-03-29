@@ -51,14 +51,14 @@ class MeasurementCreate(MeasurementBase):
                     raise ValueError(
                         "`prefix_len_v6` must be 64 for diamond-miner and yarrp"
                     )
-            if tool in (Tool.Ping, Tool.Probes):
+            if tool in (Tool.Ping,):
                 # NOTE: Technically we could use a larger prefix length to allow
                 # the flow mapper to choose a random IP address inside the prefix,
                 # but users probably expect ping to target a specific IP address.
                 if agent.tool_parameters.prefix_len_v4 != 32:
-                    raise ValueError("`prefix_len_v4` must be 32 for ping and probes")
+                    raise ValueError("`prefix_len_v4` must be 32 for ping")
                 if agent.tool_parameters.prefix_len_v6 != 128:
-                    raise ValueError("`prefix_len_v6` must be 128 for ping and probes")
+                    raise ValueError("`prefix_len_v6` must be 128 for ping")
         return values
 
 
