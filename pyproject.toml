@@ -19,7 +19,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-aioboto3 = "^9.3.1"
+aioboto3 = "^9.5.0"
 aiofiles = "^0.8.0"
 aioredis = "^2.0.0"
 # We make alembic a runtime dependency so that is available in the Docker images.
