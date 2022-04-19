@@ -1,4 +1,4 @@
-FROM docker.io/library/ubuntu:20.04 AS builder
+FROM docker.io/library/ubuntu:22.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
@@ -20,7 +20,7 @@ COPY poetry.lock poetry.lock
 RUN poetry install --no-root --no-dev \
     && rm -rf /root/.cache/*
 
-FROM docker.io/library/ubuntu:20.04
+FROM docker.io/library/ubuntu:22.04
 LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
