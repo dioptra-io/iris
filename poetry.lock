@@ -1302,7 +1302,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "pych-client"
-version = "0.2.9"
+version = "0.2.10"
 description = "A ClickHouse client for Python, with a command-line interface."
 category = "main"
 optional = false
@@ -1917,7 +1917,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "749e285d73980c4e8c1daa585664c0fb86bfecd1b8fb120435f2ccdf7ccbfc61"
+content-hash = "b3427a88a017e24d4aafe57e437d93692d571d9e5b00006e83a727ddbfbeaa2e"
 
 [metadata.files]
 aioboto3 = [
@@ -2789,8 +2789,8 @@ pycaracal = [
     {file = "pycaracal-0.8.1.tar.gz", hash = "sha256:7b7e311fc466906d107a24983cc4b89c9bac1f947fa90a5d8b201a203308207c"},
 ]
 pych-client = [
-    {file = "pych-client-0.2.9.tar.gz", hash = "sha256:3dbce08fafa9af4eeb091b47283ff6e030cea1520ac0693ac43b3c8955c4d67b"},
-    {file = "pych_client-0.2.9-py3-none-any.whl", hash = "sha256:86f45f4d64259bbac0e6cee996a671141a6a9e65e7fa598beacbd3dd374e3770"},
+    {file = "pych-client-0.2.10.tar.gz", hash = "sha256:28828c26942986806bf1b37bee1ad85c1ce66863376302dff185c2c9d3cbfc7c"},
+    {file = "pych_client-0.2.10-py3-none-any.whl", hash = "sha256:06855f3cb6fb6615347c85a4f0b21dba862636f1768a58218fbee9deafff2b4a"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.8.0-py2.py3-none-any.whl", hash = "sha256:720f8b39dde8b293825e7ff02c475f3077124006db4f440dcbc9a20b76548a20"},
