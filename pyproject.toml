@@ -27,7 +27,7 @@ alembic = "^1.7.6"
 asgiref = "^3.2.7"
 asyncpg = "^0.25.0"
 diamond-miner = "^0.9.0"
-dramatiq = {extras = ["redis", "watch"], version = "^1.12.2"}
+dramatiq = {extras = ["redis", "watch"], version = "^1.13.0"}
 email-validator = "^1.1.3"
 fastapi = "^0.75.2"
 fastapi-users = {extras = ["sqlalchemy2", "oauth"], version = "^9.2.5"}

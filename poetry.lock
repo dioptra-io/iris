@@ -760,7 +760,7 @@ wmi = ["wmi (>=1.5.1,<2.0.0)"]
 
 [[package]]
 name = "dramatiq"
-version = "1.12.3"
+version = "1.13.0"
 description = "Background Processing for Python 3."
 category = "main"
 optional = false
@@ -773,8 +773,8 @@ watchdog = {version = "*", optional = true, markers = "extra == \"watch\""}
 watchdog-gevent = {version = "*", optional = true, markers = "extra == \"watch\""}
 
 [package.extras]
-all = ["gevent (>=1.1)", "redis (>=2.0,<5.0)", "watchdog", "pika (>=1.0,<2.0)", "watchdog-gevent", "pylibmc (>=1.5,<2.0)"]
-dev = ["gevent (>=1.1)", "redis (>=2.0,<5.0)", "watchdog", "pika (>=1.0,<2.0)", "watchdog-gevent", "pylibmc (>=1.5,<2.0)", "alabaster", "sphinx (<1.8)", "sphinxcontrib-napoleon", "flake8", "flake8-bugbear", "flake8-quotes", "isort", "bumpversion", "hiredis", "twine", "wheel", "pytest", "pytest-benchmark", "pytest-cov", "tox"]
+all = ["redis (>=2.0,<5.0)", "pylibmc (>=1.5,<2.0)", "watchdog", "watchdog-gevent", "pika (>=1.0,<2.0)", "gevent (>=1.1)"]
+dev = ["redis (>=2.0,<5.0)", "pylibmc (>=1.5,<2.0)", "watchdog", "watchdog-gevent", "pika (>=1.0,<2.0)", "gevent (>=1.1)", "alabaster", "sphinx (<1.8)", "sphinxcontrib-napoleon", "flake8", "flake8-bugbear", "flake8-quotes", "isort", "bumpversion", "hiredis", "twine", "wheel", "pytest", "pytest-benchmark", "pytest-cov", "tox"]
 gevent = ["gevent (>=1.1)"]
 memcached = ["pylibmc (>=1.5,<2.0)"]
 rabbitmq = ["pika (>=1.0,<2.0)"]
@@ -1917,7 +1917,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "4178532e4a8bbf3161ead8ac92afa6620eeea214b36891c937d2891473fe3bbc"
+content-hash = "a0e0401272bf01174bdda97f9071bf0e09f9c09118ab739d4b7ed5d7d6361408"
 
 [metadata.files]
 aioboto3 = [
@@ -2298,8 +2298,8 @@ dnspython = [
     {file = "dnspython-2.2.1.tar.gz", hash = "sha256:0f7569a4a6ff151958b64304071d370daa3243d15941a7beedf0c9fe5105603e"},
 ]
 dramatiq = [
-    {file = "dramatiq-1.12.3-py3-none-any.whl", hash = "sha256:eccb0f54d44ebd9e2c79e00d67b808397589a1a621ba7c5fd58df5fb6204a0a8"},
-    {file = "dramatiq-1.12.3.tar.gz", hash = "sha256:380bd77b6b19d642f417b642935049ff71ddf4b4e57d821e4f55b92541430f21"},
+    {file = "dramatiq-1.13.0-py3-none-any.whl", hash = "sha256:8ef7509ca62bc45c3f1e3b1a0248e9f774337100e32ba1502cfcca15df79ad61"},
+    {file = "dramatiq-1.13.0.tar.gz", hash = "sha256:b4fe0ca6b55b06bebf82cd14c88044fb267505a57d4aa47378194efa0cef5f47"},
 ]
 ecdsa = [
     {file = "ecdsa-0.17.0-py2.py3-none-any.whl", hash = "sha256:5cf31d5b33743abe0dfc28999036c849a69d548f994b535e527ee3cb7f3ef676"},
