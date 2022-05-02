@@ -723,14 +723,14 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "diamond-miner"
-version = "0.9.0"
+version = "0.9.1"
 description = "High-speed, Internet-scale, load-balanced paths discovery."
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 
 [package.dependencies]
-pych-client = {version = ">=0.2.3,<0.3.0", extras = ["orjson"]}
+pych-client = ">=0.2.3,<0.3.0"
 pygfc = ">=1.0.5,<2.0.0"
 zstandard = ">=0.15.2,<0.18.0"
 
@@ -1917,7 +1917,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "4178532e4a8bbf3161ead8ac92afa6620eeea214b36891c937d2891473fe3bbc"
+content-hash = "6d8aceec1bbc00f22f669dd8f1ed1233a74ba95abe53facabaf564b621d607c6"
 
 [metadata.files]
 aioboto3 = [
@@ -2276,18 +2276,18 @@ deprecated = [
     {file = "Deprecated-1.2.13.tar.gz", hash = "sha256:43ac5335da90c31c24ba028af536a91d41d53f9e6901ddb021bcc572ce44e38d"},
 ]
 diamond-miner = [
-    {file = "diamond-miner-0.9.0.tar.gz", hash = "sha256:bf7c54101325ccf5c6e325e3160b4cd03478af5b8995bfddc4fd05b2a63918ce"},
-    {file = "diamond_miner-0.9.0-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:cb559529335019c6c41ed75e428d4a022f8421c4ab41158b5a365218795d87f6"},
-    {file = "diamond_miner-0.9.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7a9658e3d95810c360a9bfae92680ffbaf3132196a239a3665fbc2131342b5e6"},
-    {file = "diamond_miner-0.9.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f2e1b47354e0ff8ddce9e20180ef18c5a93dc83e22f62e57b01cad45cb0e726a"},
-    {file = "diamond_miner-0.9.0-cp38-cp38-macosx_10_16_x86_64.whl", hash = "sha256:ade0460f5d8321dd62d13185720559d40fed9918db0ab142a45cd80083d025c7"},
-    {file = "diamond_miner-0.9.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4ddae7fd6d5571c2c52a71ad5a725f568838ae9a6334da09a93a3178e7398eb6"},
-    {file = "diamond_miner-0.9.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:77d06017bed09a087b9ebc111c8d01ac3b80aa736b4f9c82b91691a851733aca"},
-    {file = "diamond_miner-0.9.0-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:3aa5e98f1169fa73db32221800d4bffff737939ca3da846f293f484614845c10"},
-    {file = "diamond_miner-0.9.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:74fbca4b4a4e5d59a51f162b6f05fae3b7cc30ce402efed4687607db14465e16"},
-    {file = "diamond_miner-0.9.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:85aef5673a8f03b183af8a1066c574dca343257a9e0c40b53885b7d44372f255"},
-    {file = "diamond_miner-0.9.0-pp38-pypy38_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a9ab554bc85f36d92ad9febd29bfa69dbd79fc23e1eb7d6aa3cd2f03cdf1bcea"},
-    {file = "diamond_miner-0.9.0-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl", hash = "sha256:de3d32e9c8555e37f0266dac77ba0e57c0cb069efba832e137b4582795fddf8b"},
+    {file = "diamond-miner-0.9.1.tar.gz", hash = "sha256:96b437969666230c17f34d6cd74152d34134ae2c96fb0977307f7a112ff4ff9e"},
+    {file = "diamond_miner-0.9.1-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:c8863a91fa2b2d494af93c6363d30e386784432417f29563bc531ef42e4d100e"},
+    {file = "diamond_miner-0.9.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:248127f6a6ef28c573ea3afe2fb151bd86d62fb53a0389c885dcd09aa7b5ef04"},
+    {file = "diamond_miner-0.9.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:40c7bd9537714ec08dd031faeca4fadba2afbeecfd88bd42b73363d3377bc34c"},
+    {file = "diamond_miner-0.9.1-cp38-cp38-macosx_10_16_x86_64.whl", hash = "sha256:668c0aa6435190aa908825598f2bdf6efd846161e751cae1a2c22f17c7872812"},
+    {file = "diamond_miner-0.9.1-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:255f5820411e80e102e8c39cb1fdca715b4afbcbc8ed0e02db37e311cf0aa967"},
+    {file = "diamond_miner-0.9.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2299fcf0ee9d7d787eaa65efe173a822277a8937c4d2c04047e5255aa2e16cbe"},
+    {file = "diamond_miner-0.9.1-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:b4aec2efdb1bb7d2264cf65486a3a3fe8ce0c1774fb5e7a6e51e5d128fddd680"},
+    {file = "diamond_miner-0.9.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6f18ac11e19aea348c433d60f60117ff0dc0737c2135cf51c5339fa57c74fc0b"},
+    {file = "diamond_miner-0.9.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7f485b7121f1a4cbcfb70deb47ca1261b55c255b9ff478d893d67061e54e954c"},
+    {file = "diamond_miner-0.9.1-pp38-pypy38_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:344a74cc4ba0ce76cdc3dea150a0e76815850b8227808ba9f9e1b0ef0cbdd856"},
+    {file = "diamond_miner-0.9.1-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl", hash = "sha256:67b5c6291d79e2cd0f470bd4f5b3091d4a2be29897e202a097f60fb4f4e399d3"},
 ]
 distlib = [
     {file = "distlib-0.3.4-py2.py3-none-any.whl", hash = "sha256:6564fe0a8f51e734df6333d08b8b94d4ea8ee6b99b5ed50613f731fd4089f34b"},
