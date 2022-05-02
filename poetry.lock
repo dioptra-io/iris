@@ -810,7 +810,7 @@ idna = ">=2.0.0"
 
 [[package]]
 name = "fastapi"
-version = "0.75.0"
+version = "0.75.2"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 category = "main"
 optional = false
@@ -821,10 +821,10 @@ pydantic = ">=1.6.2,<1.7 || >1.7,<1.7.1 || >1.7.1,<1.7.2 || >1.7.2,<1.7.3 || >1.
 starlette = "0.17.1"
 
 [package.extras]
-all = ["requests (>=2.24.0,<3.0.0)", "jinja2 (>=2.11.2,<4.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "itsdangerous (>=1.1.0,<3.0.0)", "pyyaml (>=5.3.1,<6.0.0)", "ujson (>=4.0.1,<5.0.0)", "orjson (>=3.2.1,<4.0.0)", "email_validator (>=1.1.1,<2.0.0)", "uvicorn[standard] (>=0.12.0,<0.16.0)"]
-dev = ["python-jose[cryptography] (>=3.3.0,<4.0.0)", "passlib[bcrypt] (>=1.7.2,<2.0.0)", "autoflake (>=1.4.0,<2.0.0)", "flake8 (>=3.8.3,<4.0.0)", "uvicorn[standard] (>=0.12.0,<0.16.0)"]
-doc = ["mkdocs (>=1.1.2,<2.0.0)", "mkdocs-material (>=8.1.4,<9.0.0)", "mdx-include (>=1.4.1,<2.0.0)", "mkdocs-markdownextradata-plugin (>=0.1.7,<0.3.0)", "typer-cli (>=0.0.12,<0.0.13)", "pyyaml (>=5.3.1,<6.0.0)"]
-test = ["pytest (>=6.2.4,<7.0.0)", "pytest-cov (>=2.12.0,<4.0.0)", "mypy (==0.910)", "flake8 (>=3.8.3,<4.0.0)", "black (==21.9b0)", "isort (>=5.0.6,<6.0.0)", "requests (>=2.24.0,<3.0.0)", "httpx (>=0.14.0,<0.19.0)", "email_validator (>=1.1.1,<2.0.0)", "sqlalchemy (>=1.3.18,<1.5.0)", "peewee (>=3.13.3,<4.0.0)", "databases[sqlite] (>=0.3.2,<0.6.0)", "orjson (>=3.2.1,<4.0.0)", "ujson (>=4.0.1,<5.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "flask (>=1.1.2,<3.0.0)", "anyio[trio] (>=3.2.1,<4.0.0)", "types-ujson (==0.1.1)", "types-orjson (==3.6.0)", "types-dataclasses (==0.1.7)"]
+all = ["requests (>=2.24.0,<3.0.0)", "jinja2 (>=2.11.2,<4.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "itsdangerous (>=1.1.0,<3.0.0)", "pyyaml (>=5.3.1,<7.0.0)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,<6.0.0)", "orjson (>=3.2.1,<4.0.0)", "email_validator (>=1.1.1,<2.0.0)", "uvicorn[standard] (>=0.12.0,<0.18.0)"]
+dev = ["python-jose[cryptography] (>=3.3.0,<4.0.0)", "passlib[bcrypt] (>=1.7.2,<2.0.0)", "autoflake (>=1.4.0,<2.0.0)", "flake8 (>=3.8.3,<4.0.0)", "uvicorn[standard] (>=0.12.0,<0.18.0)"]
+doc = ["mkdocs (>=1.1.2,<2.0.0)", "mkdocs-material (>=8.1.4,<9.0.0)", "mdx-include (>=1.4.1,<2.0.0)", "mkdocs-markdownextradata-plugin (>=0.1.7,<0.3.0)", "typer (>=0.4.1,<0.5.0)", "pyyaml (>=5.3.1,<7.0.0)"]
+test = ["pytest (>=6.2.4,<7.0.0)", "pytest-cov (>=2.12.0,<4.0.0)", "mypy (==0.910)", "flake8 (>=3.8.3,<4.0.0)", "black (==22.3.0)", "isort (>=5.0.6,<6.0.0)", "requests (>=2.24.0,<3.0.0)", "httpx (>=0.14.0,<0.19.0)", "email_validator (>=1.1.1,<2.0.0)", "sqlalchemy (>=1.3.18,<1.5.0)", "peewee (>=3.13.3,<4.0.0)", "databases[sqlite] (>=0.3.2,<0.6.0)", "orjson (>=3.2.1,<4.0.0)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,<6.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "flask (>=1.1.2,<3.0.0)", "anyio[trio] (>=3.2.1,<4.0.0)", "types-ujson (==4.2.1)", "types-orjson (==3.6.2)", "types-dataclasses (==0.6.5)"]
 
 [[package]]
 name = "fastapi-users"
@@ -1294,7 +1294,7 @@ python-versions = "*"
 
 [[package]]
 name = "pycaracal"
-version = "0.8.1"
+version = "0.11.0"
 description = ""
 category = "main"
 optional = false
@@ -1917,7 +1917,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "052afcb1545c60b2f8aba3e9af0231c2c6ab6d6061b5ad1bd5f5535d861e3d63"
+content-hash = "1d6a26c200a24540ffbc62b6144eb503d3739dd838c27daf8a12dda6c75558ee"
 
 [metadata.files]
 aioboto3 = [
@@ -2310,8 +2310,8 @@ email-validator = [
     {file = "email_validator-1.1.3.tar.gz", hash = "sha256:aa237a65f6f4da067119b7df3f13e89c25c051327b2b5b66dc075f33d62480d7"},
 ]
 fastapi = [
-    {file = "fastapi-0.75.0-py3-none-any.whl", hash = "sha256:43d12891b78fc497a50623e9c7c24640c569489f060acd9ce2c4902080487a93"},
-    {file = "fastapi-0.75.0.tar.gz", hash = "sha256:124774ce4cb3322841965f559669b233a0b8d343ea24fdd8b293253c077220d7"},
+    {file = "fastapi-0.75.2-py3-none-any.whl", hash = "sha256:a70d31f4249b6b42dbe267667d22f83af645b2d857876c97f83ca9573215784f"},
+    {file = "fastapi-0.75.2.tar.gz", hash = "sha256:b5dac161ee19d33346040d3f44d8b7a9ac09b37df9efff95891f5e7641fa482f"},
 ]
 fastapi-users = [
     {file = "fastapi-users-9.3.0.tar.gz", hash = "sha256:24d938ece7bd24d2c09680bb4e624dae4b325c4e6f98b502ed613df758415f7f"},
@@ -2777,16 +2777,16 @@ pyasn1 = [
     {file = "pyasn1-0.4.8.tar.gz", hash = "sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba"},
 ]
 pycaracal = [
-    {file = "pycaracal-0.8.1-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:efa2d91a1a91d60898a150e08d5d5a7d306a01f6fe4773edeeaafa53589bf86a"},
-    {file = "pycaracal-0.8.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:91efb647132bb51f8fecae9ea0033697bd1af8688d129d150d36071385d0a284"},
-    {file = "pycaracal-0.8.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cea16cc8341e3d9845b1337ef08b8c2b7518654cee3789a04979f93704883bed"},
-    {file = "pycaracal-0.8.1-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:4c6d030a8671e57c530975787ced3290d4c31c293b0a6fd19692623e8f76beb3"},
-    {file = "pycaracal-0.8.1-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:83ff7540bc98ad3be13450e26634d75d5a6702b21b275baf675c947fc617f364"},
-    {file = "pycaracal-0.8.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:194322e5dcb9f26950f5ea9f2152139e1556dfd4aa5d6699266327b371890c54"},
-    {file = "pycaracal-0.8.1-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:762398ff7c567e6b9a30e2b843797691cf87736f5b947195195973c0b4c92321"},
-    {file = "pycaracal-0.8.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:399875a6b391287687100e9068de4f0248b28432870b027ffa7704bc17bf93d6"},
-    {file = "pycaracal-0.8.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b00a12a2f2dfffe29d00f828c5bd2d477f9b38fd1c7cb0b8c3e018cc58e9e620"},
-    {file = "pycaracal-0.8.1.tar.gz", hash = "sha256:7b7e311fc466906d107a24983cc4b89c9bac1f947fa90a5d8b201a203308207c"},
+    {file = "pycaracal-0.11.0-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:849914a907066413c6a890cf1efd081d2d9539f9144628f5e3bf4ce96f09d86c"},
+    {file = "pycaracal-0.11.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:92467d25741e538444515da88a13d98bf128e3f9e7ce1fccd8da4058af17c21c"},
+    {file = "pycaracal-0.11.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:99097660936aa70fb0bd1a989ae743315d4c709ab8e19c1c43c9faca6598e7b5"},
+    {file = "pycaracal-0.11.0-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:2f100843f3ac483b4e4360a8ea93ba7f2b56f7365927406bca00e0a135f1c5d5"},
+    {file = "pycaracal-0.11.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:caacbaba04078ca7f55e51daa1556625024eea42419030dd25662ff672a79c26"},
+    {file = "pycaracal-0.11.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:365a53b8c52b2723db25898fc94adaaa4f8afc2fd1de89b2d23e066413ca9a66"},
+    {file = "pycaracal-0.11.0-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:6efd0a00279a32365808ddd73989781bf90d47863da98792a7387cca10b8643c"},
+    {file = "pycaracal-0.11.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:17bb515269bc4f86478606e632170f67ab36c5a3f1d25264bd1f11b8df71c5a1"},
+    {file = "pycaracal-0.11.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:389183f40a966bb545abcb692c5095e512af70d354ec4cd3228a7bbb653d9be4"},
+    {file = "pycaracal-0.11.0.tar.gz", hash = "sha256:3770678f6e2228f264a3b79d9f75e11670778c2c11f1e52684a2af3f2ac1f933"},
 ]
 pych-client = [
     {file = "pych-client-0.2.10.tar.gz", hash = "sha256:28828c26942986806bf1b37bee1ad85c1ce66863376302dff185c2c9d3cbfc7c"},
