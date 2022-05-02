@@ -24,7 +24,7 @@ aiofiles = "^0.8.0"
 aioredis = "^2.0.0"
 # We make alembic a runtime dependency so that is available in the Docker images.
 alembic = "^1.7.6"
-asgiref = "^3.2.7"
+asgiref = "^3.5.1"
 asyncpg = "^0.25.0"
 diamond-miner = "^0.9.0"
 dramatiq = {extras = ["redis", "watch"], version = "^1.12.2"}
