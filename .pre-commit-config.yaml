@@ -12,7 +12,7 @@ repos:
         args: [ "--profile=black" ]
 
   - repo: https://github.com/psf/black
-    rev: 21.10b0
+    rev: 22.3.0
     hooks:
       - id: black
         args: [ "--line-length=88" ]
@@ -26,7 +26,7 @@ repos:
         args: [ "--ignore=E203,E501,W503" ]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.2.0
     hooks:
       - id: trailing-whitespace
         exclude: ^README.md$

@@ -6,7 +6,7 @@ import time
 import aioredis
 
 from iris import __version__
-from iris.agent.measurements import do_measurement
+from iris.agent.outer_pipeline import outer_pipeline
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl_with_mtr
 from iris.commons.dependencies import get_redis_context
@@ -37,7 +37,7 @@ async def consumer(redis: Redis, storage: Storage, settings: AgentSettings):
             ),
         )
         await redis.set_agent_state(settings.AGENT_UUID, AgentState.Working)
-        await do_measurement(settings, request, logger, redis, storage)
+        await outer_pipeline(settings, request, logger, redis, storage)
         await redis.set_agent_state(settings.AGENT_UUID, AgentState.Idle)
         await redis.delete_request(request.measurement_uuid, settings.AGENT_UUID)
 
