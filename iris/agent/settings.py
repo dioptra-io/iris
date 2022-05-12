@@ -32,6 +32,7 @@ class AgentSettings(CommonSettings):
     AGENT_MAX_PROBING_RATE: int = 1000  # pps
     AGENT_MIN_TTL: int = -1  # A value < 0 will trigger `find_exit_ttl`
     AGENT_MIN_TTL_FIND_TARGET: str = "example.org"
+    AGENT_RIPE_ATLAS_KEY: str = ""
     AGENT_TAGS: str = "all"  # comma-separated list of tags
 
     AGENT_TARGETS_DIR_PATH: Path = Path("iris_data/agent/targets")
