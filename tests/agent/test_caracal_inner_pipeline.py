@@ -1,4 +1,4 @@
-from iris.agent.prober import probe
+from iris.agent.inner_pipeline.caracal import probe
 from tests.helpers import superuser
 
 
