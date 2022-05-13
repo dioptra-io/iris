@@ -2,7 +2,7 @@ import asyncio
 from logging import LoggerAdapter
 from multiprocessing import Manager, Process
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from pycaracal import prober, set_log_level
 
@@ -18,9 +18,13 @@ async def caracal_backend(
     redis: Redis,
     probes_filepath: Path,
     results_filepath: Path,
-):
+) -> Optional[dict]:
+    """
+    This is the default and reference backend for Iris.
+    It uses `caracal <https://github.com/dioptra-io/caracal>`_ for sending the probes.
+    """
     with Manager() as manager:
-        prober_statistics = manager.dict()  # type: ignore
+        probing_statistics = manager.dict()  # type: ignore
         prober_process = Process(
             target=probe,
             args=(
@@ -29,20 +33,20 @@ async def caracal_backend(
                 results_filepath,
                 request.round.number,
                 request.probing_rate,
-                prober_statistics,
+                probing_statistics,
             ),
         )
         prober_process.start()
-        is_not_canceled = await watch_cancellation(
+        cancelled = await watch_cancellation(
             redis,
             prober_process,
             request.measurement_uuid,
             settings.AGENT_UUID,
             settings.AGENT_STOPPER_REFRESH,
         )
-        prober_statistics = dict(prober_statistics)
+        probing_statistics = dict(probing_statistics)
 
-    return prober_statistics, is_not_canceled
+    return None if cancelled else probing_statistics
 
 
 async def watch_cancellation(
@@ -56,9 +60,9 @@ async def watch_cancellation(
     while process.is_alive():
         if not await redis.get_request(measurement_uuid, agent_uuid):
             process.kill()
-            return False
+            return True
         await asyncio.sleep(interval)
-    return True
+    return False
 
 
 def probe(
@@ -67,7 +71,7 @@ def probe(
     results_filepath: Path,
     round_number: int,
     probing_rate: int,
-    prober_statistics: Dict,
+    probing_statistics: Dict,
 ) -> None:
     """Probing interface."""
     # Cap the probing rate if superior to the maximum probing rate
@@ -98,18 +102,21 @@ def probe(
     prober_stats, sniffer_stats, pcap_stats = prober.probe(config, str(probes_filepath))
 
     # Populate the statistics
-    prober_statistics["probes_read"] = prober_stats.read
-    prober_statistics["packets_sent"] = prober_stats.sent
-    prober_statistics["packets_failed"] = prober_stats.failed
-    prober_statistics["filtered_low_ttl"] = prober_stats.filtered_lo_ttl
-    prober_statistics["filtered_high_ttl"] = prober_stats.filtered_hi_ttl
-    prober_statistics["filtered_prefix_excl"] = prober_stats.filtered_prefix_excl
-    prober_statistics[
+    # TODO: Implement __dict__ in pycaracal.
+    probing_statistics["probes_read"] = prober_stats.read
+    probing_statistics["packets_sent"] = prober_stats.sent
+    probing_statistics["packets_failed"] = prober_stats.failed
+    probing_statistics["filtered_low_ttl"] = prober_stats.filtered_lo_ttl
+    probing_statistics["filtered_high_ttl"] = prober_stats.filtered_hi_ttl
+    probing_statistics["filtered_prefix_excl"] = prober_stats.filtered_prefix_excl
+    probing_statistics[
         "filtered_prefix_not_incl"
     ] = prober_stats.filtered_prefix_not_incl
 
-    prober_statistics["packets_received"] = sniffer_stats.received_count
-    prober_statistics["packets_received_invalid"] = sniffer_stats.received_invalid_count
-    prober_statistics["pcap_received"] = pcap_stats.received
-    prober_statistics["pcap_dropped"] = pcap_stats.dropped
-    prober_statistics["pcap_interface_dropped"] = pcap_stats.interface_dropped
+    probing_statistics["packets_received"] = sniffer_stats.received_count
+    probing_statistics[
+        "packets_received_invalid"
+    ] = sniffer_stats.received_invalid_count
+    probing_statistics["pcap_received"] = pcap_stats.received
+    probing_statistics["pcap_dropped"] = pcap_stats.dropped
+    probing_statistics["pcap_interface_dropped"] = pcap_stats.interface_dropped

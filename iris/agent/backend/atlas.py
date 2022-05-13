@@ -5,10 +5,10 @@ from io import TextIOWrapper
 from ipaddress import IPv6Address
 from logging import LoggerAdapter
 from pathlib import Path
-from typing import AsyncIterator, Iterable, Iterator, List
+from typing import AsyncIterator, Iterable, Iterator, List, Optional
 
 from httpx import AsyncClient
-from zstandard import ZstdDecompressor
+from zstandard import ZstdCompressor, ZstdDecompressor
 
 from iris.agent.settings import AgentSettings
 from iris.commons.models import MeasurementRoundRequest
@@ -25,15 +25,16 @@ async def atlas_backend(
     redis: Redis,
     probes_filepath: Path,
     results_filepath: Path,
-):
-    # TODO: Document backends.
-    # TODO: Test, test min/max_ttl
-    # TODO: Explain why we need to group things here (to minimize number of Atlas measurements)
+) -> Optional[dict]:
+    """
+    This is an experimental backend using `RIPE Atlas <https://atlas.ripe.net/>`_ to send the probes.
+    This gives access to a large number of vantage points, at the expense of very low speed probing.
+    """
     logger.info("Converting probes to RIPE Atlas targets")
     with probes_filepath.open("rb") as f:
         ctx = ZstdDecompressor()
         with ctx.stream_reader(f) as stream:
-            targets = probes_to_targets(TextIOWrapper(stream))
+            targets = group_probes(TextIOWrapper(stream))
 
     definitions = [
         make_definition(
@@ -54,29 +55,26 @@ async def atlas_backend(
     ) as client:
         logger.info("Creating RIPE Atlas measurements")
         group_id = await create_measurement_group(client, definitions)
+        group_status = await get_measurement_group_status(client, group_id)
         logger.info("Watching RIPE Atlas measurements")
-        while True:
+        while not all(x == "Stopped" for x in group_status):
             group_status = await get_measurement_group_status(client, group_id)
             logger.info("RIPE Atlas group status: %s", group_status)
-            # (a) Stop when all the measurements are done.
-            if all(x == "Stopped" for x in group_status):
-                cancelled = False
-                break
-            # (b) Stop if the measurement request was cancelled.
+            # Stop if the measurement request was cancelled.
             if not await redis.get_request(
                 request.measurement_uuid, settings.AGENT_UUID
             ):
-                cancelled = True
-                break
+                await stop_measurement_group(client, group_id)
+                return None
             await asyncio.sleep(10)  # TODO: Parametrize the refresh interval?
 
-        if not cancelled:
-            logger.info("Fetching RIPE Atlas results")
-            # TODO: zstd compression
-            with results_filepath.open("w") as f:
+        logger.info("Fetching RIPE Atlas results")
+        with results_filepath.open("wb") as f:
+            ctx = ZstdCompressor()
+            with ctx.stream_writer(f) as stream:
                 async for result in get_measurement_group_results(client, group_id):
                     for reply in traceroute_to_replies(result, request.round.number):
-                        f.write(json.dumps(reply) + "\n")
+                        stream.write(",".join(str(x) for x in reply).encode() + b"\n")
 
     probing_statistics = dict(
         probes_read=0,
@@ -93,12 +91,13 @@ async def atlas_backend(
         pcap_interface_dropped=0,
     )  # TODO
 
-    return probing_statistics, not cancelled
+    return probing_statistics
 
 
-def probes_to_targets(lines: Iterable[str]) -> dict:
+def group_probes(lines: Iterable[str]) -> dict:
     """
-    >>> probes_to_targets([
+    Group probes by destination address and protocol in order to minimize the number of measurements required.
+    >>> group_probes([
     ...     "::ffff:192.0.2.1,24000,33434,1,icmp",
     ...     "::ffff:192.0.2.1,24000,33435,4,icmp",
     ...     "::ffff:192.0.2.2,24000,33434,1,icmp",

@@ -41,11 +41,11 @@ async def outer_pipeline(
 
     probing_start_time = datetime.utcnow()
     backend = backend_from_string[settings.AGENT_BACKEND]
-    prober_statistics, is_not_canceled = await backend(
+    prober_statistics = await backend(
         settings, request, logger, redis, probes_filepath, results_filepath
     )
 
-    if is_not_canceled:
+    if prober_statistics:
         logger.info("Upload probing statistics to Redis")
         statistics = ProbingStatistics(
             round=request.round,
