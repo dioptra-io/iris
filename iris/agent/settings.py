@@ -3,7 +3,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 from uuid import uuid4
 
 from pydantic import root_validator
@@ -21,6 +21,8 @@ class RateLimitingMethod(str, Enum):
 class AgentSettings(CommonSettings):
     """Agent specific settings."""
 
+    AGENT_BACKEND: Literal["atlas", "caracal"] = "caracal"
+
     AGENT_CARACAL_EXCLUDE_PATH: Path = Path("statics/excluded_prefixes")
     AGENT_CARACAL_RATE_LIMITING_METHOD: RateLimitingMethod = RateLimitingMethod.auto
     AGENT_CARACAL_SNIFFER_WAIT_TIME: int = 5
@@ -32,6 +34,7 @@ class AgentSettings(CommonSettings):
     AGENT_MAX_PROBING_RATE: int = 1000  # pps
     AGENT_MIN_TTL: int = -1  # A value < 0 will trigger `find_exit_ttl`
     AGENT_MIN_TTL_FIND_TARGET: str = "example.org"
+    AGENT_RIPE_ATLAS_KEY: str = ""
     AGENT_TAGS: str = "all"  # comma-separated list of tags
 
     AGENT_TARGETS_DIR_PATH: Path = Path("iris_data/agent/targets")

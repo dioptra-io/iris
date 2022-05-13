@@ -1,7 +1,12 @@
 import socket
 from ipaddress import IPv4Address, IPv6Address
 
-from iris.commons.utils import get_ipv4_address, get_ipv6_address
+from iris.commons.utils import (
+    get_ipv4_address,
+    get_ipv6_address,
+    zstd_stream_reader,
+    zstd_stream_writer,
+)
 
 
 class MockSocket:
@@ -60,3 +65,13 @@ def test_get_ipv6_address_error(monkeypatch):
 
     monkeypatch.setattr(socket, "socket", Socket)
     assert get_ipv6_address() == IPv6Address("::1")
+
+
+def test_zstd_stream(tmp_path):
+    file = tmp_path / "test.zst"
+    with zstd_stream_writer(file) as f:
+        f.write(b"Hello\nWorld")
+    with zstd_stream_reader(file) as f:
+        assert f.readall() == b"Hello\nWorld"
+    with zstd_stream_reader(file, text=True) as f:
+        assert list(f) == ["Hello\n", "World"]

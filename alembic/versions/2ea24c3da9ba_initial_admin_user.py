@@ -10,7 +10,7 @@ import logging
 from uuid import UUID
 
 # revision identifiers, used by Alembic.
-from fastapi_users.password import get_password_hash
+from fastapi_users.password import PasswordHelper
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -56,7 +56,7 @@ def upgrade():
         text(
             f"""
             INSERT INTO public.user (id, firstname, lastname, email, hashed_password, is_active, is_verified, is_superuser, probing_enabled, probing_limit)
-            VALUES ('{user_id}', 'admin', 'admin', 'admin@example.org', '{get_password_hash("admin")}', true, true, true, true, 1000000)
+            VALUES ('{user_id}', 'admin', 'admin', 'admin@example.org', '{PasswordHelper().hash("admin")}', true, true, true, true, 1000000)
             """
         ),
         # {"id": str(user_id), "hashed_password": get_password_hash("admin")},

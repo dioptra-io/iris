@@ -1,11 +1,20 @@
 import asyncio
 import json
 import socket
+from contextlib import contextmanager
+from io import TextIOWrapper
 from ipaddress import IPv4Address, IPv6Address
-from typing import Callable, Optional, TypeVar
+from pathlib import Path
+from typing import Callable, ContextManager, Optional, TypeVar, Union
 
 from pydantic import BaseModel
 from sqlmodel import SQLModel
+from zstandard import (
+    ZstdCompressionWriter,
+    ZstdCompressor,
+    ZstdDecompressionReader,
+    ZstdDecompressor,
+)
 
 T = TypeVar("T")
 
@@ -66,3 +75,21 @@ def get_ipv6_address(host="2001:4860:4860::8888", port=80) -> IPv6Address:
     finally:
         s.close()
     return ip_address
+
+
+@contextmanager
+def zstd_stream_reader(
+    path: Union[Path, str], text: bool = False
+) -> ContextManager[ZstdDecompressionReader]:
+    ctx = ZstdDecompressor()
+    with open(path, "rb") as f, ctx.stream_reader(f) as stream:
+        if text:
+            stream = TextIOWrapper(stream)
+        yield stream
+
+
+@contextmanager
+def zstd_stream_writer(path: Union[Path, str]) -> ContextManager[ZstdCompressionWriter]:
+    ctx = ZstdCompressor()
+    with open(path, "wb") as f, ctx.stream_writer(f) as stream:
+        yield stream

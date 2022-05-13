@@ -12,12 +12,17 @@ from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
 from tests.assertions import cast_response
 
-xfailci = pytest.mark.xfail(
-    "CI" in os.environ, reason="this test is not supported on GitHub actions"
+atlaskey = pytest.mark.skipif(
+    "RIPE_ATLAS_KEY" not in os.environ,
+    reason="this test requires the RIPE_ATLAS_KEY environment variable to be set",
 )
 
 superuser = pytest.mark.skipif(
     os.geteuid() != 0, reason="this test must be run as root"
+)
+
+xfailci = pytest.mark.xfail(
+    "CI" in os.environ, reason="this test is not supported on GitHub actions"
 )
 
 
