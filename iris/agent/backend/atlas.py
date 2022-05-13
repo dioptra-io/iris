@@ -28,7 +28,6 @@ async def atlas_backend(
 ):
     # TODO: Document backends.
     # TODO: Test, test min/max_ttl
-    # TODO: convert results to Iris format
     # TODO: Explain why we need to group things here (to minimize number of Atlas measurements)
     logger.info("Converting probes to RIPE Atlas targets")
     with probes_filepath.open("rb") as f:
@@ -104,7 +103,7 @@ def probes_to_targets(lines: Iterable[str]) -> dict:
     ...     "::ffff:192.0.2.1,24000,33435,4,icmp",
     ...     "::ffff:192.0.2.2,24000,33434,1,icmp",
     ... ])
-    {('::ffff:192.0.2.1', 'icmp'): (2, 1, 4), ('::ffff:192.0.2.2', 'icmp'): (1, 1, 1)}
+    {('192.0.2.1', 'icmp'): (2, 1, 4), ('192.0.2.2', 'icmp'): (1, 1, 1)}
     """
     targets = defaultdict(lambda: (set(), set()))
     for line in lines:

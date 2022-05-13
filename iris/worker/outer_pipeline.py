@@ -26,7 +26,7 @@ async def outer_pipeline(
     measurement_uuid: str,
     agent_uuid: str,
     measurement_tags: List[str],
-    # NOTE: See comments about these parameters in backend.py.
+    # NOTE: See comments about these parameters in inner_pipeline/.
     sliding_window_size: int,
     sliding_window_stopping_condition: int,
     tool: Tool,
