@@ -3,7 +3,7 @@ import shutil
 from datetime import datetime
 from logging import LoggerAdapter
 
-from iris.agent.inner_pipeline import atlas_inner_pipeline
+from iris.agent.backend import backend_from_string
 from iris.agent.settings import AgentSettings
 from iris.commons.models import MeasurementRoundRequest, ProbingStatistics
 from iris.commons.redis import Redis
@@ -40,8 +40,8 @@ async def outer_pipeline(
     logger.info("Requested probing rate: %s", request.probing_rate)
 
     probing_start_time = datetime.utcnow()
-    # TODO: Dispatch.
-    prober_statistics, is_not_canceled = await atlas_inner_pipeline(
+    backend = backend_from_string[settings.AGENT_BACKEND]
+    prober_statistics, is_not_canceled = await backend(
         settings, request, logger, redis, probes_filepath, results_filepath
     )
 

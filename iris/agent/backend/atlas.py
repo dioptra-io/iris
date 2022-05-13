@@ -1,10 +1,11 @@
 import asyncio
+import json
 from collections import defaultdict
 from io import TextIOWrapper
 from ipaddress import IPv6Address
 from logging import LoggerAdapter
 from pathlib import Path
-from typing import Iterable, List
+from typing import AsyncIterator, Iterable, Iterator, List
 
 from httpx import AsyncClient
 from zstandard import ZstdDecompressor
@@ -13,10 +14,11 @@ from iris.agent.settings import AgentSettings
 from iris.commons.models import MeasurementRoundRequest
 from iris.commons.redis import Redis
 
+ATLAS_BASE_URL = "https://atlas.ripe.net/api/v2/"
 ATLAS_PROTOCOLS = {"icmp": "ICMP", "icmp6": "ICMP", "udp": "UDP"}
 
 
-async def atlas_inner_pipeline(
+async def atlas_backend(
     settings: AgentSettings,
     request: MeasurementRoundRequest,
     logger: LoggerAdapter,
@@ -24,10 +26,10 @@ async def atlas_inner_pipeline(
     probes_filepath: Path,
     results_filepath: Path,
 ):
+    # TODO: Document backends.
     # TODO: Test, test min/max_ttl
     # TODO: convert results to Iris format
-    # TODO: pretty inefficient to rebuild the target list from the probes,
-    # it would be better to directly get the target list file here.
+    # TODO: Explain why we need to group things here (to minimize number of Atlas measurements)
     logger.info("Converting probes to RIPE Atlas targets")
     with probes_filepath.open("rb") as f:
         ctx = ZstdDecompressor()
@@ -47,7 +49,7 @@ async def atlas_inner_pipeline(
     ]
 
     async with AsyncClient(
-        base_url="https://atlas.ripe.net/api/v2/",
+        base_url=ATLAS_BASE_URL,
         params=dict(key=settings.AGENT_RIPE_ATLAS_KEY),
         timeout=30,
     ) as client:
@@ -69,9 +71,13 @@ async def atlas_inner_pipeline(
                 break
             await asyncio.sleep(10)  # TODO: Parametrize the refresh interval?
 
-    if not cancelled:
-        logger.info("Fetching RIPE Atlas results")
-        # TODO
+        if not cancelled:
+            logger.info("Fetching RIPE Atlas results")
+            # TODO: zstd compression
+            with results_filepath.open("w") as f:
+                async for result in get_measurement_group_results(client, group_id):
+                    for reply in traceroute_to_replies(result, request.round.number):
+                        f.write(json.dumps(reply) + "\n")
 
     probing_statistics = dict(
         probes_read=0,
@@ -112,6 +118,31 @@ def probes_to_targets(lines: Iterable[str]) -> dict:
     }
 
 
+def traceroute_to_replies(traceroute: dict, round_: int) -> Iterator[tuple]:
+    for hop in traceroute["result"]:
+        for result in hop["result"]:
+            if "from" in result:
+                yield (
+                    0,  # capture_timestamp - not available with RIPE Atlas.
+                    traceroute["proto"],  # TODO: probe_protocol
+                    traceroute["src_addr"],  # probe_src_addr
+                    traceroute["dst_addr"],  # probe_dst_addr
+                    traceroute["paris_id"],  # probe_src_port
+                    traceroute["paris_id"],  # probe_dst_port
+                    hop["hop"],  # probe_ttl
+                    0,  # quoted_ttl - not available with RIPE Atlas.
+                    result["from"],  # reply_src_addr
+                    1,  # reply_protocol - TODO: ICMPv6
+                    11,  # reply_icmp_type - TODO: echo reply vs time exceeded vs dest unreachable
+                    0,  # TODO: reply_icmp_code
+                    result["ttl"],  # reply_ttl
+                    result["size"],  # reply_size
+                    [],  # TODO: reply_mpls_labels
+                    result["rtt"],  # rtt
+                    round_,  # round
+                )
+
+
 def make_definition(
     measurement_uuid: str,
     dst_addr: str,
@@ -149,12 +180,35 @@ async def create_measurement_group(client: AsyncClient, definitions: List[dict])
     return data["measurements"][0]
 
 
-async def get_measurement_group_status(client: AsyncClient, group_id: int) -> List[str]:
+async def get_measurement_group_members(
+    client: AsyncClient, group_id: int
+) -> List[int]:
     data = (await client.get(f"/measurements/groups/{group_id}")).json()
-    return [
-        await get_measurement_status(client, member["id"])
-        for member in data["group_members"]
-    ]
+    return [member["id"] for member in data["group_members"]]
+
+
+async def get_measurement_group_results(
+    client: AsyncClient, group_id: int
+) -> AsyncIterator[dict]:
+    members = await get_measurement_group_members(client, group_id)
+    for member in members:
+        async for result in get_measurement_results(client, member):
+            yield result
+
+
+async def get_measurement_results(
+    client: AsyncClient, measurement_id: int
+) -> AsyncIterator[dict]:
+    async with client.stream(
+        "GET", f"/measurements/{measurement_id}/results", params=dict(format="txt")
+    ) as stream:
+        async for line in stream.aiter_lines():
+            yield json.loads(line)
+
+
+async def get_measurement_group_status(client: AsyncClient, group_id: int) -> List[str]:
+    members = await get_measurement_group_members(client, group_id)
+    return [await get_measurement_status(client, member) for member in members]
 
 
 async def get_measurement_status(client: AsyncClient, measurement_id: int) -> str:

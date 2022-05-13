@@ -6,7 +6,7 @@ import time
 import aioredis
 
 from iris import __version__
-from iris.agent.outer_pipeline import outer_pipeline
+from iris.agent.pipeline import outer_pipeline
 from iris.agent.settings import AgentSettings
 from iris.agent.ttl import find_exit_ttl_with_mtr
 from iris.commons.dependencies import get_redis_context

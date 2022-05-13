@@ -1,4 +1,5 @@
 import asyncio
+from logging import LoggerAdapter
 from multiprocessing import Manager, Process
 from pathlib import Path
 from typing import Dict
@@ -10,9 +11,10 @@ from iris.commons.models import MeasurementRoundRequest
 from iris.commons.redis import Redis
 
 
-async def caracal_inner_pipeline(
+async def caracal_backend(
     settings: AgentSettings,
     request: MeasurementRoundRequest,
+    logger: LoggerAdapter,
     redis: Redis,
     probes_filepath: Path,
     results_filepath: Path,

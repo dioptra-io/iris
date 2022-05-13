@@ -16,7 +16,10 @@ jobs:
       - name: Install package
         run: poetry install
       - name: Run tests
-        run: sudo env CI=1 $(poetry env info -p)/bin/pytest --cov=iris --cov-report=xml --log-cli-level=INFO
+        run: sudo --preserve-env=CI,RIPE_ATLAS_KEY $(poetry env info -p)/bin/pytest --cov=iris --cov-report=xml --log-cli-level=INFO
+        env:
+          CI: 1
+          RIPE_ATLAS_KEY: ${{ secrets.RIPE_ATLAS_KEY }}
       - uses: codecov/codecov-action@v3
 
   docker:

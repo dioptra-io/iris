@@ -3,7 +3,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 from uuid import uuid4
 
 from pydantic import root_validator
@@ -20,6 +20,8 @@ class RateLimitingMethod(str, Enum):
 
 class AgentSettings(CommonSettings):
     """Agent specific settings."""
+
+    AGENT_BACKEND: Literal["atlas", "caracal"] = "caracal"
 
     AGENT_CARACAL_EXCLUDE_PATH: Path = Path("statics/excluded_prefixes")
     AGENT_CARACAL_RATE_LIMITING_METHOD: RateLimitingMethod = RateLimitingMethod.auto
