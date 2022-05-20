@@ -1,7 +1,6 @@
-from ipaddress import ip_address
+from ipaddress import IPv6Address
 from logging import Logger
 from pathlib import Path
-from typing import Optional, Tuple
 
 from diamond_miner import mappers
 from diamond_miner.generators import probe_generator_parallel
@@ -27,10 +26,10 @@ async def diamond_miner_inner_pipeline(
     # Iris shouldn't need to know about this feature.
     sliding_window_stopping_condition: int,
     tool_parameters: ToolParameters,
-    results_filepath: Optional[Path],
+    results_filepath: Path | None,
     targets_filepath: Path,
     probes_filepath: Path,
-    previous_round: Optional[Round],
+    previous_round: Round | None,
     next_round: Round,
     max_open_files: int,
 ) -> int:
@@ -97,7 +96,7 @@ async def diamond_miner_inner_pipeline(
                 stopping_condition=sliding_window_stopping_condition,
             )
             for row in query.execute_iter(client, measurement_id):
-                addr_v6 = ip_address(row["probe_dst_prefix"])
+                addr_v6 = IPv6Address(row["probe_dst_prefix"])
                 if addr_v4 := addr_v6.ipv4_mapped:
                     prefix = f"{addr_v4}/{tool_parameters.prefix_len_v4}"
                 else:
@@ -147,7 +146,7 @@ async def diamond_miner_inner_pipeline(
 
 def instantiate_flow_mappers(
     klass: str, kwargs: dict, prefix_size_v4: int, prefix_size_v6: int
-) -> Tuple[FlowMapper, FlowMapper]:
+) -> tuple[FlowMapper, FlowMapper]:
     flow_mapper_cls = getattr(mappers, klass)
     flow_mapper_kwargs = kwargs
     flow_mapper_v4 = flow_mapper_cls(

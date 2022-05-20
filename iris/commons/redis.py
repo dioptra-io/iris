@@ -2,7 +2,6 @@ import asyncio
 import random
 from dataclasses import dataclass
 from logging import LoggerAdapter
-from typing import Dict, List, Optional
 
 import aioredis
 
@@ -16,7 +15,7 @@ from iris.commons.models import (
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 
-def agent_heartbeat_key(uuid: Optional[str]) -> str:
+def agent_heartbeat_key(uuid: str | None) -> str:
     return f"agent_heartbeat:{uuid or '*'}"
 
 
@@ -67,11 +66,11 @@ class Redis:
         await self.client.hdel(f"{self.ns}:{name}", *keys)
 
     @fault_tolerant
-    async def hget(self, name: str, key: str) -> Optional[str]:
+    async def hget(self, name: str, key: str) -> str | None:
         return await self.client.hget(f"{self.ns}:{name}", key)
 
     @fault_tolerant
-    async def hkeys(self, name: str) -> List[str]:
+    async def hkeys(self, name: str) -> list[str]:
         return await self.client.hkeys(f"{self.ns}:{name}")
 
     @fault_tolerant
@@ -79,8 +78,8 @@ class Redis:
         await self.client.hset(f"{self.ns}:{name}", key, value)
 
     @fault_tolerant
-    async def keys(self, pattern: str) -> List[str]:
-        keys: List[str] = await self.client.keys(f"{self.ns}:{pattern}")
+    async def keys(self, pattern: str) -> list[str]:
+        keys: list[str] = await self.client.keys(f"{self.ns}:{pattern}")
         return keys
 
     @fault_tolerant
@@ -108,7 +107,7 @@ class Redis:
         self.logger.info("Deleting agent state")
         await self.delete(agent_state_key(uuid))
 
-    async def get_agent_parameters(self, uuid: str) -> Optional[AgentParameters]:
+    async def get_agent_parameters(self, uuid: str) -> AgentParameters | None:
         if v := await self.get(agent_parameters_key(uuid)):
             return AgentParameters.parse_raw(v)
         return None
@@ -123,7 +122,7 @@ class Redis:
         self.logger.info("Deleting agent parameters")
         await self.delete(agent_parameters_key(uuid))
 
-    async def get_agents(self) -> List[Agent]:
+    async def get_agents(self) -> list[Agent]:
         # TODO: Use SCAN instead of KEYS for better scaling?
         alive = await self.keys(agent_heartbeat_key(None))
         uuids = [str(key.split(":")[2]) for key in alive]
@@ -136,11 +135,11 @@ class Redis:
             for uuid in uuids
         ]
 
-    async def get_agents_by_uuid(self) -> Dict[str, Agent]:
+    async def get_agents_by_uuid(self) -> dict[str, Agent]:
         agents = await self.get_agents()
         return {agent.uuid: agent for agent in agents}
 
-    async def get_agent_by_uuid(self, uuid: str) -> Optional[Agent]:
+    async def get_agent_by_uuid(self, uuid: str) -> Agent | None:
         if await self.exists(agent_heartbeat_key(uuid)):
             return Agent(
                 uuid=uuid,
@@ -161,7 +160,7 @@ class Redis:
 
     async def get_measurement_stats(
         self, measurement_uuid: str, agent_uuid: str
-    ) -> Optional[ProbingStatistics]:
+    ) -> ProbingStatistics | None:
         if state := await self.get(measurement_stats_key(measurement_uuid, agent_uuid)):
             return ProbingStatistics.parse_raw(state)
         return None
@@ -187,7 +186,7 @@ class Redis:
         Return a random request from the queue.
         If the queue is empty, it will retry at the specified interval.
         """
-        # TODO: Use HRANDFIELD when implement by aioredis.
+        # TODO: Use HRANDFIELD when implemented by aioredis.
         while True:
             if keys := await self.hkeys(agent_queue_key(uuid)):
                 value = await self.hget(agent_queue_key(uuid), random.choice(keys))
@@ -196,7 +195,7 @@ class Redis:
 
     async def get_request(
         self, measurement_uuid: str, agent_uuid: str
-    ) -> Optional[MeasurementRoundRequest]:
+    ) -> MeasurementRoundRequest | None:
         """Return the measurement request for the specified agent and measurement."""
         if value := await self.hget(agent_queue_key(agent_uuid), measurement_uuid):
             return MeasurementRoundRequest.parse_raw(value)

@@ -1,4 +1,4 @@
-from typing import Generic, List, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import AnyHttpUrl, NonNegativeInt
 from pydantic.generics import GenericModel
@@ -24,13 +24,13 @@ class Paginated(GenericModel, Generic[T]):
     """
 
     count: NonNegativeInt
-    next: Optional[AnyHttpUrl] = None
-    previous: Optional[AnyHttpUrl] = None
-    results: List[T]
+    next: AnyHttpUrl | None = None
+    previous: AnyHttpUrl | None = None
+    results: list[T]
 
     @classmethod
     def from_results(
-        cls, url: URL, results: List[T], count: int, offset: int, limit: int
+        cls, url: URL, results: list[T], count: int, offset: int, limit: int
     ) -> "Paginated[T]":
         next_url = None
         prev_url = None

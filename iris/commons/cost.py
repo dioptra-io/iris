@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from ipaddress import IPv4Network, ip_network
-from typing import Iterable
 
 from iris.commons.models import Tool, ToolParameters
 

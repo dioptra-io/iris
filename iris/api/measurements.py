@@ -1,7 +1,6 @@
 """Measurements operations."""
 import asyncio
 from datetime import datetime
-from typing import Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
@@ -35,7 +34,7 @@ from iris.commons.models import (
     MeasurementReadWithAgents,
     Paginated,
     Target,
-    UserDB,
+    User,
 )
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
@@ -46,8 +45,8 @@ router = APIRouter()
 
 
 def assert_measurement_visibility(
-    measurement: Optional[Measurement],
-    user: UserDB,
+    measurement: Measurement | None,
+    user: User,
     settings: APISettings,
 ) -> Measurement:
     if not measurement or (
@@ -62,7 +61,7 @@ def assert_measurement_visibility(
 
 
 def assert_measurement_agent_visibility(
-    measurement_agent: Optional[MeasurementAgent], user: UserDB
+    measurement_agent: MeasurementAgent | None, user: User
 ) -> MeasurementAgent:
     if not measurement_agent or (
         measurement_agent.measurement.user_id != str(user.id) and not user.is_superuser
@@ -83,8 +82,8 @@ def set_or_raise(d, k, v):
 
 
 def unfold_agent(
-    active_agents: Dict[str, Agent], tagged_agent: MeasurementAgentCreate
-) -> List[MeasurementAgentCreate]:
+    active_agents: dict[str, Agent], tagged_agent: MeasurementAgentCreate
+) -> list[MeasurementAgentCreate]:
     """Transform a tagged agent in a list of agents with the corresponding UUIDs."""
     agents = []
     for uuid, active_agent in active_agents.items():
@@ -102,12 +101,12 @@ def unfold_agent(
 )
 async def get_measurements(
     request: Request,
-    state: Optional[MeasurementAgentState] = None,
-    tag: Optional[str] = None,
+    state: MeasurementAgentState | None = None,
+    tag: str | None = None,
     only_mine: bool = True,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
 ):
     assert_probing_enabled(user)
@@ -140,11 +139,11 @@ async def get_measurements(
 )
 async def get_measurements_public(
     request: Request,
-    state: Optional[MeasurementAgentState] = None,
-    tag: Optional[str] = None,
+    state: MeasurementAgentState | None = None,
+    tag: str | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    _user: UserDB = Depends(current_verified_user),
+    _user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
@@ -179,7 +178,7 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
@@ -190,7 +189,7 @@ async def post_measurement(
 
     active_agents = await redis.get_agents_by_uuid()
 
-    agents: Dict[str, MeasurementAgentCreate] = {}
+    agents: dict[str, MeasurementAgentCreate] = {}
     for agent in measurement_body.agents:
         if agent.uuid:
             if agent.uuid in active_agents:
@@ -272,7 +271,7 @@ async def post_measurement(
 )
 async def get_measurement(
     measurement_uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
@@ -295,7 +294,7 @@ async def patch_measurement(
         },
     ),
     clickhouse: ClickHouse = Depends(get_clickhouse),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
@@ -328,7 +327,7 @@ async def patch_measurement(
 async def get_measurement_agent_target(
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
@@ -350,7 +349,7 @@ async def get_measurement_agent_target(
 )
 async def delete_measurement(
     measurement_uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
@@ -384,7 +383,7 @@ async def delete_measurement(
 async def delete_measurement_agent(
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
 ):

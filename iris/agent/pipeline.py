@@ -2,16 +2,15 @@
 import shutil
 from datetime import datetime
 from logging import LoggerAdapter
-from multiprocessing import Manager, Process
 
-from iris.agent.prober import probe, watch_cancellation
+from iris.agent.backend import backend_from_string
 from iris.agent.settings import AgentSettings
 from iris.commons.models import MeasurementRoundRequest, ProbingStatistics
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, results_key
 
 
-async def do_measurement(
+async def outer_pipeline(
     settings: AgentSettings,
     request: MeasurementRoundRequest,
     logger: LoggerAdapter,
@@ -41,32 +40,12 @@ async def do_measurement(
     logger.info("Requested probing rate: %s", request.probing_rate)
 
     probing_start_time = datetime.utcnow()
-    with Manager() as manager:
-        prober_statistics = manager.dict()  # type: ignore
+    backend = backend_from_string[settings.AGENT_BACKEND]
+    prober_statistics = await backend(
+        settings, request, logger, redis, probes_filepath, results_filepath
+    )
 
-        prober_process = Process(
-            target=probe,
-            args=(
-                settings,
-                probes_filepath,
-                results_filepath,
-                request.round.number,
-                request.probing_rate,
-                prober_statistics,
-            ),
-        )
-
-        prober_process.start()
-        is_not_canceled = await watch_cancellation(
-            redis,
-            prober_process,
-            request.measurement_uuid,
-            settings.AGENT_UUID,
-            settings.AGENT_STOPPER_REFRESH,
-        )
-        prober_statistics = dict(prober_statistics)
-
-    if is_not_canceled:
+    if prober_statistics:
         logger.info("Upload probing statistics to Redis")
         statistics = ProbingStatistics(
             round=request.round,

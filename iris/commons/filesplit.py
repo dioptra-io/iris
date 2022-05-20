@@ -1,8 +1,9 @@
+from collections.abc import Iterable
 from io import TextIOWrapper
 from math import ceil
-from typing import IO, Iterable, Union
+from typing import IO
 
-from zstandard import ZstdDecompressor
+from iris.commons.utils import zstd_stream_reader, zstd_stream_reader_text
 
 DEFAULT_ESTIMATE_MAX_LINES = 1000
 
@@ -31,8 +32,8 @@ def estimate_line_size(f: IO[bytes], *, max_lines: int = DEFAULT_ESTIMATE_MAX_LI
 
 
 def split_stream(
-    stream: IO[str], split_boundary: str, split_size: int, *, read_size: int = 2 ** 20
-) -> Iterable[Union[str, int]]:
+    stream: IO[str], split_boundary: str, split_size: int, *, read_size: int = 2**20
+) -> Iterable[str | int]:
     """
     >>> from io import StringIO
     >>> list(split_stream(StringIO("1234\\n5678\\n"), "\\n", 5, read_size=5)) # Aligned read
@@ -78,24 +79,19 @@ def split_compressed_file(
     max_estimate_lines: int = DEFAULT_ESTIMATE_MAX_LINES,
     skip_lines: int = 0,
 ):
-    with open(input_file, "rb") as f:
-        ctx = ZstdDecompressor()
-        with ctx.stream_reader(f) as stream:
-            line_size = estimate_line_size(stream, max_lines=max_estimate_lines)
+    with zstd_stream_reader(input_file) as f:
+        line_size = estimate_line_size(f, max_lines=max_estimate_lines)
     split_size = lines_per_file * line_size
-    with open(input_file, "rb") as f:
-        ctx = ZstdDecompressor()
-        with ctx.stream_reader(f) as stream:
-            wrapper = TextIOWrapper(stream)
-            outf = None
-            for _ in range(skip_lines):
-                next(wrapper)
-            for chunk in split_stream(wrapper, "\n", split_size):
-                if isinstance(chunk, int):
-                    if outf:
-                        outf.close()
-                    outf = open(f"{output_prefix}_{chunk}", "w")
-                else:
-                    outf.write(chunk)  # type: ignore
-            if outf:
-                outf.close()
+    with zstd_stream_reader_text(input_file) as f:
+        outf = None
+        for _ in range(skip_lines):
+            next(f)
+        for chunk in split_stream(f, "\n", split_size):
+            if isinstance(chunk, int):
+                if outf:
+                    outf.close()
+                outf = open(f"{output_prefix}_{chunk}", "w")
+            else:
+                outf.write(chunk)  # type: ignore
+        if outf:
+            outf.close()

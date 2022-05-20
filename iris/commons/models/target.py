@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List
 
 from pydantic import NonNegativeInt
 
@@ -25,7 +24,7 @@ class Target(BaseModel):
 
     key: str
     size: NonNegativeInt
-    content: List[str]
+    content: list[str]
     last_modified: datetime
 
     @classmethod

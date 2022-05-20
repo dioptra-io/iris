@@ -1,11 +1,21 @@
 import asyncio
 import json
 import socket
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from io import TextIOWrapper
 from ipaddress import IPv4Address, IPv6Address
-from typing import Callable, Optional, TypeVar
+from pathlib import Path
+from typing import IO, TypeVar
 
 from pydantic import BaseModel
 from sqlmodel import SQLModel
+from zstandard import (
+    ZstdCompressionWriter,
+    ZstdCompressor,
+    ZstdDecompressionReader,
+    ZstdDecompressor,
+)
 
 T = TypeVar("T")
 
@@ -29,7 +39,7 @@ def cast(to: Callable[..., BaseModel], from_: BaseModel, **extra) -> T:
     return to.parse_obj({**data, **extra})  # type: ignore
 
 
-def unwrap(value: Optional[T]) -> T:
+def unwrap(value: T | None) -> T:
     assert value, "unexpected None value"
     return value
 
@@ -66,3 +76,24 @@ def get_ipv6_address(host="2001:4860:4860::8888", port=80) -> IPv6Address:
     finally:
         s.close()
     return ip_address
+
+
+@contextmanager
+def zstd_stream_reader(path: Path | str) -> Iterator[ZstdDecompressionReader]:
+    ctx = ZstdDecompressor()
+    with open(path, "rb") as f, ctx.stream_reader(f) as stream:
+        yield stream
+
+
+@contextmanager
+def zstd_stream_reader_text(path: Path | str) -> Iterator[IO[str]]:
+    ctx = ZstdDecompressor()
+    with open(path, "rb") as f, ctx.stream_reader(f) as stream:
+        yield TextIOWrapper(stream)
+
+
+@contextmanager
+def zstd_stream_writer(path: Path | str) -> Iterator[ZstdCompressionWriter]:
+    ctx = ZstdCompressor()
+    with open(path, "wb") as f, ctx.stream_writer(f) as stream:
+        yield stream

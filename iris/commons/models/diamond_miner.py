@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pydantic import Field, NonNegativeInt
 
@@ -34,7 +34,7 @@ class ToolParameters(BaseModel):
         description="Ignored for other tools",
     )
     flow_mapper: FlowMapper = Field(FlowMapper.RandomFlowMapper, title="Flow mapper")
-    flow_mapper_kwargs: Optional[Dict[str, Any]] = Field(
+    flow_mapper_kwargs: dict[str, Any] | None = Field(
         {"seed": 42}, title="Flow mapper optional arguments"
     )
     prefix_len_v4: int = Field(24, ge=0, le=32, title="Target prefix length (IPv4)")

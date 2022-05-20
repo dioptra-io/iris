@@ -1,17 +1,20 @@
+import uuid
 from datetime import datetime
-from typing import Optional
 
-from fastapi_users import models
-from fastapi_users.authentication.strategy import BaseAccessToken
-from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
-from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyBaseAccessTokenTable
+from fastapi_users import schemas
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
+from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyBaseAccessTokenTableUUID
 from pydantic import Field
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
 from iris.commons.models.base import Base, BaseModel
 
 
-class UserTable(Base, SQLAlchemyBaseUserTable):
+class AccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):
+    pass
+
+
+class User(SQLAlchemyBaseUserTableUUID, Base):
     firstname = Column(String, nullable=False)
     lastname = Column(String, nullable=False)
     probing_enabled = Column(Boolean, nullable=False, default=False)
@@ -21,15 +24,7 @@ class UserTable(Base, SQLAlchemyBaseUserTable):
     creation_time = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
-class AccessToken(BaseAccessToken):
-    pass
-
-
-class AccessTokenTable(SQLAlchemyBaseAccessTokenTable, Base):
-    pass
-
-
-class CustomCreateUpdateDictModel(models.BaseModel):
+class CustomCreateUpdateDictModel(schemas.BaseModel):
     def create_update_dict(self):
         return self.dict(
             exclude_unset=True,
@@ -47,36 +42,32 @@ class CustomCreateUpdateDictModel(models.BaseModel):
         )
 
 
-class User(models.BaseUser):
+class UserRead(schemas.BaseUser[uuid.UUID]):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 1
+    probing_limit: int | None = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = True
     creation_time: datetime = Field(default_factory=datetime.utcnow)
 
 
-class UserCreate(CustomCreateUpdateDictModel, models.BaseUserCreate):
+class UserCreate(CustomCreateUpdateDictModel, schemas.BaseUserCreate):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 1
+    probing_limit: int | None = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = True
 
 
-class UserUpdate(CustomCreateUpdateDictModel, models.BaseUserUpdate):
+class UserUpdate(CustomCreateUpdateDictModel, schemas.BaseUserUpdate):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 1
+    probing_limit: int | None = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = True
-
-
-class UserDB(User, models.BaseUserDB):
-    pass
 
 
 class AWSCredentials(BaseModel):

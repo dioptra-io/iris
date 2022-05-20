@@ -2,7 +2,6 @@
 from dataclasses import dataclass
 from logging import LoggerAdapter
 from pathlib import Path
-from typing import List, Optional
 
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.models import Round, Tool, ToolParameters
@@ -25,19 +24,19 @@ async def outer_pipeline(
     logger: LoggerAdapter,
     measurement_uuid: str,
     agent_uuid: str,
-    measurement_tags: List[str],
-    # NOTE: See comments about these parameters in inner_pipeline.py.
+    measurement_tags: list[str],
+    # NOTE: See comments about these parameters in inner_pipeline/.
     sliding_window_size: int,
     sliding_window_stopping_condition: int,
     tool: Tool,
     tool_parameters: ToolParameters,
     working_directory: Path,
     targets_key: str,
-    results_key: Optional[str],
+    results_key: str | None,
     user_id: str,
     max_open_files: int,
     tag_public: str,
-) -> Optional[OuterPipelineResult]:
+) -> OuterPipelineResult | None:
     """
     Responsible to download/upload from object storage.
     """

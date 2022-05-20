@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass
 from logging import LoggerAdapter
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import aioboto3
 
@@ -43,7 +43,7 @@ class Storage:
         return f"{self.settings.S3_PREFIX}-{measurement_uuid[:18]}-{agent_uuid[:18]}"
 
     @fault_tolerant
-    async def get_measurement_buckets(self) -> List[str]:
+    async def get_measurement_buckets(self) -> list[str]:
         session = aioboto3.Session()
         async with session.client("s3", **self.settings.s3) as s3:
             response = await s3.list_buckets()
@@ -71,7 +71,7 @@ class Storage:
         await self.delete_all_files_from_bucket(bucket)
         await self.delete_bucket(bucket)
 
-    async def get_all_files_no_retry(self, bucket: str) -> List[Dict]:
+    async def get_all_files_no_retry(self, bucket: str) -> list[dict]:
         """Get all files inside a bucket."""
         targets = []
         session = aioboto3.Session()
@@ -94,13 +94,13 @@ class Storage:
         return targets
 
     @fault_tolerant
-    async def get_all_files(self, bucket: str) -> List[Dict]:
+    async def get_all_files(self, bucket: str) -> list[dict]:
         """Get all files inside a bucket."""
         return await self.get_all_files_no_retry(bucket)
 
     async def get_file_no_retry(
         self, bucket: str, filename: str, retrieve_content: bool = True
-    ) -> Dict:
+    ) -> dict:
         """Get file information from a bucket."""
         session = aioboto3.Session()
         async with session.client("s3", **self.settings.s3) as s3:
@@ -128,7 +128,7 @@ class Storage:
     @fault_tolerant
     async def get_file(
         self, bucket: str, filename: str, retrieve_content: bool = True
-    ) -> Dict:
+    ) -> dict:
         """Get file information from a bucket."""
         return await self.get_file_no_retry(
             bucket, filename, retrieve_content=retrieve_content
@@ -139,7 +139,7 @@ class Storage:
         self,
         bucket: str,
         filename: str,
-        filepath: Union[Path, str],
+        filepath: Path | str,
         metadata: Any = None,
     ) -> None:
         """Upload a file in a bucket."""
@@ -157,7 +157,7 @@ class Storage:
 
     @fault_tolerant
     async def download_file(
-        self, bucket: str, filename: str, output_path: Union[Path, str]
+        self, bucket: str, filename: str, output_path: Path | str
     ) -> None:
         """Download a file in a bucket."""
         session = aioboto3.Session()
@@ -170,14 +170,14 @@ class Storage:
         await self.download_file(bucket, filename, output_path)
         return output_path
 
-    async def delete_file_check_no_retry(self, bucket: str, filename: str) -> Dict:
+    async def delete_file_check_no_retry(self, bucket: str, filename: str) -> dict:
         """Delete a file with a check that it exists."""
         session = aioboto3.Session()
         async with session.client("s3", **self.settings.s3) as s3:
             file_object = await s3.get_object(Bucket=bucket, Key=filename)
             async with file_object["Body"] as stream:
                 await stream.read()
-            res: Dict = await s3.delete_object(Bucket=bucket, Key=filename)
+            res: dict = await s3.delete_object(Bucket=bucket, Key=filename)
             return res
 
     @fault_tolerant
@@ -210,7 +210,7 @@ class Storage:
             )
 
     @fault_tolerant
-    async def generate_temporary_credentials(self) -> Dict:
+    async def generate_temporary_credentials(self) -> dict:
         session = aioboto3.Session()
         policy = dict(
             Version="2012-10-17",

@@ -1,11 +1,12 @@
 import asyncio
 import os
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from logging import LoggerAdapter
 from pathlib import Path
-from typing import Any, Iterator, List, Optional
+from typing import Any
 
 import aiofiles.os
 from diamond_miner.queries import (
@@ -26,7 +27,7 @@ from iris.commons.filesplit import split_compressed_file
 from iris.commons.settings import CommonSettings, fault_tolerant
 
 
-def iter_file(file: str, *, read_size: int = 2 ** 20) -> Iterator[bytes]:
+def iter_file(file: str, *, read_size: int = 2**20) -> Iterator[bytes]:
     with open(file, "rb") as f:
         while True:
             chunk = f.read(read_size)
@@ -45,14 +46,14 @@ class ClickHouse:
     logger: LoggerAdapter
 
     @fault_tolerant
-    async def call(self, query: str, params: Optional[dict] = None) -> List[dict]:
+    async def call(self, query: str, params: dict | None = None) -> list[dict]:
         async with AsyncClickHouseClient(**self.settings.clickhouse) as client:
             return await client.json(query, params)
 
     @fault_tolerant
     async def execute(
         self, query: Query, measurement_id_: str, **kwargs: Any
-    ) -> List[dict]:
+    ) -> list[dict]:
         with ClickHouseClient(**self.settings.clickhouse) as client:
             return query.execute(client, measurement_id_, **kwargs)
 

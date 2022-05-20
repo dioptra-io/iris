@@ -1,7 +1,6 @@
 import logging
 from datetime import timedelta
 from functools import wraps
-from typing import List, Optional
 
 from pydantic import BaseSettings
 from tenacity import retry
@@ -22,7 +21,7 @@ class CommonSettings(BaseSettings):
     CLICKHOUSE_DATABASE: str = "iris"
     CLICKHOUSE_USERNAME: str = "iris"
     CLICKHOUSE_PASSWORD: str = "iris"
-    CLICKHOUSE_PUBLIC_USER: Optional[str] = None
+    CLICKHOUSE_PUBLIC_USER: str | None = None
     CLICKHOUSE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
     CLICKHOUSE_STORAGE_POLICY: str = "default"
     CLICKHOUSE_ARCHIVE_VOLUME: str = "default"
@@ -40,16 +39,16 @@ class CommonSettings(BaseSettings):
     S3_ENDPOINT_URL: str = "http://minio.docker.localhost"
     S3_ACCESS_KEY_ID: str = "minioadmin"
     S3_SECRET_ACCESS_KEY: str = "minioadmin"
-    S3_SESSION_TOKEN: Optional[str] = None
+    S3_SESSION_TOKEN: str | None = None
     S3_REGION_NAME: str = "local"
     S3_PREFIX: str = "iris"
 
-    S3_PUBLIC_ACTIONS: List[str] = [
+    S3_PUBLIC_ACTIONS: list[str] = [
         "s3:GetBucketLocation",
         "s3:GetObject",
         "s3:ListBucket",
     ]
-    S3_PUBLIC_RESOURCES: List[str] = [
+    S3_PUBLIC_RESOURCES: list[str] = [
         "arn:aws:s3:::public-exports",
         "arn:aws:s3:::public-exports/*",
     ]

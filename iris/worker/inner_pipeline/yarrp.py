@@ -1,6 +1,5 @@
 from logging import Logger
 from pathlib import Path
-from typing import Optional
 
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.models import Round, ToolParameters
@@ -19,10 +18,10 @@ async def yarrp_inner_pipeline(
     # Iris shouldn't need to know about this feature.
     sliding_window_stopping_condition: int,
     tool_parameters: ToolParameters,
-    results_filepath: Optional[Path],
+    results_filepath: Path | None,
     targets_filepath: Path,
     probes_filepath: Path,
-    previous_round: Optional[Round],
+    previous_round: Round | None,
     next_round: Round,
     max_open_files: int,
 ) -> int:

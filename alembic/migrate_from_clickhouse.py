@@ -22,7 +22,7 @@ from iris.commons.models import (
     Round,
     Tool,
     ToolParameters,
-    UserTable,
+    User,
 )
 
 MIGRATION_TAG = os.environ.get("IRIS_MIGRATION_TAG", "migrated-pre-1.0")
@@ -83,9 +83,9 @@ async def main():
     with get_engine_context(settings) as engine:
         with get_session_context(engine) as session:
             user_id = str(
-                session.exec(
-                    select(UserTable.id).where(UserTable.email == MIGRATION_USER)
-                ).one()[0]
+                session.exec(select(User.id).where(User.email == MIGRATION_USER)).one()[
+                    0
+                ]
             )
 
     async with Client(
