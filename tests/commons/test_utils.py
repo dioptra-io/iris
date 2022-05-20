@@ -5,6 +5,7 @@ from iris.commons.utils import (
     get_ipv4_address,
     get_ipv6_address,
     zstd_stream_reader,
+    zstd_stream_reader_text,
     zstd_stream_writer,
 )
 
@@ -73,5 +74,5 @@ def test_zstd_stream(tmp_path):
         f.write(b"Hello\nWorld")
     with zstd_stream_reader(file) as f:
         assert f.readall() == b"Hello\nWorld"
-    with zstd_stream_reader(file, text=True) as f:
+    with zstd_stream_reader_text(file) as f:
         assert list(f) == ["Hello\n", "World"]

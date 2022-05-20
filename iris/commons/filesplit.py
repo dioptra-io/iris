@@ -3,7 +3,7 @@ from io import TextIOWrapper
 from math import ceil
 from typing import IO
 
-from iris.commons.utils import zstd_stream_reader
+from iris.commons.utils import zstd_stream_reader, zstd_stream_reader_text
 
 DEFAULT_ESTIMATE_MAX_LINES = 1000
 
@@ -82,7 +82,7 @@ def split_compressed_file(
     with zstd_stream_reader(input_file) as f:
         line_size = estimate_line_size(f, max_lines=max_estimate_lines)
     split_size = lines_per_file * line_size
-    with zstd_stream_reader(input_file, text=True) as f:
+    with zstd_stream_reader_text(input_file) as f:
         outf = None
         for _ in range(skip_lines):
             next(f)

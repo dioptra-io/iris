@@ -12,7 +12,7 @@ from httpx import AsyncClient
 from iris.agent.settings import AgentSettings
 from iris.commons.models import MeasurementRoundRequest
 from iris.commons.redis import Redis
-from iris.commons.utils import zstd_stream_reader, zstd_stream_writer
+from iris.commons.utils import zstd_stream_reader_text, zstd_stream_writer
 
 ATLAS_BASE_URL = "https://atlas.ripe.net/api/v2/"
 ATLAS_PROTOCOLS = {"icmp": "ICMP", "icmp6": "ICMP", "tcp": "TCP", "udp": "UDP"}
@@ -32,7 +32,7 @@ async def atlas_backend(
     This gives access to a large number of vantage points, at the expense of very low speed probing.
     """
     logger.info("Converting probes to RIPE Atlas targets")
-    with zstd_stream_reader(probes_filepath, text=True) as f:
+    with zstd_stream_reader_text(probes_filepath) as f:
         targets = group_probes(f)
 
     definitions = [
@@ -63,26 +63,27 @@ async def atlas_backend(
             settings.AGENT_UUID,
             group_id,
         )
-        if not cancelled:
-            logger.info("Fetching RIPE Atlas results")
-            with zstd_stream_writer(results_filepath) as f:
-                await fetch_measurement_group_results(
-                    client, group_id, request.round.number, f
-                )
-            return dict(
-                probes_read=0,
-                packets_sent=0,
-                packets_failed=0,
-                filtered_low_ttl=0,
-                filtered_high_ttl=0,
-                filtered_prefix_excl=0,
-                filtered_prefix_not_incl=0,
-                packets_received=0,
-                packets_received_invalid=0,
-                pcap_received=0,
-                pcap_dropped=0,
-                pcap_interface_dropped=0,
-            )  # TODO
+        if cancelled:
+            return None
+        logger.info("Fetching RIPE Atlas results")
+        with zstd_stream_writer(results_filepath) as f:
+            await fetch_measurement_group_results(
+                client, group_id, request.round.number, f
+            )
+        return dict(
+            probes_read=0,
+            packets_sent=0,
+            packets_failed=0,
+            filtered_low_ttl=0,
+            filtered_high_ttl=0,
+            filtered_prefix_excl=0,
+            filtered_prefix_not_incl=0,
+            packets_received=0,
+            packets_received_invalid=0,
+            pcap_received=0,
+            pcap_dropped=0,
+            pcap_interface_dropped=0,
+        )  # TODO
 
 
 def group_probes(lines: Iterable[str]) -> dict:
@@ -98,8 +99,12 @@ def group_probes(lines: Iterable[str]) -> dict:
     targets = defaultdict(lambda: (set(), set()))
     for line in lines:
         dst_addr, src_port, dst_port, ttl, protocol = line.strip().split(",")
-        dst_addr = IPv6Address(dst_addr)
-        dst_addr = str(dst_addr.ipv4_mapped) if dst_addr.ipv4_mapped else str(dst_addr)
+        dst_addr_v6 = IPv6Address(dst_addr)
+        dst_addr = (
+            str(dst_addr_v6.ipv4_mapped)
+            if dst_addr_v6.ipv4_mapped
+            else str(dst_addr_v6)
+        )
         targets[(dst_addr, protocol)][0].add((int(src_port), int(dst_port)))
         targets[(dst_addr, protocol)][1].add(int(ttl))
     return {

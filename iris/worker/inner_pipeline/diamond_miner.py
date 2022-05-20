@@ -1,4 +1,4 @@
-from ipaddress import ip_address
+from ipaddress import IPv6Address
 from logging import Logger
 from pathlib import Path
 
@@ -96,7 +96,7 @@ async def diamond_miner_inner_pipeline(
                 stopping_condition=sliding_window_stopping_condition,
             )
             for row in query.execute_iter(client, measurement_id):
-                addr_v6 = ip_address(row["probe_dst_prefix"])
+                addr_v6 = IPv6Address(row["probe_dst_prefix"])
                 if addr_v4 := addr_v6.ipv4_mapped:
                     prefix = f"{addr_v4}/{tool_parameters.prefix_len_v4}"
                 else:

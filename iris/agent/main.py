@@ -60,9 +60,11 @@ async def main_with_deps(
     settings.AGENT_TARGETS_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
     if settings.AGENT_MIN_TTL < 0:
-        settings.AGENT_MIN_TTL = find_exit_ttl_with_mtr(
+        min_ttl = find_exit_ttl_with_mtr(
             settings.AGENT_MIN_TTL_FIND_TARGET, min_ttl=2, logger=logger
         )
+        assert min_ttl, "Unable to find exit TTL"
+        settings.AGENT_MIN_TTL = min_ttl
 
     while True:
         try:
