@@ -2,7 +2,6 @@ import asyncio
 from logging import LoggerAdapter
 from multiprocessing import Manager, Process
 from pathlib import Path
-from typing import Dict, Optional
 
 from pycaracal import prober, set_log_level
 
@@ -18,7 +17,7 @@ async def caracal_backend(
     redis: Redis,
     probes_filepath: Path,
     results_filepath: Path,
-) -> Optional[dict]:
+) -> dict | None:
     """
     This is the default and reference backend for Iris.
     It uses `caracal <https://github.com/dioptra-io/caracal>`_ for sending the probes.
@@ -71,7 +70,7 @@ def probe(
     results_filepath: Path,
     round_number: int,
     probing_rate: int,
-    probing_statistics: Dict,
+    probing_statistics: dict,
 ) -> None:
     """Probing interface."""
     # Cap the probing rate if superior to the maximum probing rate

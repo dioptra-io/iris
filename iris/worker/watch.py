@@ -1,7 +1,6 @@
 import asyncio
 import shutil
 from datetime import datetime
-from typing import Optional
 
 import dramatiq
 from sqlmodel import Session
@@ -191,7 +190,7 @@ async def check_agent(
 
 async def find_results(
     storage: Storage, measurement_uuid: str, agent_uuid: str
-) -> Optional[str]:
+) -> str | None:
     bucket = storage.measurement_agent_bucket(measurement_uuid, agent_uuid)
     files = await storage.get_all_files(bucket)
     for file in files:

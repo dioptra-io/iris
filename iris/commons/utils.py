@@ -1,11 +1,12 @@
 import asyncio
 import json
 import socket
+from collections.abc import Callable
 from contextlib import contextmanager
 from io import TextIOWrapper
 from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
-from typing import Callable, ContextManager, Optional, TypeVar, Union
+from typing import ContextManager, TypeVar
 
 from pydantic import BaseModel
 from sqlmodel import SQLModel
@@ -38,7 +39,7 @@ def cast(to: Callable[..., BaseModel], from_: BaseModel, **extra) -> T:
     return to.parse_obj({**data, **extra})  # type: ignore
 
 
-def unwrap(value: Optional[T]) -> T:
+def unwrap(value: T | None) -> T:
     assert value, "unexpected None value"
     return value
 
@@ -79,7 +80,7 @@ def get_ipv6_address(host="2001:4860:4860::8888", port=80) -> IPv6Address:
 
 @contextmanager
 def zstd_stream_reader(
-    path: Union[Path, str], text: bool = False
+    path: Path | str, text: bool = False
 ) -> ContextManager[ZstdDecompressionReader]:
     ctx = ZstdDecompressor()
     with open(path, "rb") as f, ctx.stream_reader(f) as stream:
@@ -89,7 +90,7 @@ def zstd_stream_reader(
 
 
 @contextmanager
-def zstd_stream_writer(path: Union[Path, str]) -> ContextManager[ZstdCompressionWriter]:
+def zstd_stream_writer(path: Path | str) -> ContextManager[ZstdCompressionWriter]:
     ctx = ZstdCompressor()
     with open(path, "wb") as f, ctx.stream_writer(f) as stream:
         yield stream

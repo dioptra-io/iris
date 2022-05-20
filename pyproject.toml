@@ -18,7 +18,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 aioboto3 = "^9.5.0"
 aiofiles = "^0.8.0"
 aioredis = "^2.0.0"

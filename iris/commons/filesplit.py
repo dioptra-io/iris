@@ -1,6 +1,7 @@
+from collections.abc import Iterable
 from io import TextIOWrapper
 from math import ceil
-from typing import IO, Iterable, Union
+from typing import IO
 
 from iris.commons.utils import zstd_stream_reader
 
@@ -32,7 +33,7 @@ def estimate_line_size(f: IO[bytes], *, max_lines: int = DEFAULT_ESTIMATE_MAX_LI
 
 def split_stream(
     stream: IO[str], split_boundary: str, split_size: int, *, read_size: int = 2**20
-) -> Iterable[Union[str, int]]:
+) -> Iterable[str | int]:
     """
     >>> from io import StringIO
     >>> list(split_stream(StringIO("1234\\n5678\\n"), "\\n", 5, read_size=5)) # Aligned read

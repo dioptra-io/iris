@@ -1,6 +1,5 @@
 """API settings."""
 
-from typing import Optional
 
 from iris.commons.settings import CommonSettings
 
@@ -8,8 +7,8 @@ from iris.commons.settings import CommonSettings
 class APISettings(CommonSettings):
     """API specific settings."""
 
-    API_CORS_ALLOW_ORIGIN: Optional[str] = "http://localhost:8080"
-    API_COOKIE_DOMAIN: Optional[str] = None
+    API_CORS_ALLOW_ORIGIN: str | None = "http://localhost:8080"
+    API_COOKIE_DOMAIN: str | None = None
     API_COOKIE_SAMESITE: str = "lax"
     API_COOKIE_LIFETIME: int = 3600 * 24 * 365  # seconds
 

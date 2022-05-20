@@ -1,7 +1,6 @@
 """Measurements operations."""
 import asyncio
 from datetime import datetime
-from typing import Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
@@ -46,7 +45,7 @@ router = APIRouter()
 
 
 def assert_measurement_visibility(
-    measurement: Optional[Measurement],
+    measurement: Measurement | None,
     user: User,
     settings: APISettings,
 ) -> Measurement:
@@ -62,7 +61,7 @@ def assert_measurement_visibility(
 
 
 def assert_measurement_agent_visibility(
-    measurement_agent: Optional[MeasurementAgent], user: User
+    measurement_agent: MeasurementAgent | None, user: User
 ) -> MeasurementAgent:
     if not measurement_agent or (
         measurement_agent.measurement.user_id != str(user.id) and not user.is_superuser
@@ -83,8 +82,8 @@ def set_or_raise(d, k, v):
 
 
 def unfold_agent(
-    active_agents: Dict[str, Agent], tagged_agent: MeasurementAgentCreate
-) -> List[MeasurementAgentCreate]:
+    active_agents: dict[str, Agent], tagged_agent: MeasurementAgentCreate
+) -> list[MeasurementAgentCreate]:
     """Transform a tagged agent in a list of agents with the corresponding UUIDs."""
     agents = []
     for uuid, active_agent in active_agents.items():
@@ -102,8 +101,8 @@ def unfold_agent(
 )
 async def get_measurements(
     request: Request,
-    state: Optional[MeasurementAgentState] = None,
-    tag: Optional[str] = None,
+    state: MeasurementAgentState | None = None,
+    tag: str | None = None,
     only_mine: bool = True,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
@@ -140,8 +139,8 @@ async def get_measurements(
 )
 async def get_measurements_public(
     request: Request,
-    state: Optional[MeasurementAgentState] = None,
-    tag: Optional[str] = None,
+    state: MeasurementAgentState | None = None,
+    tag: str | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
     _user: User = Depends(current_verified_user),
@@ -190,7 +189,7 @@ async def post_measurement(
 
     active_agents = await redis.get_agents_by_uuid()
 
-    agents: Dict[str, MeasurementAgentCreate] = {}
+    agents: dict[str, MeasurementAgentCreate] = {}
     for agent in measurement_body.agents:
         if agent.uuid:
             if agent.uuid in active_agents:

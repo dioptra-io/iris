@@ -1,6 +1,5 @@
 """Security management."""
 import uuid
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
@@ -33,7 +32,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         self.reset_password_token_secret = reset_password_token_secret
         self.verification_token_secret = verification_token_secret
 
-    async def on_after_register(self, user: User, request: Optional[Request] = None):
+    async def on_after_register(self, user: User, request: Request | None = None):
         """
         After user registration hook.
         :param user: The newly registered user.

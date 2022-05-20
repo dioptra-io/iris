@@ -1,4 +1,4 @@
-from typing import Iterable, List, Tuple
+from collections.abc import Iterable
 
 from pytricia import PyTricia
 
@@ -23,7 +23,7 @@ def load_targets(
         ...
     KeyError: 'Prefix not found.'
     """
-    tree: PyTricia[str, List[Tuple[str, range, int]]] = PyTricia(128)
+    tree: PyTricia[str, list[tuple[str, range, int]]] = PyTricia(128)
     for line in target_list:
         prefix, protocol, min_ttl, max_ttl, n_initial_flows = line.split(",")
         ttls = range(

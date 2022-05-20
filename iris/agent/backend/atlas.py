@@ -1,10 +1,11 @@
 import asyncio
 import json
 from collections import defaultdict
+from collections.abc import AsyncIterator, Iterable, Iterator
 from ipaddress import IPv6Address
 from logging import LoggerAdapter
 from pathlib import Path
-from typing import AsyncIterator, BinaryIO, Iterable, Iterator, List, Optional
+from typing import BinaryIO
 
 from httpx import AsyncClient
 
@@ -25,7 +26,7 @@ async def atlas_backend(
     redis: Redis,
     probes_filepath: Path,
     results_filepath: Path,
-) -> Optional[dict]:
+) -> dict | None:
     """
     This is an experimental backend using `RIPE Atlas <https://atlas.ripe.net/>`_ to send the probes.
     This gives access to a large number of vantage points, at the expense of very low speed probing.
@@ -159,7 +160,7 @@ def make_definition(
     )
 
 
-async def create_measurement_group(client: AsyncClient, definitions: List[dict]) -> int:
+async def create_measurement_group(client: AsyncClient, definitions: list[dict]) -> int:
     r = await client.post(
         "/measurements",
         json=dict(
@@ -173,7 +174,7 @@ async def create_measurement_group(client: AsyncClient, definitions: List[dict])
 
 async def get_measurement_group_members(
     client: AsyncClient, group_id: int
-) -> List[int]:
+) -> list[int]:
     data = (await client.get(f"/measurements/groups/{group_id}")).json()
     return [member["id"] for member in data["group_members"]]
 
@@ -197,7 +198,7 @@ async def get_measurement_results(
             yield json.loads(line)
 
 
-async def get_measurement_group_status(client: AsyncClient, group_id: int) -> List[str]:
+async def get_measurement_group_status(client: AsyncClient, group_id: int) -> list[str]:
     members = await get_measurement_group_members(client, group_id)
     return [await get_measurement_status(client, member) for member in members]
 

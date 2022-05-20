@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from fastapi_users import schemas
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
@@ -47,7 +46,7 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 1
+    probing_limit: int | None = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = True
     creation_time: datetime = Field(default_factory=datetime.utcnow)
@@ -57,7 +56,7 @@ class UserCreate(CustomCreateUpdateDictModel, schemas.BaseUserCreate):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 1
+    probing_limit: int | None = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = True
 
@@ -66,7 +65,7 @@ class UserUpdate(CustomCreateUpdateDictModel, schemas.BaseUserUpdate):
     firstname: str = "string"
     lastname: str = "string"
     probing_enabled: bool = False
-    probing_limit: Optional[int] = 1
+    probing_limit: int | None = 1
     allow_tag_reserved: bool = False
     allow_tag_public: bool = True
 

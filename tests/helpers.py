@@ -2,7 +2,6 @@ import os
 import tempfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import List
 from uuid import uuid4
 
 import pytest
@@ -72,7 +71,7 @@ async def upload_target_file(
     storage: Storage,
     user: UserRead,
     filename: str,
-    content: List[str] = ("0.0.0.0/0,icmp,8,32,6",),
+    content: list[str] = ("0.0.0.0/0,icmp,8,32,6",),
     is_probes_file: bool = False,
 ):
     with TemporaryDirectory() as directory:

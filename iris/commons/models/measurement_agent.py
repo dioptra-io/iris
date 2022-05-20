@@ -33,13 +33,13 @@ class MeasurementAgentBase(BaseSQLModel):
         sa_column=Column(PydanticType(ToolParameters)),
         title="Tool parameters",
     )
-    probing_rate: Optional[int] = Field(None, title="Probing rate")
+    probing_rate: int | None = Field(None, title="Probing rate")
     target_file: str = Field(title="Target file key")
 
 
 class MeasurementAgentCreate(MeasurementAgentBase):
-    uuid: Optional[str]
-    tag: Optional[str]
+    uuid: str | None
+    tag: str | None
 
     @root_validator
     def check_uuid_or_tag(cls, values):
@@ -65,7 +65,7 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
     measurement: "Measurement" = Relationship(back_populates="agents")
     # This is optional so that we can create a MeasurementAgent without
     # specifying the measurement_uuid and let SQLModel do it for us.
-    measurement_uuid: Optional[str] = Field(
+    measurement_uuid: str | None = Field(
         default=None,
         primary_key=True,
         foreign_key="measurement.uuid",
@@ -82,8 +82,8 @@ class MeasurementAgent(MeasurementAgentBase, table=True):
     # But this requires a composite foreign key (measurement_uuid, agent_uuid)
     # => how to do this with SQLModel?
     probing_statistics: dict = Field(default_factory=dict, sa_column=Column(JSONB))
-    start_time: Optional[datetime] = Field(default=None)
-    end_time: Optional[datetime] = Field(default=None)
+    start_time: datetime | None = Field(default=None)
+    end_time: datetime | None = Field(default=None)
     state: MeasurementAgentState = Field(
         default=MeasurementAgentState.Created,
         sa_column=Column(Enum(MeasurementAgentState)),

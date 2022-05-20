@@ -1,7 +1,6 @@
 import csv
 import io
 import subprocess
-from typing import List, Optional
 
 from iris.commons.logger import base_logger
 
@@ -30,9 +29,9 @@ def find_exit_ttl_from_output(
     output: str,
     min_ttl: int,
     *,
-    excluded: Optional[List[str]] = None,
+    excluded: list[str] | None = None,
     logger=base_logger,
-) -> Optional[int]:
+) -> int | None:
     # Ensure that the exit TTL is never in one of these networks.
     # This can be useful if a spurious/invalid ASN appears
     # before the true "gateway" ASN.
@@ -68,9 +67,9 @@ def find_exit_ttl_with_mtr(
     destination: str,
     min_ttl: int,
     *,
-    excluded: Optional[List[str]] = None,
+    excluded: list[str] | None = None,
     logger=base_logger,
-) -> Optional[int]:
+) -> int | None:
     """Find the first TTL which is not in the source AS."""
     logger.info("Finding exit TTL towards %s...", destination)
     output = mtr(

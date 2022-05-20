@@ -3,7 +3,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 from uuid import uuid4
 
 from pydantic import root_validator
@@ -30,7 +30,7 @@ class AgentSettings(CommonSettings):
     AGENT_CARACAL_INTEGRITY_CHECK: bool = True
 
     AGENT_UUID: str = str(uuid4())
-    AGENT_UUID_FILE: Optional[Path] = None
+    AGENT_UUID_FILE: Path | None = None
     AGENT_MAX_PROBING_RATE: int = 1000  # pps
     AGENT_MIN_TTL: int = -1  # A value < 0 will trigger `find_exit_ttl`
     AGENT_MIN_TTL_FIND_TARGET: str = "example.org"
