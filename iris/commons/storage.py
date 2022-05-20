@@ -56,6 +56,7 @@ class Storage:
         session = aioboto3.Session()
         async with session.client("s3", **self.settings.s3) as s3:
             try:
+                print(bucket)
                 await s3.create_bucket(Bucket=bucket)
             except s3.exceptions.BucketAlreadyOwnedByYou:
                 pass

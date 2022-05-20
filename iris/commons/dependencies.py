@@ -11,8 +11,8 @@ from sqlmodel import Session
 from iris.api.settings import APISettings
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.logger import Adapter, base_logger
-from iris.commons.models import UserDB, UserTable
-from iris.commons.models.user import AccessToken, AccessTokenTable
+from iris.commons.models import User
+from iris.commons.models.user import AccessToken
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
 from iris.commons.utils import json_serializer
@@ -66,11 +66,11 @@ async def get_async_session(engine=Depends(get_async_engine)):
 
 
 def get_access_token_db(session=Depends(get_async_session)):
-    return SQLAlchemyAccessTokenDatabase(AccessToken, session, AccessTokenTable)
+    return SQLAlchemyAccessTokenDatabase(session, AccessToken)
 
 
 def get_user_db(session=Depends(get_async_session)):
-    return SQLAlchemyUserDatabase(UserDB, session, UserTable)
+    return SQLAlchemyUserDatabase(session, User)
 
 
 def get_clickhouse(settings=Depends(get_settings), logger=Depends(get_logger)):

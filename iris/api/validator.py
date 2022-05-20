@@ -2,7 +2,7 @@ from diamond_miner.generators.standalone import count_prefixes
 from fastapi import HTTPException, status
 
 from iris.commons.cost import estimate_cost_for_tool
-from iris.commons.models import Tool, ToolParameters, UserDB
+from iris.commons.models import Tool, ToolParameters, User
 from iris.commons.storage import Storage
 
 
@@ -10,7 +10,7 @@ async def target_file_validator(
     storage: Storage,
     tool: Tool,
     tool_parameters: ToolParameters,
-    user: UserDB,
+    user: User,
     target_filename: str,
     prefix_len_v4: int,
     prefix_len_v6: int,

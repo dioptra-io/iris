@@ -18,7 +18,7 @@ from iris.api.authentication import (
     current_verified_user,
 )
 from iris.commons.dependencies import get_storage
-from iris.commons.models import Paginated, Target, TargetSummary, UserDB
+from iris.commons.models import Paginated, Target, TargetSummary, User
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -33,7 +33,7 @@ async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get all target lists."""
@@ -51,7 +51,7 @@ async def get_targets(
 async def get_target(
     key: str,
     with_content: bool = True,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
@@ -75,7 +75,7 @@ async def get_target(
 )
 async def post_target(
     target_file: UploadFile = File(...),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a target list to object storage."""
@@ -104,7 +104,7 @@ async def post_target(
 )
 async def delete_target(
     key: str,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""
@@ -125,7 +125,7 @@ async def delete_target(
 )
 async def post_probes_target(
     target_file: UploadFile = File(...),
-    user: UserDB = Depends(current_superuser),
+    user: User = Depends(current_superuser),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a probe list to object storage."""

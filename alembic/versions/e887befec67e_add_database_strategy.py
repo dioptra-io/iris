@@ -24,7 +24,7 @@ def upgrade():
         "accesstoken",
         sa.Column("token", sa.String(length=43), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("user_id", fastapi_users_db_sqlalchemy.guid.GUID(), nullable=False),
+        sa.Column("user_id", fastapi_users_db_sqlalchemy.GUID(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="cascade"),
         sa.PrimaryKeyConstraint("token"),
     )

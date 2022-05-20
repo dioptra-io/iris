@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 
-from iris.commons.models import AgentParameters, AgentState, User, UserTable
+from iris.commons.models import AgentParameters, AgentState, User, UserRead
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
 from tests.assertions import cast_response
@@ -48,13 +48,17 @@ async def upload_file(storage, bucket, tmp_file):
     )
 
 
-async def create_user_buckets(storage: Storage, user: User):
+async def create_user_buckets(storage: Storage, user: UserRead):
     await storage.create_bucket(storage.archive_bucket(str(user.id)))
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
 
 
 async def archive_target_file(
-    storage: Storage, user: User, measurement_uuid: str, agent_uuid: str, filename: str
+    storage: Storage,
+    user: UserRead,
+    measurement_uuid: str,
+    agent_uuid: str,
+    filename: str,
 ):
     await storage.copy_file_to_bucket(
         storage.targets_bucket(str(user.id)),
@@ -66,7 +70,7 @@ async def archive_target_file(
 
 async def upload_target_file(
     storage: Storage,
-    user: User,
+    user: UserRead,
     filename: str,
     content: List[str] = ("0.0.0.0/0,icmp,8,32,6",),
     is_probes_file: bool = False,
@@ -98,11 +102,11 @@ def register_user(client, cast=True, **kwargs):
         lastname="lastname",
     )
     response = client.post("/auth/register", json={**default, **kwargs})
-    return cast_response(response, User) if cast else response
+    return cast_response(response, UserRead) if cast else response
 
 
 def verify_user(session, user_id):
-    user = session.get(UserTable, user_id)
+    user = session.get(User, user_id)
     user.is_verified = True
     session.add(user)
     session.commit()

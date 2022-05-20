@@ -1,9 +1,9 @@
 """Security management."""
-
+import uuid
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, status
-from fastapi_users import BaseUserManager, FastAPIUsers
+from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
@@ -20,13 +20,11 @@ from iris.commons.dependencies import (
     get_storage,
     get_user_db,
 )
-from iris.commons.models import User, UserCreate, UserDB, UserUpdate
+from iris.commons.models import User
 from iris.commons.storage import Storage
 
 
-class UserManager(BaseUserManager[UserCreate, UserDB]):
-    user_db_model = UserDB
-
+class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     def __init__(
         self, user_db, storage, reset_password_token_secret, verification_token_secret
     ):
@@ -35,7 +33,7 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
         self.reset_password_token_secret = reset_password_token_secret
         self.verification_token_secret = verification_token_secret
 
-    async def on_after_register(self, user: UserDB, request: Optional[Request] = None):
+    async def on_after_register(self, user: User, request: Optional[Request] = None):
         """
         After user registration hook.
         :param user: The newly registered user.
@@ -45,7 +43,7 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
         await self.storage.create_bucket(self.storage.targets_bucket(str(user.id)))
         await self.storage.create_bucket(self.storage.archive_bucket(str(user.id)))
 
-    async def delete(self, user: UserDB) -> None:
+    async def delete(self, user: User) -> None:
         """
         Delete a user.
         :param user: The user to delete.
@@ -53,7 +51,7 @@ class UserManager(BaseUserManager[UserCreate, UserDB]):
         await self.user_db.delete(user)
         await self.on_after_delete(user)
 
-    async def on_after_delete(self, user: UserDB) -> None:
+    async def on_after_delete(self, user: User) -> None:
         """
         Perform cleanup after a user is deleted.
         :param user: The user that has been deleted.
@@ -121,14 +119,7 @@ jwt_auth_backend = AuthenticationBackend(
     get_strategy=get_jwt_strategy,
 )
 
-fastapi_users = FastAPIUsers(
-    get_user_manager,
-    [cookie_auth_backend, jwt_auth_backend],
-    User,
-    UserCreate,
-    UserUpdate,
-    UserDB,
-)
+fastapi_users = FastAPIUsers(get_user_manager, [cookie_auth_backend, jwt_auth_backend])
 
 current_active_user = fastapi_users.current_user(active=True)
 current_verified_user = fastapi_users.current_user(active=True, verified=True)
@@ -137,7 +128,7 @@ current_superuser = fastapi_users.current_user(
 )
 
 
-def assert_probing_enabled(user: UserDB):
+def assert_probing_enabled(user: User):
     if not user.probing_enabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -145,7 +136,7 @@ def assert_probing_enabled(user: UserDB):
         )
 
 
-def assert_tag_enabled(user: UserDB, settings: APISettings, measurement_body):
+def assert_tag_enabled(user: User, settings: APISettings, measurement_body):
     if settings.TAG_PUBLIC in measurement_body.tags:
         assert_tag_public_enabled(user)
 
@@ -155,7 +146,7 @@ def assert_tag_enabled(user: UserDB, settings: APISettings, measurement_body):
         assert_tag_reserved_enabled(user)
 
 
-def assert_tag_reserved_enabled(user: UserDB):
+def assert_tag_reserved_enabled(user: User):
     if not user.allow_tag_reserved:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -163,7 +154,7 @@ def assert_tag_reserved_enabled(user: UserDB):
         )
 
 
-def assert_tag_public_enabled(user: UserDB):
+def assert_tag_public_enabled(user: User):
     if not user.allow_tag_public:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -60,7 +60,7 @@ def upgrade():
     )
     op.create_table(
         "user",
-        sa.Column("id", fastapi_users_db_sqlalchemy.guid.GUID(), nullable=False),
+        sa.Column("id", fastapi_users_db_sqlalchemy.GUID(), nullable=False),
         sa.Column("email", sa.String(length=320), nullable=False),
         sa.Column("hashed_password", sa.String(length=72), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False),
@@ -117,14 +117,14 @@ def upgrade():
     )
     op.create_table(
         "oauth_account",
-        sa.Column("id", fastapi_users_db_sqlalchemy.guid.GUID(), nullable=False),
+        sa.Column("id", fastapi_users_db_sqlalchemy.GUID(), nullable=False),
         sa.Column("oauth_name", sa.String(length=100), nullable=False),
         sa.Column("access_token", sa.String(length=1024), nullable=False),
         sa.Column("expires_at", sa.Integer(), nullable=True),
         sa.Column("refresh_token", sa.String(length=1024), nullable=True),
         sa.Column("account_id", sa.String(length=320), nullable=False),
         sa.Column("account_email", sa.String(length=320), nullable=False),
-        sa.Column("user_id", fastapi_users_db_sqlalchemy.guid.GUID(), nullable=False),
+        sa.Column("user_id", fastapi_users_db_sqlalchemy.GUID(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="cascade"),
         sa.PrimaryKeyConstraint("id"),
     )

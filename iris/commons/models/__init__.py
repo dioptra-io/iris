@@ -32,8 +32,7 @@ from iris.commons.models.user import (
     ExternalServices,
     User,
     UserCreate,
-    UserDB,
-    UserTable,
+    UserRead,
     UserUpdate,
 )
 
@@ -62,11 +61,10 @@ __all__ = (
     "Round",
     "TargetSummary",
     "Target",
-    "UserTable",
-    "CustomCreateUpdateDictModel",
     "User",
+    "CustomCreateUpdateDictModel",
+    "UserRead",
     "UserCreate",
     "UserUpdate",
-    "UserDB",
     "ExternalServices",
 )

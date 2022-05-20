@@ -35,7 +35,7 @@ from iris.commons.models import (
     MeasurementReadWithAgents,
     Paginated,
     Target,
-    UserDB,
+    User,
 )
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
@@ -47,7 +47,7 @@ router = APIRouter()
 
 def assert_measurement_visibility(
     measurement: Optional[Measurement],
-    user: UserDB,
+    user: User,
     settings: APISettings,
 ) -> Measurement:
     if not measurement or (
@@ -62,7 +62,7 @@ def assert_measurement_visibility(
 
 
 def assert_measurement_agent_visibility(
-    measurement_agent: Optional[MeasurementAgent], user: UserDB
+    measurement_agent: Optional[MeasurementAgent], user: User
 ) -> MeasurementAgent:
     if not measurement_agent or (
         measurement_agent.measurement.user_id != str(user.id) and not user.is_superuser
@@ -107,7 +107,7 @@ async def get_measurements(
     only_mine: bool = True,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
 ):
     assert_probing_enabled(user)
@@ -144,7 +144,7 @@ async def get_measurements_public(
     tag: Optional[str] = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    _user: UserDB = Depends(current_verified_user),
+    _user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
@@ -179,7 +179,7 @@ async def post_measurement(
             "tags": ["test"],
         },
     ),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
@@ -272,7 +272,7 @@ async def post_measurement(
 )
 async def get_measurement(
     measurement_uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
@@ -295,7 +295,7 @@ async def patch_measurement(
         },
     ),
     clickhouse: ClickHouse = Depends(get_clickhouse),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
@@ -328,7 +328,7 @@ async def patch_measurement(
 async def get_measurement_agent_target(
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
@@ -350,7 +350,7 @@ async def get_measurement_agent_target(
 )
 async def delete_measurement(
     measurement_uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
@@ -384,7 +384,7 @@ async def delete_measurement(
 async def delete_measurement_agent(
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
 ):

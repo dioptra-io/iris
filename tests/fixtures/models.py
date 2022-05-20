@@ -9,7 +9,7 @@ from iris.commons.models.diamond_miner import ProbingStatistics, Tool, ToolParam
 from iris.commons.models.measurement import Measurement
 from iris.commons.models.measurement_agent import MeasurementAgent
 from iris.commons.models.round import Round
-from iris.commons.models.user import User
+from iris.commons.models.user import UserRead
 
 
 @pytest.fixture
@@ -57,6 +57,7 @@ def make_measurement(make_measurement_agent):
 def make_user():
     def _make_user(**kwargs):
         default = dict(
+            id=uuid4(),
             email="user@example.org",
             allow_tag_public=True,
             allow_tag_reserved=True,
@@ -64,7 +65,7 @@ def make_user():
             is_verified=True,
             probing_limit=1_000_000,
         )
-        return User(**{**default, **kwargs})
+        return UserRead(**{**default, **kwargs})
 
     return _make_user
 

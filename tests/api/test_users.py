@@ -1,5 +1,5 @@
 from iris.commons.models.pagination import Paginated
-from iris.commons.models.user import ExternalServices, User
+from iris.commons.models.user import ExternalServices, UserRead
 from tests.assertions import assert_response, assert_status_code, cast_response
 from tests.helpers import register_user, verify_user
 
@@ -11,7 +11,7 @@ async def test_get_users_not_superuser(make_client, make_user):
 
 async def test_get_users_empty(make_client, make_user):
     client = make_client(make_user(is_superuser=True))
-    assert_response(client.get("/users"), Paginated[User](count=0, results=[]))
+    assert_response(client.get("/users"), Paginated[UserRead](count=0, results=[]))
 
 
 async def test_get_users(make_client, make_user):
@@ -20,7 +20,7 @@ async def test_get_users(make_client, make_user):
     register_user(client)
 
     client = make_client(make_user(is_superuser=True))
-    results = cast_response(client.get("/users"), Paginated[User])
+    results = cast_response(client.get("/users"), Paginated[UserRead])
     assert results.count == 2
 
 
@@ -33,7 +33,7 @@ async def test_get_users_verified(make_client, make_user, session):
     client = make_client(make_user(is_superuser=True))
     assert_response(
         client.get("/users", params=dict(filter_verified=True)),
-        Paginated[User](count=1, results=[user1]),
+        Paginated[UserRead](count=1, results=[user1]),
     )
 
 

@@ -13,8 +13,13 @@ from iris.api.authentication import (
 )
 from iris.api.settings import APISettings
 from iris.commons.dependencies import get_session, get_settings, get_storage
-from iris.commons.models import ExternalServices, Paginated, User, UserDB, UserTable
-from iris.commons.models.user import AWSCredentials, ClickHouseCredentials
+from iris.commons.models import ExternalServices, Paginated, User, UserRead
+from iris.commons.models.user import (
+    AWSCredentials,
+    ClickHouseCredentials,
+    UserCreate,
+    UserUpdate,
+)
 from iris.commons.storage import Storage
 
 router = APIRouter()
@@ -32,12 +37,14 @@ router.include_router(
     tags=["Authentication"],
 )
 router.include_router(
-    fastapi_users.get_register_router(), prefix="/auth", tags=["Authentication"]
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["Authentication"],
 )
 
 # Users routes
 router.include_router(
-    fastapi_users.get_users_router(),
+    fastapi_users.get_users_router(UserRead, UserUpdate),
     prefix="/users",
     tags=["Users"],
 )
@@ -45,7 +52,7 @@ router.include_router(
 
 @router.get(
     "/users",
-    response_model=Paginated[User],
+    response_model=Paginated[UserRead],
     summary="Get all users (Admin only).",
     tags=["Users"],
 )
@@ -54,18 +61,18 @@ async def get_users(
     filter_verified: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    _user: UserDB = Depends(current_superuser),
+    _user: User = Depends(current_superuser),
     session: Session = Depends(get_session),
 ):
-    count_query = select(func.count(UserTable.id))
-    user_query = select(UserTable).offset(offset).limit(limit)
+    count_query = select(func.count(User.id))
+    user_query = select(User).offset(offset).limit(limit)
     if filter_verified:
-        count_query = count_query.where(UserTable.is_verified != True)  # noqa: E712
-        user_query = user_query.where(UserTable.is_verified != True)  # noqa: E712
+        count_query = count_query.where(User.is_verified != True)  # noqa: E712
+        user_query = user_query.where(User.is_verified != True)  # noqa: E712
     count = session.execute(count_query).one()[0]
     users = session.execute(user_query).fetchall()
-    users_db = [UserDB.from_orm(x[0]) for x in users]
-    return Paginated.from_results(request.url, users_db, count, offset, limit)
+    users = [x[0] for x in users]
+    return Paginated.from_results(request.url, users, count, offset, limit)
 
 
 @router.get(
@@ -77,7 +84,7 @@ async def get_users(
 async def get_user_services(
     settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
-    _user: UserDB = Depends(current_verified_user),
+    _user: User = Depends(current_verified_user),
 ):
     s3_credentials = await storage.generate_temporary_credentials()
     return ExternalServices(

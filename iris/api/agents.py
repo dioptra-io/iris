@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from iris.api.authentication import assert_probing_enabled, current_verified_user
 from iris.commons.dependencies import get_redis
-from iris.commons.models import Agent, Paginated, UserDB
+from iris.commons.models import Agent, Paginated, User
 from iris.commons.redis import Redis
 
 router = APIRouter()
@@ -15,7 +15,7 @@ async def get_agents(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
 ):
     assert_probing_enabled(user)
@@ -28,7 +28,7 @@ async def get_agents(
 @router.get("/{uuid}", response_model=Agent, summary="Get agent specified by UUID.")
 async def get_agent_by_uuid(
     uuid: UUID,
-    user: UserDB = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
 ):
     assert_probing_enabled(user)
