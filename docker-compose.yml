@@ -34,7 +34,7 @@ services:
 
   # Control-Plane & Data-Plane
   clickhouse:
-    image: ${CLICKHOUSE_IMAGE:-docker.io/clickhouse/clickhouse-server:21}
+    image: ${CLICKHOUSE_IMAGE:-docker.io/clickhouse/clickhouse-server:22}
     labels:
       # ClickHouse HTTP (8123)
       - traefik.http.routers.clickhouse-http.entrypoints=web
