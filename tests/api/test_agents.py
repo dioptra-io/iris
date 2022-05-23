@@ -36,6 +36,28 @@ async def test_get_agents(make_client, make_user, make_agent_parameters, redis):
     )
 
 
+async def test_get_agents_tag(make_client, make_user, make_agent_parameters, redis):
+    client = make_client(make_user(probing_enabled=True))
+    agents = [
+        Agent(
+            uuid=str(uuid4()),
+            parameters=make_agent_parameters(),
+            state=AgentState.Idle,
+        ),
+        Agent(
+            uuid=str(uuid4()),
+            parameters=make_agent_parameters(tags=["test-agent"]),
+            state=AgentState.Idle,
+        ),
+    ]
+    for agent in agents:
+        await register_agent(redis, agent.uuid, agent.parameters, agent.state)
+    assert_response(
+        client.get("/agents", params=dict(tag="test-agent")),
+        Paginated[Agent](count=1, results=agents[1:]),
+    )
+
+
 async def test_get_agent_probing_not_enabled(make_client, make_user):
     client = make_client(make_user(probing_enabled=False))
     assert_status_code(client.get(f"/agents/{uuid4()}"), 403)
