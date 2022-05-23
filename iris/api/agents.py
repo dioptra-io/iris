@@ -13,6 +13,7 @@ router = APIRouter()
 @router.get("/", response_model=Paginated[Agent], summary="Get all agents.")
 async def get_agents(
     request: Request,
+    tag: str | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
     user: User = Depends(current_verified_user),
@@ -20,6 +21,8 @@ async def get_agents(
 ):
     assert_probing_enabled(user)
     agents = await redis.get_agents()
+    if tag:
+        agents = [agent for agent in agents if tag in agent.parameters.tags]
     return Paginated.from_results(
         request.url, agents[offset : offset + limit], len(agents), offset, limit
     )
