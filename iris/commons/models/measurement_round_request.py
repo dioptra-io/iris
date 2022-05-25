@@ -6,4 +6,5 @@ class MeasurementRoundRequest(BaseModel):
     measurement_uuid: str
     probe_filename: str
     probing_rate: int | None
+    batch_size: int | None
     round: Round

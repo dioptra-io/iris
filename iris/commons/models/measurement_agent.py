@@ -33,6 +33,9 @@ class MeasurementAgentBase(BaseSQLModel):
         sa_column=Column(PydanticType(ToolParameters)),
         title="Tool parameters",
     )
+    batch_size: int | None = Field(
+        None, title="Number of packets to send before applying rate-limiting"
+    )
     probing_rate: int | None = Field(None, title="Probing rate")
     target_file: str = Field(title="Target file key")
 
