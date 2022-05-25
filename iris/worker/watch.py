@@ -162,6 +162,7 @@ async def watch_measurement_agent_with_deps(
                 measurement_uuid=ma.measurement_uuid,
                 probe_filename=result.probes_key,
                 probing_rate=ma.probing_rate,
+                batch_size=ma.batch_size,
                 round=result.next_round,
             ),
         )

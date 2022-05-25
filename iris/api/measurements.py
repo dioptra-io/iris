@@ -236,6 +236,7 @@ async def post_measurement(
             agent_uuid=agent.uuid,
             agent_parameters=active_agents[unwrap(agent.uuid)].parameters,
             tool_parameters=agent.tool_parameters,
+            batch_size=agent.batch_size,
             probing_rate=agent.probing_rate,
             target_file=agent.target_file,
         )

@@ -31,6 +31,7 @@ async def caracal_backend(
                 probes_filepath,
                 results_filepath,
                 request.round.number,
+                request.batch_size,
                 request.probing_rate,
                 probing_statistics,
             ),
@@ -69,6 +70,7 @@ def probe(
     probes_filepath: Path,
     results_filepath: Path,
     round_number: int,
+    batch_size: int | None,
     probing_rate: int,
     probing_statistics: dict,
 ) -> None:
@@ -94,6 +96,9 @@ def probe(
     config.set_sniffer_wait_time(settings.AGENT_CARACAL_SNIFFER_WAIT_TIME)
     config.set_integrity_check(settings.AGENT_CARACAL_INTEGRITY_CHECK)
     config.set_meta_round(str(round_number))
+
+    if batch_size:
+        config.set_batch_size(batch_size)
 
     if settings.AGENT_CARACAL_EXCLUDE_PATH is not None:
         config.set_prefix_excl_file(str(settings.AGENT_CARACAL_EXCLUDE_PATH))
