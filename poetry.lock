@@ -821,7 +821,7 @@ test = ["pytest (>=6.2.4,<7.0.0)", "pytest-cov (>=2.12.0,<4.0.0)", "mypy (==0.91
 
 [[package]]
 name = "fastapi-users"
-version = "10.0.4"
+version = "10.0.6"
 description = "Ready-to-use and customizable users management for FastAPI"
 category = "main"
 optional = false
@@ -834,7 +834,7 @@ fastapi-users-db-sqlalchemy = {version = ">=4.0.0", optional = true, markers = "
 httpx-oauth = {version = ">=0.4,<0.7", optional = true, markers = "extra == \"oauth\""}
 makefun = ">=1.11.2,<1.14"
 passlib = {version = "1.7.4", extras = ["bcrypt"]}
-pyjwt = {version = "2.3.0", extras = ["crypto"]}
+pyjwt = {version = "2.4.0", extras = ["crypto"]}
 python-multipart = "0.0.5"
 
 [package.extras]
@@ -1334,7 +1334,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "pyjwt"
-version = "2.3.0"
+version = "2.4.0"
 description = "JSON Web Token implementation in Python"
 category = "main"
 optional = false
@@ -1868,7 +1868,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "c1325007cfac4242c9094fa4a4c46f9e28920c3b173cb8542203b797ed71d876"
+content-hash = "a80eb14621dbc9dde7361b84d8958c62cc9c1db68d213050778093bff6111771"
 
 [metadata.files]
 aioboto3 = [
@@ -2260,8 +2260,8 @@ fastapi = [
     {file = "fastapi-0.78.0.tar.gz", hash = "sha256:3233d4a789ba018578658e2af1a4bb5e38bdd122ff722b313666a9b2c6786a83"},
 ]
 fastapi-users = [
-    {file = "fastapi-users-10.0.4.tar.gz", hash = "sha256:b22a5791c1cafa370d8d45725c36f3407675d2b42af8c507e1bb1af92228b243"},
-    {file = "fastapi_users-10.0.4-py3-none-any.whl", hash = "sha256:84c679b3b23222618d228acfea56e7f7b205d1359880b4b1af3e49807207b744"},
+    {file = "fastapi-users-10.0.6.tar.gz", hash = "sha256:e3d965469d8388a5e8b87e4d0d61876f902ff59ee0fb3cae62f7a57f3729eabc"},
+    {file = "fastapi_users-10.0.6-py3-none-any.whl", hash = "sha256:df1a61d4d9ad527491b4de9e52d7b35079c83776e3f6fd1a4dc5c1c270975c92"},
 ]
 fastapi-users-db-sqlalchemy = [
     {file = "fastapi-users-db-sqlalchemy-4.0.3.tar.gz", hash = "sha256:7d223742e687cf386bea4e990d6ca8571185c50f365301a34e8eb14ebbda18b2"},
@@ -2821,8 +2821,8 @@ pygments = [
     {file = "Pygments-2.12.0.tar.gz", hash = "sha256:5eb116118f9612ff1ee89ac96437bb6b49e8f04d8a13b514ba26f620208e26eb"},
 ]
 pyjwt = [
-    {file = "PyJWT-2.3.0-py3-none-any.whl", hash = "sha256:e0c4bb8d9f0af0c7f5b1ec4c5036309617d03d56932877f2f7a0beeb5318322f"},
-    {file = "PyJWT-2.3.0.tar.gz", hash = "sha256:b888b4d56f06f6dcd777210c334e69c737be74755d3e5e9ee3fe67dc18a0ee41"},
+    {file = "PyJWT-2.4.0-py3-none-any.whl", hash = "sha256:72d1d253f32dbd4f5c88eaf1fdc62f3a19f676ccbadb9dbc5d07e951b2b26daf"},
+    {file = "PyJWT-2.4.0.tar.gz", hash = "sha256:d42908208c699b3b973cbeb01a969ba6a96c821eefb1c5bfe4c390c01d67abba"},
 ]
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
