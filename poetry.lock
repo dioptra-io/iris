@@ -96,11 +96,11 @@ frozenlist = ">=1.1.0"
 
 [[package]]
 name = "alembic"
-version = "1.7.7"
+version = "1.8.0"
 description = "A database migration tool for SQLAlchemy."
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
 Mako = "*"
@@ -1868,7 +1868,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "e5689ebae006f75e86cd80d2ed22d9ac50687a8bce9b89b6f77b31141a2e482e"
+content-hash = "0050975a12681fc083a8d083393d2c873b985f2b33571ac6e4ccf8e48cb42e27"
 
 [metadata.files]
 aioboto3 = [
@@ -1969,8 +1969,8 @@ aiosignal = [
     {file = "aiosignal-1.2.0.tar.gz", hash = "sha256:78ed67db6c7b7ced4f98e495e572106d5c432a93e1ddd1bf475e1dc05f5b7df2"},
 ]
 alembic = [
-    {file = "alembic-1.7.7-py3-none-any.whl", hash = "sha256:29be0856ec7591c39f4e1cb10f198045d890e6e2274cf8da80cb5e721a09642b"},
-    {file = "alembic-1.7.7.tar.gz", hash = "sha256:4961248173ead7ce8a21efb3de378f13b8398e6630fab0eb258dc74a8af24c58"},
+    {file = "alembic-1.8.0-py3-none-any.whl", hash = "sha256:b5ae4bbfc7d1302ed413989d39474d102e7cfa158f6d5969d2497955ffe85a30"},
+    {file = "alembic-1.8.0.tar.gz", hash = "sha256:a2d4d90da70b30e70352cd9455e35873a255a31402a438fe24815758d7a0e5e1"},
 ]
 anyio = [
     {file = "anyio-3.6.1-py3-none-any.whl", hash = "sha256:cb29b9c70620506a9a8f87a309591713446953302d7d995344d0d7c6c0c9a7be"},
