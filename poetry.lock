@@ -1683,7 +1683,7 @@ full = ["itsdangerous", "jinja2", "python-multipart", "pyyaml", "requests"]
 
 [[package]]
 name = "starlette-exporter"
-version = "0.12.0"
+version = "0.13.0"
 description = "Prometheus metrics exporter for Starlette applications."
 category = "main"
 optional = false
@@ -1868,7 +1868,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "865252e1842940e86eab10a04db7dabe3cca099fd2c9b925868bf15f40698691"
+content-hash = "c1325007cfac4242c9094fa4a4c46f9e28920c3b173cb8542203b797ed71d876"
 
 [metadata.files]
 aioboto3 = [
@@ -2981,8 +2981,8 @@ starlette = [
     {file = "starlette-0.19.1.tar.gz", hash = "sha256:c6d21096774ecb9639acad41b86b7706e52ba3bf1dc13ea4ed9ad593d47e24c7"},
 ]
 starlette-exporter = [
-    {file = "starlette_exporter-0.12.0-py3-none-any.whl", hash = "sha256:8d9537e94edef0a2afc396dfdc37687aa95dd594d00dbdab72bdd9dba6c28222"},
-    {file = "starlette_exporter-0.12.0.tar.gz", hash = "sha256:18d95d09cfb45427e6f54ae591982b5ef900aa150ce9b41e717675b18c5bdb74"},
+    {file = "starlette_exporter-0.13.0-py3-none-any.whl", hash = "sha256:9bdbca9e05ffc6b84a6491ee88ee47f12ffb3182b644a4998a496d859237c0cc"},
+    {file = "starlette_exporter-0.13.0.tar.gz", hash = "sha256:15f21098586eae73e453e4e05bf61890c94e2bd83dfe0fb33b0acdf984294e84"},
 ]
 tenacity = [
     {file = "tenacity-8.0.1-py3-none-any.whl", hash = "sha256:f78f4ea81b0fabc06728c11dc2a8c01277bfc5181b321a4770471902e3eb844a"},
