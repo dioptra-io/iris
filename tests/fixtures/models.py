@@ -18,6 +18,9 @@ def make_agent_parameters():
         default = dict(
             version=__version__,
             hostname="agent.example.org",
+            cpus=1,
+            disk=1,
+            memory=1,
             min_ttl=0,
             max_probing_rate=100,
         )
