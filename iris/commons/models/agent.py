@@ -15,8 +15,13 @@ class AgentState(Enum):
 class AgentParameters(BaseModel):
     version: str
     hostname: str
-    ipv4_address: IPv4Address | None = Field(title="IPv4 address")
-    ipv6_address: IPv6Address | None = Field(title="IPv6 address")
+    internal_ipv4_address: IPv4Address | None = Field(title="Internal IPv4 address")
+    internal_ipv6_address: IPv6Address | None = Field(title="Internal IPv6 address")
+    external_ipv4_address: IPv4Address | None = Field(title="External IPv4 address")
+    external_ipv6_address: IPv6Address | None = Field(title="External IPv6 address")
+    cpus: int = Field(title="Number of logical CPUs")
+    disk: float = Field(title="Total disk size in GB")
+    memory: float = Field(title="Total memory in GB")
     min_ttl: NonNegativeInt = Field(
         title="Minimum TTL",
         description="Minimum TTL allowed by the agent",

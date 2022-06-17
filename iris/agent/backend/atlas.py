@@ -154,7 +154,7 @@ def make_definition(
         first_hop=min_ttl,
         max_hops=max_ttl,
         is_oneoff=True,
-        is_public=False,
+        is_public=True,
         packets=1,
         paris=n_flows,
         protocol=ATLAS_PROTOCOLS[protocol],

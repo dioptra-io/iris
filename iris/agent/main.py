@@ -4,6 +4,7 @@ import socket
 import time
 
 import aioredis
+import psutil
 
 from iris import __version__
 from iris.agent.pipeline import outer_pipeline
@@ -14,7 +15,13 @@ from iris.commons.logger import Adapter, base_logger
 from iris.commons.models import AgentParameters, AgentState
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage
-from iris.commons.utils import cancel_task, get_ipv4_address, get_ipv6_address
+from iris.commons.utils import (
+    cancel_task,
+    get_external_ipv4_address,
+    get_external_ipv6_address,
+    get_internal_ipv4_address,
+    get_internal_ipv6_address,
+)
 
 
 async def heartbeat(agent_uuid: str, redis: Redis) -> None:
@@ -82,8 +89,17 @@ async def main_with_deps(
             AgentParameters(
                 version=__version__,
                 hostname=socket.gethostname(),
-                ipv4_address=get_ipv4_address(),
-                ipv6_address=get_ipv6_address(),
+                internal_ipv4_address=get_internal_ipv4_address(),
+                internal_ipv6_address=get_internal_ipv6_address(),
+                external_ipv4_address=get_external_ipv4_address(),
+                external_ipv6_address=get_external_ipv6_address(),
+                cpus=psutil.cpu_count(),
+                disk=round(
+                    psutil.disk_usage(str(settings.AGENT_RESULTS_DIR_PATH)).total
+                    / 1000**3,
+                    3,
+                ),
+                memory=round(psutil.virtual_memory().total / 1024**3, 3),
                 min_ttl=settings.AGENT_MIN_TTL,
                 max_probing_rate=settings.AGENT_MAX_PROBING_RATE,
                 tags=settings.AGENT_TAGS.split(","),
