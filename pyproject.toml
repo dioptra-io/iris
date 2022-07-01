@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "iris"
-version = "1.1.0"
+version = "1.1.1"
 description = "Resilient Internet-scale measurement system."
 license = "MIT"
 authors = [
@@ -46,22 +46,24 @@ SQLAlchemy-Utils = "^0.38.2"
 sqlmodel = "^0.0.6"
 starlette_exporter = "^0.13.0"
 tenacity = "^8.0.1"
-uvicorn = "^0.17.1"
+uvicorn = "^0.18.2"
 zstandard = "^0.17.0"
 
 [tool.poetry.dev-dependencies]
-black = "^22.3"
-boto3-stubs = "^1.23.4"
+black = "^22.6"
+boto3-stubs = "^1.24.21"
 bumpversion = "^0.6.0"
 coverage = {extras = ["toml"], version = "^6.4"}
 flake8 = "^4.0.1"
 isort = "^5.10.1"
-mypy = "^0.960"
+mypy = "^0.961"
 pre-commit = "^2.19.0"
 pytest = "^7.1.2"
 pytest-asyncio = "^0.18.3"
 pytest-cov = "^3.0.0"
 pytest-clarity = "^1.0.1"
+# Required by fastapi.testclient -> starlette.testclient.
+requests = "^2.28.1"
 types-aiofiles = "^0.8.8"
 
 [tool.pytest.ini_options]
@@ -73,6 +75,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:aiohttp.*:",
     "ignore::DeprecationWarning:urllib3.*:",
 ]
+markers = ["cifail"]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]

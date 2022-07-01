@@ -1,5 +1,7 @@
+import pytest
+
 from iris.agent.ttl import find_exit_ttl_from_output, find_exit_ttl_with_mtr
-from tests.helpers import superuser, xfailci
+from tests.helpers import superuser
 
 output = """
 Mtr_Version,Start_Time,Status,Host,Hop,Ip,Asn,Loss%,Snt, ,Last,Avg,Best,Wrst,StDev,
@@ -31,7 +33,7 @@ def test_find_exit_ttl_from_output_empty():
     assert find_exit_ttl_from_output("", 2) is None
 
 
-@xfailci
 @superuser
+@pytest.mark.cifail
 def test_find_exit_ttl_with_mtr():
     assert 2 <= find_exit_ttl_with_mtr("8.8.8.8", 2) <= 255
