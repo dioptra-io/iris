@@ -50,7 +50,7 @@ uvicorn = "^0.17.1"
 zstandard = "^0.17.0"
 
 [tool.poetry.dev-dependencies]
-black = "^22.3"
+black = "^22.6"
 boto3-stubs = "^1.23.4"
 bumpversion = "^0.6.0"
 coverage = {extras = ["toml"], version = "^6.4"}
