@@ -15,10 +15,6 @@ superuser = pytest.mark.skipif(
     os.geteuid() != 0, reason="this test must be run as root"
 )
 
-xfailci = pytest.mark.xfail(
-    "CI" in os.environ, reason="this test is not supported on GitHub actions"
-)
-
 
 class FakeUploadFile:
     def __init__(self, content):

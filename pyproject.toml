@@ -75,6 +75,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:aiohttp.*:",
     "ignore::DeprecationWarning:urllib3.*:",
 ]
+markers = ["cifail"]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
