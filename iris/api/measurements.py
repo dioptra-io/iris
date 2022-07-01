@@ -48,7 +48,7 @@ def assert_measurement_visibility(
     measurement: Measurement | None,
     user: User,
     settings: APISettings,
-) -> Measurement:
+) -> None:
     if not measurement or (
         settings.TAG_PUBLIC not in measurement.tags
         and measurement.user_id != str(user.id)
@@ -57,19 +57,17 @@ def assert_measurement_visibility(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
         )
-    return measurement
 
 
 def assert_measurement_agent_visibility(
     measurement_agent: MeasurementAgent | None, user: User
-) -> MeasurementAgent:
+) -> None:
     if not measurement_agent or (
         measurement_agent.measurement.user_id != str(user.id) and not user.is_superuser
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement agent not found"
         )
-    return measurement_agent
 
 
 def set_or_raise(d, k, v):
@@ -277,7 +275,7 @@ async def get_measurement(
     settings: APISettings = Depends(get_settings),
 ):
     measurement = Measurement.get(session, str(measurement_uuid))
-    measurement = assert_measurement_visibility(measurement, user, settings)
+    assert_measurement_visibility(measurement, user, settings)
     return MeasurementReadWithAgents.from_measurement(measurement)
 
 
@@ -335,7 +333,7 @@ async def get_measurement_agent_target(
 ):
     assert_probing_enabled(user)
     measurement = Measurement.get(session, str(measurement_uuid))
-    measurement = assert_measurement_visibility(measurement, user, settings)
+    assert_measurement_visibility(measurement, user, settings)
     target_file = await storage.get_file_no_retry(
         storage.archive_bucket(measurement.user_id),
         targets_key(str(measurement_uuid), str(agent_uuid)),
@@ -356,7 +354,7 @@ async def cancel_measurement(
     settings: APISettings = Depends(get_settings),
 ):
     measurement = Measurement.get(session, str(measurement_uuid))
-    measurement = assert_measurement_visibility(measurement, user, settings)
+    assert_measurement_visibility(measurement, user, settings)
     aws = [
         cancel_measurement_agent(
             measurement_uuid=UUID(agent.measurement_uuid),
@@ -392,7 +390,7 @@ async def cancel_measurement_agent(
     measurement_agent = MeasurementAgent.get(
         session, str(measurement_uuid), str(agent_uuid)
     )
-    measurement_agent = assert_measurement_agent_visibility(measurement_agent, user)
+    assert_measurement_agent_visibility(measurement_agent, user)
     await redis.delete_request(str(measurement_uuid), str(agent_uuid))
     measurement_agent.state = MeasurementAgentState.Canceled
     measurement_agent.end_time = datetime.utcnow()

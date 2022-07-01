@@ -1,11 +1,24 @@
 import json
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, status
+from sqlmodel import Session
 
-from iris.commons.dependencies import get_redis
+from iris.api.authentication import current_superuser
+from iris.api.measurements import assert_measurement_visibility, cancel_measurement
+from iris.api.settings import APISettings
+from iris.commons.clickhouse import ClickHouse
+from iris.commons.dependencies import (
+    get_clickhouse,
+    get_redis,
+    get_session,
+    get_settings,
+    get_storage,
+)
+from iris.commons.models import Measurement, User
 from iris.commons.redis import Redis
+from iris.commons.storage import Storage, targets_key
 
 router = APIRouter()
 
@@ -71,3 +84,39 @@ async def delete_dramatiq_message(
 ):
     await redis.client.lrem(redis_list_key(redis.ns, queue), 0, redis_message_id)
     await redis.client.hdel(redis_hash_key(redis.ns, queue), redis_message_id)
+
+
+@router.delete(
+    "/measurements/{measurement_uuid}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_measurement(
+    measurement_uuid: UUID,
+    clickhouse: ClickHouse = Depends(get_clickhouse),
+    user: User = Depends(current_superuser),
+    redis: Redis = Depends(get_redis),
+    session: Session = Depends(get_session),
+    settings: APISettings = Depends(get_settings),
+    storage: Storage = Depends(get_storage),
+):
+    measurement = Measurement.get(session, str(measurement_uuid))
+    assert_measurement_visibility(measurement, user, settings)
+    # (1) Ensure that the measurement is not running anymore
+    await cancel_measurement(
+        measurement_uuid=measurement_uuid,
+        user=user,
+        redis=redis,
+        session=session,
+        settings=settings,
+    )
+    for agent in measurement.agents:
+        # (2) Delete ClickHouse tables
+        await clickhouse.drop_tables(agent.measurement_uuid, agent.agent_uuid)
+        # (3) Delete archived target lists
+        await storage.delete_file_no_check(
+            storage.archive_bucket(str(user.id)),
+            targets_key(agent.measurement_uuid, agent.agent_uuid),
+        )
+        # (4) Delete measurement metadata
+        session.delete(agent)
+    session.delete(measurement)
+    session.commit()
