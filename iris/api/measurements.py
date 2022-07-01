@@ -348,7 +348,7 @@ async def get_measurement_agent_target(
     response_model=MeasurementReadWithAgents,
     summary="Cancel measurement specified by UUID.",
 )
-async def delete_measurement(
+async def cancel_measurement(
     measurement_uuid: UUID,
     user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
@@ -358,7 +358,7 @@ async def delete_measurement(
     measurement = Measurement.get(session, str(measurement_uuid))
     measurement = assert_measurement_visibility(measurement, user, settings)
     aws = [
-        delete_measurement_agent(
+        cancel_measurement_agent(
             measurement_uuid=UUID(agent.measurement_uuid),
             agent_uuid=UUID(agent.agent_uuid),
             user=user,
@@ -381,7 +381,7 @@ async def delete_measurement(
     response_model=MeasurementAgentRead,
     summary="Cancel measurement agent specified by UUID.",
 )
-async def delete_measurement_agent(
+async def cancel_measurement_agent(
     measurement_uuid: UUID,
     agent_uuid: UUID,
     user: User = Depends(current_verified_user),

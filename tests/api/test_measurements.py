@@ -202,7 +202,7 @@ async def test_get_measurement_agent_target(
     assert target.content == ["0.0.0.0/0,icmp,8,32,6"]
 
 
-async def test_delete_measurement(
+async def test_cancel_measurement(
     make_client, make_measurement, make_user, session, storage
 ):
     user = make_user(probing_enabled=True)
@@ -228,7 +228,7 @@ async def test_delete_measurement(
     assert actual.end_time
 
 
-async def test_delete_measurement_not_found(
+async def test_cancel_measurement_not_found(
     make_client, make_measurement, make_user, session, storage
 ):
     user = make_user(probing_enabled=True)
