@@ -234,8 +234,8 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "boto3-stubs"
-version = "1.24.21"
-description = "Type annotations for boto3 1.24.21 generated with mypy-boto3-builder 7.7.2"
+version = "1.24.22"
+description = "Type annotations for boto3 1.24.22 generated with mypy-boto3-builder 7.7.2"
 category = "dev"
 optional = false
 python-versions = ">=3.6"
@@ -575,8 +575,8 @@ crt = ["awscrt (==0.13.5)"]
 
 [[package]]
 name = "botocore-stubs"
-version = "1.27.21"
-description = "Type annotations for botocore 1.27.21 generated with mypy-boto3-builder 7.7.2"
+version = "1.27.22"
+description = "Type annotations for botocore 1.27.22 generated with mypy-boto3-builder 7.7.2"
 category = "dev"
 optional = false
 python-versions = ">=3.6"
@@ -720,7 +720,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "diamond-miner"
-version = "0.10.0"
+version = "0.10.1"
 description = "High-speed, Internet-scale, load-balanced paths discovery."
 category = "main"
 optional = false
@@ -729,7 +729,7 @@ python-versions = ">=3.10,<4.0"
 [package.dependencies]
 pych-client = ">=0.2.3,<0.3.0"
 pygfc = ">=1.0.5,<2.0.0"
-zstandard = ">=0.15.2,<0.18.0"
+zstandard = ">=0.15.2,<0.19.0"
 
 [[package]]
 name = "distlib"
@@ -1744,7 +1744,7 @@ python-versions = "*"
 
 [[package]]
 name = "typing-extensions"
-version = "4.2.0"
+version = "4.3.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
 category = "main"
 optional = false
@@ -1881,7 +1881,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "4e9cd64f743af9e37eea2f4f0c9470d26b30069b393f721bc6bf6c875299efcd"
+content-hash = "ff833854101e8c1ae98772e61a9f704196088580f04c6cfa191b5ed8951e7aba"
 
 [metadata.files]
 aioboto3 = [
@@ -2076,16 +2076,16 @@ boto3 = [
     {file = "boto3-1.21.21.tar.gz", hash = "sha256:6fa0622f308cfd1da758966fc98b52fbd74b80606d14586c8ad82c7a6c4f32d0"},
 ]
 boto3-stubs = [
-    {file = "boto3-stubs-1.24.21.tar.gz", hash = "sha256:c336826af8f692dbe71874188f242116726e98a4efe9b26bd3bae3e7f0d655ce"},
-    {file = "boto3_stubs-1.24.21-py3-none-any.whl", hash = "sha256:93d3fed453f1542ed0b7070b30f077928c0d2c3dd6271667f71e17858aa121be"},
+    {file = "boto3-stubs-1.24.22.tar.gz", hash = "sha256:0602494ca5ae96fd6a275f1fb47c79b565bd1b7d6bcb3427db9db10b5a05dea4"},
+    {file = "boto3_stubs-1.24.22-py3-none-any.whl", hash = "sha256:f6166156e6e6b03f27056efcab1c38fbf98d886743470ce1b900c4d56977817f"},
 ]
 botocore = [
     {file = "botocore-1.24.21-py3-none-any.whl", hash = "sha256:92daca8775e738a9db9b465d533019285f09d541e903233261299fd87c2f842c"},
     {file = "botocore-1.24.21.tar.gz", hash = "sha256:7e976cfd0a61601e74624ef8f5246b40a01f2cce73a011ef29cf80a6e371d0fa"},
 ]
 botocore-stubs = [
-    {file = "botocore-stubs-1.27.21.tar.gz", hash = "sha256:69736da87841cc6369dfc5eaf3753431eb8a1b3b203e7072bfc3f33979e5332d"},
-    {file = "botocore_stubs-1.27.21-py3-none-any.whl", hash = "sha256:80d016900b5babf9b0ed1537918a88d9bf47235a6612187c5152a12c0f39e77e"},
+    {file = "botocore-stubs-1.27.22.tar.gz", hash = "sha256:ec94790abb50ae7da42f1650f09a35a86ef257c50f03b0a618ede1ed807b5609"},
+    {file = "botocore_stubs-1.27.22-py3-none-any.whl", hash = "sha256:56c687edac63deb757623c152265aa37e8e79492f482bc334f5ce084b70c80b7"},
 ]
 bump2version = [
     {file = "bump2version-1.0.1-py2.py3-none-any.whl", hash = "sha256:37f927ea17cde7ae2d7baf832f8e80ce3777624554a653006c9144f8017fe410"},
@@ -2257,10 +2257,10 @@ deprecated = [
     {file = "Deprecated-1.2.13.tar.gz", hash = "sha256:43ac5335da90c31c24ba028af536a91d41d53f9e6901ddb021bcc572ce44e38d"},
 ]
 diamond-miner = [
-    {file = "diamond-miner-0.10.0.tar.gz", hash = "sha256:66f5fb4882264c5fbbc04620a85a984a34eeed87835ff6708e8f43c2993ee011"},
-    {file = "diamond_miner-0.10.0-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:7547c11953eacdfeb467066dd84c81dba92c26eccbe4238aab8216153ea545a5"},
-    {file = "diamond_miner-0.10.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c05490ffe84610e41c961225c34c96b452dec36f5931cdf9278bee6adaf28365"},
-    {file = "diamond_miner-0.10.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7aa4ad0dbbe726d55682b59c5325789911a4baa2f1ece387c1c5da16fb5270cf"},
+    {file = "diamond-miner-0.10.1.tar.gz", hash = "sha256:ce4664416cd9743909c5a3cf52b9f6a6faf5ef790c6a41cc1fa981d9527c51aa"},
+    {file = "diamond_miner-0.10.1-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:8fa4ba1f06910c859c28eba59e9355fa89d21478e156d0936d857527a02f0441"},
+    {file = "diamond_miner-0.10.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7a18e006fd4aa19177f25103b538064001d8d75facf1525681606ec79c7fb394"},
+    {file = "diamond_miner-0.10.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dad6bc832612d53e6b172f0d97cdfbd2380b22bd7067e3d392e230085faec0e2"},
 ]
 distlib = [
     {file = "distlib-0.3.4-py2.py3-none-any.whl", hash = "sha256:6564fe0a8f51e734df6333d08b8b94d4ea8ee6b99b5ed50613f731fd4089f34b"},
@@ -3067,8 +3067,8 @@ types-aiofiles = [
     {file = "types_aiofiles-0.8.8-py3-none-any.whl", hash = "sha256:64846425bc267beec45ddf50b14fb532e6612b9d74c976761cc5e1c47a88a06b"},
 ]
 typing-extensions = [
-    {file = "typing_extensions-4.2.0-py3-none-any.whl", hash = "sha256:6657594ee297170d19f67d55c05852a874e7eb634f4f753dbd667855e07c1708"},
-    {file = "typing_extensions-4.2.0.tar.gz", hash = "sha256:f1c24655a0da0d1b67f07e17a5e6b2a105894e6824b92096378bb3668ef02376"},
+    {file = "typing_extensions-4.3.0-py3-none-any.whl", hash = "sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02"},
+    {file = "typing_extensions-4.3.0.tar.gz", hash = "sha256:e6d2677a32f47fc7eb2795db1dd15c1f34eff616bcaf2cfb5e997f854fa1c4a6"},
 ]
 urllib3 = [
     {file = "urllib3-1.26.9-py2.py3-none-any.whl", hash = "sha256:44ece4d53fb1706f667c9bd1c648f5469a2ec925fcf3a776667042d645472c14"},

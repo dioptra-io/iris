@@ -26,7 +26,7 @@ aioredis = "^2.0.0"
 alembic = "^1.8.0"
 asgiref = "^3.5.1"
 asyncpg = "^0.25.0"
-diamond-miner = "^0.10.0"
+diamond-miner = "^0.10.1"
 dramatiq = {extras = ["redis", "watch"], version = "^1.13.0"}
 email-validator = "^1.1.3"
 fastapi = "^0.78.0"
