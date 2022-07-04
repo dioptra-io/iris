@@ -108,7 +108,10 @@ async def get_user_services(
         tables += [f"{settings.CLICKHOUSE_DATABASE}.*"]
     clickhouse_credentials = {}
     if settings.GUESTHOUSE_URL:
-        async with httpx.AsyncClient(base_url=settings.GUESTHOUSE_URL) as client:
+        async with httpx.AsyncClient(
+            base_url=settings.GUESTHOUSE_URL,
+            timeout=httpx.Timeout(60),
+        ) as client:
             params = {
                 "username": settings.CLICKHOUSE_USERNAME,
                 "password": settings.CLICKHOUSE_PASSWORD,
