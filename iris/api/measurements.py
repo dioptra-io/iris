@@ -13,14 +13,7 @@ from iris.api.authentication import (
 )
 from iris.api.settings import APISettings
 from iris.api.validator import target_file_validator
-from iris.commons.clickhouse import ClickHouse
-from iris.commons.dependencies import (
-    get_clickhouse,
-    get_redis,
-    get_session,
-    get_settings,
-    get_storage,
-)
+from iris.commons.dependencies import get_redis, get_session, get_settings, get_storage
 from iris.commons.models import (
     Agent,
     Measurement,
@@ -292,7 +285,6 @@ async def patch_measurement(
             "tags": ["test"],
         },
     ),
-    clickhouse: ClickHouse = Depends(get_clickhouse),
     user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
@@ -301,15 +293,8 @@ async def patch_measurement(
     assert_tag_enabled(user, settings, measurement_body)
     measurement = Measurement.get(session, str(measurement_uuid))
     assert_measurement_visibility(measurement, user, settings)
-
     if tags := measurement_body.tags:
         measurement.set_tags(session, tags)
-        revoke_public_access = settings.TAG_PUBLIC not in tags
-        for ma in measurement.agents:
-            await clickhouse.grant_public_access(
-                ma.measurement_uuid, ma.agent_uuid, revoke=revoke_public_access
-            )
-
     return await get_measurement(
         measurement_uuid=measurement_uuid,
         user=user,

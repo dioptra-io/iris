@@ -1,5 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
+import httpx
+from diamond_miner.queries import (
+    links_table,
+    prefixes_table,
+    probes_table,
+    results_table,
+)
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlmodel import Session
@@ -13,7 +20,7 @@ from iris.api.authentication import (
 )
 from iris.api.settings import APISettings
 from iris.commons.dependencies import get_session, get_settings, get_storage
-from iris.commons.models import ExternalServices, Paginated, User, UserRead
+from iris.commons.models import ExternalServices, Measurement, Paginated, User, UserRead
 from iris.commons.models.user import (
     AWSCredentials,
     ClickHouseCredentials,
@@ -82,19 +89,44 @@ async def get_users(
     tags=["Users"],
 )
 async def get_user_services(
+    session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
-    _user: User = Depends(current_verified_user),
+    user: User = Depends(current_verified_user),
 ):
+    tables = []
+    public_measurements = Measurement.all(session, tags=[settings.TAG_PUBLIC])
+    user_measurements = Measurement.all(session, user_id=str(user.id))
+    for measurement in public_measurements + user_measurements:
+        tables += [
+            f"{settings.CLICKHOUSE_DATABASE}.{links_table(measurement.uuid)}",
+            f"{settings.CLICKHOUSE_DATABASE}.{prefixes_table(measurement.uuid)}",
+            f"{settings.CLICKHOUSE_DATABASE}.{probes_table(measurement.uuid)}",
+            f"{settings.CLICKHOUSE_DATABASE}.{results_table(measurement.uuid)}",
+        ]
+    if user.is_superuser:
+        tables += [f"{settings.CLICKHOUSE_DATABASE}.*"]
+    clickhouse_credentials = {}
+    if settings.GUESTHOUSE_URL:
+        async with httpx.AsyncClient(base_url=settings.GUESTHOUSE_URL) as client:
+            params = {
+                "username": settings.CLICKHOUSE_USERNAME,
+                "password": settings.CLICKHOUSE_PASSWORD,
+                "lifetime": 60 * 60 * 3,
+                "tables": tables,
+            }
+            clickhouse_credentials = (await client.post("/", json=params)).json()
     s3_credentials = await storage.generate_temporary_credentials()
     return ExternalServices(
         clickhouse=ClickHouseCredentials(
-            base_url=settings.CHPROXY_PUBLIC_BASE_URL,
-            database=settings.CHPROXY_PUBLIC_DATABASE,
-            username=settings.CHPROXY_PUBLIC_USERNAME,
-            password=settings.CHPROXY_PUBLIC_PASSWORD,
+            base_url=clickhouse_credentials.get("base_url", ""),
+            database=settings.CLICKHOUSE_DATABASE,
+            username=clickhouse_credentials.get("username", ""),
+            password=clickhouse_credentials.get("password", ""),
         ),
-        clickhouse_expiration_time=datetime.utcnow() + timedelta(days=365),
+        clickhouse_expiration_time=clickhouse_credentials.get(
+            "expiration_time", datetime.now()
+        ),
         s3=AWSCredentials(
             aws_access_key_id=s3_credentials["AccessKeyId"],
             aws_secret_access_key=s3_credentials["SecretAccessKey"],

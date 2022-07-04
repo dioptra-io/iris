@@ -12,22 +12,17 @@ from tenacity.wait import wait_random
 class CommonSettings(BaseSettings):
     """Common settings."""
 
-    CHPROXY_PUBLIC_BASE_URL: str = ""
-    CHPROXY_PUBLIC_DATABASE: str = ""
-    CHPROXY_PUBLIC_USERNAME: str = ""
-    CHPROXY_PUBLIC_PASSWORD: str = ""
-
     CLICKHOUSE_BASE_URL: str = "http://clickhouse.docker.localhost"
     CLICKHOUSE_DATABASE: str = "iris"
     CLICKHOUSE_USERNAME: str = "iris"
     CLICKHOUSE_PASSWORD: str = "iris"
-    CLICKHOUSE_PUBLIC_USER: str | None = None
     CLICKHOUSE_PARALLEL_CSV_MAX_LINE: int = 25_000_000
     CLICKHOUSE_STORAGE_POLICY: str = "default"
     CLICKHOUSE_ARCHIVE_VOLUME: str = "default"
     CLICKHOUSE_ARCHIVE_INTERVAL: timedelta = timedelta(days=15)
 
     DATABASE_URL: str = "postgresql://iris:iris@postgres.docker.localhost/iris"
+    GUESTHOUSE_URL: str | None = None
 
     REDIS_NAMESPACE: str = "iris"
     REDIS_URL: str = "redis://default:iris@redis.docker.localhost"
