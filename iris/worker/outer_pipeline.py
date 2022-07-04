@@ -35,7 +35,6 @@ async def outer_pipeline(
     results_key: str | None,
     user_id: str,
     max_open_files: int,
-    tag_public: str,
 ) -> OuterPipelineResult | None:
     """
     Responsible to download/upload from object storage.
@@ -73,9 +72,6 @@ async def outer_pipeline(
         ):
             next_round = next_round.next_round(tool_parameters.global_max_ttl)
     logger.info("%s => %s", previous_round, next_round)
-
-    if tag_public in measurement_tags:
-        await clickhouse.grant_public_access(measurement_uuid, agent_uuid)
 
     probes_filepath = working_directory / next_round_key(next_round)
     inner_pipeline_kwargs = dict(

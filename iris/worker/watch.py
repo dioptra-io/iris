@@ -149,7 +149,6 @@ async def watch_measurement_agent_with_deps(
             results_key=results_filename,
             user_id=ma.measurement.user_id,
             max_open_files=settings.WORKER_MAX_OPEN_FILES,
-            tag_public=settings.TAG_PUBLIC,
         )
 
         if not result:

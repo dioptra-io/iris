@@ -47,7 +47,6 @@ def settings():
     print(f"@{namespace}", end=" ")
     # Redis has 16 databases by default, we use the last one for testing.
     return CommonSettings(
-        CLICKHOUSE_PUBLIC_USER="public",
         CLICKHOUSE_DATABASE="iris_test",
         DATABASE_URL=f"postgresql://iris:iris@postgres.docker.localhost/iris-test-{namespace}",
         S3_PREFIX=f"iris-test-{namespace}",

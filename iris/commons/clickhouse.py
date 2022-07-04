@@ -87,29 +87,6 @@ class ClickHouse:
         self.logger.info("Deleting tables")
         await self.execute(DropTables(), measurement_id(measurement_uuid, agent_uuid))
 
-    async def grant_public_access(
-        self, measurement_uuid: str, agent_uuid: str, *, revoke: bool = False
-    ) -> None:
-        """Grant public access to the tables."""
-        if public_user := self.settings.CLICKHOUSE_PUBLIC_USER:
-            if revoke:
-                self.logger.info("Revoking public access to measurement tables")
-            else:
-                self.logger.info("Granting public access to measurement tables")
-            measurement_id_ = measurement_id(measurement_uuid, agent_uuid)
-            for table in [
-                results_table(measurement_id_),
-                links_table(measurement_id_),
-                prefixes_table(measurement_id_),
-            ]:
-                # TODO: Proper parameter injection?
-                # It doesn't seems to be supported for GRANT.
-                # Syntax error: failed at position 17 ('{'): {table:Identifier}
-                if revoke:
-                    await self.call(f"REVOKE SELECT ON {table} FROM {public_user}")
-                else:
-                    await self.call(f"GRANT SELECT ON {table} TO {public_user}")
-
     async def insert_csv(
         self, measurement_uuid: str, agent_uuid: str, csv_filepath: Path
     ) -> None:
