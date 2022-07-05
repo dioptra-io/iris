@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 import httpx
 from diamond_miner.queries import (
@@ -18,7 +19,9 @@ from iris.api.authentication import (
     fastapi_users,
     jwt_auth_backend,
 )
+from iris.api.measurements import assert_measurement_visibility
 from iris.api.settings import APISettings
+from iris.commons.clickhouse import measurement_id
 from iris.commons.dependencies import get_session, get_settings, get_storage
 from iris.commons.models import ExternalServices, Measurement, Paginated, User, UserRead
 from iris.commons.models.user import (
@@ -89,21 +92,26 @@ async def get_users(
     tags=["Users"],
 )
 async def get_user_services(
+    measurement_uuid: UUID | None = None,
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
     user: User = Depends(current_verified_user),
 ):
     tables = []
-    public_measurements = Measurement.all(session, tags=[settings.TAG_PUBLIC])
-    user_measurements = Measurement.all(session, user_id=str(user.id))
-    for measurement in public_measurements + user_measurements:
-        tables += [
-            f"{settings.CLICKHOUSE_DATABASE}.{links_table(measurement.uuid)}",
-            f"{settings.CLICKHOUSE_DATABASE}.{prefixes_table(measurement.uuid)}",
-            f"{settings.CLICKHOUSE_DATABASE}.{probes_table(measurement.uuid)}",
-            f"{settings.CLICKHOUSE_DATABASE}.{results_table(measurement.uuid)}",
-        ]
+    if measurement_uuid:
+        measurement = Measurement.get(session, str(measurement_uuid))
+        assert_measurement_visibility(measurement, user, settings)
+        for measurement_agent in measurement.agents:
+            measurement_id_ = measurement_id(
+                measurement_agent.measurement_uuid, measurement_agent.agent_uuid
+            )
+            tables += [
+                f"{settings.CLICKHOUSE_DATABASE}.{links_table(measurement_id_)}",
+                f"{settings.CLICKHOUSE_DATABASE}.{prefixes_table(measurement_id_)}",
+                f"{settings.CLICKHOUSE_DATABASE}.{probes_table(measurement_id_)}",
+                f"{settings.CLICKHOUSE_DATABASE}.{results_table(measurement_id_)}",
+            ]
     if user.is_superuser:
         tables += [f"{settings.CLICKHOUSE_DATABASE}.*"]
     clickhouse_credentials = {}
