@@ -26,7 +26,7 @@ aioredis = "^2.0.0"
 alembic = "^1.8.0"
 asgiref = "^3.5.1"
 asyncpg = "^0.25.0"
-diamond-miner = "^0.10.1"
+diamond-miner = "^1.0.0"
 dramatiq = {extras = ["redis", "watch"], version = "^1.13.0"}
 email-validator = "^1.1.3"
 fastapi = "^0.78.0"
@@ -35,7 +35,7 @@ gunicorn = "^20.1.0"
 psutil = "^5.9.1"
 psycopg2 = "^2.9.3"
 pycaracal = "^0.11.1"
-pych-client = {extras = ["orjson"], version = "^0.2.10"}
+pych-client = {extras = ["orjson"], version = "^0.3.0"}
 pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 python-multipart = "^0.0.5"
