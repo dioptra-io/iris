@@ -8,6 +8,7 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
+    Response,
     UploadFile,
     status,
 )
@@ -110,6 +111,7 @@ async def delete_target(
     """Delete a target list from object storage."""
     assert_probing_enabled(user)
     await storage.delete_file_check_no_retry(storage.targets_bucket(str(user.id)), key)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

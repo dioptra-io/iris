@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Body, Depends, status
+from fastapi import APIRouter, Body, Depends, Response, status
 from sqlmodel import Session
 
 from iris.api.authentication import current_superuser
@@ -84,6 +84,7 @@ async def delete_dramatiq_message(
 ):
     await redis.client.lrem(redis_list_key(redis.ns, queue), 0, redis_message_id)
     await redis.client.hdel(redis_hash_key(redis.ns, queue), redis_message_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.delete(
@@ -120,3 +121,4 @@ async def delete_measurement(
         session.delete(agent)
     session.delete(measurement)
     session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
