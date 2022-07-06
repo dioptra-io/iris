@@ -80,10 +80,7 @@ def unfold_agent(
     for uuid, active_agent in active_agents.items():
         if parameters := active_agent.parameters:
             if tagged_agent.tag in parameters.tags:
-                tagged_agent = tagged_agent.copy()
-                tagged_agent.tag = None
-                tagged_agent.uuid = uuid
-                agents.append(tagged_agent)
+                agents.append(tagged_agent.copy(update={"tag": None, "uuid": uuid}))
     return agents
 
 
