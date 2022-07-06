@@ -382,9 +382,13 @@ async def test_post_measurement_tag(
 ):
     user = make_user(probing_enabled=True)
     client = make_client(user)
-    agent_uuid = str(uuid4())
+    # We check with multiple agents since we encountered a bug where tag selection
+    # was seemingly working, but was in practice selecting only one matching agent.
     await register_agent(
-        redis, agent_uuid, make_agent_parameters(tags=["tag1"]), AgentState.Idle
+        redis, str(uuid4()), make_agent_parameters(tags=["tag1"]), AgentState.Idle
+    )
+    await register_agent(
+        redis, str(uuid4()), make_agent_parameters(tags=["tag1"]), AgentState.Idle
     )
     await create_user_buckets(storage, user)
     await upload_target_file(storage, user, "targets.csv")
@@ -396,6 +400,7 @@ async def test_post_measurement_tag(
     assert_status_code(response, 201)
     result = cast_response(response, MeasurementReadWithAgents)
     assert result.state == MeasurementAgentState.Created
+    assert len(result.agents) == 2
     assert not result.start_time
     assert not result.end_time
 
