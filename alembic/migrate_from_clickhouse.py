@@ -158,7 +158,7 @@ async def main():
                 new_mas.append(new_ma)
             new_tags = measurement["tags"] + [MIGRATION_TAG]
             if "exhaustive.saturday.json" in new_tags:
-                new_tags += ["!public", "collection:exhaustive"]
+                new_tags += ["visibility:public", "collection:exhaustive"]
             new_measurement = Measurement(
                 uuid=measurement["uuid"],
                 tool=Tool(measurement["tool"]),

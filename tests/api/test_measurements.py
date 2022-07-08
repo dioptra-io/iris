@@ -112,8 +112,8 @@ def test_get_measurements_public(make_client, make_measurement, make_user, sessi
     measurements = [
         make_measurement(user_id=str(user.id)),
         make_measurement(user_id=str(user.id)),
-        make_measurement(user_id=str(user.id), tags=["!public"]),
-        make_measurement(user_id=str(uuid4()), tags=["!public"]),
+        make_measurement(user_id=str(user.id), tags=["visibility:public"]),
+        make_measurement(user_id=str(uuid4()), tags=["visibility:public"]),
     ]
     add_and_refresh(session, measurements)
 
@@ -264,7 +264,7 @@ async def test_patch_measurement_public_tag_disallowed(
     add_and_refresh(session, [measurement])
 
     response = client.patch(
-        f"/measurements/{measurement.uuid}", json={"tags": ["!public"]}
+        f"/measurements/{measurement.uuid}", json={"tags": ["visibility:public"]}
     )
     assert_status_code(response, 403)
     assert "You cannot use public tag" in response.text
@@ -333,7 +333,7 @@ async def test_post_measurement_public_tag_disallowed(make_client, make_user):
     client = make_client(make_user(allow_tag_public=False, probing_enabled=True))
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
-        tags=["!public"],
+        tags=["visibility:public"],
         agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
     )
     response = client.post("/measurements/", data=body.json())
