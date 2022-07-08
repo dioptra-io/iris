@@ -50,7 +50,7 @@ class CommonSettings(BaseSettings):
 
     STREAM_LOGGING_LEVEL: int = logging.INFO
 
-    TAG_PUBLIC: str = "!public"
+    TAG_PUBLIC: str = "visibility:public"
     TAG_COLLECTION_PREFIX: str = "collection:"
 
     @property
