@@ -827,7 +827,7 @@ test = ["pytest (>=6.2.4,<7.0.0)", "pytest-cov (>=2.12.0,<4.0.0)", "mypy (==0.91
 
 [[package]]
 name = "fastapi-users"
-version = "10.1.1"
+version = "10.1.4"
 description = "Ready-to-use and customizable users management for FastAPI"
 category = "main"
 optional = false
@@ -1891,7 +1891,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "c4a108f93f43af4f610a4504e077d2c37eab417f84d22c0a21bfec5816f1d3e6"
+content-hash = "1316d7deb67d4c434f02a7e50a4be6008de517b5de6fb0abc582547aae3bfb47"
 
 [metadata.files]
 aioboto3 = [
@@ -2297,8 +2297,8 @@ fastapi = [
     {file = "fastapi-0.79.0.tar.gz", hash = "sha256:cf0ff6db25b91d321050c4112baab0908c90f19b40bf257f9591d2f9780d1f22"},
 ]
 fastapi-users = [
-    {file = "fastapi-users-10.1.1.tar.gz", hash = "sha256:94c59830874c52a9bcdfb5176d48d65922083802e7fd022692c179141369ccf2"},
-    {file = "fastapi_users-10.1.1-py3-none-any.whl", hash = "sha256:b22737ce60cb9be969c8c5774d538b0cffc62c79d31964bf5939cba3030534a7"},
+    {file = "fastapi-users-10.1.4.tar.gz", hash = "sha256:b91b3c8da52c0e5a72254bd1875171ecd3e4be2f2c248df7418ee95c1fe68f94"},
+    {file = "fastapi_users-10.1.4-py3-none-any.whl", hash = "sha256:c4110413369ab7a6ed6d279adbefbe8f86ba9f3adc8048b0f1f2033fea9191a5"},
 ]
 fastapi-users-db-sqlalchemy = [
     {file = "fastapi-users-db-sqlalchemy-4.0.3.tar.gz", hash = "sha256:7d223742e687cf386bea4e990d6ca8571185c50f365301a34e8eb14ebbda18b2"},
