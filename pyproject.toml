@@ -42,7 +42,7 @@ python-multipart = "^0.0.5"
 pytricia = "^1.0.2"
 # Temporary entry to force SQLAlchemy <1.4.36 which breaks tests.
 SQLAlchemy = "<1.4.36"
-SQLAlchemy-Utils = "^0.38.2"
+SQLAlchemy-Utils = "^0.38.3"
 sqlmodel = "^0.0.6"
 starlette_exporter = "^0.13.0"
 tenacity = "^8.0.1"
