@@ -64,7 +64,7 @@ pytest-cov = "^3.0.0"
 pytest-clarity = "^1.0.1"
 # Required by fastapi.testclient -> starlette.testclient.
 requests = "^2.28.1"
-types-aiofiles = "^0.8.8"
+types-aiofiles = "^0.8.10"
 
 [tool.pytest.ini_options]
 addopts = "--capture=no --doctest-modules --ignore=alembic --ignore=iris_data --strict-markers --verbosity=2"
