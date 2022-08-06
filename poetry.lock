@@ -1738,7 +1738,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "types-aiofiles"
-version = "0.8.8"
+version = "0.8.10"
 description = "Typing stubs for aiofiles"
 category = "dev"
 optional = false
@@ -1891,7 +1891,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "a9af17e8b3ab149c51c8a1d03c8448943f3e483a69f69acf14e1f037a9ed3229"
+content-hash = "c1cc779808c9f042a9fe111b52fad61d9a8056001167e8de557ddf8535701549"
 
 [metadata.files]
 aioboto3 = [
@@ -3075,8 +3075,8 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 types-aiofiles = [
-    {file = "types-aiofiles-0.8.8.tar.gz", hash = "sha256:62942901b44dd8fb14b5581e8389fa0fe5c03b8aef7a1f86ac08e7b550d7dc11"},
-    {file = "types_aiofiles-0.8.8-py3-none-any.whl", hash = "sha256:64846425bc267beec45ddf50b14fb532e6612b9d74c976761cc5e1c47a88a06b"},
+    {file = "types-aiofiles-0.8.10.tar.gz", hash = "sha256:d006ed6894c1da9ed148325b80f3b13c45332474ec31335e6342493cf134e6d4"},
+    {file = "types_aiofiles-0.8.10-py3-none-any.whl", hash = "sha256:ced29372faf9fe95a5b617c844b3c10db3b288c85f8fabdd8b58f4cdb0101bcd"},
 ]
 types-s3transfer = [
     {file = "types-s3transfer-0.6.0.post4.tar.gz", hash = "sha256:0c45331bfd0db210f5043efd2bc3ecd4b3482a02c28faea33edf719b6be38431"},
