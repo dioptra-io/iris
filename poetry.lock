@@ -1273,7 +1273,7 @@ python-versions = "*"
 
 [[package]]
 name = "pycaracal"
-version = "0.11.1"
+version = "0.12.0"
 description = ""
 category = "main"
 optional = false
@@ -1892,7 +1892,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "5e4b0420d3d29efa61fb1f3ef9b5555a3a8cd984be515592849b7cba98f26131"
+content-hash = "20b293d525f4e16ac9a7d76b82cd31e90388f00d059fe234466ba2c3ff9f3e6f"
 
 [metadata.files]
 aioboto3 = [
@@ -2792,16 +2792,19 @@ pyasn1 = [
     {file = "pyasn1-0.4.8.tar.gz", hash = "sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba"},
 ]
 pycaracal = [
-    {file = "pycaracal-0.11.1-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:8553d8d2f474ecdef05838477c7641f7055255e9389dba37e26d35a5721ef795"},
-    {file = "pycaracal-0.11.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0079f74903625048b89ae64a22d99b2bd8b8adefa10e19930a08fcb8887d4721"},
-    {file = "pycaracal-0.11.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:364326e23fdc20630f2228204eacd125f6ec41d6f9407b2eea42eaca00986c14"},
-    {file = "pycaracal-0.11.1-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:f8d0bf02520ddcbddaeb2dc2d85c97cda35bc8bb6416911ba12ed68e8bef254e"},
-    {file = "pycaracal-0.11.1-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7000c4f9d7ce79f417bef87aa88d0f42e7a97d21fba97cbdb441566a9fb38f5b"},
-    {file = "pycaracal-0.11.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:45ca866d71d3b842307dec7d63ea79c94b38c8364a9d081398965459b819e04c"},
-    {file = "pycaracal-0.11.1-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:21fd68b51bdd8f7f37a856f2d8254bd5c71329c1324fc4b0fe11b4a4482f50c7"},
-    {file = "pycaracal-0.11.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:04dbf112a137734688ca838ec1438d076b3d697134d6fccbc12cd7b45db1289c"},
-    {file = "pycaracal-0.11.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:acbf6dc6f8bd5a20eb031150c6beee64aceef03d58727482f420d8b28cb7e4c0"},
-    {file = "pycaracal-0.11.1.tar.gz", hash = "sha256:9a1e928cbf2f5d9bc8eafe560681d73686f94b02dd14684c2f6df894bfcb58ca"},
+    {file = "pycaracal-0.12.0-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:87f97c1f9e5cdc5bc06b7cf9d386a7f877d1b086ab5c639c2b04ed382bc6ea33"},
+    {file = "pycaracal-0.12.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:0f849281bafbdc8f41bb72123901338c809dd0f6786798c2b8a85872fe8d1bf7"},
+    {file = "pycaracal-0.12.0-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9d5fa0a64515cd05fb5b66b513d29c4efaf005ccc0227b274917320fb2e6234a"},
+    {file = "pycaracal-0.12.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c6e5d6ced847600f0277f9d6bfdea30f9aa75f753d28817d81e58892ebc3effe"},
+    {file = "pycaracal-0.12.0-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:4fdef56e4e100aedf421540f2c4365e20b4a993ce2b4386e201c3a8ed70dd1b7"},
+    {file = "pycaracal-0.12.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:e9cc079832c6ba5dd447838778b904409a588c4f655729815be9188166ba441c"},
+    {file = "pycaracal-0.12.0-cp38-cp38-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:24c8178ccc356feb2bef55db56cd089141a44f7efab64f0aea9b137a0443ca47"},
+    {file = "pycaracal-0.12.0-cp38-cp38-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:10fe6e7f87071b852e4d2e9de7d183b9d99a143059033403be7dd1e17cdbaee1"},
+    {file = "pycaracal-0.12.0-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:211ca2f9848be3d02929930f96ef694a487c93ca60a46c713605e2552b187c16"},
+    {file = "pycaracal-0.12.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:b8b3ef7cc7e25cb80ea270785771d0dcc7ac35ffd42de6cfe5dc19bd4c699f2b"},
+    {file = "pycaracal-0.12.0-cp39-cp39-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:cb4cde27f8dc40f2a1bea7761ac2021d657c55c1dcb7578424b2d67168e6e2ea"},
+    {file = "pycaracal-0.12.0-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a68341da306b50208dd8049daea52d331fdea1926ed116561e80f807e5b632d5"},
+    {file = "pycaracal-0.12.0.tar.gz", hash = "sha256:b918b1a5e5c3a53dbb91eec073dc351f73b3579612ab91bf29b471b4098d0109"},
 ]
 pych-client = [
     {file = "pych-client-0.3.1.tar.gz", hash = "sha256:9770ab9370ecf95c2d51ebcd7c0af81b0a0871fda1e7bc651e0e5d6bcf9af2d7"},
