@@ -723,7 +723,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "diamond-miner"
-version = "1.0.0"
+version = "1.0.2"
 description = "High-speed, Internet-scale, load-balanced paths discovery."
 category = "main"
 optional = false
@@ -1891,7 +1891,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "4d78afc521bbfb030f1f3282d2a64cbca212d7533310554a131eec679d145162"
+content-hash = "026276945a7cf598043d38b0c65e68bfee68f22452828c2cb40fa4d6d3996538"
 
 [metadata.files]
 aioboto3 = [
@@ -2267,10 +2267,10 @@ deprecated = [
     {file = "Deprecated-1.2.13.tar.gz", hash = "sha256:43ac5335da90c31c24ba028af536a91d41d53f9e6901ddb021bcc572ce44e38d"},
 ]
 diamond-miner = [
-    {file = "diamond-miner-1.0.0.tar.gz", hash = "sha256:1ce3d641ecda2c6aa3d9d65d278c1fba2794be0fb48693e153df211f896ba89a"},
-    {file = "diamond_miner-1.0.0-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:4f96e8ab744415d200c3798863ce9817c2ff3b248e7a8077639c49d361a1d456"},
-    {file = "diamond_miner-1.0.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c9486fbc1bc4ecffd5a7c54f7ef89a302853ee861c82991be7d3b828e1d60dd2"},
-    {file = "diamond_miner-1.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3e52d52e9e2b04aa2a4134d2f97be9c27cbb2c26cbb9432994d267ba91b964dc"},
+    {file = "diamond-miner-1.0.2.tar.gz", hash = "sha256:173aa8d4c9d1c6a1444a1e3106adbf33b40cf3429ba049cfaa46ad08caecb73d"},
+    {file = "diamond_miner-1.0.2-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:75a085ec97a11219f5700a5f2d82f1b7866267779bd4dc79add6b9e58f6d3f82"},
+    {file = "diamond_miner-1.0.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2c3e90a99ba9bb35982d3ab50a8c3a613c01b4f933b9a1160a57f8bd2d5c4e60"},
+    {file = "diamond_miner-1.0.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a81c5c560dd37aff2b149e8d243010292c9a734fb441802c1178a8daf700dfca"},
 ]
 distlib = [
     {file = "distlib-0.3.4-py2.py3-none-any.whl", hash = "sha256:6564fe0a8f51e734df6333d08b8b94d4ea8ee6b99b5ed50613f731fd4089f34b"},
