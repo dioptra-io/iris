@@ -1,10 +1,8 @@
 # Deployment
 
-TODO: UPDATE SETTINGS LINKS.
-
 You can set up a production-ready system to orchestrate multiple vantage points from a dedicated API.
 
-We provide a [docker-compose.yml](docker-compose.yml) file to set up Iris locally.
+We provide a [`docker-compose.yml`](https://github.com/dioptra-io/iris/blob/main/docker-compose.yml) file to set up Iris locally.
 Feel free to adapt it with your own configurations.
 Don't forget to change the default passwords before pushing it to production!
 
@@ -44,11 +42,11 @@ curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/js
 
 In this section we will document the different settings to configure Iris.
 Most of the settings are commons to the API, the worker and the agent components.
-All of the settings must be declared in the [docker-compose.yml](docker-compose.yml) file for each component.
+All of the settings must be declared in the [`docker-compose.yml`](https://github.com/dioptra-io/iris/blob/main/docker-compose.yml) file for each component.
 
 | Component    | Settings location                                |
 |--------------|--------------------------------------------------|
-| Commons  | [iris/commons/settings.py](iris/commons/settings.py) |
-| API      | [iris/api/settings.py](iris/api/settings.py)         |
-| Worker   | [iris/worker/settings.py](iris/worker/settings.py)   |
-| Agent    | [iris/agent/settings.py](iris/agent/settings.py)     |
+| Commons  | [iris/commons/settings.py](https://github.com/dioptra-io/iris/blob/main/iris/commons/settings.py) |
+| API      | [iris/api/settings.py](https://github.com/dioptra-io/iris/blob/main/iris/api/settings.py)         |
+| Worker   | [iris/worker/settings.py](https://github.com/dioptra-io/iris/blob/main/iris/worker/settings.py)   |
+| Agent    | [iris/agent/settings.py](https://github.com/dioptra-io/iris/blob/main/iris/agent/settings.py)     |
