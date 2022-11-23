@@ -50,7 +50,8 @@ poetry run alembic upgrade head
 docker-compose down
 ```
 
-The API documentation will be available on http://api.docker.localhost/docs.
+The API documentation will be available on http://api.docker.localhost/docs.  
+By default, the admin user is `admin@example.org` and the password is `admin`.
 
 ## Tests
 
