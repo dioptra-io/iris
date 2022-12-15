@@ -1,10 +1,10 @@
-# Contributing
+# Development
 
-Thanks for contributing ! Here is some guidelines to make your life easier during the development process.
+Here are some guidelines to make your life easier during the development process.
 
 ## Prerequisites
 
-To develop on Iris you need a Python 3.8+ interpreter and Docker.
+To develop on Iris you need a Python 3.10+ interpreter and Docker.
 
 Iris services and their dependencies are hosted behind a Traefik reverse-proxy.
 To be able to access them from your own machine, you need to add the following entries to [`/etc/hosts`](file:///etc/hosts):
@@ -50,7 +50,8 @@ poetry run alembic upgrade head
 docker-compose down
 ```
 
-The API documentation will be available on http://api.docker.localhost/docs.
+The API documentation will be available on http://api.docker.localhost/docs.  
+By default, the admin user is `admin@example.org` and the password is `admin`.
 
 ## Tests
 
@@ -82,4 +83,3 @@ poetry run pre-commit run --all-files
 
 Please use [bumpversion](https://pypi.org/project/bumpversion/0.6.0/) to conduct the releases.
 The version bump will automatically create a new commit associated with a tag.
-When pushed to GitHub, the tag will trigger a deployment workflow that will push the new version of Iris Agent into Docker Hub.

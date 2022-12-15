@@ -12,9 +12,9 @@ Think of it as a project similar to [CAIDA Ark](https://www.caida.org/projects/a
 
 We offer a public instance of Iris, as well as public measurement data, on [iris.dioptra.io](https://iris.dioptra.io).
 
-## 🚀 Deployment
+## 📖 Documentation
 
-See [`DEPLOYMENT.md`](DEPLOYMENT.md) for more information about how to deploy Iris on your own infrastructure.
+Please refer to the [documentation](https://dioptra-io.github.io/iris/) for more information on how to use Iris, deploy your own instance and contribute to the project.
 
 ## 📚 Publications
 
@@ -38,11 +38,6 @@ numpages = {8},
 keywords = {active internet measurements, internet topology}
 }
 ```
-
-## ✏️ Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for more information about how to contribute to this project.
-
 
 ## 🧑‍💻 Authors
 
