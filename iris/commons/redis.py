@@ -3,7 +3,7 @@ import random
 from dataclasses import dataclass
 from logging import LoggerAdapter
 
-import aioredis
+from redis import asyncio as aioredis
 
 from iris.commons.models import (
     Agent,

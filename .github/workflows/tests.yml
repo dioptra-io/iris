@@ -13,6 +13,10 @@ jobs:
       - uses: dioptra-io/setup-poetry-action@v1
       - name: Start services
         run: docker compose up -d -t 0 traefik clickhouse minio postgres redis
+      - name: Install caracal
+        run: |
+          sudo curl -L -o /usr/bin/caracal https://github.com/dioptra-io/caracal/releases/download/v0.15.1/caracal-linux-amd64
+          sudo chmod +x /usr/bin/caracal
       - name: Install package
         run: poetry install
       - name: Run tests

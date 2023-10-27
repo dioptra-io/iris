@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager, contextmanager
 
-import aioredis
+from redis import asyncio as aioredis
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyAccessTokenDatabase

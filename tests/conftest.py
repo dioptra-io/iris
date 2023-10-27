@@ -2,7 +2,7 @@ import logging
 import os
 import secrets
 
-import aioredis
+from redis import asyncio as aioredis
 import boto3
 import pytest
 import redis as pyredis
@@ -69,7 +69,6 @@ def api_settings(settings):
 def agent_settings(settings, tmp_path):
     return AgentSettings(
         **settings.dict(),
-        AGENT_CARACAL_SNIFFER_WAIT_TIME=1,
         AGENT_MIN_TTL=0,
         AGENT_RESULTS_DIR_PATH=tmp_path / "agent_results",
         AGENT_TARGETS_DIR_PATH=tmp_path / "agent_targets",

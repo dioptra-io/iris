@@ -21,22 +21,20 @@ classifiers = [
 python = "^3.10"
 aioboto3 = "^9.5.0"
 aiofiles = "^0.8.0"
-aioredis = "^2.0.0"
 # We make alembic a runtime dependency so that is available in the Docker images.
 alembic = "^1.8.1"
 asgiref = "^3.5.1"
 asyncpg = "^0.26.0"
-diamond-miner = "^1.0.2"
+diamond-miner = "^1.1.0"
 dramatiq = {extras = ["redis", "watch"], version = "^1.13.0"}
 email-validator = "^1.1.3"
 fastapi = "^0.81.0"
-fastapi-users = {extras = ["sqlalchemy", "oauth"], version = "^10.1.4"}
+fastapi-users = {extras = ["sqlalchemy"], version = "^10.1.4"}
 gunicorn = "^20.1.0"
 mkdocs-material = "^8.4.2"
 psutil = "^5.9.1"
 psycopg2 = "^2.9.3"
-pycaracal = "^0.14.5"
-pych-client = {extras = ["orjson"], version = "^0.3.1"}
+pych-client = {extras = ["orjson"], version = "^0.4.0"}
 pydantic = "^1.8.2"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 python-multipart = "^0.0.5"
@@ -48,7 +46,8 @@ sqlmodel = "^0.0.6"
 starlette_exporter = "^0.14.0"
 tenacity = "^8.0.1"
 uvicorn = "^0.18.3"
-zstandard = "^0.18.0"
+zstandard = "^0.21.0"
+redis = "^5.0.1"
 
 [tool.poetry.dev-dependencies]
 black = "^22.6"
