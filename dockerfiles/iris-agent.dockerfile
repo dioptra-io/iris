@@ -28,11 +28,15 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         ca-certificates \
+        curl \
         libpq5 \
         mtr \
         python3 \
         tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -L https://github.com/dioptra-io/caracal/releases/download/v0.15.1/caracal-linux-amd64 > /usr/bin/caracal \
+    && chmod +x /usr/bin/caracal
 
 WORKDIR /app
 

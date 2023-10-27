@@ -11,22 +11,12 @@ from pydantic import root_validator
 from iris.commons.settings import CommonSettings
 
 
-class RateLimitingMethod(str, Enum):
-    auto = "auto"
-    active = "active"
-    sleep = "sleep"
-    none = "none"
-
-
 class AgentSettings(CommonSettings):
     """Agent specific settings."""
 
     AGENT_BACKEND: Literal["atlas", "caracal"] = "caracal"
 
     AGENT_CARACAL_EXCLUDE_PATH: Path = Path("statics/excluded_prefixes")
-    AGENT_CARACAL_RATE_LIMITING_METHOD: RateLimitingMethod = RateLimitingMethod.auto
-    AGENT_CARACAL_SNIFFER_WAIT_TIME: int = 5
-    AGENT_CARACAL_LOGGING_LEVEL: int = logging.INFO
     AGENT_CARACAL_INTEGRITY_CHECK: bool = True
 
     AGENT_UUID: str = str(uuid4())

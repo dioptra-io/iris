@@ -18,6 +18,13 @@ To be able to access them from your own machine, you need to add the following e
 127.0.0.1 traefik.docker.localhost
 ```
 
+You also need caracal in your $PATH if you intend to run Iris locally:
+```bash
+# Use caracal-macos-amd64 for macOS
+curl -L https://github.com/dioptra-io/caracal/releases/download/v0.15.1/caracal-linux-amd64 > /usr/bin/caracal
+chmod +x /usr/bin/caracal
+```
+
 ## Running Iris
 
 ### Locally

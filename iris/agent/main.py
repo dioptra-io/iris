@@ -3,7 +3,7 @@ import logging
 import socket
 import time
 
-import aioredis
+from redis import asyncio as aioredis
 import psutil
 
 from iris import __version__
