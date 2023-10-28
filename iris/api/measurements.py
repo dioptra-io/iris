@@ -155,16 +155,18 @@ async def get_measurements_public(
 async def post_measurement(
     measurement_body: MeasurementCreate = Body(
         ...,
-        example={
-            "tool": "diamond-miner",
-            "agents": [
-                {
-                    "tag": "all",
-                    "target_file": "prefixes.csv",
-                }
-            ],
-            "tags": ["test"],
-        },
+        examples=[
+            {
+                "tool": "diamond-miner",
+                "agents": [
+                    {
+                        "tag": "all",
+                        "target_file": "prefixes.csv",
+                    }
+                ],
+                "tags": ["test"],
+            }
+        ],
     ),
     user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
@@ -278,9 +280,11 @@ async def patch_measurement(
     measurement_uuid: UUID,
     measurement_body: MeasurementPatch = Body(
         ...,
-        example={
-            "tags": ["test"],
-        },
+        examples=[
+            {
+                "tags": ["test"],
+            }
+        ],
     ),
     user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
