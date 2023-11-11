@@ -8,7 +8,6 @@ from logging import LoggerAdapter
 from pathlib import Path
 from typing import Any
 
-import aiofiles.os
 from diamond_miner.queries import (
     CreateTables,
     DropTables,
@@ -123,7 +122,7 @@ class ClickHouse:
             await asyncio.gather(
                 *[loop.run_in_executor(pool, insert, file) for file in files]
             )
-        await aiofiles.os.rmdir(split_dir)
+        os.rmdir(split_dir)
 
     @fault_tolerant
     async def insert_links(self, measurement_uuid: str, agent_uuid: str) -> None:
