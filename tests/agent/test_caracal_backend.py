@@ -1,4 +1,4 @@
-from iris.agent.backend.caracal import probe
+from iris.agent.backend import probe
 from tests.helpers import superuser
 
 

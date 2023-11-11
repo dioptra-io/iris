@@ -1,9 +1,6 @@
 """Agents settings."""
 
-import logging
-from enum import Enum
 from pathlib import Path
-from typing import Literal
 from uuid import uuid4
 
 from pydantic import root_validator
@@ -13,8 +10,6 @@ from iris.commons.settings import CommonSettings
 
 class AgentSettings(CommonSettings):
     """Agent specific settings."""
-
-    AGENT_BACKEND: Literal["atlas", "caracal"] = "caracal"
 
     AGENT_CARACAL_EXCLUDE_PATH: Path = Path("statics/excluded_prefixes")
     AGENT_CARACAL_INTEGRITY_CHECK: bool = True
