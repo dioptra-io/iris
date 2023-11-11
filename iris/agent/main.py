@@ -77,7 +77,7 @@ async def main_with_deps(
         try:
             await redis.client.ping()
             break
-        except aioredis.exceptions.ConnectionError:
+        except aioredis.ConnectionError:
             logger.info("Waiting for redis...")
             time.sleep(1)
 
