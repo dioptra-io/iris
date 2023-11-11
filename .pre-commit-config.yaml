@@ -1,35 +1,16 @@
 repos:
-  - repo: https://github.com/PyCQA/autoflake
-    rev: v1.4
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.5
     hooks:
-      - id: autoflake
-        args: ["--in-place", "--remove-all-unused-imports"]
-
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.10.1
-    hooks:
-      - id: isort
-        args: ["--profile=black"]
-
-  - repo: https://github.com/psf/black
-    rev: 22.3.0
-    hooks:
-      - id: black
-        args: ["--line-length=88"]
-
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
-    hooks:
-      - id: flake8
-        # https://github.com/PyCQA/pycodestyle/issues/373
-        # E203: False positive "whitespace before ':' " on list slice.
-        args: ["--ignore=E203,E501,W503"]
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.2.0
     hooks:
       - id: trailing-whitespace
-        exclude: .md$
+        exclude_types: [ markdown ]
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
