@@ -1,9 +1,7 @@
-import logging
 from uuid import uuid4
 
 import pytest
 
-from iris.commons.storage import Storage
 from tests.helpers import upload_file
 
 
@@ -137,25 +135,3 @@ async def test_delete_all_files(storage, make_bucket, make_tmp_file):
     await upload_file(storage, bucket, make_tmp_file())
     await storage.delete_all_files_from_bucket(bucket)
     assert len(await storage.get_all_files(bucket)) == 0
-
-
-async def test_generate_credentials(settings, storage, make_tmp_file):
-    bucket = "test-public-exports"
-    tmp_file = make_tmp_file()
-    await storage.create_bucket(bucket)
-    await upload_file(storage, bucket, tmp_file)
-
-    r = await storage.generate_temporary_credentials()
-    settings.S3_ACCESS_KEY_ID = r["AccessKeyId"]
-    settings.S3_SECRET_ACCESS_KEY = r["SecretAccessKey"]
-    settings.S3_SESSION_TOKEN = r["SessionToken"]
-    user_storage = Storage(settings, logging.getLogger(__name__))
-
-    files = await user_storage.get_all_files(bucket)
-    assert len(files) == 1
-
-    file = await user_storage.get_file(bucket, tmp_file["name"])
-    assert file["content"] == tmp_file["content"]
-    assert file["metadata"] == tmp_file["metadata"]
-    assert file["key"] == tmp_file["name"]
-    assert file["size"] == len(tmp_file["content"])

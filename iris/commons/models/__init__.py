@@ -29,7 +29,6 @@ from iris.commons.models.round import Round
 from iris.commons.models.target import Target, TargetSummary
 from iris.commons.models.user import (
     CustomCreateUpdateDictModel,
-    ExternalServices,
     User,
     UserCreate,
     UserRead,
@@ -66,5 +65,4 @@ __all__ = (
     "UserRead",
     "UserCreate",
     "UserUpdate",
-    "ExternalServices",
 )

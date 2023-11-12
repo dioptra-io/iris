@@ -22,7 +22,6 @@ class CommonSettings(BaseSettings):
     CLICKHOUSE_ARCHIVE_INTERVAL: timedelta = timedelta(days=15)
 
     DATABASE_URL: str = "postgresql://iris:iris@postgres.docker.localhost/iris"
-    GUESTHOUSE_URL: str | None = None
 
     REDIS_NAMESPACE: str = "iris"
     REDIS_URL: str = "redis://default:iris@redis.docker.localhost"
@@ -38,20 +37,7 @@ class CommonSettings(BaseSettings):
     S3_REGION_NAME: str = "local"
     S3_PREFIX: str = "iris"
 
-    S3_PUBLIC_ACTIONS: list[str] = [
-        "s3:GetBucketLocation",
-        "s3:GetObject",
-        "s3:ListBucket",
-    ]
-    S3_PUBLIC_RESOURCES: list[str] = [
-        "arn:aws:s3:::public-exports",
-        "arn:aws:s3:::public-exports/*",
-    ]
-
     STREAM_LOGGING_LEVEL: int = logging.INFO
-
-    TAG_PUBLIC: str = "visibility:public"
-    TAG_COLLECTION_PREFIX: str = "collection:"
 
     @property
     def clickhouse(self):

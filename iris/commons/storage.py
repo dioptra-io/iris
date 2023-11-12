@@ -1,5 +1,4 @@
 import datetime
-import json
 from dataclasses import dataclass
 from logging import LoggerAdapter
 from pathlib import Path
@@ -208,26 +207,3 @@ class Storage:
             await bucket_destination.copy(
                 {"Bucket": bucket_src, "Key": filename_src}, filename_dst
             )
-
-    @fault_tolerant
-    async def generate_temporary_credentials(self) -> dict:
-        session = aioboto3.Session()
-        policy = dict(
-            Version="2012-10-17",
-            Statement=[
-                dict(
-                    Effect="Allow",
-                    Action=self.settings.S3_PUBLIC_ACTIONS,
-                    Resource=self.settings.S3_PUBLIC_RESOURCES,
-                )
-            ],
-        )
-        async with session.client("sts", **self.settings.s3) as sts:
-            response = await sts.assume_role(
-                DurationSeconds=60 * 60 * 3,
-                Policy=json.dumps(policy),
-                RoleArn="NotNeededForMinIO---",
-                RoleSessionName="NotNeededForMinIO---",
-            )
-            credentials: dict = response["Credentials"]
-            return credentials

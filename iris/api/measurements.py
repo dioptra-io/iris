@@ -6,11 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlmodel import Session
 
-from iris.api.authentication import (
-    assert_probing_enabled,
-    assert_tag_enabled,
-    current_verified_user,
-)
+from iris.api.authentication import assert_probing_enabled, current_verified_user
 from iris.api.settings import APISettings
 from iris.api.validator import target_file_validator
 from iris.commons.dependencies import get_redis, get_session, get_settings, get_storage
@@ -43,9 +39,7 @@ def assert_measurement_visibility(
     settings: APISettings,
 ) -> None:
     if not measurement or (
-        settings.TAG_PUBLIC not in measurement.tags
-        and measurement.user_id != str(user.id)
-        and not user.is_superuser
+        measurement.user_id != str(user.id) and not user.is_superuser
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Measurement not found"
@@ -120,32 +114,6 @@ async def get_measurements(
     return Paginated.from_results(request.url, measurements_, count, offset, limit)
 
 
-@router.get(
-    "/public",
-    response_model=Paginated[MeasurementRead],
-    summary="Get all public measurements.",
-)
-async def get_measurements_public(
-    request: Request,
-    state: MeasurementAgentState | None = None,
-    tag: str | None = None,
-    offset: int = Query(0, ge=0),
-    limit: int = Query(20, ge=0, le=200),
-    _user: User = Depends(current_verified_user),
-    session: Session = Depends(get_session),
-    settings: APISettings = Depends(get_settings),
-):
-    tags = [settings.TAG_PUBLIC]
-    if tag:
-        tags.append(tag)
-    count = Measurement.count(session, state=state, tags=tags)
-    measurements = Measurement.all(
-        session, state=state, tags=tags, offset=offset, limit=limit
-    )
-    measurements_ = MeasurementRead.from_measurements(measurements)
-    return Paginated.from_results(request.url, measurements_, count, offset, limit)
-
-
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
@@ -175,7 +143,6 @@ async def post_measurement(
     settings: APISettings = Depends(get_settings),
 ):
     assert_probing_enabled(user)
-    assert_tag_enabled(user, settings, measurement_body)
 
     active_agents = await redis.get_agents_by_uuid()
 
@@ -291,7 +258,6 @@ async def patch_measurement(
     settings: APISettings = Depends(get_settings),
 ):
     assert_probing_enabled(user)
-    assert_tag_enabled(user, settings, measurement_body)
     measurement = Measurement.get(session, str(measurement_uuid))
     assert_measurement_visibility(measurement, user, settings)
     if tags := measurement_body.tags:

@@ -133,29 +133,3 @@ def assert_probing_enabled(user: User):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You must have probing enabled to access this resource",
         )
-
-
-def assert_tag_enabled(user: User, settings: APISettings, measurement_body):
-    if settings.TAG_PUBLIC in measurement_body.tags:
-        assert_tag_public_enabled(user)
-
-    if any(
-        tag.startswith(settings.TAG_COLLECTION_PREFIX) for tag in measurement_body.tags
-    ):
-        assert_tag_reserved_enabled(user)
-
-
-def assert_tag_reserved_enabled(user: User):
-    if not user.allow_tag_reserved:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You cannot use reserved tags",
-        )
-
-
-def assert_tag_public_enabled(user: User):
-    if not user.allow_tag_public:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You cannot use public tag",
-        )

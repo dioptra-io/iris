@@ -62,8 +62,6 @@ def make_user():
         default = dict(
             id=uuid4(),
             email="user@example.org",
-            allow_tag_public=True,
-            allow_tag_reserved=True,
             is_active=True,
             is_verified=True,
             probing_limit=1_000_000,

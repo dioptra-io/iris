@@ -35,8 +35,6 @@ curl -X POST \
   "lastname": "Last",
   "probing_enabled": false,
   "probing_limit": 1,
-  "allow_tag_reserved": false,
-  "allow_tag_public": false,
   "creation_time": "2022-08-17T14:24:22.495581"
 }
 ```
@@ -66,7 +64,7 @@ To avoid specifying the credentials in the code, you can use environment variabl
 from iris_client import IrisClient
 
 with IrisClient() as iris:
-    iris.all("/measurements/", params={"tag": "collection:public", "only_mine": False})
+    iris.all("/measurements/", params={"only_mine": False})
     iris.post("/measurements/", json={"tool": "diamond-miner", "agents": "..."})
 ```
 

@@ -50,7 +50,6 @@ def settings():
         CLICKHOUSE_DATABASE="iris_test",
         DATABASE_URL=f"postgresql://iris:iris@postgres.docker.localhost/iris-test-{namespace}",
         S3_PREFIX=f"iris-test-{namespace}",
-        S3_PUBLIC_RESOURCES=["arn:aws:s3:::test-public-exports/*"],
         REDIS_NAMESPACE=f"iris-test-{namespace}",
         REDIS_URL="redis://default:iris@redis.docker.localhost?db=15",
         RETRY_TIMEOUT=-1,

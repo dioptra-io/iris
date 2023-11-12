@@ -44,7 +44,6 @@ async def test_e2e(
     # Create the measurement
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
-        tags=[worker_settings.TAG_PUBLIC],
         agents=[
             MeasurementAgentCreate(
                 uuid=agent_settings.AGENT_UUID, target_file="targets.csv"
