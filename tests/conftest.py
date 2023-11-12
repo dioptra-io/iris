@@ -12,11 +12,7 @@ from sqlalchemy_utils import create_database, database_exists, drop_database
 from sqlmodel import Session, create_engine
 
 from iris.agent.settings import AgentSettings
-from iris.api.authentication import (
-    current_active_user,
-    current_superuser,
-    current_verified_user,
-)
+from iris.api.authentication import current_active_user, current_superuser
 from iris.api.main import make_app
 from iris.api.settings import APISettings
 from iris.commons.clickhouse import ClickHouse
@@ -121,9 +117,7 @@ def make_client(engine, api_settings):
         app = make_app(settings=api_settings)
         if user and user.is_active:
             app.dependency_overrides[current_active_user] = lambda: user
-        if user and user.is_active and user.is_verified:
-            app.dependency_overrides[current_verified_user] = lambda: user
-        if user and user.is_active and user.is_verified and user.is_superuser:
+        if user and user.is_active and user.is_superuser:
             app.dependency_overrides[current_superuser] = lambda: user
         app.dependency_overrides[get_settings] = lambda: api_settings
         return TestClient(app)

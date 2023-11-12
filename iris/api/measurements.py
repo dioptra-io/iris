@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlmodel import Session
 
-from iris.api.authentication import current_verified_user
+from iris.api.authentication import current_active_user
 from iris.api.settings import APISettings
 from iris.api.validator import target_file_validator
 from iris.commons.dependencies import get_redis, get_session, get_settings, get_storage
@@ -88,7 +88,7 @@ async def get_measurements(
     only_mine: bool = True,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     session: Session = Depends(get_session),
 ):
     if not only_mine and not user.is_superuser:
@@ -135,7 +135,7 @@ async def post_measurement(
             }
         ],
     ),
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
@@ -226,7 +226,7 @@ async def post_measurement(
 )
 async def get_measurement(
     measurement_uuid: UUID,
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
@@ -250,7 +250,7 @@ async def patch_measurement(
             }
         ],
     ),
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
@@ -274,7 +274,7 @@ async def patch_measurement(
 async def get_measurement_agent_target(
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
@@ -295,7 +295,7 @@ async def get_measurement_agent_target(
 )
 async def cancel_measurement(
     measurement_uuid: UUID,
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
@@ -329,7 +329,7 @@ async def cancel_measurement(
 async def cancel_measurement_agent(
     measurement_uuid: UUID,
     agent_uuid: UUID,
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
 ):

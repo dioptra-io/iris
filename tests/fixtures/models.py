@@ -63,7 +63,6 @@ def make_user():
             id=uuid4(),
             email="user@example.org",
             is_active=True,
-            is_verified=True,
         )
         return UserRead(**{**default, **kwargs})
 

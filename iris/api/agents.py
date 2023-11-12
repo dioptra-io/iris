@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
-from iris.api.authentication import current_verified_user
+from iris.api.authentication import current_active_user
 from iris.commons.dependencies import get_redis
 from iris.commons.models import Agent, Paginated, User
 from iris.commons.redis import Redis
@@ -16,7 +16,7 @@ async def get_agents(
     tag: str | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=0, le=200),
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     redis: Redis = Depends(get_redis),
 ):
     agents = await redis.get_agents()
@@ -30,7 +30,7 @@ async def get_agents(
 @router.get("/{uuid}", response_model=Agent, summary="Get agent specified by UUID.")
 async def get_agent_by_uuid(
     uuid: UUID,
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     redis: Redis = Depends(get_redis),
 ):
     if agent := await redis.get_agent_by_uuid(str(uuid)):

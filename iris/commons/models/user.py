@@ -28,7 +28,6 @@ class CustomCreateUpdateDictModel(schemas.BaseModel):
                 "id",
                 "is_superuser",
                 "is_active",
-                "is_verified",
                 "oauth_accounts",
             },
         )

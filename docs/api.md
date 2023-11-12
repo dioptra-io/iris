@@ -30,14 +30,11 @@ curl -X POST \
   "email": "a@b.c",
   "is_active": true,
   "is_superuser": false,
-  "is_verified": false,
   "firstname": "First",
   "lastname": "Last",
   "creation_time": "2022-08-17T14:24:22.495581"
 }
 ```
-
-An administrator can then set `is_verified` to true by issuing a PATCH query against the `/users/:id` endpoint.
 
 ## iris-client
 

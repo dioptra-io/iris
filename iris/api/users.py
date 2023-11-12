@@ -48,7 +48,6 @@ router.include_router(
 )
 async def get_users(
     request: Request,
-    filter_verified: bool = False,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
     _user: User = Depends(current_superuser),
@@ -56,9 +55,6 @@ async def get_users(
 ):
     count_query = select(func.count(User.id))
     user_query = select(User).offset(offset).limit(limit)
-    if filter_verified:
-        count_query = count_query.where(User.is_verified != True)  # noqa: E712
-        user_query = user_query.where(User.is_verified != True)  # noqa: E712
     count = session.execute(count_query).one()[0]
     users = session.execute(user_query).fetchall()
     users = [x[0] for x in users]

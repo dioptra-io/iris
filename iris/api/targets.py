@@ -13,7 +13,7 @@ from fastapi import (
     status,
 )
 
-from iris.api.authentication import current_superuser, current_verified_user
+from iris.api.authentication import current_active_user, current_superuser
 from iris.commons.dependencies import get_storage
 from iris.commons.models import Paginated, Target, TargetSummary, User
 from iris.commons.storage import Storage
@@ -30,7 +30,7 @@ async def get_targets(
     request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=0, le=200),
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get all target lists."""
@@ -47,7 +47,7 @@ async def get_targets(
 async def get_target(
     key: str,
     with_content: bool = True,
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
@@ -70,7 +70,7 @@ async def get_target(
 )
 async def post_target(
     target_file: UploadFile = File(...),
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     storage: Storage = Depends(get_storage),
 ):
     """Upload a target list to object storage."""
@@ -99,7 +99,7 @@ async def post_target(
 )
 async def delete_target(
     key: str,
-    user: User = Depends(current_verified_user),
+    user: User = Depends(current_active_user),
     storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""

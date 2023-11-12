@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from iris.commons.models import AgentParameters, AgentState, User, UserRead
+from iris.commons.models import AgentParameters, AgentState, UserRead
 from iris.commons.redis import Redis
 from iris.commons.storage import Storage, targets_key
 from tests.assertions import cast_response
@@ -93,10 +93,3 @@ def register_user(client, cast=True, **kwargs):
     )
     response = client.post("/auth/register", json={**default, **kwargs})
     return cast_response(response, UserRead) if cast else response
-
-
-def verify_user(session, user_id):
-    user = session.get(User, user_id)
-    user.is_verified = True
-    session.add(user)
-    session.commit()

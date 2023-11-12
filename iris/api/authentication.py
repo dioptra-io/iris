@@ -121,7 +121,4 @@ jwt_auth_backend = AuthenticationBackend(
 fastapi_users = FastAPIUsers(get_user_manager, [cookie_auth_backend, jwt_auth_backend])
 
 current_active_user = fastapi_users.current_user(active=True)
-current_verified_user = fastapi_users.current_user(active=True, verified=True)
-current_superuser = fastapi_users.current_user(
-    active=True, verified=True, superuser=True
-)
+current_superuser = fastapi_users.current_user(active=True, superuser=True)
