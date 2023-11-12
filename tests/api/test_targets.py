@@ -9,13 +9,8 @@ from tests.assertions import assert_response, assert_status_code, cast_response
 from tests.helpers import FakeUploadFile, upload_file
 
 
-async def test_get_targets_probing_not_enabled(make_client, make_user):
-    client = make_client(make_user(probing_enabled=False))
-    assert_status_code(client.get("/targets"), 403)
-
-
 async def test_get_targets_empty(make_client, make_user, storage):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     assert_response(
@@ -24,7 +19,7 @@ async def test_get_targets_empty(make_client, make_user, storage):
 
 
 async def test_get_targets(make_client, make_user, make_tmp_file, storage):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     bucket = storage.targets_bucket(str(user.id))
     tmp_file = make_tmp_file()
@@ -36,7 +31,7 @@ async def test_get_targets(make_client, make_user, make_tmp_file, storage):
 
 
 async def test_get_target(make_client, make_user, make_tmp_file, storage):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     bucket = storage.targets_bucket(str(user.id))
     tmp_file = make_tmp_file()
@@ -49,7 +44,7 @@ async def test_get_target(make_client, make_user, make_tmp_file, storage):
 
 
 async def test_get_target_not_found(make_client, make_user, storage):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     bucket = storage.targets_bucket(str(user.id))
     await storage.create_bucket(bucket)
@@ -57,7 +52,7 @@ async def test_get_target_not_found(make_client, make_user, storage):
 
 
 async def test_delete_target(make_client, make_user, make_tmp_file, storage):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     bucket = storage.targets_bucket(str(user.id))
     tmp_file = make_tmp_file()
@@ -67,14 +62,14 @@ async def test_delete_target(make_client, make_user, make_tmp_file, storage):
 
 
 async def test_delete_target_not_found(make_client, make_user, storage):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     assert_status_code(client.delete(f"/targets/{uuid4()}"), 404)
 
 
 async def test_post_target(make_client, make_user, storage, tmp_path):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "targets.csv"
@@ -88,7 +83,7 @@ async def test_post_target(make_client, make_user, storage, tmp_path):
 
 
 async def test_post_target_invalid_extension(make_client, make_user, storage, tmp_path):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "targets.txt"
@@ -99,7 +94,7 @@ async def test_post_target_invalid_extension(make_client, make_user, storage, tm
 
 
 async def test_post_target_invalid_content(make_client, make_user, storage, tmp_path):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "targets.csv"
@@ -110,7 +105,7 @@ async def test_post_target_invalid_content(make_client, make_user, storage, tmp_
 
 
 async def test_post_probes(make_client, make_user, storage, tmp_path):
-    user = make_user(probing_enabled=True, is_superuser=True)
+    user = make_user(is_superuser=True)
     client = make_client(user)
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "probes.csv"
@@ -124,7 +119,7 @@ async def test_post_probes(make_client, make_user, storage, tmp_path):
 
 
 async def test_post_probes_invalid_extension(make_client, make_user, storage, tmp_path):
-    user = make_user(probing_enabled=True, is_superuser=True)
+    user = make_user(is_superuser=True)
     client = make_client(user)
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "probes.txt"
@@ -135,7 +130,7 @@ async def test_post_probes_invalid_extension(make_client, make_user, storage, tm
 
 
 async def test_post_probes_invalid_content(make_client, make_user, storage, tmp_path):
-    user = make_user(probing_enabled=True, is_superuser=True)
+    user = make_user(is_superuser=True)
     client = make_client(user)
     await storage.create_bucket(storage.targets_bucket(str(user.id)))
     filepath = tmp_path / "probes.csv"

@@ -1,7 +1,6 @@
 from diamond_miner.generators.standalone import count_prefixes
 from fastapi import HTTPException, status
 
-from iris.commons.cost import estimate_cost_for_tool
 from iris.commons.models import Tool, ToolParameters, User
 from iris.commons.storage import Storage
 
@@ -71,26 +70,16 @@ async def target_file_validator(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid prefixes length"
         )
 
-    try:
-        cost = estimate_cost_for_tool[tool](
-            tool_parameters, target_file["content"].split()
-        )
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid line"
-        )
-
-    if cost > user.probing_limit:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Cost ({cost}) > probing limit ({user.probing_limit})",
-        )
-
     # Check protocol and min/max TTL
     global_min_ttl = 256
     global_max_ttl = 0
     for line in [p.strip() for p in target_file["content"].split()]:
-        _, protocol, min_ttl, max_ttl, n_initial_flows = line.split(",")
+        try:
+            _, protocol, min_ttl, max_ttl, n_initial_flows = line.split(",")
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid line"
+            )
         min_ttl, max_ttl = int(min_ttl), int(max_ttl)
         global_min_ttl = min(global_min_ttl, min_ttl)
         global_max_ttl = max(global_max_ttl, max_ttl)

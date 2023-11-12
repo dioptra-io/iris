@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
-from iris.api.authentication import assert_probing_enabled, current_verified_user
+from iris.api.authentication import current_verified_user
 from iris.commons.dependencies import get_redis
 from iris.commons.models import Agent, Paginated, User
 from iris.commons.redis import Redis
@@ -19,7 +19,6 @@ async def get_agents(
     user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
 ):
-    assert_probing_enabled(user)
     agents = await redis.get_agents()
     if tag:
         agents = [agent for agent in agents if tag in agent.parameters.tags]
@@ -34,7 +33,6 @@ async def get_agent_by_uuid(
     user: User = Depends(current_verified_user),
     redis: Redis = Depends(get_redis),
 ):
-    assert_probing_enabled(user)
     if agent := await redis.get_agent_by_uuid(str(uuid)):
         return agent
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")

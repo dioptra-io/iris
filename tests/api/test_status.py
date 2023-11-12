@@ -15,7 +15,7 @@ from tests.helpers import create_user_buckets, register_agent, upload_target_fil
 async def test_get_status(
     make_client, make_user, make_agent_parameters, redis, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     # Register an agent

@@ -12,7 +12,6 @@ async def test_register(make_client):
     assert user.is_active
     assert not user.is_superuser
     assert not user.is_verified
-    assert not user.probing_enabled
 
 
 async def test_register_overridden_fields(make_client):
@@ -22,12 +21,10 @@ async def test_register_overridden_fields(make_client):
         is_active=False,
         is_superuser=True,
         is_verified=True,
-        probing_enabled=True,
     )
     assert user.is_active
     assert not user.is_superuser
     assert not user.is_verified
-    assert not user.probing_enabled
 
 
 async def test_register_invalid_email(make_client):

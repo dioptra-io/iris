@@ -6,18 +6,13 @@ from tests.assertions import assert_response, assert_status_code
 from tests.helpers import register_agent
 
 
-def test_get_agents_probing_not_enabled(make_client, make_user):
-    client = make_client(make_user(probing_enabled=False))
-    assert_status_code(client.get("/agents"), 403)
-
-
 async def test_get_agents_empty(make_client, make_user, make_agent_parameters):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
     assert_response(client.get("/agents"), Paginated[Agent](count=0, results=[]))
 
 
 async def test_get_agents(make_client, make_user, make_agent_parameters, redis):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
 
     agents = [
         Agent(
@@ -37,7 +32,7 @@ async def test_get_agents(make_client, make_user, make_agent_parameters, redis):
 
 
 async def test_get_agents_tag(make_client, make_user, make_agent_parameters, redis):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
     agents = [
         Agent(
             uuid=str(uuid4()),
@@ -58,18 +53,13 @@ async def test_get_agents_tag(make_client, make_user, make_agent_parameters, red
     )
 
 
-async def test_get_agent_probing_not_enabled(make_client, make_user):
-    client = make_client(make_user(probing_enabled=False))
-    assert_status_code(client.get(f"/agents/{uuid4()}"), 403)
-
-
 async def test_get_agent_not_found(make_client, make_user):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
     assert_status_code(client.get(f"/agents/{uuid4()}"), 404)
 
 
 async def test_get_agent(make_client, make_user, make_agent_parameters, redis):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
     agent = Agent(
         uuid=str(uuid4()),
         parameters=make_agent_parameters(),

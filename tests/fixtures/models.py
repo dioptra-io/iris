@@ -64,7 +64,6 @@ def make_user():
             email="user@example.org",
             is_active=True,
             is_verified=True,
-            probing_limit=1_000_000,
         )
         return UserRead(**{**default, **kwargs})
 

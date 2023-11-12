@@ -13,11 +13,7 @@ from fastapi import (
     status,
 )
 
-from iris.api.authentication import (
-    assert_probing_enabled,
-    current_superuser,
-    current_verified_user,
-)
+from iris.api.authentication import current_superuser, current_verified_user
 from iris.commons.dependencies import get_storage
 from iris.commons.models import Paginated, Target, TargetSummary, User
 from iris.commons.storage import Storage
@@ -38,7 +34,6 @@ async def get_targets(
     storage: Storage = Depends(get_storage),
 ):
     """Get all target lists."""
-    assert_probing_enabled(user)
     targets = await storage.get_all_files_no_retry(storage.targets_bucket(str(user.id)))
     summaries = [TargetSummary.from_s3(target) for target in targets]
     return Paginated.from_results(request.url, summaries, len(summaries), offset, limit)
@@ -56,7 +51,6 @@ async def get_target(
     storage: Storage = Depends(get_storage),
 ):
     """Get a target list information by key."""
-    assert_probing_enabled(user)
     target = await storage.get_file_no_retry(
         storage.targets_bucket(str(user.id)), key, retrieve_content=with_content
     )
@@ -109,7 +103,6 @@ async def delete_target(
     storage: Storage = Depends(get_storage),
 ):
     """Delete a target list from object storage."""
-    assert_probing_enabled(user)
     await storage.delete_file_check_no_retry(storage.targets_bucket(str(user.id)), key)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -131,7 +124,6 @@ async def post_probes_target(
     storage: Storage = Depends(get_storage),
 ):
     """Upload a probe list to object storage."""
-    assert_probing_enabled(user)
     if not target_file.filename.endswith(".csv"):
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,

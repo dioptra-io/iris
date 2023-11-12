@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlmodel import Session
 
-from iris.api.authentication import assert_probing_enabled, current_verified_user
+from iris.api.authentication import current_verified_user
 from iris.api.settings import APISettings
 from iris.api.validator import target_file_validator
 from iris.commons.dependencies import get_redis, get_session, get_settings, get_storage
@@ -91,7 +91,6 @@ async def get_measurements(
     user: User = Depends(current_verified_user),
     session: Session = Depends(get_session),
 ):
-    assert_probing_enabled(user)
     if not only_mine and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -142,8 +141,6 @@ async def post_measurement(
     storage: Storage = Depends(get_storage),
     settings: APISettings = Depends(get_settings),
 ):
-    assert_probing_enabled(user)
-
     active_agents = await redis.get_agents_by_uuid()
 
     agents: dict[str, MeasurementAgentCreate] = {}
@@ -257,7 +254,6 @@ async def patch_measurement(
     session: Session = Depends(get_session),
     settings: APISettings = Depends(get_settings),
 ):
-    assert_probing_enabled(user)
     measurement = Measurement.get(session, str(measurement_uuid))
     assert_measurement_visibility(measurement, user, settings)
     if tags := measurement_body.tags:
@@ -283,7 +279,6 @@ async def get_measurement_agent_target(
     settings: APISettings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
 ):
-    assert_probing_enabled(user)
     measurement = Measurement.get(session, str(measurement_uuid))
     assert_measurement_visibility(measurement, user, settings)
     target_file = await storage.get_file_no_retry(
@@ -338,7 +333,6 @@ async def cancel_measurement_agent(
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session),
 ):
-    assert_probing_enabled(user)
     measurement_agent = MeasurementAgent.get(
         session, str(measurement_uuid), str(agent_uuid)
     )

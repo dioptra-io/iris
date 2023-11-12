@@ -24,20 +24,15 @@ from tests.helpers import (
 )
 
 
-def test_get_measurements_probing_not_enabled(make_client, make_user):
-    client = make_client(make_user(probing_enabled=False))
-    assert_status_code(client.get("/measurements"), 403)
-
-
 def test_get_measurements_empty(make_client, make_user):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
     assert_response(
         client.get("/measurements"), Paginated[Measurement](count=0, results=[])
     )
 
 
 def test_get_measurements(make_client, make_measurement, make_user, session):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     measurements = [
@@ -62,7 +57,7 @@ def test_get_measurements(make_client, make_measurement, make_user, session):
 def test_get_measurements_with_state(
     make_client, make_measurement, make_measurement_agent, make_user, session
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     measurements = [
@@ -88,7 +83,7 @@ def test_get_measurements_with_state(
 
 
 def test_get_measurements_with_tag(make_client, make_measurement, make_user, session):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     measurements = [
@@ -108,22 +103,7 @@ def test_get_measurements_with_tag(make_client, make_measurement, make_user, ses
 async def test_get_measurement(
     make_client, make_measurement, make_user, redis, session, storage
 ):
-    user = make_user(probing_enabled=True)
-    client = make_client(user)
-
-    measurement = make_measurement(user_id=str(user.id))
-    add_and_refresh(session, [measurement])
-
-    assert_response(
-        client.get(f"/measurements/{measurement.uuid}"),
-        MeasurementReadWithAgents.from_measurement(measurement),
-    )
-
-
-async def test_get_measurement_verified_user(
-    make_client, make_measurement, make_user, redis, session, storage
-):
-    user = make_user(probing_enabled=False)
+    user = make_user()
     client = make_client(user)
 
     measurement = make_measurement(user_id=str(user.id))
@@ -138,7 +118,7 @@ async def test_get_measurement_verified_user(
 async def test_get_measurement_other_user(
     make_client, make_measurement, make_user, redis, session, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     measurement = make_measurement(user_id=str(uuid4()))
     add_and_refresh(session, [measurement])
@@ -148,14 +128,14 @@ async def test_get_measurement_other_user(
 async def test_get_measurement_not_found(
     make_client, make_measurement, make_user, redis, session, storage
 ):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
     assert_status_code(client.get(f"/measurements/{uuid4()}"), 404)
 
 
 async def test_get_measurement_agent_target(
     make_client, make_measurement, make_user, redis, session, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     measurement = make_measurement(user_id=str(user.id))
@@ -184,7 +164,7 @@ async def test_get_measurement_agent_target(
 async def test_cancel_measurement(
     make_client, make_measurement, make_user, session, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     measurement = make_measurement(user_id=str(user.id))
@@ -210,7 +190,7 @@ async def test_cancel_measurement(
 async def test_cancel_measurement_not_found(
     make_client, make_measurement, make_user, session, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     assert_status_code(client.delete(f"/measurements/{uuid4()}"), 404)
 
@@ -218,7 +198,7 @@ async def test_cancel_measurement_not_found(
 async def test_patch_measurement(
     make_client, make_measurement, make_user, redis, session, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     measurement = make_measurement(user_id=str(user.id))
@@ -236,7 +216,7 @@ async def test_patch_measurement(
 async def test_patch_measurement_no_tag_in_body(
     make_client, make_measurement, make_user, redis, session, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     measurement = make_measurement(user_id=str(user.id))
@@ -253,7 +233,7 @@ async def test_patch_measurement_no_tag_in_body(
 
 
 async def test_post_measurement_unknown_uuid(make_client, make_user):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         tags=[],
@@ -265,7 +245,7 @@ async def test_post_measurement_unknown_uuid(make_client, make_user):
 
 
 async def test_post_measurement_unknown_tag(make_client, make_user):
-    client = make_client(make_user(probing_enabled=True))
+    client = make_client(make_user())
     body = MeasurementCreate(
         tool=Tool.DiamondMiner,
         tags=[],
@@ -282,7 +262,7 @@ async def test_post_measurement_unknown_tag(make_client, make_user):
 async def test_post_measurement_uuid(
     make_client, make_user, make_agent_parameters, redis, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     agent_uuid = str(uuid4())
     await register_agent(redis, agent_uuid, make_agent_parameters(), AgentState.Idle)
@@ -303,7 +283,7 @@ async def test_post_measurement_uuid(
 async def test_post_measurement_tag(
     make_client, make_user, make_agent_parameters, redis, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     # We check with multiple agents since we encountered a bug where tag selection
     # was seemingly working, but was in practice selecting only one matching agent.
@@ -331,7 +311,7 @@ async def test_post_measurement_tag(
 async def test_post_measurement_duplicate(
     make_client, make_user, make_agent_parameters, redis, storage
 ):
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
     agent_uuid = str(uuid4())
     await register_agent(

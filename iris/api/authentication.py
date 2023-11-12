@@ -1,7 +1,7 @@
 """Security management."""
 import uuid
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users.authentication import (
     AuthenticationBackend,
@@ -125,11 +125,3 @@ current_verified_user = fastapi_users.current_user(active=True, verified=True)
 current_superuser = fastapi_users.current_user(
     active=True, verified=True, superuser=True
 )
-
-
-def assert_probing_enabled(user: User):
-    if not user.probing_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must have probing enabled to access this resource",
-        )

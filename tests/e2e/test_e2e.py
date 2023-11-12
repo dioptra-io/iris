@@ -25,7 +25,7 @@ async def test_e2e(
     storage,
 ):
     # Start the API
-    user = make_user(probing_enabled=True)
+    user = make_user()
     client = make_client(user)
 
     # Start the agent
