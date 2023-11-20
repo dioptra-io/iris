@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager, contextmanager
 
-import aioredis
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyAccessTokenDatabase
+from redis import asyncio as aioredis
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlmodel import Session
@@ -83,7 +83,7 @@ async def get_redis(settings=Depends(get_settings), logger=Depends(get_logger)):
     try:
         yield Redis(client, settings, logger)
     finally:
-        await client.close()
+        await client.aclose()
 
 
 def get_storage(settings=Depends(get_settings), logger=Depends(get_logger)):

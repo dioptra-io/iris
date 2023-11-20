@@ -52,7 +52,7 @@ async def post_dramatiq_message(
     actor: str = "watch_measurement_agent",
     kwargs: dict = Body(
         ...,
-        example={"measurement_uuid": "", "agent_uuid": ""},
+        examples=[{"measurement_uuid": "", "agent_uuid": ""}],
     ),
     redis: Redis = Depends(get_redis),
 ):

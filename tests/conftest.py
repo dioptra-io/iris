@@ -2,11 +2,11 @@ import logging
 import os
 import secrets
 
-import aioredis
 import boto3
 import pytest
 import redis as pyredis
 from fastapi.testclient import TestClient
+from redis import asyncio as aioredis
 from sqlalchemy import text
 from sqlalchemy_utils import create_database, database_exists, drop_database
 from sqlmodel import Session, create_engine
@@ -17,7 +17,7 @@ from iris.api.authentication import (
     current_superuser,
     current_verified_user,
 )
-from iris.api.main import app
+from iris.api.main import make_app
 from iris.api.settings import APISettings
 from iris.commons.clickhouse import ClickHouse
 from iris.commons.dependencies import get_settings
@@ -69,7 +69,6 @@ def api_settings(settings):
 def agent_settings(settings, tmp_path):
     return AgentSettings(
         **settings.dict(),
-        AGENT_CARACAL_SNIFFER_WAIT_TIME=1,
         AGENT_MIN_TTL=0,
         AGENT_RESULTS_DIR_PATH=tmp_path / "agent_results",
         AGENT_TARGETS_DIR_PATH=tmp_path / "agent_targets",
@@ -103,7 +102,7 @@ def engine(settings):
 async def redis(settings, logger):
     client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
     yield Redis(client, settings, logger)
-    await client.close()
+    await client.aclose()
 
 
 @pytest.fixture
@@ -120,6 +119,7 @@ def storage(settings, logger):
 @pytest.fixture
 def make_client(engine, api_settings):
     def _make_client(user=None):
+        app = make_app(settings=api_settings)
         if user and user.is_active:
             app.dependency_overrides[current_active_user] = lambda: user
         if user and user.is_active and user.is_verified:
@@ -130,7 +130,6 @@ def make_client(engine, api_settings):
         return TestClient(app)
 
     yield _make_client
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture(autouse=True, scope="session")

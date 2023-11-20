@@ -1,7 +1,7 @@
 # 🕸️ Iris — An open-source internet measurement platform
 
 [![Coverage](https://img.shields.io/codecov/c/github/dioptra-io/iris?logo=codecov&logoColor=white)](https://app.codecov.io/gh/dioptra-io/iris)
-[![Tests](https://img.shields.io/github/workflow/status/dioptra-io/iris/Tests?logo=github&label=tests)](https://github.com/dioptra-io/iris/actions/workflows/tests.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/dioptra-io/iris/tests.yml?logo=github&label=tests)](https://github.com/dioptra-io/iris/actions/workflows/tests.yml)
 
 Iris is a system to coordinate complex network measurements from multiple vantage points.
 Think of it as a project similar to [CAIDA Ark](https://www.caida.org/projects/ark/) or [RIPE Atlas](https://atlas.ripe.net), with the following features:

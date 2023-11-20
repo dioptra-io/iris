@@ -312,7 +312,7 @@ async def test_post_measurement_unknown_uuid(make_client, make_user):
         tags=[],
         agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
     )
-    response = client.post("/measurements/", data=body.json())
+    response = client.post("/measurements/", content=body.json())
     assert_status_code(response, 404)
     assert "No agent associated with UUID" in response.text
 
@@ -324,7 +324,7 @@ async def test_post_measurement_unknown_tag(make_client, make_user):
         tags=[],
         agents=[MeasurementAgentCreate(tag="unknown", target_file="targets.csv")],
     )
-    response = client.post("/measurements/", data=body.json())
+    response = client.post("/measurements/", content=body.json())
     assert_status_code(response, 404)
     assert "No agents associated with tag" in response.text
 
@@ -336,7 +336,7 @@ async def test_post_measurement_public_tag_disallowed(make_client, make_user):
         tags=["visibility:public"],
         agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
     )
-    response = client.post("/measurements/", data=body.json())
+    response = client.post("/measurements/", content=body.json())
     assert_status_code(response, 403)
     assert "You cannot use public tag" in response.text
 
@@ -348,7 +348,7 @@ async def test_post_measurement_reserved_tag_disallowed(make_client, make_user):
         tags=["collection:test"],
         agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
     )
-    response = client.post("/measurements/", data=body.json())
+    response = client.post("/measurements/", content=body.json())
     assert_status_code(response, 403)
     assert "You cannot use reserved tags" in response.text
 
@@ -369,7 +369,7 @@ async def test_post_measurement_uuid(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv")],
     )
-    response = client.post("/measurements/", data=body.json())
+    response = client.post("/measurements/", content=body.json())
     assert_status_code(response, 201)
     result = cast_response(response, MeasurementReadWithAgents)
     assert result.state == MeasurementAgentState.Created
@@ -396,7 +396,7 @@ async def test_post_measurement_tag(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(tag="tag1", target_file="targets.csv")],
     )
-    response = client.post("/measurements/", data=body.json())
+    response = client.post("/measurements/", content=body.json())
     assert_status_code(response, 201)
     result = cast_response(response, MeasurementReadWithAgents)
     assert result.state == MeasurementAgentState.Created
@@ -423,6 +423,6 @@ async def test_post_measurement_duplicate(
             MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv"),
         ],
     )
-    response = client.post("/measurements/", data=body.json())
+    response = client.post("/measurements/", content=body.json())
     assert_status_code(response, 400)
     assert "Multiple assignment of key" in response.text
