@@ -33,6 +33,7 @@ RUN apt-get update \
         mtr \
         python3 \
         tzdata \
+        zstd \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -L https://github.com/dioptra-io/caracal/releases/download/v0.15.1/caracal-linux-amd64 > /usr/bin/caracal \
