@@ -36,7 +36,7 @@ RUN apt-get update \
         zstd \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -L https://github.com/dioptra-io/caracal/releases/download/v0.15.1/caracal-linux-amd64 > /usr/bin/caracal \
+RUN curl -L https://github.com/dioptra-io/caracal/releases/download/v0.15.2/caracal-linux-amd64 > /usr/bin/caracal \
     && chmod +x /usr/bin/caracal
 
 WORKDIR /app
