@@ -1,4 +1,4 @@
-version: "3"
+version: "3.4"
 
 services:
   # Web Entrypoint
@@ -34,7 +34,7 @@ services:
 
   # Control-Plane & Data-Plane
   clickhouse:
-    image: docker.io/clickhouse/clickhouse-server:22
+    image: docker.io/clickhouse/clickhouse-server:22.8
     labels:
       # ClickHouse HTTP (8123)
       - traefik.http.routers.clickhouse-http.entrypoints=web
@@ -51,7 +51,7 @@ services:
       - "./configuration/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh"
 
   postgres:
-    image: postgres
+    image: postgres:16.1
     environment:
       POSTGRES_USER: iris
       POSTGRES_PASSWORD: iris
@@ -69,7 +69,7 @@ services:
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
 
   minio:
-    image: docker.io/minio/minio:latest
+    image: docker.io/minio/minio:RELEASE.2023-08-31T15-31-16Z
     command: "server /data --console-address :9001"
     labels:
       # API
