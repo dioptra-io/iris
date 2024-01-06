@@ -21,7 +21,7 @@ To be able to access them from your own machine, you need to add the following e
 You also need caracal in your $PATH if you intend to run Iris locally:
 ```bash
 # Use caracal-macos-amd64 for macOS
-curl -L https://github.com/dioptra-io/caracal/releases/download/v0.15.2/caracal-linux-amd64 > /usr/bin/caracal
+curl -L https://github.com/dioptra-io/caracal/releases/download/v0.15.3/caracal-linux-amd64 > /usr/bin/caracal
 chmod +x /usr/bin/caracal
 ```
 
