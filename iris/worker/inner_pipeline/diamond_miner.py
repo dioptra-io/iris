@@ -101,8 +101,14 @@ async def diamond_miner_inner_pipeline(
                     prefix = f"{addr_v4}/{tool_parameters.prefix_len_v4}"
                 else:
                     prefix = f"{addr_v6}/{tool_parameters.prefix_len_v6}"
-                for protocol, ttls, n_initial_flows in targets[prefix]:
-                    prefixes.append((prefix, protocol, ttls, n_initial_flows))
+                try:
+                    for protocol, ttls, n_initial_flows in targets[prefix]:
+                        prefixes.append((prefix, protocol, ttls, n_initial_flows))
+                except KeyError:
+                    logger.error(
+                        f"Prefix not in initial target file {targets_filepath}:{prefix}"
+                    )
+                    continue
 
         logger.info("Insert probe counts")
         insert_probe_counts(
