@@ -18,7 +18,8 @@ class AgentSettings(CommonSettings):
 
     AGENT_CARACAL_EXCLUDE_PATH: Path = Path("statics/excluded_prefixes")
     AGENT_CARACAL_INTEGRITY_CHECK: bool = True
-
+    AGENT_CARACAL_SNIFFER_WAIT_TIME: int = 5
+    
     AGENT_UUID: str = str(uuid4())
     AGENT_UUID_FILE: Path | None = None
     AGENT_MAX_PROBING_RATE: int = 1000  # pps
