@@ -100,6 +100,7 @@ async def probe(
         "caracal",
         f"--meta-round {shlex.quote(str(round_number))}",
         f"--probing-rate {shlex.quote(str(measurement_probing_rate))}",
+        f"--sniffer-wait-time {settings.AGENT_CARACAL_SNIFFER_WAIT_TIME}",
     ]
 
     if batch_size:
