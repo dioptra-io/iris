@@ -17,7 +17,7 @@ RUN poetry config virtualenvs.in-project true
 COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
 
-RUN poetry install --no-root --no-dev \
+RUN poetry install --no-root \
     && rm -rf /root/.cache/*
 
 FROM docker.io/library/ubuntu:22.04
