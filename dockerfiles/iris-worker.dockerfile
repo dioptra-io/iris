@@ -1,27 +1,23 @@
-FROM docker.io/library/ubuntu:22.04 AS builder
+FROM docker.io/library/python:3.10.18-bookworm AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         build-essential \
         libpq-dev \
-        python3-dev \
-        python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-RUN pip3 install --no-cache-dir poetry
-RUN poetry config virtualenvs.in-project true
-
 COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
-
-RUN poetry install --no-root \
+RUN pip3 install --no-cache-dir poetry \
+    && poetry config virtualenvs.in-project true \
+    && poetry install --no-root \
     && rm -rf /root/.cache/*
 
-FROM docker.io/library/ubuntu:22.04
-LABEL maintainer="Matthieu Gouel <matthieu.gouel@lip6.fr>"
+FROM docker.io/library/python:3.10.18-bookworm
+LABEL maintainer="Elena Nardi <elena.nardi@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
@@ -29,7 +25,6 @@ RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         ca-certificates \
         libpq5 \
-        python3 \
         tzdata \
     && rm -rf /var/lib/apt/lists/*
 
