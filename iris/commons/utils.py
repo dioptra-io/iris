@@ -8,7 +8,7 @@ from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
 from typing import IO, TypeVar
 
-import httpx
+import subprocess
 from pydantic import BaseModel
 from sqlmodel import SQLModel
 from zstandard import (
@@ -85,20 +85,45 @@ def get_internal_ipv6_address(
     return ip_address
 
 
+def get_ip_from_endpoints(endpoints, ip_version='ipv4'):
+    for url in endpoints:
+        try:
+            result = subprocess.run(
+                ["curl", "-s", url],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5,
+            )
+            ip_str = result.stdout.strip()
+            if ip_version == 'ipv4':
+                ip = IPv4Address(ip_str)
+            else:
+                ip = IPv6Address(ip_str)
+            return ip
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError) as e:
+            base_logger.info("Failed to get valid %s from %s: %s", ip_version, url, e)
+            continue
+    return None
+
+
 def get_external_ipv4_address() -> IPv4Address | None:
-    try:
-        return IPv4Address(httpx.get("https://ip4.seeip.org").text)
-    except Exception as e:
-        base_logger.info("Cannot get external IPv4 address: %s", e)
-        return None
+    ipv4_endpoints = [
+        "https://ipv4.icanhazip.com",
+        "https://v4.ident.me",
+        "https://api.ipify.org"
+    ]
+    return get_ip_from_endpoints(ipv4_endpoints, 'ipv4')
 
 
 def get_external_ipv6_address() -> IPv6Address | None:
-    try:
-        return IPv6Address(httpx.get("https://ip6.seeip.org").text)
-    except Exception as e:
-        base_logger.info("Cannot get external IPv6 address: %s", e)
-        return None
+    ipv6_endpoints = [
+        "https://ipv6.icanhazip.com",
+        "https://v6.ident.me",
+        "https://api6.ipify.org",
+        "https://ifconfig.me",
+    ]
+    return get_ip_from_endpoints(ipv6_endpoints, 'ipv6')
 
 
 @contextmanager
