@@ -2,6 +2,8 @@ import logging
 
 base_logger = logging.getLogger("iris")
 
+logging.getLogger("diamond-miner").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 class Adapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
