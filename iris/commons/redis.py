@@ -193,6 +193,15 @@ class Redis:
                 return MeasurementRoundRequest.parse_raw(value)
             await asyncio.sleep(interval)
 
+    async def get_requests(self, uuid: str
+    ) -> list[str]:
+        """
+        Return all the requests from the queue.
+        If the queue is empty, it will return an empty list.
+        """
+        keys = await self.hkeys(agent_queue_key(uuid))
+        return keys or []
+
     async def get_request(
         self, measurement_uuid: str, agent_uuid: str
     ) -> MeasurementRoundRequest | None:

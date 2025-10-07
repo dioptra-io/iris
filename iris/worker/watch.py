@@ -106,8 +106,14 @@ async def watch_measurement_agent_with_deps(
             settings.WORKER_SANITY_CHECK_RETRIES,
             settings.WORKER_SANITY_CHECK_INTERVAL,
         )
+
         if not agent_ok:
             ma.set_state(session, MeasurementAgentState.AgentFailure)
+            # Clean up Round request if it's in the agent's queue.
+            round_requests = await redis.get_requests(agent_uuid)
+            if measurement_uuid in round_requests:
+                logger.info("Cleaning up after AgentFailure")
+                await redis.delete_request(str(measurement_uuid), str(agent_uuid))
             break
 
         # 4. Find the results file.
