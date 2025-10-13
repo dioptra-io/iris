@@ -10,11 +10,10 @@ Think of it as a project similar to [CAIDA Ark](https://www.caida.org/projects/a
 - Handle both centralized computation on a powerful server, and distributed probing on smaller agents.
 - Can tolerate the temporary loss of agents, database or control-plane components.
 
-We offer a public instance of Iris, as well as public measurement data, on [iris.dioptra.io](https://iris.dioptra.io).
-
-## 📖 Documentation
-
-Please refer to the [documentation](https://dioptra-io.github.io/iris/) for more information on how to use Iris, deploy your own instance and contribute to the project.
+Iris generates IP Route Survey ([IPRS](https://iprs.dioptra.io/))
+snapshots, which are published through Measurement Lab
+([M-Lab](https://www.measurementlab.net/tests/iprs/)) and are
+publicly accessible.
 
 ## 📚 Publications
 
