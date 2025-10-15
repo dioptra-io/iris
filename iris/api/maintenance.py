@@ -38,6 +38,18 @@ def redis_list_key(namespace, queue_name):
 def redis_hash_key(namespace, queue_name):
     return f"{namespace}:{queue_name}.msgs"
 
+@router.get("/agents/queue/{agent_uuid}")
+async def get_agent_queue(agent_uuid: str, redis: Redis = Depends(get_redis)):
+    keys = await redis.get_requests(agent_uuid)
+    return keys
+
+@router.delete("/agents/queue/{agent_uuid}/{measurement_uuid}")
+async def delete_agent_queue_request(agent_uuid: str, measurement_uuid:str, redis: Redis = Depends(get_redis)):
+    keys = await redis.get_requests(agent_uuid)
+    round_requests = await redis.get_requests(agent_uuid)
+    if measurement_uuid in round_requests:
+       await redis.delete_request(measurement_uuid, agent_uuid)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.get("/dq/{queue}/messages")
 async def get_dramatiq_messages(queue: str, redis: Redis = Depends(get_redis)):
