@@ -109,12 +109,8 @@ async def watch_measurement_agent_with_deps(
 
         if not agent_ok:
             ma.set_state(session, MeasurementAgentState.AgentFailure)
-            # Clean up Round request if it's in the agent's queue.
-            # TODO: write tests for this piece of code
-            round_requests = await redis.get_requests(agent_uuid)
-            if measurement_uuid in round_requests:
-                logger.info("Cleaning up agent's queue after AgentFailure")
-                await redis.delete_request(measurement_uuid, agent_uuid)
+            logger.info("Cleaning up agent's queue")
+            await clean_agent_queue(redis, measurement_uuid, agent_uuid)
             break
 
         # 4. Find the results file.
@@ -162,6 +158,20 @@ async def watch_measurement_agent_with_deps(
             ma.set_state(session, MeasurementAgentState.Finished)
             break
 
+        agent_queue_ok = await is_agent_queue_clear(
+            redis=redis,
+            measurement_uuid=measurement_uuid,
+            agent_uuid=agent_uuid,
+            trials=settings.WORKER_SANITY_CHECK_RETRIES,
+            interval=settings.WORKER_SANITY_CHECK_INTERVAL,
+        )
+
+        if not agent_queue_ok:
+            ma.set_state(session, MeasurementAgentState.AgentFailure)
+            logger.info("Cleaning up agent's queue")
+            await clean_agent_queue(redis, measurement_uuid, agent_uuid)
+            break
+
         await redis.set_request(
             agent_uuid,
             MeasurementRoundRequest(
@@ -195,6 +205,13 @@ async def check_agent(
         return False
 
 
+async def clean_agent_queue(redis: Redis, measurement_uuid: str, agent_uuid: str
+) -> None:
+    round_requests = await redis.get_requests(agent_uuid)
+    if measurement_uuid in round_requests:
+        await redis.delete_request(str(measurement_uuid), str(agent_uuid))
+
+
 async def find_results(
     storage: Storage, measurement_uuid: str, agent_uuid: str
 ) -> str | None:
@@ -204,3 +221,14 @@ async def find_results(
         if file["key"].startswith("results_"):
             return str(file["key"])
     return None
+
+
+async def is_agent_queue_clear(
+    redis: Redis, measurement_uuid: str, agent_uuid: str, trials: int, interval: float
+) -> bool:
+    for _ in range(trials):
+        round_requests = await redis.get_requests(agent_uuid)
+        if measurement_uuid not in round_requests:
+            return True
+        await asyncio.sleep(interval)
+    return False
