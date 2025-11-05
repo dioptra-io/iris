@@ -43,7 +43,7 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 python-multipart = "^0.0.20"
 pytricia = "^1.0.2"
 SQLAlchemy = "^2.0.44"
-SQLAlchemy-Utils = "^0.38.3"
+SQLAlchemy-Utils = ">=0.41.2"
 sqlmodel = "^0.0.14"
 starlette_exporter = "^0.14.0"
 tenacity = "^8.2.3"
