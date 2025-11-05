@@ -39,16 +39,15 @@ def upgrade():
     )
     op.alter_column("user", "allow_tag_public", server_default=None)
 
-    bind = op.get_bind()
-    session = Session(bind=bind)
-    session.execute(
-        "UPDATE public.user SET allow_tag_reserved = true WHERE is_superuser = true"
-    )
-    session.execute(
-        "UPDATE public.user SET allow_tag_public = true WHERE is_superuser = true"
-    )
-    session.commit()
-
+    connection = op.get_bind()
+    with Session(bind=connection) as session:
+        session.execute(
+            text('UPDATE public."user" SET allow_tag_reserved = true WHERE is_superuser = true')
+        )
+        session.execute(
+            text('UPDATE public."user" SET allow_tag_public = true WHERE is_superuser = true')
+        )
+        session.commit()
 
 def downgrade():
     op.drop_column("user", "allow_tag_reserved")

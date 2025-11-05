@@ -48,26 +48,37 @@ def delete_buckets(user_id):
 
 user_id = UUID("fb2ebc52-7685-41cc-926a-880e6a939ee2")
 
-
 def upgrade():
-    bind = op.get_bind()
-    session = Session(bind=bind)
-    session.execute(
-        text(
-            f"""
-            INSERT INTO public.user (id, firstname, lastname, email, hashed_password, is_active, is_verified, is_superuser, probing_enabled, probing_limit)
-            VALUES ('{user_id}', 'admin', 'admin', 'admin@example.org', '{PasswordHelper().hash("admin")}', true, true, true, true, 1000000)
-            """
-        ),
-        # {"id": str(user_id), "hashed_password": get_password_hash("admin")},
-    )
-    session.commit()
+    connection = op.get_bind()
+
+    with Session(bind=connection) as session:
+        hashed_password = PasswordHelper().hash("admin")
+        session.execute(
+            text(
+                """
+                INSERT INTO public."user"
+                    (id, firstname, lastname, email, hashed_password,
+                     is_active, is_verified, is_superuser, probing_enabled, probing_limit)
+                VALUES
+                    (:id, 'admin', 'admin', 'admin@example.org', :hashed_password,
+                     true, true, true, true, 1000000)
+                """
+            ),
+            {"id": str(user_id), "hashed_password": hashed_password},
+        )
+        session.commit()
+
     create_buckets(user_id)
 
 
 def downgrade():
-    bind = op.get_bind()
-    session = Session(bind=bind)
-    session.execute(f"DELETE FROM public.user WHERE id = {user_id}")
-    session.commit()
+    connection = op.get_bind()
+
+    with Session(bind=connection) as session:
+        session.execute(
+            text("DELETE FROM public.\"user\" WHERE id = :id"),
+            {"id": str(user_id)},
+        )
+        session.commit()
+
     delete_buckets(user_id)
