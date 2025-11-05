@@ -3,12 +3,23 @@ from pydantic import ValidationError
 
 from iris.commons.models import MeasurementAgentCreate
 
-
 def test_create_missing_tag_uuid():
-    with pytest.raises(ValidationError, match="one of `uuid` or `tag`"):
+    with pytest.raises(ValidationError) as exc_info:
         MeasurementAgentCreate()
+
+    errors = exc_info.value.errors()
+    assert any(
+        error["loc"] == ("__root__",) and "one of `uuid` or `tag`" in error["msg"]
+        for error in errors
+    )
 
 
 def test_create_tag_and_uuid():
-    with pytest.raises(ValidationError, match="one of `uuid` or `tag`"):
+    with pytest.raises(ValidationError) as exc_info:
         MeasurementAgentCreate(tag="tag", uuid="uuid")
+
+    errors = exc_info.value.errors()
+    assert any(
+        error["loc"] == ("__root__",) and "one of `uuid` or `tag`" in error["msg"]
+        for error in errors
+    )
