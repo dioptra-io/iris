@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import root_validator
+from pydantic import model_validator
 
 from iris.commons.settings import CommonSettings
 
@@ -33,16 +33,18 @@ class AgentSettings(CommonSettings):
 
     AGENT_STOPPER_REFRESH: int = 1  # seconds
 
-    @root_validator
-    def load_or_save_uuid(cls, values):
+    @model_validator(mode='after')
+    def load_or_save_uuid(self):
         """
         If an AGENT_UUID_FILE is specified:
         - If it doesn't exist, write AGENT_UUID to it
         - If it exists, read AGENT_UUID from it
         """
-        if uuid_file := values.get("AGENT_UUID_FILE"):
+        uuid_file = self.AGENT_UUID_FILE
+        if uuid_file:
             if uuid_file.exists():
-                values["AGENT_UUID"] = uuid_file.read_text().strip()
+                new_uuid = uuid_file.read_text().strip()
+                return self.model_copy(update={'AGENT_UUID': new_uuid})
             else:
-                uuid_file.write_text(values["AGENT_UUID"])
-        return values
+                uuid_file.write_text(self.AGENT_UUID)
+        return self

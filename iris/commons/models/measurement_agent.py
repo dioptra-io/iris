@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from pydantic import root_validator
+from pydantic import model_validator
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Enum, Field, Relationship, Session, update
 
@@ -41,16 +41,14 @@ class MeasurementAgentBase(BaseSQLModel):
 
 
 class MeasurementAgentCreate(MeasurementAgentBase):
-    uuid: str | None
-    tag: str | None
+    uuid: str | None = None
+    tag: str | None = None
 
-    @root_validator
-    def check_uuid_or_tag(cls, values):
-        uuid, tag = values.get("uuid"), values.get("tag")
-        if bool(uuid) != bool(tag):
-            return values
+    @model_validator(mode="after")
+    def check_uuid_or_tag(self):
+        if bool(self.uuid) != bool(self.tag):
+            return self
         raise ValueError("one of `uuid` or `tag` must be specified")
-
 
 class MeasurementAgentRead(MeasurementAgentBase):
     agent_uuid: str

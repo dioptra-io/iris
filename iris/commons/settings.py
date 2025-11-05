@@ -1,12 +1,11 @@
 import logging
 from datetime import timedelta
 from functools import wraps
-
-from pydantic import BaseSettings
 from tenacity import retry
 from tenacity.before_sleep import before_sleep_log
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
+from pydantic_settings import BaseSettings
 
 
 class CommonSettings(BaseSettings):
