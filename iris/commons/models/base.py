@@ -5,13 +5,13 @@ import sqlmodel
 from sqlalchemy import types
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeMeta, declarative_base, registry
+from pydantic import ConfigDict
 
 Base: DeclarativeMeta = declarative_base()  # type: ignore
 
 
 class BaseModel(pydantic.BaseModel):
-    class Config:
-        extra = pydantic.Extra.forbid
+    model_config = ConfigDict(extra=pydantic.Extra.forbid)
 
 
 class BaseSQLModel(sqlmodel.SQLModel, registry=registry(metadata=Base.metadata)):

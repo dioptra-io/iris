@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
-from pydantic import root_validator
+from pydantic import model_validator
 from sqlalchemy import desc
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Column, Enum, Field, Relationship, Session, String, func, select
@@ -34,10 +34,10 @@ class MeasurementCreate(MeasurementBase):
         description="Optional agent parameters can also be set",
     )
 
-    @root_validator
-    def check_tool_parameters(cls, values):
-        agents: list[MeasurementAgentCreate] = values.get("agents")
-        tool: Tool = values.get("tool")
+    @model_validator(mode="after")
+    def check_tool_parameters(self):
+        agents: list[MeasurementAgentCreate] = self.agents
+        tool: Tool = self.tool
         for agent in agents:
             if tool == Tool.DiamondMiner:
                 # NOTE: We could use other values, but this would require to change
@@ -65,7 +65,7 @@ class MeasurementCreate(MeasurementBase):
                     raise ValueError("`prefix_len_v4` must be 32 for ping")
                 if agent.tool_parameters.prefix_len_v6 != 128:
                     raise ValueError("`prefix_len_v6` must be 128 for ping")
-        return values
+        return self
 
 
 class MeasurementRead(MeasurementBase):

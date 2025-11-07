@@ -1,13 +1,12 @@
 from typing import Generic, TypeVar
 
-from pydantic import AnyHttpUrl, NonNegativeInt
-from pydantic.generics import GenericModel
+from pydantic import BaseModel, AnyHttpUrl, NonNegativeInt
 from starlette.datastructures import URL
 
 T = TypeVar("T")
 
 
-class Paginated(GenericModel, Generic[T]):
+class Paginated(BaseModel, Generic[T]):
     """
     >>> url = URL("http://localhost:8000/test")
     >>> results = [1, 2, 3, 4]

@@ -62,7 +62,7 @@ def upgrade():
         "user",
         sa.Column("id", fastapi_users_db_sqlalchemy.GUID(), nullable=False),
         sa.Column("email", sa.String(length=320), nullable=False),
-        sa.Column("hashed_password", sa.String(length=72), nullable=False),
+        sa.Column("hashed_password", sa.String(length=255), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("is_superuser", sa.Boolean(), nullable=False),
         sa.Column("is_verified", sa.Boolean(), nullable=False),

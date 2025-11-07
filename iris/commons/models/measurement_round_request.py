@@ -5,6 +5,6 @@ from iris.commons.models.round import Round
 class MeasurementRoundRequest(BaseModel):
     measurement_uuid: str
     probe_filename: str
-    probing_rate: int | None
-    batch_size: int | None
+    probing_rate: int | None = None
+    batch_size: int | None = None
     round: Round
