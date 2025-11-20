@@ -11,6 +11,7 @@ from fastapi_users.authentication import (
 )
 from fastapi_users.authentication.strategy import DatabaseStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
+from typing import Optional
 
 from iris.api.settings import APISettings
 from iris.commons.dependencies import (
@@ -42,7 +43,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         await self.storage.create_bucket(self.storage.targets_bucket(str(user.id)))
         await self.storage.create_bucket(self.storage.archive_bucket(str(user.id)))
 
-    async def delete(self, user: User) -> None:
+    async def delete(self, user: User, request: Optional[Request] = None) -> None:
         """
         Delete a user.
         :param user: The user to delete.
@@ -50,7 +51,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         await self.user_db.delete(user)
         await self.on_after_delete(user)
 
-    async def on_after_delete(self, user: User) -> None:
+    async def on_after_delete(self, user: User, request: Optional[Request] = None) -> None:
         """
         Perform cleanup after a user is deleted.
         :param user: The user that has been deleted.
