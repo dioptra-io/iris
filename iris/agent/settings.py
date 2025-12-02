@@ -43,8 +43,7 @@ class AgentSettings(CommonSettings):
         uuid_file = self.AGENT_UUID_FILE
         if uuid_file:
             if uuid_file.exists():
-                new_uuid = uuid_file.read_text().strip()
-                return self.model_copy(update={'AGENT_UUID': new_uuid})
+                self.AGENT_UUID = uuid_file.read_text().strip()
             else:
                 uuid_file.write_text(self.AGENT_UUID)
         return self
