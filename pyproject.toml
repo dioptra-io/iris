@@ -52,7 +52,7 @@ zstandard = "^0.21.0"
 redis = "^5.0.1"
 
 [tool.poetry.dev-dependencies]
-black = "^24.3.0"
+black = "^26.3.1"
 boto3-stubs = "^1.28.73"
 bumpversion = "^0.6.0"
 coverage = {extras = ["toml"], version = "^7.3.2"}
