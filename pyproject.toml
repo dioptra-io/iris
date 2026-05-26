@@ -40,7 +40,7 @@ pych-client = {extras = ["orjson"], version = "^0.4.1"}
 pydantic = "^2.0.0"
 pydantic-settings = "^2.0.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
-python-multipart = "^0.0.26"
+python-multipart = "^0.0.27"
 pytricia = "^1.0.2"
 SQLAlchemy = "^2.0.44"
 SQLAlchemy-Utils = ">=0.41.2"
