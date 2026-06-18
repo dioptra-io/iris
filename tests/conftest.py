@@ -61,14 +61,14 @@ def settings():
 def api_settings(settings):
     return APISettings(
         API_CORS_ALLOW_ORIGIN="https://example.org,http://localhost:8000",
-        **settings.dict(),
+        **settings.model_dump(),
     )
 
 
 @pytest.fixture
 def agent_settings(settings, tmp_path):
     return AgentSettings(
-        **settings.dict(),
+        **settings.model_dump(),
         AGENT_MIN_TTL=0,
         AGENT_RESULTS_DIR_PATH=tmp_path / "agent_results",
         AGENT_TARGETS_DIR_PATH=tmp_path / "agent_targets",
@@ -78,7 +78,7 @@ def agent_settings(settings, tmp_path):
 @pytest.fixture
 def worker_settings(settings, tmp_path):
     return WorkerSettings(
-        **settings.dict(),
+        **settings.model_dump(),
         WORKER_RESULTS_DIR_PATH=tmp_path / "worker_results",
         WORKER_MAX_OPEN_FILES=128,
     )
