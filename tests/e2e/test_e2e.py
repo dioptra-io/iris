@@ -54,7 +54,7 @@ async def test_e2e(
     await create_user_buckets(storage, user)
     await upload_target_file(storage, user, "targets.csv", ["1.0.0.0/24,icmp,8,32,6"])
 
-    response = client.post("/measurements/", content=body.json())
+    response = client.post("/measurements/", json=body.model_dump(mode="json"))
     measurement = cast_response(response, MeasurementReadWithAgents)
 
     # Emulate dramatiq and launch the watchers

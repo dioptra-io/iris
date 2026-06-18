@@ -116,7 +116,7 @@ class Redis:
         self, uuid: str, parameters: AgentParameters
     ) -> None:
         self.logger.info("Setting agent parameters")
-        await self.set(agent_parameters_key(uuid), parameters.json())
+        await self.set(agent_parameters_key(uuid), parameters.model_dump_json())
 
     async def delete_agent_parameters(self, uuid: str) -> None:
         self.logger.info("Deleting agent parameters")
@@ -162,7 +162,7 @@ class Redis:
         self, measurement_uuid: str, agent_uuid: str
     ) -> ProbingStatistics | None:
         if state := await self.get(measurement_stats_key(measurement_uuid, agent_uuid)):
-            return ProbingStatistics.parse_raw(state)
+            return ProbingStatistics.model_validate_json(state)
         return None
 
     async def set_measurement_stats(
@@ -170,7 +170,7 @@ class Redis:
     ) -> None:
         self.logger.info("Setting measurement statistics")
         await self.set(
-            measurement_stats_key(measurement_uuid, agent_uuid), stats.json()
+            measurement_stats_key(measurement_uuid, agent_uuid), stats.model_dump_json()
         )
 
     async def delete_measurement_stats(
@@ -190,7 +190,7 @@ class Redis:
         while True:
             if keys := await self.hkeys(agent_queue_key(uuid)):
                 value = await self.hget(agent_queue_key(uuid), random.choice(keys))
-                return MeasurementRoundRequest.parse_raw(value)
+                return MeasurementRoundRequest.model_validate_json(value)
             await asyncio.sleep(interval)
 
     async def get_requests(self, uuid: str
@@ -207,12 +207,12 @@ class Redis:
     ) -> MeasurementRoundRequest | None:
         """Return the measurement request for the specified agent and measurement."""
         if value := await self.hget(agent_queue_key(agent_uuid), measurement_uuid):
-            return MeasurementRoundRequest.parse_raw(value)
+            return MeasurementRoundRequest.model_validate_json(value)
         return None
 
     async def set_request(self, uuid: str, request: MeasurementRoundRequest) -> None:
         """Set the measurement request for a specified agent and measurement."""
-        await self.hset(agent_queue_key(uuid), request.measurement_uuid, request.json())
+        await self.hset(agent_queue_key(uuid), request.measurement_uuid, request.model_dump_json())
 
     async def delete_request(self, measurement_uuid: str, agent_uuid: str) -> None:
         """Delete the measurement request for a specified agent and measurement."""

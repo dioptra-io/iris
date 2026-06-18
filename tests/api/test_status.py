@@ -29,7 +29,7 @@ async def test_get_status(
         tool=Tool.DiamondMiner,
         agents=[MeasurementAgentCreate(uuid=agent_uuid, target_file="targets.csv")],
     )
-    client.post("/measurements/", content=body.json())
+    client.post("/measurements/", json=body.model_dump(mode="json"))
 
     # Check status
     status = cast_response(client.get("/status"), Status)
