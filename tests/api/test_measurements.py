@@ -312,7 +312,7 @@ async def test_post_measurement_unknown_uuid(make_client, make_user):
         tags=[],
         agents=[MeasurementAgentCreate(uuid=str(uuid4()), target_file="targets.csv")],
     )
-    response = client.post("/measurements/", json=body.model_dump()))
+    response = client.post("/measurements/", json=body.model_dump())
     assert_status_code(response, 404)
     assert "No agent associated with UUID" in response.text
 
