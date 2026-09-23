@@ -42,10 +42,10 @@ def upgrade():
     connection = op.get_bind()
     with Session(bind=connection) as session:
         session.execute(
-            text('UPDATE public."user" SET allow_tag_reserved = true WHERE is_superuser = true')
+            sa.text('UPDATE public."user" SET allow_tag_reserved = true WHERE is_superuser = true')
         )
         session.execute(
-            text('UPDATE public."user" SET allow_tag_public = true WHERE is_superuser = true')
+            sa.text('UPDATE public."user" SET allow_tag_public = true WHERE is_superuser = true')
         )
         session.commit()
 
