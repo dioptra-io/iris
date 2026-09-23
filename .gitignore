@@ -154,3 +154,7 @@ cython_debug/
 
 # Iris data
 iris_data/
+
+# server deployment
+/data/
+/.env
