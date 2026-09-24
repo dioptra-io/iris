@@ -126,14 +126,21 @@ class Redis:
         # TODO: Use SCAN instead of KEYS for better scaling?
         alive = await self.keys(agent_heartbeat_key(None))
         uuids = [str(key.split(":")[2]) for key in alive]
-        return [
-            Agent(
-                uuid=uuid,
-                parameters=await self.get_agent_parameters(uuid),
-                state=await self.get_agent_state(uuid),
+        agents = []
+        for uuid in uuids:
+            # A heartbeat without parameters (e.g. redis lost them) is not usable:
+            # skip it rather than failing every caller.
+            if not (parameters := await self.get_agent_parameters(uuid)):
+                self.logger.warning("Agent %s has no parameters, skipping", uuid)
+                continue
+            agents.append(
+                Agent(
+                    uuid=uuid,
+                    parameters=parameters,
+                    state=await self.get_agent_state(uuid),
+                )
             )
-            for uuid in uuids
-        ]
+        return agents
 
     async def get_agents_by_uuid(self) -> dict[str, Agent]:
         agents = await self.get_agents()

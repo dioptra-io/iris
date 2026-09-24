@@ -23,9 +23,14 @@ from iris.commons.utils import (
 )
 
 
-async def heartbeat(agent_uuid: str, redis: Redis) -> None:
+async def heartbeat(
+    agent_uuid: str, redis: Redis, parameters: AgentParameters
+) -> None:
     """Periodically register the agent."""
     while True:
+        # Re-publish the parameters too, so the agent recovers if redis lost them
+        # (e.g. restart without persistence); the API needs both keys.
+        await redis.set_agent_parameters(agent_uuid, parameters)
         await redis.register_agent(agent_uuid, 30)
         await asyncio.sleep(5)
 
@@ -86,30 +91,28 @@ async def main_with_deps(
     tasks = []
     try:
         await redis.set_agent_state(settings.AGENT_UUID, AgentState.Idle)
-        await redis.set_agent_parameters(
-            settings.AGENT_UUID,
-            AgentParameters(
-                version=__version__,
-                hostname=socket.gethostname(),
-                internal_ipv4_address=get_internal_ipv4_address(),
-                internal_ipv6_address=get_internal_ipv6_address(),
-                external_ipv4_address=get_external_ipv4_address(),
-                external_ipv6_address=get_external_ipv6_address(),
-                cpus=psutil.cpu_count(),
-                disk=round(
-                    psutil.disk_usage(str(settings.AGENT_RESULTS_DIR_PATH)).total
-                    / 1000**3,
-                    3,
-                ),
-                memory=round(psutil.virtual_memory().total / 1024**3, 3),
-                min_ttl=settings.AGENT_MIN_TTL,
-                max_probing_rate=settings.AGENT_MAX_PROBING_RATE,
-                tags=settings.AGENT_TAGS.split(","),
+        parameters = AgentParameters(
+            version=__version__,
+            hostname=socket.gethostname(),
+            internal_ipv4_address=get_internal_ipv4_address(),
+            internal_ipv6_address=get_internal_ipv6_address(),
+            external_ipv4_address=get_external_ipv4_address(),
+            external_ipv6_address=get_external_ipv6_address(),
+            cpus=psutil.cpu_count(),
+            disk=round(
+                psutil.disk_usage(str(settings.AGENT_RESULTS_DIR_PATH)).total
+                / 1000**3,
+                3,
             ),
+            memory=round(psutil.virtual_memory().total / 1024**3, 3),
+            min_ttl=settings.AGENT_MIN_TTL,
+            max_probing_rate=settings.AGENT_MAX_PROBING_RATE,
+            tags=settings.AGENT_TAGS.split(","),
         )
+        await redis.set_agent_parameters(settings.AGENT_UUID, parameters)
 
         tasks = [
-            asyncio.create_task(heartbeat(settings.AGENT_UUID, redis)),
+            asyncio.create_task(heartbeat(settings.AGENT_UUID, redis, parameters)),
             asyncio.create_task(consumer(redis, storage, settings)),
         ]
         await asyncio.gather(*tasks)
