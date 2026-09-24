@@ -1,0 +1,34 @@
+# Single local Iris agent for testing against docker-compose.server.yml.
+# Start the server stack first; the agent joins its network (iris_default)
+# and reaches redis/minio by service name. Uses the same defaults / .env vars.
+#
+#   docker compose -f docker-compose.agent.yml up -d --build
+#   docker compose -f docker-compose.agent.yml logs -f
+
+name: iris-agent
+
+services:
+  agent:
+    build: { context: ., dockerfile: ./dockerfiles/iris-agent.dockerfile }
+    image: "${DOCKER_IMAGE:-iris-agent:research}"
+    environment:
+      REDIS_URL: "redis://default:${REDIS_PASSWORD:-iris}@redis:6379"
+      S3_ENDPOINT_URL: "http://minio:9000"
+      S3_ACCESS_KEY_ID: "${MINIO_ROOT_USER:-minioadmin}"
+      S3_SECRET_ACCESS_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
+      S3_REGION_NAME: "local"
+      AGENT_MAX_PROBING_RATE: "${PROBING_RATE:-1000}"
+      AGENT_UUID_FILE: "/app/iris_data/agent/uuid"
+      AGENT_CARACAL_INTEGRITY_CHECK: "false" # In order to test from Docker for Mac
+    cap_add:
+      - NET_RAW
+    volumes:
+      - "./data/agent:/app/iris_data/agent"
+    networks:
+      - iris
+    restart: unless-stopped
+
+networks:
+  iris:
+    external: true
+    name: iris_default

@@ -46,7 +46,9 @@ services:
     volumes:
       - "./data/postgres:/var/lib/postgresql/data"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U iris"]
+      # -h forces TCP: the temporary server used during first-run init only
+      # listens on the unix socket, so this can't pass before POSTGRES_DB exists.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U iris -d iris"]
       interval: 5s
       timeout: 5s
       retries: 10
