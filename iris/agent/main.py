@@ -1,9 +1,8 @@
 import asyncio
 import logging
 import socket
-import time
 
-from redis import asyncio as aioredis
+from redis import exceptions as redis_exceptions
 import psutil
 
 from iris import __version__
@@ -77,9 +76,12 @@ async def main_with_deps(
         try:
             await redis.client.ping()
             break
-        except aioredis.exceptions.ConnectionError:
+        except redis_exceptions.AuthenticationError:
+            # Subclass of ConnectionError: fail loudly instead of retrying forever.
+            raise
+        except redis_exceptions.ConnectionError:
             logger.info("Waiting for redis...")
-            time.sleep(1)
+            await asyncio.sleep(1)
 
     tasks = []
     try:
