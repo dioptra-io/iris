@@ -83,7 +83,11 @@ services:
     build: { context: ., dockerfile: ./dockerfiles/iris-api.dockerfile }
     image: iris-api:research
     command: ["/app/.venv/bin/alembic", "upgrade", "head"]
-    environment: *iris-env
+    environment:
+      <<: *iris-env
+      # Initial admin user, created only when the database is first migrated.
+      IRIS_USERNAME: "${IRIS_USERNAME:-admin@example.org}"
+      IRIS_PASSWORD: "${IRIS_PASSWORD:-admin}"
     depends_on:
       postgres:
         condition: service_healthy

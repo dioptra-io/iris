@@ -7,6 +7,7 @@ Create Date: 2022-01-10 17:00:33.649009
 """
 import asyncio
 import logging
+import os
 from uuid import UUID
 
 # revision identifiers, used by Alembic.
@@ -47,12 +48,15 @@ def delete_buckets(user_id):
 
 
 user_id = UUID("fb2ebc52-7685-41cc-926a-880e6a939ee2")
+# Initial admin credentials, overridable at migration time.
+admin_email = os.environ.get("IRIS_USERNAME", "admin@example.org")
+admin_password = os.environ.get("IRIS_PASSWORD", "admin")
 
 def upgrade():
     connection = op.get_bind()
 
     with Session(bind=connection) as session:
-        hashed_password = PasswordHelper().hash("admin")
+        hashed_password = PasswordHelper().hash(admin_password)
         session.execute(
             text(
                 """
@@ -60,11 +64,11 @@ def upgrade():
                     (id, firstname, lastname, email, hashed_password,
                      is_active, is_verified, is_superuser, probing_enabled, probing_limit)
                 VALUES
-                    (:id, 'admin', 'admin', 'admin@example.org', :hashed_password,
+                    (:id, 'admin', 'admin', :email, :hashed_password,
                      true, true, true, true, 1000000)
                 """
             ),
-            {"id": str(user_id), "hashed_password": hashed_password},
+            {"id": str(user_id), "email": admin_email, "hashed_password": hashed_password},
         )
         session.commit()
 
