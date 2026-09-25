@@ -23,6 +23,9 @@ x-iris-env: &iris-env
   S3_ACCESS_KEY_ID: "${MINIO_ROOT_USER:-minioadmin}"
   S3_SECRET_ACCESS_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
   S3_REGION_NAME: "local"
+  # Tenacity retry window for S3/Redis/ClickHouse calls (default 2 h). A failing bucket cleanup
+  # after a cancel/delete held a worker thread for the whole window.
+  RETRY_TIMEOUT: "300"
 
 services:
   clickhouse:
