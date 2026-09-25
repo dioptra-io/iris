@@ -102,7 +102,7 @@ services:
       <<: *iris-env
       # Creating a measurement on all agents validates the target file once per agent in-request;
       # the default 30 s timeout and single worker made such requests time out and block the API.
-      GUNICORN_CMD_ARGS: "--timeout 900 --workers 4"
+      GUNICORN_CMD_ARGS: "--timeout 3600 --workers 4"
     ports:
       - "127.0.0.1:8000:8000"   # reach via SSH tunnel
     depends_on:
