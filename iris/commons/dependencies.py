@@ -79,7 +79,16 @@ def get_clickhouse(settings=Depends(get_settings), logger=Depends(get_logger)):
 
 async def get_redis(settings=Depends(get_settings), logger=Depends(get_logger)):
     # TODO: Connection pooling.
-    client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    # Without timeouts a reply lost on the way (e.g. from a remote agent) makes the
+    # command wait forever; keepalive and health checks catch dead connections.
+    client = aioredis.from_url(
+        settings.REDIS_URL,
+        decode_responses=True,
+        socket_timeout=30,
+        socket_connect_timeout=10,
+        socket_keepalive=True,
+        health_check_interval=30,
+    )
     try:
         yield Redis(client, settings, logger)
     finally:

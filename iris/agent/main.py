@@ -30,8 +30,14 @@ async def heartbeat(
     while True:
         # Re-publish the parameters too, so the agent recovers if redis lost them
         # (e.g. restart without persistence); the API needs both keys.
-        await redis.set_agent_parameters(agent_uuid, parameters)
-        await redis.register_agent(agent_uuid, 30)
+        # Each beat is bounded so that one stuck call cannot stop the heartbeat
+        # and get the agent's measurements marked as failed.
+        try:
+            await asyncio.wait_for(
+                redis.heartbeat_agent(agent_uuid, parameters, 30), timeout=10
+            )
+        except Exception as e:
+            redis.logger.warning("Heartbeat failed, retrying: %r", e)
         await asyncio.sleep(5)
 
 

@@ -90,6 +90,21 @@ class Redis:
         self.logger.info("Registering agent for %s seconds", ttl_seconds)
         await self.set(agent_heartbeat_key(uuid), "alive", ex=ttl_seconds)
 
+    async def heartbeat_agent(
+        self, uuid: str, parameters: AgentParameters, ttl_seconds: int
+    ) -> None:
+        """
+        Re-publish the agent parameters and refresh its heartbeat.
+        Not fault tolerant on purpose: the retry delays are longer than the
+        heartbeat TTL, so the caller retries on its own schedule instead.
+        """
+        await self.client.set(
+            f"{self.ns}:{agent_parameters_key(uuid)}", parameters.model_dump_json()
+        )
+        await self.client.set(
+            f"{self.ns}:{agent_heartbeat_key(uuid)}", "alive", ex=ttl_seconds
+        )
+
     async def unregister_agent(self, uuid: str) -> None:
         self.logger.info("Unregistering agent")
         await self.delete(agent_heartbeat_key(uuid))
