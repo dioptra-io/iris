@@ -45,6 +45,15 @@ async def outer_pipeline(
         settings, request, logger, redis, probes_filepath, results_filepath
     )
 
+    # The worker drops the request (and deletes the measurement bucket) when it
+    # gives up on the measurement, e.g. after a missed heartbeat. Uploading would
+    # then retry for hours and block the rest of the agent's queue.
+    if prober_statistics and not await redis.get_request(
+        request.measurement_uuid, settings.AGENT_UUID
+    ):
+        logger.warning("Measurement request is gone, discarding the results")
+        prober_statistics = None
+
     if prober_statistics:
         logger.info("Upload probing statistics to Redis")
         statistics = ProbingStatistics(
