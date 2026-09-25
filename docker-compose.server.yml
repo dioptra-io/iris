@@ -122,8 +122,9 @@ services:
   worker:
     build: { context: ., dockerfile: ./dockerfiles/iris-worker.dockerfile }
     image: iris-worker:research
-    # 128 concurrent measurement-agent jobs (each holds a Postgres connection); >= 39 agents x ~3 parts.
-    command: ["/app/.venv/bin/python3", "-m", "iris.worker", "--processes", "8", "--threads", "16"]
+    # 32 concurrent measurement-agent jobs. Each runs heavy ClickHouse inserts; 128 jobs hit ClickHouse's
+    # 100 concurrent-query limit and every insert crawled, leaving agents idle.
+    command: ["/app/.venv/bin/python3", "-m", "iris.worker", "--processes", "8", "--threads", "4"]
     environment: *iris-env
     depends_on:
       migrate:
