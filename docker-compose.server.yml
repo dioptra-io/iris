@@ -39,6 +39,8 @@ services:
 
   postgres:
     image: postgres:16.1
+    # Each worker job holds a connection for its measurement's lifetime; the default 100 ran out.
+    command: ["postgres", "-c", "max_connections=500"]
     environment:
       POSTGRES_USER: iris
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-iris}"
@@ -96,7 +98,11 @@ services:
   api:
     build: { context: ., dockerfile: ./dockerfiles/iris-api.dockerfile }
     image: iris-api:research
-    environment: *iris-env
+    environment:
+      <<: *iris-env
+      # Creating a measurement on all agents validates the target file once per agent in-request;
+      # the default 30 s timeout and single worker made such requests time out and block the API.
+      GUNICORN_CMD_ARGS: "--timeout 900 --workers 4"
     ports:
       - "127.0.0.1:8000:8000"   # reach via SSH tunnel
     depends_on:
@@ -113,6 +119,8 @@ services:
   worker:
     build: { context: ., dockerfile: ./dockerfiles/iris-worker.dockerfile }
     image: iris-worker:research
+    # 128 concurrent measurement-agent jobs (each holds a Postgres connection); >= 39 agents x ~3 parts.
+    command: ["/app/.venv/bin/python3", "-m", "iris.worker", "--processes", "8", "--threads", "16"]
     environment: *iris-env
     depends_on:
       migrate:
