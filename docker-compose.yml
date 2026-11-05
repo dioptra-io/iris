@@ -71,6 +71,8 @@ services:
   minio:
     image: cgr.dev/chainguard/minio:latest
     command: "server /data --console-address :9001"
+    tmpfs:
+      - /data:uid=65532,gid=65532
     labels:
       # API
       - "traefik.http.routers.minio.entrypoints=web"
