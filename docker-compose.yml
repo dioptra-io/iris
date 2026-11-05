@@ -3,7 +3,7 @@ version: "3.4"
 services:
   # Web Entrypoint
   traefik:
-    image: docker.io/library/traefik:2.5
+    image: docker.io/library/traefik:3.6
     command:
       - "--api.dashboard=true"
       - "--entrypoints.web.address=:80"
@@ -69,8 +69,10 @@ services:
       - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
 
   minio:
-    image: docker.io/minio/minio:RELEASE.2023-08-31T15-31-16Z
+    image: cgr.dev/chainguard/minio:latest
     command: "server /data --console-address :9001"
+    tmpfs:
+      - /data:uid=65532,gid=65532
     labels:
       # API
       - "traefik.http.routers.minio.entrypoints=web"

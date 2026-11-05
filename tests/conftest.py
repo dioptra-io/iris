@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import os
 import secrets
 
@@ -8,7 +9,7 @@ import redis as pyredis
 from fastapi.testclient import TestClient
 from redis import asyncio as aioredis
 from sqlalchemy import text
-from sqlalchemy_utils import create_database, database_exists, drop_database
+from sqlalchemy_utils import create_database, database_exists
 from sqlmodel import Session, create_engine
 
 from iris.agent.settings import AgentSettings
@@ -27,6 +28,9 @@ from iris.commons.settings import CommonSettings
 from iris.commons.storage import Storage
 from iris.commons.utils import json_serializer
 from iris.worker import WorkerSettings
+
+# fork() from a multi-threaded process can deadlock the ClickHouse insert workers.
+multiprocessing.set_start_method("forkserver", force=True)
 
 pytest.register_assert_rewrite("tests.assertions")
 pytest_plugins = ["tests.fixtures.models", "tests.fixtures.storage"]
@@ -95,7 +99,8 @@ def engine(settings):
     if not database_exists(engine.url):
         create_database(engine.url)
     Base.metadata.create_all(engine)
-    return engine
+    yield engine
+    engine.dispose()
 
 
 @pytest.fixture
@@ -145,8 +150,10 @@ def cleanup_redis():
 def cleanup_database():
     yield
     if should_cleanup():
-        # TODO: Cleanup/simplify this code.
-        engine = create_engine("postgresql://iris:iris@postgres.docker.localhost")
+        engine = create_engine(
+            "postgresql://iris:iris@postgres.docker.localhost",
+            isolation_level="AUTOCOMMIT",
+        )
         with engine.connect() as conn:
             databases = conn.execute(
                 text(
@@ -157,10 +164,10 @@ def cleanup_database():
                     """
                 )
             ).all()
-        for (database,) in databases:
-            drop_database(
-                f"postgresql://iris:iris@postgres.docker.localhost/{database}"
-            )
+            # FORCE terminates sessions the app's own engines may still hold.
+            for (database,) in databases:
+                conn.execute(text(f'DROP DATABASE IF EXISTS "{database}" WITH (FORCE)'))
+        engine.dispose()
 
 
 @pytest.fixture(autouse=True, scope="session")

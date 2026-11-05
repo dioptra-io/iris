@@ -20,7 +20,14 @@ jobs:
       - name: Install package
         run: poetry install
       - name: Run tests
-        run: sudo $(poetry env info -p)/bin/pytest --cov=iris --cov-report=xml --log-cli-level=INFO -m "not cifail"
+        timeout-minutes: 20
+        run: sudo $(poetry env info -p)/bin/pytest --cov=iris --cov-report=xml --log-cli-level=INFO -m "not cifail" -o faulthandler_timeout=120
+      - name: Dump services
+        if: always()
+        run: |
+          docker compose ps -a
+          docker compose logs --tail=200 minio postgres clickhouse
+          docker compose exec -T postgres psql -U iris -c "SELECT pid, datname, state, wait_event_type, wait_event, left(query, 80) FROM pg_stat_activity WHERE backend_type = 'client backend';"
       - uses: codecov/codecov-action@v3
 
   docker:
