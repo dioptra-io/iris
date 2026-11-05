@@ -3,7 +3,7 @@ version: "3.4"
 services:
   # Web Entrypoint
   traefik:
-    image: docker.io/library/traefik:2.5
+    image: docker.io/library/traefik:3.6
     command:
       - "--api.dashboard=true"
       - "--entrypoints.web.address=:80"
