@@ -1,4 +1,4 @@
-FROM docker.io/library/python:3.10.18-bookworm AS builder
+FROM docker.io/library/python:3.11-bookworm AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
@@ -16,7 +16,7 @@ RUN pip3 install --no-cache-dir poetry \
     && poetry install --no-root \
     && rm -rf /root/.cache/*
 
-FROM docker.io/library/python:3.10.18-bookworm
+FROM docker.io/library/python:3.11-bookworm
 LABEL maintainer="Elena Nardi <elena.nardi@lip6.fr>"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
